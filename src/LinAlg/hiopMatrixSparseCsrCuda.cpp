@@ -426,9 +426,10 @@ void hiopMatrixSparseCSRCUDA::copy_to(hiopMatrixSparseCSRSeq& W)
   assert(W.m() == nrows_);
   assert(W.n() == ncols_);
   assert(W.numberOfNonzeros() == nnz_);
-  cudaMemcpy(W.i_row(), this->i_row(), sizeof(index_type)*(1+nrows_), cudaMemcpyDeviceToHost);
-  cudaMemcpy(W.j_col(), this->j_col(), sizeof(index_type)*nnz_, cudaMemcpyDeviceToHost);
-  cudaMemcpy(W.M(), this->M(), sizeof(double)*nnz_, cudaMemcpyDeviceToHost);
+
+  W.hw_backend_.copy(W.i_row(), this->i_row(), 1+nrows_, hw_backend_);
+  W.hw_backend_.copy(W.j_col(), this->j_col(), nnz_, hw_backend_);
+  W.hw_backend_.copy(W.M(), this->M(), nnz_, hw_backend_);
 }
 
 void hiopMatrixSparseCSRCUDA::
@@ -611,11 +612,11 @@ void hiopMatrixSparseCSRCUDA::print(FILE* file,
     std::stringstream ss;
     if(nullptr==msg) {
       if(numranks>1) {
-        ss << "CSR matrix of size " << m() << " " << n() << " and nonzeros " 
+        ss << "CSR CUDA matrix of size " << m() << " " << n() << " and nonzeros " 
            << numberOfNonzeros() << ", printing " <<  max_elems << " elems (on rank="
            << myrank_ << ")" << std::endl;
       } else {
-        ss << "CSR matrix of size " << m() << " " << n() << " and nonzeros " 
+        ss << "CSR CUDA matrix of size " << m() << " " << n() << " and nonzeros " 
            << numberOfNonzeros() << ", printing " <<  max_elems << " elems" << std::endl;
       }
     } else {

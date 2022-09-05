@@ -1,4 +1,8 @@
 #ifdef HIOP_USE_CUDA
+
+#include <cuda_runtime.h>
+#include <cassert>
+
 namespace hiop
 {
 

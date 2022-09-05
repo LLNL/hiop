@@ -49,8 +49,10 @@
 #define HIOP_HW_BACKENDS
 
 #include <hiop_defs.hpp>
+#include <string>
 
-namespace hiop {
+namespace hiop
+{
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // The memory backends classes
@@ -85,7 +87,6 @@ struct MemBackendCuda
  * Umpire-based memory backend that supports "HOST", "UM" (unified memory), and "DEVICE"
  * memory spaces.
  */
-#include <string>
 struct MemBackendUmpire
 {
   MemBackendUmpire(const std::string& l)

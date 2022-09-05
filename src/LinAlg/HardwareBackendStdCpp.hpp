@@ -1,3 +1,6 @@
+#include <cassert>
+#include <cstring>
+
 namespace hiop
 {
 
