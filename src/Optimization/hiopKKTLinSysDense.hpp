@@ -87,7 +87,7 @@ public:
                                 const hiopVector& delta_cc,
                                 const hiopVector& delta_cd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(nlp_);
 
     int nx  = Hess_->m();
@@ -164,7 +164,7 @@ public:
       csr_writer.writeMatToFile(Msys, write_linsys_counter, nx, neq, nineq);
     }
     
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 

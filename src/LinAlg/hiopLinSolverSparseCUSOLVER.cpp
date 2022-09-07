@@ -237,7 +237,7 @@ namespace hiop
 
   int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
@@ -310,13 +310,13 @@ namespace hiop
       }
       // end of factor
     }
-    nvtxRangePop();
+    RANGE_POP();
     return 0;
   }
 
   bool hiopLinSolverSymSparseCUSOLVER::solve(hiopVector& x)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
     assert(x.get_size() == M_->n());
@@ -396,7 +396,7 @@ namespace hiop
       }
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    nvtxRangePop();
+    RANGE_POP();
     delete rhs;
     rhs = nullptr;
     return 1;

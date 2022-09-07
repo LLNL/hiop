@@ -393,7 +393,7 @@ bool hiopLinSolverCholCuSparse::initial_setup()
 /* returns -1 if zero or negative pivots are encountered */
 int hiopLinSolverCholCuSparse::matrixChanged()
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   auto* mat_csr = this->sys_mat_csr();
   size_type m = mat_csr->m();
   assert(m == mat_csr->n());
@@ -463,13 +463,13 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                       zero_piv_tol);
     return -1;
   } 
-  nvtxRangePop();
+  RANGE_POP();
   return 0;
 }
 
 bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   hiopTimer t;
   cusolverStatus_t ret;
   
@@ -512,7 +512,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
     return false;
   }
 
-  nvtxRangePop();
+  RANGE_POP();
   return true;
 }
 

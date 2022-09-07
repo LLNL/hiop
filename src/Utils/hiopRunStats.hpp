@@ -50,7 +50,15 @@
 #define HIOP_RUNSTATS
 
 #include "hiopTimer.hpp"
-#include <nvToolsExt.h>
+
+#ifdef HIOP_USE_CUDA
+  #include <nvToolsExt.h>
+  #define RANGE_PUSH(id) nvtxRangePush(id);
+  #define RANGE_POP() nvtxRangePop();
+#else
+  #define RANGE_PUSH(id)
+  #define RANGE_POP()
+#endif
 
 #include <sstream>
 #include <iomanip>

@@ -113,7 +113,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
                                                     const hiopVector& dcc,
                                                     const hiopVector& dcd)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp_->runStats.kkt.tmUpdateInit.start();
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -343,7 +343,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   if(write_linsys_counter_>=0) {
     // TODO csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, 0, nineq);
   }
-  nvtxRangePop();
+  RANGE_POP();
   return true; 
 }
 
@@ -412,7 +412,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
                                                    hiopVector& dyc,
                                                    hiopVector& dyd)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   assert(nlpSp_);
   assert(HessSp_);
   assert(Jac_dSp_);
@@ -457,7 +457,7 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   nlp_->log->write("SOL KKT_SPARSE_Condensed dd: ", dd,  hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyc:", dyc, hovMatrices);
   nlp_->log->write("SOL KKT_SPARSE_Condensed dyd:", dyd, hovMatrices);
-  nvtxRangePop();
+  RANGE_POP();
   return bret;
 }
 

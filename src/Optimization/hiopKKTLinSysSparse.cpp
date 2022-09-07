@@ -92,7 +92,7 @@ namespace hiop
                                                             const hiopVector& delta_cc,
                                                             const hiopVector& delta_cd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
 
@@ -186,7 +186,7 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -194,7 +194,7 @@ namespace hiop
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                   hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     if(!nlpSp_)   { assert(false); return false; }
     if(!HessSp_)  { assert(false); return false; }
     if(!Jac_cSp_) { assert(false); return false; }
@@ -257,7 +257,7 @@ namespace hiop
     nlp_->log->write("SOL KKT_SPARSE_XYcYd dyd:", dyd, hovMatrices);
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -419,7 +419,7 @@ namespace hiop
                                                              const hiopVector& delta_cc,
                                                              const hiopVector& delta_cd)
   {    
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
 
@@ -514,7 +514,7 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -522,7 +522,7 @@ namespace hiop
   solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
                   hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     if(!nlpSp_)   { assert(false); return false; }
     if(!HessSp_)  { assert(false); return false; }
     if(!Jac_cSp_) { assert(false); return false; }
@@ -588,7 +588,7 @@ namespace hiop
     nlp_->log->write("SOL KKT_SPARSE_XDYcYd dyd:", dyd, hovMatrices);
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -857,7 +857,7 @@ namespace hiop
                                                  const hiopVector& delta_cc,
                                                  const hiopVector& delta_cd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
     if(!HessSp_) { assert(false); return false; }
 
@@ -1046,7 +1046,7 @@ namespace hiop
       csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
     }
 
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -1058,7 +1058,7 @@ namespace hiop
                                        hiopVector& dvl, hiopVector& dvu, hiopVector& dzl, hiopVector& dzu,
                                        hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     if(!nlpSp_)   { assert(false); return false; }
     if(!HessSp_)  { assert(false); return false; }
     if(!Jac_cSp_) { assert(false); return false; }
@@ -1158,7 +1158,7 @@ namespace hiop
     }
 
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 

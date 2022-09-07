@@ -126,7 +126,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
                                                     const hiopVector& delta_cc_in,
                                                     const hiopVector& delta_cd_in)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
    
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
@@ -373,7 +373,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
     // TODO csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nx, 0, nineq);
   }
 
-  nvtxRangePop();
+  RANGE_POP();
   return true; 
 }
 
@@ -436,7 +436,7 @@ bool hiopKKTLinSysSparseNormalEqn::solveCompressed(hiopVector& ryc,
                                                    hiopVector& dyc,
                                                    hiopVector& dyd)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   bool bret{false};
 
   nlp_->runStats.kkt.tmSolveRhsManip.start();
@@ -491,7 +491,7 @@ bool hiopKKTLinSysSparseNormalEqn::solveCompressed(hiopVector& ryc,
 
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
     
-  nvtxRangePop();
+  RANGE_POP();
   return bret;
 }
 

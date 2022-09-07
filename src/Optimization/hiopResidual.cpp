@@ -101,7 +101,7 @@ double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it,
                                                    const hiopVector& c, 
                                                    const hiopVector& d)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp->runStats.tmSolverInternal.start();
   double nrmOne_infeasib = 0.;
   size_type nx_loc=rx->get_local_size();
@@ -147,7 +147,7 @@ double hiopResidual::compute_nlp_infeasib_onenorm (const hiopIterate& it,
   }
 
   nlp->runStats.tmSolverInternal.stop();
-  nvtxRangePop();
+  RANGE_POP();
   return nrmOne_infeasib;
 }
 
@@ -156,7 +156,7 @@ int hiopResidual::update(const hiopIterate& it,
 			 const hiopVector& grad, const hiopMatrix& jac_c, const hiopMatrix& jac_d, 
 			 const hiopLogBarProblem& logprob)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp->runStats.tmSolverInternal.start();
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
@@ -350,7 +350,7 @@ int hiopResidual::update(const hiopIterate& it,
   nrmInf_bar_complem=aux_g[5];  
 #endif
   nlp->runStats.tmSolverInternal.stop();
-  nvtxRangePop();
+  RANGE_POP();
   return true;
 }
 
@@ -416,7 +416,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
                               const hiopMatrix& jac_d,
                               const hiopLogBarProblem& logprob)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp->runStats.tmSolverInternal.start();
 
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 0;
@@ -602,7 +602,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   nrmInf_bar_complem = aux_g[5];  
 #endif
   nlp->runStats.tmSolverInternal.stop();
-  nvtxRangePop();
+  RANGE_POP();
 
 }
 

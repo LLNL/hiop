@@ -275,7 +275,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
                                             hiopMatrix& Jac_c,
                                             hiopMatrix& Jac_d)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   bool duals_avail = false;
   bool slacks_avail = false;
   bool warmstart_avail = false;
@@ -416,7 +416,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
 
   solver_status_ = NlpSolve_SolveNotCalled;
 
-  nvtxRangePop();
+  RANGE_POP();
   return true;
 }
 
@@ -625,7 +625,7 @@ bool hiopAlgFilterIPMBase::evalNlpAndLogErrors(const hiopIterate& it,
                                                double& logcomplem,
                                                double& logoverall)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp->runStats.tmSolverInternal.start();
 
   size_type n=nlp->n_complem(), m=nlp->m();
@@ -683,7 +683,7 @@ bool hiopAlgFilterIPMBase::evalNlpAndLogErrors(const hiopIterate& it,
   //finally, the scaled barrier error
   logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
   nlp->runStats.tmSolverInternal.stop();
-  nvtxRangePop();
+  RANGE_POP();
   return true;
 }
 

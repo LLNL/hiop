@@ -230,7 +230,7 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
 bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 				const hiopMatrix& Jac_c_curr_, const hiopMatrix& Jac_d_curr_)
 {
-  nvtxRangePush(__FUNCTION__);
+  RANGE_PUSH(__FUNCTION__);
   nlp->runStats.tmSolverInternal.start();
 
   const hiopVectorPar&   grad_f_curr= dynamic_cast<const hiopVectorPar&>(grad_f_curr_);
@@ -348,7 +348,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
   }
 
   nlp->runStats.tmSolverInternal.stop();
-  nvtxRangePop();
+  RANGE_POP();
   return true;
 }
 

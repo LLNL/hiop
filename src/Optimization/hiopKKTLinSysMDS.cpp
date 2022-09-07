@@ -117,7 +117,7 @@ namespace hiop
                                                const hiopMatrix* Jac_d,
                                                hiopMatrix* Hess)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     if(!nlpMDS_) { assert(false); return false; }
 
     nlp_->runStats.linsolv.reset();
@@ -168,7 +168,7 @@ namespace hiop
     bool retval = factorize();
     
     nlp_->runStats.tmSolverInternal.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -178,7 +178,7 @@ namespace hiop
                                                          const hiopVector& delta_cc,
                                                          const hiopVector& delta_cd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(linSys_);
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
     assert(linSys);
@@ -304,7 +304,7 @@ namespace hiop
       csr_writer_.writeMatToFile(Msys, write_linsys_counter_, nxd+nxs, neq, nineq);
     }
     
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 
@@ -312,7 +312,7 @@ namespace hiop
   solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                   hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
 
     if(!nlpMDS_)   { assert(false); return false; }
@@ -404,7 +404,7 @@ namespace hiop
     nlp_->log->write("SOL KKT_MDS_XYcYd dyd:", dyd, hovMatrices);
   
     nlp_->runStats.kkt.tmSolveRhsManip.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return true;
   }
 

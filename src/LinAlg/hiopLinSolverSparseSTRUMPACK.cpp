@@ -225,7 +225,7 @@ namespace hiop
 
   int hiopLinSolverSymSparseSTRUMPACK::matrixChanged()
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
@@ -272,13 +272,13 @@ namespace hiop
  
     nlp_->runStats.linsolv.tmInertiaComp.start();
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return num_neg_eig_val;
   }
   
   bool hiopLinSolverSymSparseSTRUMPACK::solve ( hiopVector& x_ )
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(x_.get_size()==M_->n());
@@ -296,7 +296,7 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
     delete rhs; rhs=nullptr;
-    nvtxRangePop();
+    RANGE_POP();
     return 1;
   }
 
@@ -377,7 +377,7 @@ namespace hiop
 
   int hiopLinSolverNonSymSparseSTRUMPACK::matrixChanged()
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
@@ -402,13 +402,13 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmInertiaComp.start();
     nlp_->runStats.linsolv.tmInertiaComp.stop();
-    nvtxRangePop();
+    RANGE_POP();
     return 0;
   }
 
   bool hiopLinSolverNonSymSparseSTRUMPACK::solve(hiopVector& x_)
   {
-    nvtxRangePush(__FUNCTION__);
+    RANGE_PUSH(__FUNCTION__);
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(x_.get_size()==M_->n());
@@ -425,7 +425,7 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     delete rhs; rhs=nullptr;
-    nvtxRangePop();
+    RANGE_POP();
     return 1;
   }
 
