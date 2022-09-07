@@ -16,6 +16,7 @@ if(HIOP_BUILD_SHARED)
     CUDA::cudart
     CUDA::cublasLt
     CUDA::curand
+    CUDA::nvToolsExt
     )
 endif()
 if(HIOP_BUILD_STATIC)
@@ -25,6 +26,7 @@ if(HIOP_BUILD_STATIC)
     CUDA::cudart_static
     CUDA::cublasLt_static
     CUDA::curand_static
+    CUDA::nvToolsExt
     )
 endif()
 
