@@ -55,7 +55,7 @@
 #define HIOP_SPARSE_MATRIX_CSRCUDA
 
 #include "hiop_defs.hpp"
-#include "HardwareBackends.hpp"
+#include "ExecSpace.hpp"
 
 #ifdef HIOP_USE_CUDA 
 

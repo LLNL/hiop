@@ -70,7 +70,7 @@
 //temporary
 #include "hiopVectorPar.hpp"
 
-#include "HardwareBackends.hpp"
+#include "ExecSpace.hpp"
 
 namespace hiop
 {

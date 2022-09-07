@@ -77,6 +77,9 @@
 #include "hiopLinAlgFactory.hpp"
 
 #include "hiopCppStdUtils.hpp"
+
+#include <ExecSpace.hpp>
+
 using namespace hiop;
 
 /**
@@ -85,15 +88,16 @@ using namespace hiop;
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
+hiopVector* LinearAlgebraFactory::create_vector(const HardwareInfo& hi, //const std::string& mem_space,
                                                 const size_type& glob_n,
                                                 index_type* col_part,
                                                 MPI_Comm comm)
 {
-  const std::string mem_space_upper = toupper(mem_space);
+  const std::string mem_space_upper = toupper(hi.mem_space);
   if(mem_space_upper == "DEFAULT") {
     return new hiopVectorPar(glob_n, col_part, comm);
   } else {
+    
 #ifdef HIOP_USE_RAJA
     return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
 #else
@@ -245,6 +249,8 @@ double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, siz
   if(mem_space_upper == "DEFAULT") {
     return new double[n];
   } else {
+
+
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_upper);

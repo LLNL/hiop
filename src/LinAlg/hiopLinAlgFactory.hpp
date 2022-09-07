@@ -58,6 +58,25 @@
 
 namespace hiop {
 
+struct HardwareInfo
+{
+  HardwareInfo(const std::string mem_space_in)
+  {
+    mem_space = mem_space_in;
+    if(mem_space == "DEFAULT") {
+      mem_backend = "stdcpp";
+    } else {
+      mem_backend = "umpire";
+    }
+  }
+  HardwareInfo(const char* mem_space_in)
+    : HardwareInfo(std::string(mem_space_in))
+  {
+  }
+  std::string mem_space;
+  std::string mem_backend;
+};
+  
 /**
  * @brief Factory for HiOp's linear algebra objects
  * 
@@ -71,7 +90,7 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* create_vector(const std::string& mem_space,
+  static hiopVector* create_vector(const HardwareInfo& hi, //const std::string& mem_space,
                                    const size_type& glob_n,
                                    index_type* col_part = nullptr,
                                    MPI_Comm comm = MPI_COMM_SELF);

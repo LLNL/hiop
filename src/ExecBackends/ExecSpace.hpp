@@ -272,8 +272,8 @@ struct SupportsHostMemSpace
 } // end namespace
 
 // concrete implementations
-#include <HardwareBackendStdCpp.hpp>
-#include <HardwareBackendCuda.hpp>
-#include <HardwareBackendUmpire.hpp>
+#include <ExecSpaceHost.hpp>
+#include <ExecSpaceCuda.hpp>
+#include <ExecSpaceRajaUmpire.hpp>
 
 #endif
