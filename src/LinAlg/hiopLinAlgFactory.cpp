@@ -97,8 +97,8 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
 {
   const std::string mem_space_upper = toupper(hi.mem_space);
   if(mem_space_upper == "DEFAULT") {
-    assert(hi.mem_backend == "STDCPP");
-    assert(hi.exec_backend == "HOST");
+    //assert(hi.mem_backend == "STDCPP");
+    //assert(hi.exec_backend == "HOST");
     return new hiopVectorPar(glob_n, col_part, comm);
   } else {
 
