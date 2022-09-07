@@ -55,7 +55,8 @@
 #define HIOP_SPARSE_MATRIX_CSRCUDA
 
 #include "hiop_defs.hpp"
-#include "ExecSpace.hpp"
+
+#include "ExecSpaceCuda.hpp"
 
 #ifdef HIOP_USE_CUDA 
 
@@ -656,7 +657,7 @@ private:
   void alloc();
   void dealloc();
 protected:
-  HWBackend<MemBackendCuda> hw_backend_; 
+  ExecSpace<MemBackendCuda> exec_space_; 
   
   //// inherits nrows_, ncols_, and nnz_ from  hiopSparseMatrix
   

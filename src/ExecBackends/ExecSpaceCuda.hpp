@@ -1,3 +1,8 @@
+#ifndef HIOP_EXEC_SPACE_CUDA
+#define HIOP_EXEC_SPACE_CUDA
+
+#include <ExecSpace.hpp>
+
 #ifdef HIOP_USE_CUDA
 
 #include <cuda_runtime.h>
@@ -40,9 +45,9 @@ template<typename T>
 struct TransferImpl<MemBackendCuda, MemBackendCuda, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
@@ -54,9 +59,9 @@ template<typename T>
 struct TransferImpl<MemBackendCuda, MemBackendCpp, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendCpp>& hwb_src,
+                           const ExecSpace<MemBackendCpp>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
@@ -67,9 +72,9 @@ template<typename T>
 struct TransferImpl<MemBackendCpp, MemBackendCuda, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendCpp>& hwb_dest,
+                           ExecSpace<MemBackendCpp>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
@@ -81,9 +86,9 @@ template<typename T>
 struct TransferImpl<MemBackendCuda, MemBackendUmpire, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire>& hwb_src,
                            const size_t& n)
   {
     if(hwb_src.mem_backend().is_device()) {
@@ -103,9 +108,9 @@ template<typename T>
 struct TransferImpl<MemBackendUmpire, MemBackendCuda, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendUmpire>& hwb_dest,
+                           ExecSpace<MemBackendUmpire>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda>& hwb_src,
                            const size_t& n)
   {
     if(hwb_dest.mem_backend().is_device()) {
@@ -123,4 +128,7 @@ struct TransferImpl<MemBackendUmpire, MemBackendCuda, T>
 
 
 } // end namespace hiop
-#endif
+#endif //HIOP_USE_CUDA
+#endif //HIOP_EXEC_SPACE_HOST
+
+

@@ -97,8 +97,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   index_type* col_part /* = NULL */,
   MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
-    hw_backend_(HWBackend<MemBackend>(MemBackendUmpire(mem_space))),
-    hw_backend_host_(HWBackend<MemBackendHost>(MemBackendHost::new_backend_host())),
+    hw_backend_(ExecSpace<MemBackend>(MemBackendUmpire(mem_space))),
+    hw_backend_host_(ExecSpace<MemBackendHost>(MemBackendHost::new_backend_host())),
     mem_space_(mem_space),
     comm_(comm)
 {

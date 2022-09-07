@@ -427,9 +427,9 @@ void hiopMatrixSparseCSRCUDA::copy_to(hiopMatrixSparseCSRSeq& W)
   assert(W.n() == ncols_);
   assert(W.numberOfNonzeros() == nnz_);
 
-  W.hw_backend_.copy(W.i_row(), this->i_row(), 1+nrows_, hw_backend_);
-  W.hw_backend_.copy(W.j_col(), this->j_col(), nnz_, hw_backend_);
-  W.hw_backend_.copy(W.M(), this->M(), nnz_, hw_backend_);
+  W.exec_space_.copy(W.i_row(), this->i_row(), 1+nrows_, exec_space_);
+  W.exec_space_.copy(W.j_col(), this->j_col(), nnz_, exec_space_);
+  W.exec_space_.copy(W.M(), this->M(), nnz_, exec_space_);
 }
 
 void hiopMatrixSparseCSRCUDA::
@@ -899,9 +899,11 @@ void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& 
 
   //transfer coo/triplet to device
   int* d_rowind=nullptr;
-  cudaMalloc(&d_rowind, nnz_*sizeof(index_type));
+  //cudaMalloc(&d_rowind, nnz_*sizeof(index_type));
+  d_rowind = exec_space_.alloc_array<index_type>(nnz_);
   assert(d_rowind);
-  cudaMemcpy(d_rowind, M.i_row(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);
+  //cudaMemcpy(d_rowind, M.i_row(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);
+  exec_space_.copy(d_rowind, M.i_row(), nnz_, M.exec_space_);
 
   //use cuda API
   cusparseStatus_t st = cusparseXcoo2csr(h_cusparse_,

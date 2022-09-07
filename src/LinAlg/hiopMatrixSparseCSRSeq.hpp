@@ -54,7 +54,7 @@
 #ifndef HIOP_SPARSE_MATRIX_CSRSEQ
 #define HIOP_SPARSE_MATRIX_CSRSEQ
 
-#include "ExecSpace.hpp"
+#include "ExecSpaceHost.hpp"
 
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
@@ -582,7 +582,7 @@ private:
   void dealloc();
 protected:
   friend class hiopMatrixSparseCSRCUDA;
-  HWBackend<MemBackendCpp> hw_backend_;
+  ExecSpace<MemBackendCpp> exec_space_;
   
   //// inherits nrows_, ncols_, and nnz_ from  hiopSparseMatrix
   

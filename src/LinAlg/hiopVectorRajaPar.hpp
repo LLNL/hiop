@@ -70,7 +70,7 @@
 //temporary
 #include "hiopVectorPar.hpp"
 
-#include "ExecSpace.hpp"
+#include "ExecSpaceRajaUmpire.hpp"
 
 namespace hiop
 {
@@ -307,9 +307,9 @@ public:
   
 private:
   using MemBackend = MemBackendUmpire;
-  HWBackend<MemBackend> hw_backend_;
+  ExecSpace<MemBackend> hw_backend_;
   using MemBackendHost = MemBackendUmpire;
-  HWBackend<MemBackendHost> hw_backend_host_;
+  ExecSpace<MemBackendHost> hw_backend_host_;
   std::string mem_space_;
   MPI_Comm comm_;
   double* data_host_;

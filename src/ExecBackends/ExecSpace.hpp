@@ -45,11 +45,18 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_HW_BACKENDS
-#define HIOP_HW_BACKENDS
+#ifndef HIOP_EXEC_BACKEND
+#define HIOP_EXEC_BACKEND
 
 #include <hiop_defs.hpp>
 #include <string>
+
+///////////////////////////////////////////////////////////////////////////////////////
+// This header defines the generic execution space class and its various generic types.
+// It should be used from a concrete execution space class, for example
+// ExecSpaceHost.hpp or ExecSpaceCuda.hpp. The concrete execution space class should be
+// then included in the code.
+///////////////////////////////////////////////////////////////////////////////////////
 
 namespace hiop
 {
@@ -58,7 +65,7 @@ namespace hiop
 // The memory backends classes
 ///////////////////////////////////////////////////////////////////////////////////////
 
-/// Standard C++ memory backend on host implemented `new` and `delete[]` operators.
+/// Standard C++ memory backend on host 
 struct MemBackendCpp
 {
   /// Always on host memory space
@@ -137,11 +144,11 @@ struct ExePoliciesRaja
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
-// The hardware backend class
+// The generic/template execution backend class
 ///////////////////////////////////////////////////////////////////////////////////////
 
 //
-// Forward declarations of implementation internals of class HWBackend
+// Forward declarations of implementation internals of class ExecSpace
 //
 template<class MEMBACKEND, typename T> struct AllocImpl;
 template<class MEMBACKENDDEST, class MEMBACKENDSRC, typename T> struct TransferImpl;
@@ -157,15 +164,15 @@ template<class MEMBACKEND> struct SupportsHostMemSpace;
  * Re: execution policies, TBD.
  */
 template<class MEMBACKEND>
-class HWBackend
+class ExecSpace
 {
 public:
-  HWBackend()
+  ExecSpace()
   {
     static_assert("HiOp was not built with the requested hardware backend/memory space." &&
                   FeatureIsPresent<MEMBACKEND>::value);
   }
-  HWBackend(const MEMBACKEND& mb)
+  ExecSpace(const MEMBACKEND& mb)
     : mb_(mb)
   {
     static_assert("HiOp was not built with the requested hardware backend/memory space." &&
@@ -198,7 +205,7 @@ public:
    * @pre `p_src` should be managed by the memory backend of `md`.
    */
   template<class MEMSRC, typename T>
-  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const HWBackend<MEMSRC>& md)
+  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const ExecSpace<MEMSRC>& md)
   {
     return TransferImpl<MEMBACKEND,MEMSRC,T>::do_it(p_dest, *this, p_src, md, n);
   }
@@ -247,9 +254,9 @@ template<class MEMDEST, class MEMSRC, typename T>
 struct TransferImpl
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MEMDEST>& hwb_dest,
+                           ExecSpace<MEMDEST>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MEMSRC>& hwb_src,
+                           const ExecSpace<MEMSRC>& hwb_src,
                            const size_t& n)
   {
     return false;
@@ -270,10 +277,5 @@ struct SupportsHostMemSpace
 };
 
 } // end namespace
-
-// concrete implementations
-#include <ExecSpaceHost.hpp>
-#include <ExecSpaceCuda.hpp>
-#include <ExecSpaceRajaUmpire.hpp>
 
 #endif

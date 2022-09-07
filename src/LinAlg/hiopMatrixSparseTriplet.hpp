@@ -1,6 +1,8 @@
 #ifndef HIOP_SPARSE_MATRIX_TRIPLET
 #define HIOP_SPARSE_MATRIX_TRIPLET
 
+#include "ExecSpaceHost.hpp"
+
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
 #include "hiopMatrixSparse.hpp"
@@ -323,6 +325,8 @@ public:
   virtual bool checkIndexesAreOrdered() const;
 #endif
 protected:
+  friend class hiopMatrixSparseCSRCUDA;
+  ExecSpace<MemBackendCpp> exec_space_;
   int* iRow_; ///< row indices of the nonzero entries
   int* jCol_; ///< column indices of the nonzero entries
   double* values_; ///< values_ of the nonzero entries

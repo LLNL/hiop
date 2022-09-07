@@ -1,3 +1,8 @@
+#ifndef HIOP_EXEC_SPACE_RAJAUMP
+#define HIOP_EXEC_SPACE_RAJAUMP
+
+#include <ExecSpace.hpp>
+
 #ifdef HIOP_USE_RAJA
 
 #include <umpire/Allocator.hpp>
@@ -36,9 +41,9 @@ template<typename T>
 struct TransferImpl<MemBackendUmpire, MemBackendUmpire, T>
 {
   inline static bool do_it(T* p_dest,
-                           HWBackend<MemBackendUmpire>& hwb_dest,
+                           ExecSpace<MemBackendUmpire>& hwb_dest,
                            const T* p_src,
-                           const HWBackend<MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire>& hwb_src,
                            const size_t& n)
   {
     auto& rm = umpire::ResourceManager::getInstance();
@@ -52,5 +57,6 @@ struct TransferImpl<MemBackendUmpire, MemBackendUmpire, T>
 };
 
 }  // end namespace
-#endif
+#endif //HIOP_USE_RAJA
+#endif //HIOP_EXEC_SPACE_RAJAUMP
 

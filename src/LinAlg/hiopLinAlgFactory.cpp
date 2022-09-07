@@ -59,6 +59,10 @@
 
 #include <hiop_defs.hpp>
 
+#include <ExecSpaceHost.hpp>
+#include <ExecSpaceCuda.hpp>
+#include <ExecSpaceRajaUmpire.hpp>
+
 #ifdef HIOP_USE_RAJA
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
@@ -77,8 +81,6 @@
 #include "hiopLinAlgFactory.hpp"
 
 #include "hiopCppStdUtils.hpp"
-
-#include <ExecSpace.hpp>
 
 using namespace hiop;
 
