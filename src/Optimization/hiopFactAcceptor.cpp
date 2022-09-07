@@ -63,10 +63,10 @@ namespace hiop
 
 int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
                                                const int& n_neg_eig,
-                                               double& delta_wx,
-                                               double& delta_wd,
-                                               double& delta_cc,
-                                               double& delta_cd,
+                                               hiopVector& delta_wx,
+                                               hiopVector& delta_wd,
+                                               hiopVector& delta_cc,
+                                               hiopVector& delta_cd,
                                                const bool force_reg)
 {
   int continue_re_fact{1};
@@ -109,10 +109,10 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
 
 int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulation& nlp,
                                                            const int& n_neg_eig,
-                                                           double& delta_wx,
-                                                           double& delta_wd,
-                                                           double& delta_cc,
-                                                           double& delta_cd,
+                                                           hiopVector& delta_wx,
+                                                           hiopVector& delta_wd,
+                                                           hiopVector& delta_cc,
+                                                           hiopVector& delta_cd,
                                                            const bool force_reg)
 {
   int continue_re_fact{1};

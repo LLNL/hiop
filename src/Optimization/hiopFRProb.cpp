@@ -416,15 +416,15 @@ bool hiopFRProbSparse::eval_Hess_Lagr(const size_type& n,
   return true;
 }
 
-bool hiopFRProbSparse::get_starting_point(const size_type& n,
-                                          const size_type& m,
-                                          double* x0,
-                                          double* z_bndL0, 
-                                          double* z_bndU0,
-                                          double* lambda0,
-                                          double* ineq_slack,
-                                          double* vl0,
-                                          double* vu0 )
+bool hiopFRProbSparse::get_warmstart_point(const size_type& n,
+                                           const size_type& m,
+                                           double* x0,
+                                           double* z_bndL0, 
+                                           double* z_bndU0,
+                                           double* lambda0,
+                                           double* ineq_slack,
+                                           double* vl0,
+                                           double* vu0 )
 {
   assert( n == n_);
   assert( m == m_);
@@ -1042,15 +1042,15 @@ bool hiopFRProbMDS::eval_Jac_cons(const size_type& n,
   return true;
 }
 
-bool hiopFRProbMDS::get_starting_point(const size_type& n,
-                                       const size_type& m,
-                                       double* x0,
-                                       double* z_bndL0, 
-                                       double* z_bndU0,
-                                       double* lambda0,
-                                       double* ineq_slack,
-                                       double* vl0,
-                                       double* vu0 )
+bool hiopFRProbMDS::get_warmstart_point(const size_type& n,
+                                        const size_type& m,
+                                        double* x0,
+                                        double* z_bndL0, 
+                                        double* z_bndU0,
+                                        double* lambda0,
+                                        double* ineq_slack,
+                                        double* vl0,
+                                        double* vu0 )
 {
   assert( n == n_);
   assert( m == m_);

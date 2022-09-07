@@ -132,11 +132,6 @@
       done
       echo "finished batch job: $res"
       exit $res
-  after_script:
-    - |
-      set -xv
-      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
-      rm -rf "$WORKDIR"
 
 .pnnl_tags_template: &pnnl_tags_definition
   tags:
@@ -169,6 +164,7 @@ build_on_marianas:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
+  allow_failure: false 
   stage: default_build
   variables:
     SLURM_Q: "newell_shared"
@@ -191,6 +187,19 @@ build_on_incline:
     BUILD_SCRIPT_ARGS: --build-only
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
+pnnl_cleanup:
+  stage: test
+  dependencies:
+    - build_on_incline
+  script:
+  - |
+    set -xv
+    export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
+    rm -rf "$WORKDIR"
+  <<: *pnnl_tags_definition
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 

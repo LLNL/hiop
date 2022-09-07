@@ -85,6 +85,7 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
     Hess_csr_(nullptr),
     M_condensed_(nullptr),
     Hess_upper_plus_diag_(nullptr),
+    deltawx_(nullptr),
     Dx_plus_deltawx_(nullptr),
     Diag_Dx_deltawx_(nullptr),
     Hd_copy_(nullptr)
@@ -94,7 +95,8 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
 hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
 {
   delete Hd_copy_;
-  delete Diag_Dx_deltawx_;  
+  delete deltawx_;
+  delete Diag_Dx_deltawx_;
   delete Dx_plus_deltawx_;
   delete Hess_upper_plus_diag_;
   delete M_condensed_;
@@ -106,22 +108,13 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete Hess_lower_csr_;
 }
 
-bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
-                                                    const double& delta_wd_in,
-                                                    const double& dcc,
-                                                    const double& dcd)
+bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_in,
+                                                    const hiopVector& delta_wd_in,
+                                                    const hiopVector& dcc,
+                                                    const hiopVector& dcd)
 {
   nvtxRangePush(__FUNCTION__);
   nlp_->runStats.kkt.tmUpdateInit.start();
-  
-  auto delta_wx = delta_wx_in;
-  auto delta_wd = delta_wd_in;
-  if(dcc!=0) {
-    //nlp_->log->printf(hovWarning, "LinSysCondensed: dual reg. %.6e primal %.6e %.6e\n", dcc, delta_wx, delta_wd);
-    assert(dcc == dcd);
-    delta_wx += fabs(dcc);
-    delta_wd += fabs(dcc);
-  }
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
   HessSp_ = Hess_triplet; //dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
@@ -150,7 +143,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   // hybrid compute mode -> linear algebra objects used internally by the class will be allocated on the device. Most of the inputs
   // to this class will be however on HOST under hybrid mode, so some objects are copied/replicated/transfered to device
   // gpu copute mode -> not yet supported
-  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeinity
+  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeneity
   //
   // REMARK: The objects that are copied/replicated are temporary and will be removed later on as the remaining sparse KKT computations
   // will be ported to device
@@ -168,17 +161,13 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     Hd_copy_ = LinearAlgebraFactory::create_vector(mem_space_internal, nineq);
 
     assert(nullptr == Dx_plus_deltawx_); //should be also not allocated
+    assert(nullptr == deltawx_); //should be also not allocated
     //allocate this internal vector on the device if hybrid compute mode
     Dx_plus_deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
+    deltawx_ = LinearAlgebraFactory::create_vector(mem_space_internal, Dx_->get_size());
   }
-
-  //
-  // compute diagonals
-  //
-
-  //Hd_
-  Hd_->copyFrom(*Dd_);
-  Hd_->addConstant(delta_wd);
+  Hd_->copyFrom(*Dd_);  
+  Hd_->axpy(1., delta_wd_in);
 
   //temporary code, see above note
   {
@@ -190,24 +179,30 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
       assert(Hd_par && "incorrect type for vector class");      
       Hd_raja->copy_from_host_vec(*Hd_par);
 
-      auto Dx_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
+      auto Dx_delta_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
+      auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
       auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
-      assert(Dx_raja && Dx_par && "incorrect type for vector class");
-      Dx_raja->copy_from_host_vec(*Dx_par);
+      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
+      assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");
+      
+      Dx_delta_raja->copy_from_host_vec(*Dx_par);
+      deltawx_raja->copy_from_host_vec(deltawx_host);
 #else
       assert(false && "compute mode not available under current build. Enable CUDA and RAJA.");
       Hd_copy_->copyFrom(*Hd_);
       Dx_plus_deltawx_->copyFrom(*Dx_);
+      deltawx_->copyFrom(delta_wx_in);
 #endif 
     } else {
       assert(dynamic_cast<hiopVectorPar*>(Hd_) && "incorrect type for vector class");
       Hd_copy_->copyFrom(*Hd_);
       Dx_plus_deltawx_->copyFrom(*Dx_);
+      deltawx_->copyFrom(delta_wx_in);
     }
   }
 
-  // Dd_ + delta_wx*I
-  Dx_plus_deltawx_->addConstant(delta_wx);
+  // Dx_ + delta_wx*I
+  Dx_plus_deltawx_->axpy(1.0, *deltawx_);
   
   nlp_->runStats.kkt.tmUpdateInit.stop();
   nlp_->runStats.kkt.tmUpdateLinsys.start();
@@ -312,6 +307,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
     //todo assert(M_condensed_ == linSys_->sys_matrix());
   
     t.reset(); t.start();
+    // compute M_condensed_ = M_condensed_ + Hess_csr_ + JtDiagJ_ + Dx_ + delta_wx*I
     //form lower and upper
     Hess_upper_csr_->form_from_numeric(*Hess_triplet);
     Hess_lower_csr_->form_transpose_from_numeric(*Hess_upper_csr_);
@@ -325,8 +321,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const double& delta_wx_in,
   }
 
   fflush(stdout);
-  
-  int nnz_condensed = M_condensed_->numberOfNonzeros();
 
   //
   // instantiate linear solver class based on values of compute_mode, safe mode, and other options

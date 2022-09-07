@@ -160,19 +160,19 @@ protected:
     std::string descr;
     bool specifiedInFile;
     bool specifiedAtRuntime;
-    virtual void print(FILE* f) const =0;
+    virtual void print(FILE* f, bool short_ver=false) const =0;
   };
   struct OptionInt : public Option { 
     OptionInt(int    v, int    low,    int upp, const char* description)
       : Option(description), val(v), lb(low), ub(upp) {}; 
     int    val, lb, ub; 
-    void print(FILE* f) const;
+    void print(FILE* f, bool short_ver=false) const;
   };
   struct OptionNum : public Option { 
     OptionNum(double v, double low, double upp, const char* description)
       : Option(description), val(v), lb(low), ub(upp) {}; 
     double val, lb, ub; 
-    void print(FILE* f) const;
+    void print(FILE* f, bool short_ver=false) const;
   };
 
   struct OptionStr : public Option { 
@@ -180,7 +180,7 @@ protected:
       : Option(description), val(v), range(range_) {};
     std::string val;
     std::vector<std::string> range;
-    void print(FILE* f) const;
+    void print(FILE* f, bool short_ver=false) const;
   };
 
   std::map<std::string, Option*> mOptions_;

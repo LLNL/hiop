@@ -155,24 +155,6 @@ namespace hiop
                             ir_->tol_);
           ir_->tol_ = 1e-12;
         }
-        /* 0) "Standard" GMRES and FGMRES (Saad and Schulz, 1986, Saad, 1992)  use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
-         * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
-         * GPU-accelerated implementation and it becomes even more pronouced for MPI+GPU-acceleration.
-         * Modified Gram-Schidt can be replaced by a different scheme.
-         *
-         * 1) One can use Classical Gram-Schmidt ("cgs") which is numerically unstable or reorthogonalized Classical Gram-Schmidt ("cgs2"), which
-         * is numerically stable and requires 3 synchrnozations and each iteration. Reorthogonalized Classical Gram-Schmidt makes two passes of
-         * Classical Gram-Schmidt. And two passes are enough to get vectors orthogonal to machine precision (Bjorck 1967).
-         * 
-         * 2) An alternative is a low-sych version (Swirydowicz and Thomas, 2020), which reformulates Modified Gram-Schmidt to be a (very small) triangular solve.
-         * It requires extra storage for the matrix used in triangular solve (kxk at iteration k), but only two sycnhronizations are needed per iteration.
-         * The inner producats are performed in bulk, which quarantees better GPU utilization. The second synchronization comes from normalizing the vector and 
-         * can be eliminated if the norm is postponed to the next iteration, but also makes code more complicated. This is why we use two-synch method ("mgs_two_synch")
-         * 
-         * 3) A recently submitted paper by Stephen Thomas (Thomas 202*) takes the triangular solve idea further and uses a different approximation for 
-         * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
-         * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephe's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
-         */ 
         ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
@@ -1287,6 +1269,10 @@ namespace hiop
   void hiopLinSolverSymSparseCUSOLVERInnerIR::GramSchmidt(int i)
   {
     double t;
+    const double one = 1.0;
+    const double minusone = -1.0;
+    const double zero = 0.0;
+    double s;
     int sw = 0;
     if(orth_option_ == "mgs") {
       sw = 0;
@@ -1422,9 +1408,26 @@ namespace hiop
         break;
         // the two low synch schemes
       case 2:
+	// KS: the kernels are limited by the size of the shared memory on the GPU. If too many vectors in Krylov space, use standard cublas routines.
         // V[1:i]^T[V[i] w]
-        mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
-
+        if(i < 200) {
+       	  mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+        } else {
+          cublasDgemm(cublas_handle_,
+                      CUBLAS_OP_T,
+                      CUBLAS_OP_N,
+                      i + 1,//m
+                      2,//n
+                      n_,//k
+                      &one,//alpha
+                      d_V_,//A
+                      n_,//lda
+                      &d_V_[i * n_],//B
+                      n_,//ldb
+                      &zero,
+                      d_rvGPU_,//c
+                      i+1);//ldc 
+	      } 
         // copy rvGPU to L
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
                    d_rvGPU_, 
@@ -1442,17 +1445,37 @@ namespace hiop
         // triangular solve
         for(int j = 0; j <= i; ++j) {
           h_H_[(i) * (restart_ + 1) + j] = h_rv_[j];
+          s = 0.0;
           for(int k = 0; k < j; ++k) {
-            h_H_[(i) * (restart_ + 1) + j] -= h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
+            s += h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
           } // for k
+          h_H_[(i) * (restart_ + 1) + j] -= s; 
         }   // for j
 
         cudaMemcpy(d_Hcolumn_, 
                    &h_H_[(i) * (restart_ + 1)], 
                    (i + 1) * sizeof(double), 
                    cudaMemcpyHostToDevice);
+        //again, use std cublas functions if Krylov space is too large
+        if(i < 200) {
+          mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+        } else {
+          cublasDgemm(cublas_handle_,
+                      CUBLAS_OP_N,
+                      CUBLAS_OP_N,
+                      n_,//m
+                      1,//n
+                      i + 1,//k
+                      &minusone,//alpha
+                      d_V_,//A
+                      n_,//lda
+                      d_Hcolumn_,//B
+                      i + 1,//ldb
+                      &one,
+                      &d_V_[(i + 1) * n_],//c
+                      n_);//ldc     
 
-        mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+        }
         // normalize (second synch)
         t=0.0;
         cublasDdot(cublas_handle_, n_, &d_V_[(i + 1) * n_], 1, &d_V_[(i + 1) * n_], 1, &t);
@@ -1471,8 +1494,25 @@ namespace hiop
       case 3: //two synch Gauss-Seidel mgs, SUPER STABLE
         // according to unpublisjed work by ST
         // L is where we keep the triangular matrix(L is ON THE CPU)
-        mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
-
+        // if Krylov space is too large, use std cublas (because out of shared mmory)
+        if(i < 200) {
+          mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+        } else {
+          cublasDgemm(cublas_handle_,
+                      CUBLAS_OP_T,
+                      CUBLAS_OP_N,
+                      i + 1,//m
+                      2,//n
+                      n_,//k
+                      &one,//alpha
+                      d_V_,//A
+                      n_,//lda
+                      &d_V_[i * n_],//B
+                      n_,//ldb
+                      &zero,
+                      d_rvGPU_,//c
+                      i+1);//ldc 
+        }
         // copy rvGPU to L
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
                    d_rvGPU_, 
@@ -1490,9 +1530,11 @@ namespace hiop
         //triangular solve
         for(int j = 0; j <= i; ++j) {
           h_H_[(i) * (restart_ + 1) + j] = h_rv_[j];
+          s = 0.0;
           for(int k = 0; k < j; ++k) {
-            h_H_[(i) * (restart_ + 1) + j] -= h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
+            s += h_L_[j * (restart_ + 1) + k] * h_H_[(i) * (restart_ + 1) + k];
           } // for k
+          h_H_[(i) * (restart_ + 1) + j] -= s;
         }   // for j
 
         // now compute h_rv = L^T h_H
@@ -1501,11 +1543,7 @@ namespace hiop
           // go through COLUMN OF L
           h_rv_[j] = 0.0;
           for(int k = j + 1; k <= i; ++k) {
-            if(j == k) {
-              h = 0.0;
-            } else {
-              h = h_L_[k * (restart_ + 1) + j];
-            }
+            h = h_L_[k * (restart_ + 1) + j];
             h_rv_[j] += h_H_[(i) * (restart_ + 1) + k] * h;
           }
         }
@@ -1513,9 +1551,11 @@ namespace hiop
         // and do one more tri solve with L^T: h_aux = (I-L)^{-1}h_rv
         for(int j = 0; j <= i; ++j) {
           h_aux_[j] = h_rv_[j];
+          s = 0.0;
           for(int k = 0; k < j; ++k) {
-            h_aux_[j] -= h_L_[j * (restart_ + 1) + k] * h_aux_[k];
+            s += h_L_[j * (restart_ + 1) + k] * h_aux_[k];
           } // for k
+          h_aux_[j] -= s;
         }   // for j
 
         // and now subtract that from h_H
@@ -1526,10 +1566,25 @@ namespace hiop
                    &h_H_[(i) * (restart_ + 1)], 
                    (i + 1) * sizeof(double), 
                    cudaMemcpyHostToDevice);
-
-
-        mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
-
+        // if Krylov space too large, use std cublas routines
+        if(i < 200) {
+          mass_axpy(n_, i, d_V_, &d_V_[(i+1) * n_],d_Hcolumn_);
+        } else {
+          cublasDgemm(cublas_handle_,
+                      CUBLAS_OP_N,
+                      CUBLAS_OP_N,
+                      n_,//m
+                      1,//n
+                      i + 1,//k
+                      &minusone,//alpha
+                      d_V_,//A
+                      n_,//lda
+                      d_Hcolumn_,//B
+                      i + 1,//ldb
+                      &one,
+                      &d_V_[(i + 1) * n_],//c
+                      n_);//ldc     
+        }
         // normalize (second synch)
         t=0.0;
         cublasDdot(cublas_handle_, n_, &d_V_[(i + 1) * n_], 1, &d_V_[(i + 1) * n_], 1, &t);

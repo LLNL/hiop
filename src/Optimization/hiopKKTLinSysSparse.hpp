@@ -77,10 +77,10 @@ public:
   hiopKKTLinSysCompressedSparseXYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedSparseXYcYd();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
@@ -139,10 +139,10 @@ public:
   hiopKKTLinSysCompressedSparseXDYcYd(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysCompressedSparseXDYcYd();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   virtual bool solveCompressed(hiopVector& rx, hiopVector& rd, hiopVector& ryc, hiopVector& ryd,
                                hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd);
@@ -212,10 +212,10 @@ public:
 
   virtual ~hiopKKTLinSysSparseFull();
 
-  virtual bool build_kkt_matrix(const double& delta_wx,
-                                const double& delta_wd,
-                                const double& delta_cc,
-                                const double& delta_cd);
+  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
+                                const hiopVector& delta_wd,
+                                const hiopVector& delta_cc,
+                                const hiopVector& delta_cd);
 
   bool solve(hiopVector& rx, hiopVector& ryc, hiopVector& ryd, hiopVector& rd,
              hiopVector& rvl, hiopVector& rvu, hiopVector& rzl, hiopVector& rzu,

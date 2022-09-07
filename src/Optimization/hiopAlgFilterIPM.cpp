@@ -282,17 +282,22 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   bool ret_bool = false;
   
   if(nlp->options->GetString("warm_start")=="yes") {
-    ret_bool = nlp->get_starting_point(*it_ini.get_x(),
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
-                                       *it_ini.get_d(),
-                                       *it_ini.get_vl(), *it_ini.get_vu());
+    ret_bool = nlp->get_warmstart_point(*it_ini.get_x(),
+                                        *it_ini.get_zl(),
+                                        *it_ini.get_zu(),
+                                        *it_ini.get_yc(),
+                                        *it_ini.get_yd(),
+                                        *it_ini.get_d(),
+                                        *it_ini.get_vl(),
+                                        *it_ini.get_vu());
     warmstart_avail = duals_avail = slacks_avail = true;
   } else {
     ret_bool = nlp->get_starting_point(*it_ini.get_x(),
                                        duals_avail,
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
+                                       *it_ini.get_zl(),
+                                       *it_ini.get_zu(),
+                                       *it_ini.get_yc(), 
+                                       *it_ini.get_yd(),
                                        slacks_avail,
                                        *it_ini.get_d());
     
@@ -942,7 +947,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
@@ -1670,7 +1675,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
@@ -1701,13 +1706,22 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   hiopKKTLinSys* kkt = decideAndCreateLinearSystem(nlp);
   assert(kkt != NULL);
   
-  auto* kkt_normaleqn = dynamic_cast<hiopKKTLinSysNormalEquation*>(kkt);
-  if(kkt_normaleqn) {
-    pd_perturb_ = new hiopPDPerturbationNormalEqn();
+  if(nlp->options->GetString("normaleqn_regularization_priority")=="dual_first" && nlp->options->GetString("KKTLinsys")=="normaleqn") {
+    if(nlp->options->GetString("regularization_method")=="randomized") {
+      pd_perturb_ = new hiopPDPerturbationDualFirstRand();
+    } else {
+      pd_perturb_ = new hiopPDPerturbationDualFirstScala();
+    }
   } else {
-    pd_perturb_ = new hiopPDPerturbation();
+    if(nlp->options->GetString("regularization_method")=="randomized") {
+      pd_perturb_ = new hiopPDPerturbationPrimalFirstRand();
+    } else {
+      pd_perturb_ = new hiopPDPerturbationPrimalFirstScala();
+    }
   }
+
   if(!pd_perturb_->initialize(nlp)) {
+    delete kkt;
     return SolveInitializationError;
   }
   
@@ -1758,6 +1772,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     if(!bret) {
       solver_status_ = Error_In_User_Function;
       nlp->runStats.tmOptimizTotal.stop();
+      delete kkt;
       return Error_In_User_Function;
     }
 
@@ -1832,6 +1847,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                  _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
       if(!bret) {
         solver_status_ = Error_In_User_Function;
+        delete kkt;
         return Error_In_User_Function;
       }
       nlp->log->
@@ -1926,6 +1942,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(linsol_safe_mode_on) {
           nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
                           hovError);
+          delete kkt;
           return solver_status_ = Err_Step_Computation;
         } else {
 
@@ -1934,6 +1951,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
             nlp->log->write("Unrecoverable error in step computation (factorization) [2]. Will exit here.",
                             hovError);
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
 
@@ -1958,6 +1976,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it fails under safe mode, this is fatal
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
           // safe mode was turned on in the above call because kkt->computeDirections(...) failed 
@@ -1971,6 +1990,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it failed under safe mode
+            delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
           // safe mode was turned on in the above call because kkt->computeDirections(...) failed or the number
@@ -2042,6 +2062,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
           solver_status_ = Error_In_User_Function;
           nlp->runStats.tmOptimizTotal.stop();
+          delete kkt;
           return Error_In_User_Function;
         }
 
@@ -2243,6 +2264,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       if(!this->evalNlp_derivOnly(*it_trial, *_grad_f, *_Jac_c, *_Jac_d, *_Hess_Lagr)) {
         solver_status_ = Error_In_User_Function;
         nlp->runStats.tmOptimizTotal.stop();
+        delete kkt;
         return Error_In_User_Function;
       }
     }

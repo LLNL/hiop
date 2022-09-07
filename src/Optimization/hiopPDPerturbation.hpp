@@ -2,6 +2,7 @@
 #define HIOP_PERTURB_PD_LINSSYS
 
 #include "hiopNlpFormulation.hpp"
+#include "hiopVector.hpp"
 
 namespace hiop
 {
@@ -23,71 +24,115 @@ public:
       kappa_w_plus_(8.),
       delta_c_bar_(1e-8),
       kappa_c_(0.25),
-      delta_wx_curr_(0.),
-      delta_wd_curr_(0.), 
-      delta_cc_curr_(0.), 
-      delta_cd_curr_(0.), 
-      delta_wx_last_(0.), 
-      delta_wd_last_(0.), 
-      delta_cc_last_(0.), 
-      delta_cd_last_(0.),
       hess_degenerate_(dtNotEstablished),
       jac_degenerate_(dtNotEstablished),
       num_degen_iters_(0),
       num_degen_max_iters_(3),
       deltas_test_type_(dttNoTest),
-      mu_(1e-8)
+      mu_(1e-8),
+      max_uniform_ratio_{1.0},
+      min_uniform_ratio_{0.9},
+      delta_wx_curr_(nullptr),
+      delta_wd_curr_(nullptr),
+      delta_cc_curr_(nullptr),
+      delta_cd_curr_(nullptr),
+      delta_wx_last_(nullptr),
+      delta_wd_last_(nullptr),
+      delta_cc_last_(nullptr),
+      delta_cd_last_(nullptr),
+      nlp_(nullptr),
+      delta_wx_curr_db_{0.},
+      delta_wd_curr_db_{0.},
+      delta_cc_curr_db_{0.},
+      delta_cd_curr_db_{0.},
+      delta_wx_last_db_{0.},
+      delta_wd_last_db_{0.},
+      delta_cc_last_db_{0.},
+      delta_cd_last_db_{0.}
   {
   }
-  
-  virtual ~hiopPDPerturbation() = default;
+
+  virtual ~hiopPDPerturbation()
+  {
+    delete delta_wx_curr_;
+    delete delta_wd_curr_;
+    delete delta_cc_curr_;
+    delete delta_cd_curr_;
+    delete delta_wx_last_;
+    delete delta_wd_last_;
+    delete delta_cc_last_;
+    delete delta_cd_last_;
+  }
 
   /** Initializes and reinitializes object based on the 'options' parameters of the
    * 'nlp_' object.
    * Returns 'false' if something goes wrong, otherwise 'true'
    */
-  bool initialize(hiopNlpFormulation* nlp);
+  virtual bool initialize(hiopNlpFormulation* nlp);
 
   /** Set log-barrier mu. */
-  inline void set_mu(const double& mu)
+  virtual inline void set_mu(const double& mu)
   {
     mu_ = mu;
   }
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(double& delta_wx, double& delta_wd,
-			      double& delta_cc, double& delta_cd);
+  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
+                                      hiopVector& delta_wd,
+                                      hiopVector& delta_cc,
+                                      hiopVector& delta_cd) = 0;
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(double& delta_wx,
-                                             double& delta_wd,
-                                             double& delta_cc,
-                                             double& delta_cd);
+  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
+                                             hiopVector& delta_wd,
+                                             hiopVector& delta_cc,
+                                             hiopVector& delta_cd) = 0;
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  virtual bool compute_perturb_singularity(double& delta_wx, double& delta_wd,
-				     double& delta_cc, double& delta_cd);
+  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
+                                           hiopVector& delta_wd,
+                                           hiopVector& delta_cc,
+                                           hiopVector& delta_cd) = 0;
 
-  inline bool get_curr_perturbations(double& delta_wx, double& delta_wd,
-				     double& delta_cc, double& delta_cd)
+  inline bool get_curr_perturbations(hiopVector& delta_wx, 
+                                     hiopVector& delta_wd,
+                                     hiopVector& delta_cc,
+                                     hiopVector& delta_cd)
   {
-    delta_wx = delta_wx_curr_;
-    delta_wd = delta_wd_curr_;
-    delta_cc = delta_cc_curr_;
-    delta_cd = delta_cd_curr_;
+    delta_wx.copyFrom(*delta_wx_curr_);
+    delta_wd.copyFrom(*delta_wd_curr_);
+    delta_cc.copyFrom(*delta_cc_curr_);
+    delta_cd.copyFrom(*delta_cd_curr_);
     return true;
   }
+
+  virtual bool check_consistency() = 0;
+
 protected:
   /** Current and last perturbations, primal is split in x and d, dual in c and d. */
-  double delta_wx_curr_, delta_wd_curr_;
-  double delta_cc_curr_, delta_cd_curr_;
+  hiopVector* delta_wx_curr_;
+  hiopVector* delta_wd_curr_;
+  hiopVector* delta_cc_curr_;
+  hiopVector* delta_cd_curr_;
 
-  double delta_wx_last_, delta_wd_last_;
-  double delta_cc_last_, delta_cd_last_;
+  hiopVector* delta_wx_last_;
+  hiopVector* delta_wd_last_;
+  hiopVector* delta_cc_last_;
+  hiopVector* delta_cd_last_;
 
+  double delta_wx_curr_db_;
+  double delta_wd_curr_db_;
+  double delta_cc_curr_db_;
+  double delta_cd_curr_db_;
+
+  double delta_wx_last_db_;
+  double delta_wd_last_db_;
+  double delta_cc_last_db_;
+  double delta_cd_last_db_;
+  
   /** Algorithmic parameters */
 
   /** Smallest possible perturbation for Hessian (for primal 'x' and 's' variables). */
@@ -107,6 +152,9 @@ protected:
   double delta_c_bar_;
   /** Exponent of mu when computing regularization for Jacobian. */
   double kappa_c_;
+  
+  double min_uniform_ratio_;
+  double max_uniform_ratio_;
   
   /** Degeneracy is handled as in Ipopt*/
   
@@ -138,79 +186,153 @@ protected:
     dttDeltacposDeltawpos
   };
 
+  enum DeltasUpdateType
+  {
+    DualUpdate = -1,
+    PrimalUpdate = 0,
+    PDUpdate
+  };
+
   /** Current status */
   DeltasTestType deltas_test_type_;
   
   /** Log barrier mu in the outer loop. */
   double mu_;
 
+  hiopNlpFormulation* nlp_;
+
 protected: //methods
   /** Decides degeneracy @hess_degenerate_ and @jac_degenerate_ based on @deltas_test_type_ 
    *  when the @num_degen_iters_ > @num_degen_max_iters_
    */
-  void update_degeneracy_type();
-  
-private: //methods
-  /** Internal method implementing the computation of delta_w's to correct wrong inertia
-   * 
-   */
-  bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
-
-  double compute_delta_c(const double& mu) const;
+  virtual void update_degeneracy_type();
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid) = 0;
+  virtual void set_delta_last_vec(DeltasUpdateType taskid) = 0;
 };
 
-
-class hiopPDPerturbationNormalEqn : public hiopPDPerturbation
+class hiopPDPerturbationPrimalFirstScala : public hiopPDPerturbation
 {
 public:
-  hiopPDPerturbationNormalEqn()
-    : hiopPDPerturbation(),
-      delta_c_min_bar_(1e-20),
-      delta_c_max_bar_(1e-2),
-      kappa_c_plus_(10.)
-  {
-  }
-
-  ~hiopPDPerturbationNormalEqn()
-  {
-  }
+  /** Default constructor 
+   * Provides complete initialization, but uses algorithmic parameters from the Ipopt
+   * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
+   * this class based on HiOp option file or HiOp user-supplied runtime options.
+   */
+  hiopPDPerturbationPrimalFirstScala() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationPrimalFirstScala() {}
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool compute_initial_deltas(double& delta_wx,
-                              double& delta_wd,
-                              double& delta_cc,
-                              double& delta_cd);
+  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
+                                      hiopVector& delta_wd,
+                                      hiopVector& delta_cc,
+                                      hiopVector& delta_cd);
 
   /** Method for correcting inertia */
-  bool compute_perturb_wrong_inertia(double& delta_wx, 
-                                     double& delta_wd,
-                                     double& delta_cc,
-                                     double& delta_cd);
+  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
+                                             hiopVector& delta_wd,
+                                             hiopVector& delta_cc,
+                                             hiopVector& delta_cd);
+
+  /** Method for correcting singular Jacobian 
+   *  (follows Ipopt closely since the paper seems to be outdated)
+   */
+  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
+                                           hiopVector& delta_wd,
+                                           hiopVector& delta_cc,
+                                           hiopVector& delta_cd);
+                  
+  virtual bool check_consistency();
+                         
+protected:
+
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);
+
+  /** Internal method implementing the computation of delta_w's to correct wrong inertia
+   * 
+   */
+  virtual bool guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd);
+
+  virtual double compute_delta_c(const double& mu) const;  
+
+};
+
+class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScala
+{
+public:
+  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScala() {}
+
+  virtual ~hiopPDPerturbationPrimalFirstRand() {}
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
+};
+
+
+class hiopPDPerturbationDualFirstScala : public hiopPDPerturbation
+{
+public:
+  hiopPDPerturbationDualFirstScala();
+
+  virtual ~hiopPDPerturbationDualFirstScala();
+
+  /** Called when a new linear system is attempted to be factorized 
+   */
+  virtual bool compute_initial_deltas(hiopVector& delta_wx,
+                                      hiopVector& delta_wd,
+                                      hiopVector& delta_cc,
+                                      hiopVector& delta_cd);
+
+  /** Method for correcting inertia */
+  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
+                                             hiopVector& delta_wd,
+                                             hiopVector& delta_cc,
+                                             hiopVector& delta_cd);
                             
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */  
-  bool compute_perturb_singularity(double& delta_wx,
-                                   double& delta_wd,
-                                   double& delta_cc,
-                                   double& delta_cd);
+  virtual bool compute_perturb_singularity(hiopVector& delta_wx,
+                                           hiopVector& delta_wd,
+                                           hiopVector& delta_cc,
+                                           hiopVector& delta_cd);
 
-private: //methods
+  virtual bool check_consistency();
+                         
+protected: //variables
+  double delta_c_min_bar_;
+  double kappa_c_plus_;
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);
+
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
-  bool compute_primal_perturb_impl(double& delta_wx, double& delta_wd);
+  virtual bool compute_primal_perturb_impl();
                                       
   /** 
    * Internal method implementing the computation of delta_c's to correct wrong inertia
    */
-  bool compute_dual_perturb_impl(const double& mu, double& delta_cc, double& delta_cd);
+  virtual bool compute_dual_perturb_impl(const double& mu);
 
-protected: //variables
-  double delta_c_max_bar_;
-  double delta_c_min_bar_;
-  double kappa_c_plus_;
+};
+
+class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScala
+{
+public:
+  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScala() {}
+
+  virtual ~hiopPDPerturbationDualFirstRand() {}
+
+protected: // methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
+  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
 };
 
 } //end of namespace
