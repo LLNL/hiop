@@ -90,23 +90,35 @@ using namespace hiop;
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-hiopVector* LinearAlgebraFactory::create_vector(const HardwareInfo& hi, //const std::string& mem_space,
+hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const std::string& mem_space,
                                                 const size_type& glob_n,
                                                 index_type* col_part,
                                                 MPI_Comm comm)
 {
   const std::string mem_space_upper = toupper(hi.mem_space);
   if(mem_space_upper == "DEFAULT") {
+    assert(hi.mem_backend == "STDCPP");
+    assert(hi.exec_backend == "HOST");
     return new hiopVectorPar(glob_n, col_part, comm);
   } else {
-    
+
+    if(hi.exec_backend == "RAJA") {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
+      if(hi.mem_backend == "UMPIRE") {
+        return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
+      } else {
+        assert(false && "to be implemented");
+        return nullptr;
+      }
 #else
-    assert(false && "requested memory space not available because Hiop was not"
+    assert(false && "requested execution space not available because Hiop was not"
            "built with RAJA support");
     return new hiopVectorPar(glob_n, col_part, comm);
 #endif
+    } else {
+        assert(false && "to be implemented");
+        return nullptr;      
+    }
   }
 }
 

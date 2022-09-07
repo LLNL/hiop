@@ -45,8 +45,8 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#ifndef HIOP_EXEC_BACKEND
-#define HIOP_EXEC_BACKEND
+#ifndef HIOP_EXEC_SPACE
+#define HIOP_EXEC_SPACE
 
 #include <hiop_defs.hpp>
 #include <string>
@@ -61,6 +61,36 @@
 namespace hiop
 {
 
+/** 
+ * Runtime information about the execution space. Closely related to HiOp's options.
+ */
+struct ExecSpaceInfo
+{
+  ExecSpaceInfo(const std::string mem_space_in)
+  {
+    mem_space = mem_space_in;
+    if(mem_space == "DEFAULT") {
+      mem_backend = "STDCPP";
+      mem_backend_host = "STDCPP";
+      exec_backend = "HOST";
+    } else {
+      mem_backend = "UMPIRE";
+      mem_backend_host = "UMPIRE";
+      exec_backend = "RAJA";
+    }
+  }
+  ExecSpaceInfo(const char* mem_space_in)
+    : ExecSpaceInfo(std::string(mem_space_in))
+  {
+  }
+  
+  std::string mem_space;
+  std::string mem_backend;
+  std::string mem_backend_host;
+  std::string exec_backend;
+};
+
+  
 ///////////////////////////////////////////////////////////////////////////////////////
 // The memory backends classes
 ///////////////////////////////////////////////////////////////////////////////////////
