@@ -1875,7 +1875,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     
     nlp->runStats.kkt.start_optimiz_iteration();
     //
-    // this is the linear solve (computeDirections) loop that iterates at most two times
+    // this is the linear solve (compute_search_direction) loop that iterates at most two times
     //
     //  - two times when the step is small (search direction is assumed to be invalid, of ascent): first time
     // linear solve with safe mode=off failed; second time with safe mode on
@@ -1951,7 +1951,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             return solver_status_ = Err_Step_Computation;
           }
 
-          //turn on safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+          //turn on safe mode to repeat linear solve (kkt->update(...) and kkt->compute_directions_w_IR(...)
           //(meaning additional accuracy and stability is requested, possibly from a new kkt class)
           linsol_safe_mode_on = true;
           //linsol_safe_mode_lastiter = iter_num;
@@ -1975,7 +1975,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
-          // safe mode was turned on in the above call because kkt->computeDirections(...) failed 
+          // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed 
           continue;
         } 
       } else {
@@ -1989,7 +1989,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
-          // safe mode was turned on in the above call because kkt->computeDirections(...) failed or the number
+          // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed or the number
           // of inertia corrections reached max number allowed
           continue;
         }         
@@ -2165,20 +2165,20 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           filter.add(theta_trial, logbar->f_logbar_trial);
         }
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==2) {
         //switching condition does not hold for the trial
         filter.add(theta_trial, logbar->f_logbar_trial);
 
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==3) {
         //Armijo (and switching condition) hold, nothing to do.
 
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==0) {
 
@@ -2196,7 +2196,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             solver_status_ = NlpSolve_Pending;
           }
 
-          // exit the linear solve (computeDirections) loop
+          // exit the linear solve (compute_search_direction) loop
           nlp->runStats.tmSolverInternal.stop();
           break;
         } else {
@@ -2208,7 +2208,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             // however take the update;
             // if the update doesn't pass the convergence test, the optimiz. loop will exit
 
-            // first exit the linear solve (computeDirections) loop
+            // first exit the linear solve (compute_search_direction) loop
             nlp->runStats.tmSolverInternal.stop();
             break;
           }
@@ -2220,7 +2220,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                            "Requesting additional accuracy and stability from the KKT linear system "
                            "at iteration %d (safe mode ON) [2]\n", iter_num);
 
-          // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+          // repeat linear solve (compute_search_direction) in safe mode (meaning additional accuracy
           // and stability is requested)
           nlp->runStats.tmSolverInternal.stop();
           continue;
@@ -2230,7 +2230,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         nlp->runStats.tmSolverInternal.stop();
         assert(false && "unrecognized value for lsStatus");
       }
-    } // end of the linear solve (computeDirections) loop
+    } // end of the linear solve (compute_search_direction) loop
 
     if(NlpSolve_Pending!=solver_status_) {
       break; //failure of the line search or user stopped.
@@ -2752,7 +2752,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       }
       // compute rhs for soft feasibility restoration. Use resid_trial since it hasn't been used
       resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
-      bret = kkt->computeDirections(resid_trial, soft_dir); 
+      bret = kkt->compute_directions_w_IR(resid_trial, soft_dir); 
     }    
     assert(bret);
 
