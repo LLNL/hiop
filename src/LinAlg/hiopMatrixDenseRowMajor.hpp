@@ -224,8 +224,11 @@ public:
   virtual size_type get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  double* local_data_const() const {return M_[0]; }
-  double* local_data() {return M_[0]; }
+  virtual double* local_data_const() const {return M_[0]; }
+  virtual double* local_data() {return M_[0]; }
+  virtual double* local_data_host_const() const {return M_[0]; }
+  virtual double* local_data_host() {return M_[0]; }
+
 protected:
   //do not use this unless you sure you know what you're doing
   inline double** get_M() { return M_; }
@@ -236,6 +239,10 @@ public:
   virtual bool assertSymmetry(double tol=1e-16) const;
 #endif
   virtual bool symmetrize();
+
+  virtual void copyToDev(){}
+  virtual void copyFromDev(){}
+
 
 private:
   double** M_; //local storage

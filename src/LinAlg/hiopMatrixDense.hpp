@@ -231,6 +231,9 @@ public:
 
   virtual double* local_data_const() const {assert(false && "not implemented in base class"); return nullptr;}
   virtual double* local_data() {assert(false && "not implemented in base class"); return nullptr;}
+  virtual double* local_data_host_const() const {assert(false && "not implemented in base class"); return nullptr;}
+  virtual double* local_data_host() {assert(false && "not implemented in base class"); return nullptr;}
+
 public:
   virtual size_type m() const {return m_local_;}
   virtual size_type n() const {return n_global_;}
@@ -242,6 +245,10 @@ public:
   }
 #endif
   virtual bool symmetrize() = 0;
+
+  virtual void copyToDev() = 0;
+  virtual void copyFromDev() = 0;
+
 
 protected:
   size_type m_local_;

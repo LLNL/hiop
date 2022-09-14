@@ -248,9 +248,10 @@ public:
   virtual size_type get_local_size_m() const { return m_local_; }
   virtual MPI_Comm get_mpi_comm() const { return comm_; }
 
-  inline double* local_data_host() const {return data_host_; }
-  double* local_data() {return data_dev_; }
-  double* local_data_const() const { return data_dev_; }
+  virtual double* local_data_host() {return data_host_; }
+  virtual double* local_data_host_const() const {return data_host_; }
+  virtual double* local_data() {return data_dev_; }
+  virtual double* local_data_const() const { return data_dev_; }
 public:
   virtual size_type m() const {return m_local_;}
   virtual size_type n() const {return n_global_;}
