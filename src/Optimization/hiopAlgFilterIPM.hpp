@@ -353,7 +353,7 @@ protected:
   virtual hiopKKTLinSys* switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
                                             const double& mu,
                                             const int& iter_num,
-                                            const bool& linsol_safe_mode_on,
+                                            bool& linsol_safe_mode_on,
                                             const int& linsol_safe_mode_max_iters,
                                             int& linsol_safe_mode_last_iter_switched_on,
                                             double& theta_mu,

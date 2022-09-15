@@ -1471,7 +1471,7 @@ hiopKKTLinSys*
 hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
                                             const double& mu,
                                             const int& iter_num,
-                                            const bool& linsol_safe_mode_on,
+                                            bool& linsol_safe_mode_on,
                                             const int& linsol_safe_mode_max_iters,
                                             int& linsol_safe_mode_last_iter_switched_on,
                                             double& theta_mu,
@@ -1515,6 +1515,33 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
   }
 #endif
 #endif
+
+// TODO: turn to 0 --- keep using fast mode till linear solver (kkt->update) fails
+#if 1
+  //
+  // MDS starts with fast mode, when linsol_mode = speculative
+  // Safe mode is on when IPM is arroching convergence, or a high accurate solution is required
+  //
+  if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
+    if("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode"))) {
+      const double target_mu = nlp->options->GetNumeric("tolerance");
+      if( (false==linsol_safe_mode_on) &&
+          (iter_num - linsol_safe_mode_last_iter_switched_on < linsol_safe_mode_max_iters) &&
+          (mu < target_mu*10) ){
+        // keep using safe mode for couple of iterations when close to convergence
+        linsol_safe_mode_on=true;
+        switched = true;
+      }
+    } else {
+      //
+      // don't switch, keep using the same mode
+      //
+      switched = false;
+    }
+    return kkt_curr;
+  }
+#endif
+
   //
   // all other KKT formulations -> never switch back to safe mode
   //
@@ -1585,33 +1612,8 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
 #endif
 
   //
-  // MDS safe mode is on for the first three iterations for MDS under speculative linsol mode
-  //        
-  //TODO: maybe the newly developed adjust slacks and push bounds features make the MDS probles less
-  //challenging and we don't need safe mode in the first three iterations for MDS under 'speculative'
-  // IR should also make this robust.
-
-  if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
-
-    //first two iteration are safe-mode : TODO: this likely can be relaxed
-    if(iter_num<=2) {   
-      linsol_safe_mode_on=true;
-      switched = false;
-    } else {
-      if(linsol_safe_mode_on==true) {
-        switched = true;
-        linsol_safe_mode_on = false;
-      } else {
-        assert(false==linsol_safe_mode_on);
-        switched = false;
-      }
-    }
-    kkt_curr->set_safe_mode(linsol_safe_mode_on);
-    return kkt_curr;
-  }
-
-  //
   // all other KKT formulations -> do nothing (and return switched=false)
+  // if linsol_mode = speculative, linsol_safe_mode_on = false by initialization, and hiop starts from fast mode.
   //
   switched = false;
   return kkt_curr;
