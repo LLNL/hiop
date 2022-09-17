@@ -408,6 +408,8 @@ int hiopLinSolverCholCuSparse::matrixChanged()
     if(!initial_setup()) {
       nlp_->log->printf(hovError, 
                         "hiopLinSolverCholCuSparse: initial setup failed.\n");
+
+      RANGE_POP();
       return -1;
     }
     nlp_->runStats.linsolv.tmFactTime.stop();
@@ -443,6 +445,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
     nlp_->log->printf(hovWarning, 
                       "hiopLinSolverCholCuSparse: factorization failed: CUSOLVER_STATUS=%d.\n",
                       ret);
+    RANGE_POP();
     return -1;
   }
   nlp_->runStats.linsolv.tmFactTime.stop();
@@ -461,6 +464,7 @@ int hiopLinSolverCholCuSparse::matrixChanged()
                       "hiopLinSolverCholCuSparse: the %dth pivot is <=%.5e\n",
                       position,
                       zero_piv_tol);
+    RANGE_POP();
     return -1;
   } 
   RANGE_POP();
@@ -509,6 +513,7 @@ bool hiopLinSolverCholCuSparse::solve(hiopVector& x_in)
     nlp_->log->printf(hovWarning,
                       "hiopLinSolverCholCuSparse: solve failed: CUSOLVER_STATUS=%d.\n",
                       ret);
+    RANGE_POP();
     return false;
   }
 

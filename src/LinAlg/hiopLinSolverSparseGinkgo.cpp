@@ -341,8 +341,8 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
     dense_x_host->copy_from(dense_x.get());
-    RANGE_POP();
     delete rhs; rhs=nullptr;
+    RANGE_POP();
     return 1;
   }
 
@@ -429,8 +429,8 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
-    RANGE_POP();
     delete rhs; rhs=nullptr;
+    RANGE_POP();
     return 1;
   }
 

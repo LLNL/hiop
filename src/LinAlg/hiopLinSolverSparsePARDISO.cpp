@@ -514,6 +514,7 @@ namespace hiop
 
     if ( error_ != 0) {
       printf ("PardisoSolver - ERROR during backsolve: %d\n", error_ );
+      RANGE_POP();
       return false;
     }
 

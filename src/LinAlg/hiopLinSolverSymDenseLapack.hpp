@@ -77,7 +77,7 @@ public:
     RANGE_PUSH(__FUNCTION__);
     assert(M_->n() == M_->m());
     int N=M_->n(), lda = N, info;
-    if(N==0) return 0;
+    if(N==0) { RANGE_POP(); return 0; }
 
     nlp_->runStats.linsolv.tmFactTime.start();
     
@@ -106,6 +106,7 @@ public:
       nlp_->log->printf(hovError,
 		       "hiopLinSolverSymDense error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
+      RANGE_POP();
       return -1;
     } else {
       if(info>0) {
@@ -114,6 +115,7 @@ public:
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
+        RANGE_POP();
 	return -1;
       }
     }
@@ -165,8 +167,8 @@ public:
     //printf("(pos,null,neg)=(%d,%d,%d)\n", posEigVal, nullEigVal, negEigVal);
     nlp_->runStats.linsolv.tmInertiaComp.stop();
     
-    if(nullEigVal>0) return -1;
     RANGE_POP();
+    if(nullEigVal>0) return -1;
     return negEigVal;
   }
     
@@ -179,7 +181,7 @@ public:
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
     int N=M_->n(), LDA = N, info;
-    if(N==0) return true;
+    if(N==0) { RANGE_POP(); return true; }
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
     

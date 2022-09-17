@@ -94,13 +94,13 @@ namespace hiop
   {
     RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
-    if(!HessSp_) { assert(false); return false; }
+    if(!HessSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_cSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_c_);
-    if(!Jac_cSp_) { assert(false); return false; }
+    if(!Jac_cSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_d_);
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!Jac_dSp_) { assert(false); RANGE_POP(); return false; }
 
     size_type nx = HessSp_->n(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros();
@@ -195,10 +195,10 @@ namespace hiop
                   hiopVector& dx, hiopVector& dyc, hiopVector& dyd)
   {
     RANGE_PUSH(__FUNCTION__);
-    if(!nlpSp_)   { assert(false); return false; }
-    if(!HessSp_)  { assert(false); return false; }
-    if(!Jac_cSp_) { assert(false); return false; }
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!nlpSp_)    { assert(false); RANGE_POP(); return false; }
+    if(!HessSp_)   { assert(false); RANGE_POP(); return false; }
+    if(!Jac_cSp_)  { assert(false); RANGE_POP(); return false; }
+    if(!Jac_dSp_)  { assert(false); RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -241,7 +241,7 @@ namespace hiop
     if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
     }
-    if(false==linsol_ok) return false;
+    if(false==linsol_ok) { RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -421,13 +421,13 @@ namespace hiop
   {    
     RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
-    if(!HessSp_) { assert(false); return false; }
+    if(!HessSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_cSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c_);
-    if(!Jac_cSp_) { assert(false); return false; }
+    if(!Jac_cSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!Jac_dSp_) { assert(false); RANGE_POP(); return false; }
 
     size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
     int nnz = HessSp_->numberOfNonzeros() + Jac_cSp_->numberOfNonzeros() + Jac_dSp_->numberOfNonzeros() + nd + nx + nd + neq + nineq;
@@ -523,10 +523,10 @@ namespace hiop
                   hiopVector& dx, hiopVector& dd, hiopVector& dyc, hiopVector& dyd)
   {
     RANGE_PUSH(__FUNCTION__);
-    if(!nlpSp_)   { assert(false); return false; }
-    if(!HessSp_)  { assert(false); return false; }
-    if(!Jac_cSp_) { assert(false); return false; }
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!nlpSp_)   { assert(false); RANGE_POP(); return false; }
+    if(!HessSp_)  { assert(false); RANGE_POP(); return false; }
+    if(!Jac_cSp_) { assert(false); RANGE_POP(); return false; }
+    if(!Jac_dSp_) { assert(false); RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -571,7 +571,7 @@ namespace hiop
     if(write_linsys_counter_>=0) {
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
     }
-    if(false==linsol_ok) return false;
+    if(false==linsol_ok) { RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -859,13 +859,13 @@ namespace hiop
   {
     RANGE_PUSH(__FUNCTION__);
     HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
-    if(!HessSp_) { assert(false); return false; }
+    if(!HessSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_cSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c_);
-    if(!Jac_cSp_) { assert(false); return false; }
+    if(!Jac_cSp_) { assert(false); RANGE_POP(); return false; }
 
     Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!Jac_dSp_) { assert(false); RANGE_POP(); return false; }
 
     size_type nx = HessSp_->n(); 
     size_type nd = Jac_dSp_->m();
@@ -1059,10 +1059,10 @@ namespace hiop
                                        hiopVector& dsdl, hiopVector& dsdu, hiopVector& dsxl, hiopVector& dsxu)
   {
     RANGE_PUSH(__FUNCTION__);
-    if(!nlpSp_)   { assert(false); return false; }
-    if(!HessSp_)  { assert(false); return false; }
-    if(!Jac_cSp_) { assert(false); return false; }
-    if(!Jac_dSp_) { assert(false); return false; }
+    if(!nlpSp_)   { assert(false); RANGE_POP(); return false; }
+    if(!HessSp_)  { assert(false); RANGE_POP(); return false; }
+    if(!Jac_cSp_) { assert(false); RANGE_POP(); return false; }
+    if(!Jac_dSp_) { assert(false); RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
@@ -1124,7 +1124,7 @@ namespace hiop
     if(write_linsys_counter_>=0)
       csr_writer_.writeSolToFile(*rhs_, write_linsys_counter_);
 
-    if(false==linsol_ok) return false;
+    if(false==linsol_ok) { RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 

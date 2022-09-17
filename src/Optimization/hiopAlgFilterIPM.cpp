@@ -326,6 +326,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
+    RANGE_POP();
     return false;
   }
 
@@ -345,6 +346,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   if(!this->evalNlp_noHess(it_ini, f, c, d, gradf, Jac_c, Jac_d)) {
     nlp->log->printf(hovError, "Failure in evaluating user provided NLP functions.");
     assert(false);
+    RANGE_POP();
     return false;
   }
 
@@ -407,6 +409,7 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   //we have the duals
   if(!this->evalNlp_HessOnly(it_ini, *_Hess_Lagr)) {
     assert(false);
+    RANGE_POP();
     return false;
   }
 

@@ -341,6 +341,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
   if(!perturb_calc_->compute_initial_deltas(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_)) {
     nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
+    RANGE_POP();
     return false;
   }
 
@@ -367,6 +368,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
     continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
     
     if(-1==continue_re_fact) {
+      RANGE_POP();
       return false;
     } else if(0==continue_re_fact) {
       break;
@@ -381,6 +383,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
     nlp_->log->printf(hovError,
         "Reached max number (%d) of refactorization within an outer iteration.\n",
               max_refactorization);
+    RANGE_POP();
     return false;
   }
   RANGE_POP();
@@ -427,6 +430,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
     continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
     
     if(-1==continue_re_fact) {
+      RANGE_POP();
       return false;
     } else {
       // this while loop is used to correct singularity
@@ -697,6 +701,7 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
 #endif
 
   if(false==sol_ok) {
+    RANGE_POP();
     return false;
   }
 
@@ -923,6 +928,7 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
 
   if(false == sol_ok) {
     nlp_->runStats.tmSolverInternal.stop();
+    RANGE_POP();
     return false;
   }
   
@@ -942,6 +948,7 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   // skip IR if user set ir_outer_maxit to 0 or negative values
   if(0 >= nlp_->options->GetInteger("ir_outer_maxit")) {
     nlp_->runStats.tmSolverInternal.stop();
+    RANGE_POP();
     return computeDirections(resid,dir);
   }
   const hiopResidual &r=*resid;
@@ -2278,6 +2285,7 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
   
   if(false == sol_ok) {
     nlp_->runStats.tmSolverInternal.stop();
+    RANGE_POP();
     return false;
   }
   

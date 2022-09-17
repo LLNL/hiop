@@ -263,6 +263,7 @@ namespace hiop
         nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
         // This is not a catastrophic failure
         // The matrix is singular so return -1 to regularaize!
+        RANGE_POP();
         return -1;
       } else { // Numeric was succesfull so now can set up
         factorizationSetupSucc_ = 1;
@@ -350,6 +351,7 @@ namespace hiop
         nlp_->log->printf(hovError,  // catastrophic failure
                           "Solve failed with status: %d\n", 
                           sp_status_);
+        RANGE_POP();
         return false;
       }
     } else {
@@ -381,6 +383,7 @@ namespace hiop
             nlp_->log->printf(hovError,  // catastrophic failure
                               "Solve failed with status: %d\n", 
                               sp_status_);
+            RANGE_POP();
             return false;
           }
         } else {
@@ -396,9 +399,9 @@ namespace hiop
       }
     }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    RANGE_POP();
     delete rhs;
     rhs = nullptr;
+    RANGE_POP();
     return 1;
   }
 

@@ -72,6 +72,7 @@ namespace hiop
     int lda = N;
     int info;
     if(N==0) {
+      RANGE_POP();
       return 0;
     }
 
@@ -114,6 +115,7 @@ namespace hiop
       nlp_->log->printf(hovError,
 		       "hiopLinSolverMagmaBuka error: argument %d to dsytrf has an illegal value.\n",
 		       -info);
+      RANGE_POP();
       return -1;
     } else {
       if(info>0) {
@@ -122,6 +124,7 @@ namespace hiop
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
+        RANGE_POP();
 	return -1;
       }
     }
@@ -129,10 +132,12 @@ namespace hiop
     int negEigVal, posEigVal, nullEigVal;
 
     if(!compute_inertia(N, ipiv_, posEigVal, negEigVal, nullEigVal)) {
+      RANGE_POP();
       return -1;
     }
 
     if(nullEigVal>0) {
+      RANGE_POP();
       return -1;
     }
     RANGE_POP();
@@ -161,6 +166,7 @@ namespace hiop
                         "Magma dsidi inertia computation failed with [%d] (MagmaBuKa)\n",
                         info);
       posEigVal = negEigVal = nullEigVal = -1;
+      RANGE_POP();
       return false;
     }
 
@@ -189,6 +195,7 @@ namespace hiop
     int LDB = N;
     int NRHS = 1;
     if(N == 0) {
+      RANGE_POP();
       return true;
     }
 
@@ -291,6 +298,7 @@ namespace hiop
     int LDA = N;
     int LDB=N;
     if(N==0) {
+      RANGE_POP();
       return true;
     }
 
@@ -328,6 +336,7 @@ namespace hiop
       nlp_->log->printf(hovError,
 		       "hiopLinSolverSymDenseNoPiv error: %d argument to dsytrf has an illegal value.\n",
 		       -info);
+      RANGE_POP();
       return -1;
     } else {
       if(info>0) {
@@ -336,6 +345,7 @@ namespace hiop
 			 "is exactly zero. Division by zero will occur if it a solve is attempted.\n",
 			 info);
 	//matrix is singular
+        RANGE_POP();
 	return -1;
       }
     }
@@ -343,11 +353,12 @@ namespace hiop
     int negEigVal, posEigVal, nullEigVal;
     
     if(!compute_inertia(N, posEigVal, negEigVal, nullEigVal)) {
+      RANGE_POP();
       return -1;
     }
 
-    if(nullEigVal>0) return -1;
     RANGE_POP();
+    if(nullEigVal>0) return -1;
     return negEigVal;
   }
 
@@ -402,6 +413,7 @@ namespace hiop
     int LDA = N;
     int LDB=N;
     if(N==0) {
+      RANGE_POP();
       return true;
     }
 
@@ -437,6 +449,7 @@ namespace hiop
       nlp_->log->printf(hovError, 
 			"hiopLinSolverMagmaNopiv: dsytrs_nopiv_gpu returned error %d [%s]\n", 
 			info, magma_strerror(info));
+      RANGE_POP();
       return false;
     }
 

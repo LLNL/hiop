@@ -118,7 +118,7 @@ namespace hiop
                                                hiopMatrix* Hess)
   {
     RANGE_PUSH(__FUNCTION__);
-    if(!nlpMDS_) { assert(false); return false; }
+    if(!nlpMDS_) { assert(false); RANGE_POP(); return false; }
 
     nlp_->runStats.linsolv.reset();
     nlp_->runStats.tmSolverInternal.start();
@@ -129,13 +129,13 @@ namespace hiop
     Jac_c_ = Jac_c; Jac_d_ = Jac_d; Hess_=Hess;
 
     HessMDS_ = dynamic_cast<hiopMatrixSymBlockDiagMDS*>(Hess);
-    if(!HessMDS_) { assert(false); return false; }
+    if(!HessMDS_) { assert(false); RANGE_POP(); return false; }
 
     Jac_cMDS_ = dynamic_cast<const hiopMatrixMDS*>(Jac_c);
-    if(!Jac_cMDS_) { assert(false); return false; }
+    if(!Jac_cMDS_) { assert(false); RANGE_POP(); return false; }
 
     Jac_dMDS_ = dynamic_cast<const hiopMatrixMDS*>(Jac_d);
-    if(!Jac_dMDS_) { assert(false); return false; }
+    if(!Jac_dMDS_) { assert(false); RANGE_POP(); return false; }
 
     int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n(); 
     int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
@@ -315,10 +315,10 @@ namespace hiop
     RANGE_PUSH(__FUNCTION__);
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
 
-    if(!nlpMDS_)   { assert(false); return false; }
-    if(!HessMDS_)  { assert(false); return false; }
-    if(!Jac_cMDS_) { assert(false); return false; }
-    if(!Jac_dMDS_) { assert(false); return false; }
+    if(!nlpMDS_)    { assert(false); RANGE_POP(); return false; }
+    if(!HessMDS_)   { assert(false); RANGE_POP(); return false; }
+    if(!Jac_cMDS_)  { assert(false); RANGE_POP(); return false; }
+    if(!Jac_dMDS_)  { assert(false); RANGE_POP(); return false; }
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 

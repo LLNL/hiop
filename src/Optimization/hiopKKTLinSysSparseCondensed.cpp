@@ -128,6 +128,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   if(nullptr==Jac_dSp_ || nullptr==HessSp_) {
     nlp_->runStats.kkt.tmUpdateInit.stop();
     //incorrect linear algebra objects were provided to this class
+    RANGE_POP(); 
     return false;
   }
 
