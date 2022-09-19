@@ -46,46 +46,41 @@
 // product endorsement purposes.
 
 /**
- * @file MemBackendCudaImpl.hpp
+ * @file MemBackendCppImpl.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * 
  */
 
 /**
- * This file contains CUDA implementation of memory backend. Should be generally included 
- * in CUDA compilation units.
+ * This file contains C++ memory backend implementation using new and delete operators. 
+ * std::memcpy is used to copy.
  */
 
-#ifndef HIOP_MEM_BCK_CUDA
-#define HIOP_MEM_BCK_CUDA
+#ifndef HIOP_MEM_BCK_CPP
+#define HIOP_MEM_BCK_CPP
 
 #include <ExecSpace.hpp>
 
-#ifdef HIOP_USE_CUDA
-
-#include <cuda_runtime.h>
 #include <cassert>
+#include <cstring>
 
 namespace hiop
 {
+
 //
 // Allocator
 //
 template<typename T>
-struct AllocImpl<MemBackendCuda, T>
+struct AllocImpl<MemBackendCpp, T>
 {
-  inline static T* alloc(MemBackendCuda& mb, const size_t& n)
+  inline static T* alloc(MemBackendCpp& mb, const size_t& n)
   {
-    T* p;
-    auto err = cudaMalloc((void**)&p, n*sizeof(T));
-    assert(cudaSuccess==err);
-    return p;
+    return new T[n];
   }
-  inline static void dealloc(MemBackendCuda& mb, T* p)
+  inline static void dealloc(MemBackendCpp& mb, T* p)
   {
-    auto err = cudaFree((void*)p);
-    assert(cudaSuccess==err);
+    delete[] p;
   }  
 };
 
@@ -93,46 +88,18 @@ struct AllocImpl<MemBackendCuda, T>
 // Transfers
 //
 template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
-  {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
-  }
-};
-
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
-  {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
-  }
-};
-
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
+                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
+    std::memcpy(p_dest, p_src, n*sizeof(T));
+    return true;
   }
 };
-
+ 
 } // end namespace hiop
-#endif //HIOP_USE_CUDA
-#endif //HIOP_MEM_BCK_CUDA
-
-
+#endif //HIOP_MEM_BCK_CPP

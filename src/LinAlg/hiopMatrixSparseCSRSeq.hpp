@@ -54,7 +54,7 @@
 #ifndef HIOP_SPARSE_MATRIX_CSRSEQ
 #define HIOP_SPARSE_MATRIX_CSRSEQ
 
-#include "ExecSpaceHost.hpp"
+#include "ExecSpace.hpp"
 
 #include "hiopVector.hpp"
 #include "hiopMatrixDense.hpp"
