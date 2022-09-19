@@ -53,9 +53,12 @@
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Cameron Rutherford <cameron.rutherford@pnnl.gov>, PNNL
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-// #include "hiopVectorRajaPar.hpp"
+
+#include "ExecSpace.hpp"
+
 #include "hiopVectorIntRaja.hpp"
 
 #ifdef HIOP_USE_GPU
@@ -78,8 +81,6 @@
 
 #include <RAJA/RAJA.hpp>
 #include "hiop_raja_defs.hpp"
-#include "ExecSpace.hpp"
-#include "ExecPoliciesRajaCuda.hpp"
 
 namespace hiop
 {

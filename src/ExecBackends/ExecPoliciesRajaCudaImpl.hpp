@@ -46,93 +46,59 @@
 // product endorsement purposes.
 
 /**
- * @file MemBackendCudaImpl.hpp
+ * @file ExecPoliciesRajaCudaImpl.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
- * 
+ * @author Slaven Peles <peless@ornl.gov>, ORNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  */
 
 /**
- * This file contains CUDA implementation of memory backend. Should be generally included 
- * only in CUDA compilation units.
+ * This file contains CUDA RAJA policies. Should be generally included only in CUDA 
+ * compilation units.
  */
 
-#ifndef HIOP_MEM_BCK_CUDA
-#define HIOP_MEM_BCK_CUDA
+#ifndef HIOP_EXEC_POL_RAJA_CUDA
+#define HIOP_EXEC_POL_RAJA_CUDA
 
-#include <ExecSpace.hpp>
+#if defined(HIOP_USE_RAJA) && defined(HIOP_USE_CUDA)
 
-#ifdef HIOP_USE_CUDA
+#include "ExecSpace.hpp"
 
-#include <cuda_runtime.h>
-#include <cassert>
+#include <cuda.h>
+#include <RAJA/RAJA.hpp>
 
 namespace hiop
 {
-//
-// Allocator
-//
-template<typename T>
-struct AllocImpl<MemBackendCuda, T>
+#define RAJA_LAMBDA [=] __device__
+  
+template<>
+struct ExecRajaPoliciesBackend<ExecPolicyRajaCuda>
 {
-  inline static T* alloc(MemBackendCuda& mb, const size_t& n)
-  {
-    T* p;
-    auto err = cudaMalloc((void**)&p, n*sizeof(T));
-    assert(cudaSuccess==err);
-    return p;
-  }
-  inline static void dealloc(MemBackendCuda& mb, T* p)
-  {
-    auto err = cudaFree((void*)p);
-    assert(cudaSuccess==err);
-  }  
+  static constexpr unsigned short int HIOP_RAJA_GPU_BLOCK_SIZE = 128;
+  
+  using hiop_raja_exec   = RAJA::cuda_exec<HIOP_RAJA_GPU_BLOCK_SIZE>;
+  using hiop_raja_reduce = RAJA::cuda_reduce;
+  using hiop_raja_atomic = RAJA::cuda_atomic;
+
+  // The following are primarily for _matrix_exec_
+  using hiop_block_x_loop = RAJA::cuda_block_x_loop;
+  using hiop_thread_x_loop = RAJA::cuda_thread_x_loop;
+  template<typename T>
+  using hiop_kernel = RAJA::statement::CudaKernel<T>;
+
+  using matrix_exec =
+    RAJA::KernelPolicy<
+      hiop_kernel<
+        RAJA::statement::For<1, hiop_block_x_loop,
+          RAJA::statement::For<0, hiop_thread_x_loop,
+            RAJA::statement::Lambda<0>
+          >
+        >
+      >
+    >;
+
 };
-
-//
-// Transfers
-//
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
-  {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
-  }
-};
-
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
-  {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
-  }
-};
-
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
-  {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
-  }
-};
-
-} // end namespace hiop
-#endif //HIOP_USE_CUDA
-#endif //HIOP_MEM_BCK_CUDA
-
-
+} //end of namespace
+#endif //defined(HIOP_USE_RAJA) && defined(HIOP_USE_CUDA)
+#endif

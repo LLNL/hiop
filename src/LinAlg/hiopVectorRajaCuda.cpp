@@ -1,15 +1,14 @@
 #include "hiopVectorRaja.hpp"
 
-//#include "MemorySpaceCuda.hpp"
-#include "ExecPoliciesRajaCuda.hpp"
 #include "MemBackendUmpireImpl.hpp"
+#include "ExecPoliciesRajaCudaImpl.hpp"
+
 
 namespace hiop
 {
 
 using hiop_raja_exec2 = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_exec;
-//hiop::ExecSpace<MemBackendUmpire,ExecPolicyRajaCuda>::policy_backend()::hiop_raja_exec;
-//hiop::HiopGetPolicy<hiop::ExecPoliciesRajaCuda>::hiop_raja_exec;
+
 }
 
 #include "hiopVectorRajaImpl.hpp"
