@@ -57,9 +57,9 @@
 #ifdef HIOP_USE_CUDA
 
 #include "hiopVectorPar.hpp"
-#include "MatrixSparseCsrCudaKernels.hpp"
-
 #include "hiopVectorRajaPar.hpp"
+#include "MatrixSparseCsrCudaKernels.hpp"
+#include "MemBackendCudaImpl.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite

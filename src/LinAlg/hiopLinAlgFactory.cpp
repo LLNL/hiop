@@ -60,10 +60,6 @@
 #include <hiop_defs.hpp>
 
 #include <ExecSpace.hpp>
-#include <ExecSpaceHost.hpp>
-#include <MemorySpaceCuda.hpp>
-#include <ExecSpaceRajaUmpire.hpp>
-//#include <ExecPoliciesRajaCuda.hpp>
 
 #ifdef HIOP_USE_RAJA
 #include <umpire/Allocator.hpp>

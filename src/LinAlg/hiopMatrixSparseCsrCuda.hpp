@@ -57,7 +57,6 @@
 #include "hiop_defs.hpp"
 
 #include "ExecSpace.hpp"
-#include "MemorySpaceCuda.hpp"
 
 #ifdef HIOP_USE_CUDA 
 
