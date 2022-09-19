@@ -58,11 +58,23 @@
 #include <umpire/ResourceManager.hpp>
 
 #include <RAJA/RAJA.hpp>
-#include "hiop_raja_defs.hpp"
+
+//TODO: introduce hip and cuda .cpp
+#ifdef HIOP_USE_CUDA
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
+#endif
+
+#ifdef HIOP_USE_HIP
+#include <ExecPoliciesRajaHipImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
+#endif
 
 namespace hiop
 {
 
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_exec;
+  
 hiopVectorIntRaja::hiopVectorIntRaja(size_type sz, std::string mem_space)
   : hiopVectorInt(sz),
     mem_space_(mem_space)

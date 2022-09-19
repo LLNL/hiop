@@ -6,9 +6,8 @@
 
 namespace hiop
 {
-
 using hiop_raja_exec2 = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_exec;
-
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_reduce;
 }
 
 #include "hiopVectorRajaImpl.hpp"

@@ -65,9 +65,25 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixRajaDense.hpp>
 
-#include <hiop_raja_defs.hpp>
-using ex1_raja_exec = hiop::hiop_raja_exec;
-using ex1_raja_reduce = hiop::hiop_raja_reduce;
+//TODO: A good idea to not use the internal HiOp Raja policies here and, instead, give self-containing
+// definitions of the policies here so that the user gets a better grasp of the concept and does not
+// rely on the internals of HiOp. For example:
+// #define RAJA_LAMBDA [=] __device__
+// using ex1_raja_exec = RAJA::cuda_exec<128>;
+// more defs here
+
+
+#ifdef HIOP_USE_CUDA 
+#include "ExecPoliciesRajaCudaImpl.hpp"
+using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_exec;
+using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_reduce;
+#endif
+
+#ifdef HIOP_USE_HIP
+#include <ExecPoliciesRajaHipImpl.hpp>
+using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_exec;
+using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
+#endif
 
 using namespace hiop;
 

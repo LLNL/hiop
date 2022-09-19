@@ -65,7 +65,17 @@
 #include "hiopLinAlgFactory.hpp"
 
 #include "hiop_blasdefs.hpp"
-#include "hiop_raja_defs.hpp"
+
+//TODO: introduce hip and cuda .cpp
+#ifdef HIOP_USE_CUDA
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
+#endif
+
+#ifdef HIOP_USE_HIP
+#include <ExecPoliciesRajaHipImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
+#endif
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -78,6 +88,10 @@
 namespace hiop
 {
 
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_reduce;
+using hiop_raja_atomic = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_atomic;
+  
 /// @brief Constructs a hiopMatrixRajaSparseTriplet with the given dimensions and memory space
 hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
                                                          int cols,

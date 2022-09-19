@@ -80,7 +80,6 @@
 #include <cstddef>
 
 #include <RAJA/RAJA.hpp>
-#include "hiop_raja_defs.hpp"
 #include "ExecSpace.hpp"
 #include "ExecPoliciesRajaCuda.hpp"
 

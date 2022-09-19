@@ -140,7 +140,7 @@ endif()
 
 # Add RAJA/Umpire sources when enabled
 if(HIOP_USE_RAJA)
-  list(APPEND hiopLinAlg_INTERFACE_HEADERS hiop_raja_defs.hpp)
+  #list(APPEND hiopLinAlg_INTERFACE_HEADERS hiop_raja_defs.hpp)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_RAJA_SRC})
 endif()
 

@@ -67,15 +67,28 @@
 #include <umpire/ResourceManager.hpp>
 #include <RAJA/RAJA.hpp>
 
-#include "hiop_blasdefs.hpp"
-#include "hiop_raja_defs.hpp"
-
 #include "hiopVectorPar.hpp"
 #include "hiopVectorRajaPar.hpp"
+
+#include "hiop_blasdefs.hpp"
+//TODO: introduce hip and cuda .cpp
+#ifdef HIOP_USE_CUDA
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
+#endif
+
+#ifdef HIOP_USE_HIP
+#include <ExecPoliciesRajaHipImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
+#endif
 
 namespace hiop
 {
 
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_reduce;
+using matrix_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::matrix_exec;
+  
 hiopMatrixRajaDense::hiopMatrixRajaDense(const size_type& m, 
                                          const size_type& glob_n,
                                          std::string mem_space, 

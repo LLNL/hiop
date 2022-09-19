@@ -80,7 +80,6 @@
 #include <cstddef>
 
 #include <RAJA/RAJA.hpp>
-#include "hiop_raja_defs.hpp"
 
 namespace hiop
 {
