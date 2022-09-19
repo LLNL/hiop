@@ -70,7 +70,6 @@
 //temporary
 #include "hiopVectorPar.hpp"
 
-#include "ExecSpaceRajaUmpire.hpp"
 #include "ExecSpace.hpp"
 
 namespace hiop

@@ -52,8 +52,12 @@
  * 
  */
 
-#ifndef HIOP_MEM_SPACE_UMPIRE
-#define HIOP_MEM_SPACE_UMPIRE
+/**
+ * This file contains Umpire implementation memory backend.
+ */
+
+#ifndef HIOP_MEM_BCK_UMPIRE
+#define HIOP_MEM_BCK_UMPIRE
 
 #include <ExecSpace.hpp>
 
@@ -207,5 +211,5 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T
 #endif
 }  // end namespace hiop
 #endif //HIOP_USE_RAJA
-#endif //HIOP_EXEC_SPACE_RAJAUMP
+#endif //HIOP_MEM_BCK_UMPIRE
 
