@@ -59,15 +59,18 @@
 
 #include <hiop_defs.hpp>
 
+#include <ExecSpace.hpp>
 #include <ExecSpaceHost.hpp>
-#include <ExecSpaceCuda.hpp>
+#include <MemorySpaceCuda.hpp>
 #include <ExecSpaceRajaUmpire.hpp>
+//#include <ExecPoliciesRajaCuda.hpp>
 
 #ifdef HIOP_USE_RAJA
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <hiopVectorIntRaja.hpp>
 #include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include <hiopMatrixSparseCsrCuda.hpp>
@@ -105,7 +108,9 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
     if(hi.exec_backend == "RAJA") {
 #ifdef HIOP_USE_RAJA
       if(hi.mem_backend == "UMPIRE") {
-        return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
+        //return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire,hiop::ExecPolicyRajaCuda>(glob_n, mem_space_upper, col_part, comm);
+        //return new hiop::hiopVectorRaja<MemBackendCuda,ExecPoliciesRajaCuda>(glob_n, mem_space_upper, col_part, comm);
       } else {
         assert(false && "to be implemented");
         return nullptr;

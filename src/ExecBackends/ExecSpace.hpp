@@ -90,9 +90,8 @@ struct ExecSpaceInfo
   std::string exec_backend;
 };
 
-  
 ///////////////////////////////////////////////////////////////////////////////////////
-// The memory backends classes
+// Memory backends
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Standard C++ memory backend on host 
@@ -111,15 +110,7 @@ struct MemBackendCpp
   };
 };
 
-/// Cuda memory backend for device memory space that is implemented using  Cuda API
-struct MemBackendCuda
-{
-  /// For now does not support memory space (but can/will be implemented).
-  static bool is_host() { return false; }
-
-  static bool is_device() { return true; }
-};
-
+#ifdef HIOP_USE_RAJA //HIOP_USE_UMPIRE would be better since Hiop RAJA code can now work without Umpire
 /**
  * Umpire-based memory backend that supports "HOST", "UM" (unified memory), and "DEVICE"
  * memory spaces.
@@ -149,29 +140,124 @@ struct MemBackendUmpire
     return mem_space_ == "DEVICE";
   }
 
+  using MemBackendHost = MemBackendUmpire;
   /// Returns a backend set up for host memory space
-  static MemBackendUmpire new_backend_host()
+  inline static MemBackendHost new_backend_host()
   {
-    return MemBackendUmpire("HOST");
+    return MemBackendHost("HOST");
   };
 
 private:
   std::string mem_space_;
 };
+#endif //HIOP_USE_RAJA //HIOP_USE_UMPIRE
 
-  
+#ifdef HIOP_USE_CUDA
+/// Cuda memory backend for device memory space that is implemented using Cuda API
+struct MemBackendCuda
+{
+  /// For now does not support host memory space (but can/will be implemented).
+  inline static bool is_host() { return false; }
+
+  inline static bool is_device() { return true; }
+
+  using MemBackendHost = MemBackendCpp;
+  /// Returns a backend set up for host memory space
+  inline static MemBackendHost new_backend_host()
+  {
+    return MemBackendHost();
+  };
+};
+#endif //HIOP_USE_CUDA
+
+#ifdef HIOP_USE_HIP
+/// Cuda memory backend for device memory space that is implemented using Hip API
+struct MemBackendHip
+{
+  /// For now does not support host memory space (but can/will be implemented).
+  inline static bool is_host() { return false; }
+
+  inline static bool is_device() { return true; }
+
+  using MemBackendHost = MemBackendCpp;
+  /// Returns a backend set up for host memory space
+  inline static MemBackendHost new_backend_host()
+  {
+    return MemBackendHost();
+  };
+};
+#endif //HIOP_USE_HIP
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // Execution policies
 ///////////////////////////////////////////////////////////////////////////////////////
 
-struct ExePoliciesCuda
-{
+/// Standard C++ sequential execution
+using ExecPolicySeq = void;
 
-};
-struct ExePoliciesRaja
+#ifdef HIOP_USE_CUDA
+struct ExecPolicyCuda
 {
-
+  unsigned short int num_blocks_vector;
+  unsigned short int num_blocks_search;
 };
+#endif
+
+#ifdef HIOP_USE_HIP
+struct ExecPolicyHip
+{
+  unsigned short int num_blocks_vector;
+  unsigned short int num_blocks_search;
+};
+#endif
+
+///////////////////////////
+// RAJA execution policies
+//////////////////////////
+#ifdef HIOP_USE_RAJA
+#ifdef HIOP_USE_CUDA
+struct ExecPolicyRajaCuda
+{
+  //empty since no runtime info is stored
+};
+#endif
+
+#ifdef HIOP_USE_HIP
+struct ExecPolicyRajaHip
+{
+  //empty since no runtime info is stored
+};
+#endif
+
+//RAJA OMP execution policies backend present but not tested
+#define HIOP_USE_RAJAOMP 0
+#if defined(HIOP_USE_RAJAOMP)
+struct ExecPolicyRajaOmp
+{
+  //empty since no runtime info is stored
+};
+#endif //HIOP_USE_RAJA
+
+/**
+ * The backend RAJA policies that needs to be provided for each one of the ExecPolicyRajaCuda,
+ * ExecPolicyRajaHip, and/or ExecPolicyRajaOmp. The class is specialized in HiOp's vendor-specific
+ * Raja execution policies source files. Namely, the class' inner types are specialized to 
+ * vendor-specific RAJA policies types. The inner type below are just for reference and this
+ * generic templated struct should not be used.
+ */
+template<class RAJAEXECPOLICIES>
+struct ExecRajaPoliciesBackend
+{
+  using hiop_raja_exec   = void;
+  using hiop_raja_reduce = void; 
+  using hiop_raja_atomic = void;
+
+  // The following are primarily for _matrix_exec_
+  using hiop_block_x_loop = void;
+  using hiop_thread_x_loop = void;
+  template<typename T> using hiop_kernel = void;
+};
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // The generic/template execution backend class
@@ -193,20 +279,16 @@ template<class MEMBACKEND> struct SupportsHostMemSpace;
  *
  * Re: execution policies, TBD.
  */
-template<class MEMBACKEND>
+template<class MEMBACKEND, class EXECPOLICIES=void>
 class ExecSpace
 {
 public:
   ExecSpace()
   {
-    static_assert("HiOp was not built with the requested hardware backend/memory space." &&
-                  FeatureIsPresent<MEMBACKEND>::value);
   }
   ExecSpace(const MEMBACKEND& mb)
     : mb_(mb)
   {
-    static_assert("HiOp was not built with the requested hardware backend/memory space." &&
-                  FeatureIsPresent<MEMBACKEND>::value);
   }
 
   const MEMBACKEND& mem_backend() const
@@ -291,19 +373,6 @@ struct TransferImpl
   {
     return false;
   }
-};
-
-/// Generic trait: concrete types that are supported should specialize `value` to true.
-template<class Feature> struct FeatureIsPresent
-{
-  static constexpr bool value = false; 
-};
-
-/// Generic trait: concrete memory backends that supports Host memory space should specialize this to be true.
-template<class MEMBACKEND>
-struct SupportsHostMemSpace
-{
-  static constexpr bool value = false;
 };
 
 } // end namespace

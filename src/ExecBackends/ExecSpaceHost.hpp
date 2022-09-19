@@ -9,6 +9,8 @@
 namespace hiop
 {
 
+
+  
 template<>
 struct FeatureIsPresent<MemBackendCpp>
 {
@@ -53,45 +55,6 @@ struct TransferImpl<MemBackendCpp, MemBackendCpp, T>
     return true;
   }
 };
-
-template<typename T>
-struct TransferImpl<MemBackendCpp, MemBackendUmpire, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCpp>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendUmpire>& hwb_src,
-                           const size_t& n)
-  {
-    if(hwb_src.mem_backend().is_host()) {
-      std::memcpy(p_dest, p_src, n*sizeof(T));
-    } else {
-      assert(false && "Transfer BACKENDS(TO:Cpp-host,FROM:umpire) only supported with Umpire mem space host"); 
-      return false;
-    }
-    return true;
-  }
-};
-
-template<typename T>
-struct TransferImpl<MemBackendUmpire, MemBackendCpp, T>
-{
-  inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendUmpire>& hwb_dest,
-                           const T* p_src,
-                           const ExecSpace<MemBackendCpp>& hwb_src,
-                           const size_t& n)
-  {
-    if(hwb_dest.mem_backend().is_host()) {
-      std::memcpy(p_dest, p_src, n*sizeof(T));
-    } else {
-      assert(false && "Transfer BACKENDS(TO:Umpire,FROM:Cpp-host) only supported with Umpire mem space host"); 
-      return false;
-    }
-    return true;
-  }
-};
-
  
 } // end namespace hiop
 #endif
