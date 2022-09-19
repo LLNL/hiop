@@ -71,12 +71,12 @@
 #include "hiopVectorPar.hpp"
 
 #include "ExecSpaceRajaUmpire.hpp"
-#include "ExecSpaceHost.hpp"
+#include "ExecSpace.hpp"
 
 namespace hiop
 {
   
-template<class MEMBACKEND, class RAJABACKEND>
+template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopVectorRaja : public hiopVector
 {
 public:
@@ -307,13 +307,14 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
   
 private:
-  using MemBackend = MEMBACKEND;//MemBackendUmpire;
-  ExecSpace<MemBackend> hw_backend_;
-  using MemBackendHost = MemBackendUmpire;
-  ExecSpace<MemBackendHost> hw_backend_host_;
+  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> hw_backend_;
+  
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+  //EXECPOLICYRAJA is used for exectution and host exec policy is not used. Anything would
+  // work as EXECPOLICYHOST
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> hw_backend_host_;
 
-  //using hiop_raja_exec2 = typename hiop::PolicyBackendImpl<RAJABACKEND>::hiop_raja_exec;
-  //using hiop_raja_exec2 = typename PolicyBackendImpl<ExecPolicyRajaCuda>::hiop_raja_exec;
   std::string mem_space_;
   MPI_Comm comm_;
   double* data_host_;

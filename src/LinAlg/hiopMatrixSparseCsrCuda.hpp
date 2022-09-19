@@ -658,7 +658,7 @@ private:
   void alloc();
   void dealloc();
 protected:
-  ExecSpace<MemBackendCuda> exec_space_; 
+  ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_; 
   
   //// inherits nrows_, ncols_, and nnz_ from  hiopSparseMatrix
   

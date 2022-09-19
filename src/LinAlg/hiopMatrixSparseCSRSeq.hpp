@@ -582,7 +582,7 @@ private:
   void dealloc();
 protected:
   friend class hiopMatrixSparseCSRCUDA;
-  ExecSpace<MemBackendCpp> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_;
   
   //// inherits nrows_, ncols_, and nnz_ from  hiopSparseMatrix
   

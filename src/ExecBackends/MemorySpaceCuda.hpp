@@ -33,39 +33,39 @@ struct AllocImpl<MemBackendCuda, T>
 //
 // Transfers
 //
-template<typename T>
-struct TransferImpl<MemBackendCuda, MemBackendCuda, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
   }
 };
 
-template<typename T>
-struct TransferImpl<MemBackendCuda, MemBackendCpp, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCpp>& hwb_src,
+                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
   }
 };
 
-template<typename T>
-struct TransferImpl<MemBackendCpp, MemBackendCuda, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCpp>& hwb_dest,
+                           ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);

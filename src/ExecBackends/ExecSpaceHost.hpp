@@ -9,20 +9,6 @@
 namespace hiop
 {
 
-
-  
-template<>
-struct FeatureIsPresent<MemBackendCpp>
-{
- static constexpr bool value = true;
-};
-
-template<>
-struct SupportsHostMemSpace<MemBackendCpp>
-{
-  static constexpr bool value = true;
-};
-
 //
 // Allocator
 //
@@ -42,13 +28,13 @@ struct AllocImpl<MemBackendCpp, T>
 //
 // Transfers
 //
-template<typename T>
-struct TransferImpl<MemBackendCpp, MemBackendCpp, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCpp>& hwb_dest,
+                           ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCpp>& hwb_src,
+                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     std::memcpy(p_dest, p_src, n*sizeof(T));

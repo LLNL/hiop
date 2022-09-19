@@ -326,7 +326,7 @@ public:
 #endif
 protected:
   friend class hiopMatrixSparseCSRCUDA;
-  ExecSpace<MemBackendCpp> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_;
   int* iRow_; ///< row indices of the nonzero entries
   int* jCol_; ///< column indices of the nonzero entries
   double* values_; ///< values_ of the nonzero entries

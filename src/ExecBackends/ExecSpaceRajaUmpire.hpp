@@ -46,13 +46,13 @@ struct AllocImpl<MemBackendUmpire, T>
 // Transfers
 //////////////////////////////////////////////////////////////////////////////////////////
 
-template<typename T>
-struct TransferImpl<MemBackendUmpire, MemBackendUmpire, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendUmpire>& hwb_dest,
+                           ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     auto& rm = umpire::ResourceManager::getInstance();
@@ -68,13 +68,13 @@ struct TransferImpl<MemBackendUmpire, MemBackendUmpire, T>
 ////////////////////////////////////////////////////////////////////////////////////////
 // Transfers to/from Host C++ memory
 ////////////////////////////////////////////////////////////////////////////////////////
-template<typename T>
-struct TransferImpl<MemBackendCpp, MemBackendUmpire, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCpp>& hwb_dest,
+                           ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire, MemBackendUmpire>& hwb_src,
                            const size_t& n)
   {
     if(hwb_src.mem_backend().is_host()) {
@@ -87,13 +87,13 @@ struct TransferImpl<MemBackendCpp, MemBackendUmpire, T>
   }
 };
 
-template<typename T>
-struct TransferImpl<MemBackendUmpire, MemBackendCpp, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendUmpire>& hwb_dest,
+                           ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCpp>& hwb_src,
+                           const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     if(hwb_dest.mem_backend().is_host()) {
@@ -110,13 +110,13 @@ struct TransferImpl<MemBackendUmpire, MemBackendCpp, T>
 // Transfers to/from CUDA memory
 ////////////////////////////////////////////////////////////////////////////////////////
 #ifdef HIOP_USE_CUDA
-template<typename T>
-struct TransferImpl<MemBackendCuda, MemBackendUmpire, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendCuda>& hwb_dest,
+                           ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     if(hwb_src.mem_backend().is_device()) {
@@ -132,13 +132,13 @@ struct TransferImpl<MemBackendCuda, MemBackendUmpire, T>
   }
 };
 
-template<typename T>
-struct TransferImpl<MemBackendUmpire, MemBackendCuda, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MemBackendUmpire>& hwb_dest,
+                           ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendCuda>& hwb_src,
+                           const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
     if(hwb_dest.mem_backend().is_device()) {

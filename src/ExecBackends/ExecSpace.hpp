@@ -193,7 +193,9 @@ struct MemBackendHip
 ///////////////////////////////////////////////////////////////////////////////////////
 
 /// Standard C++ sequential execution
-using ExecPolicySeq = void;
+struct ExecPolicySeq
+{
+};
 
 #ifdef HIOP_USE_CUDA
 struct ExecPolicyCuda
@@ -267,9 +269,8 @@ struct ExecRajaPoliciesBackend
 // Forward declarations of implementation internals of class ExecSpace
 //
 template<class MEMBACKEND, typename T> struct AllocImpl;
-template<class MEMBACKENDDEST, class MEMBACKENDSRC, typename T> struct TransferImpl;
-template<class FEATURE> struct FeatureIsPresent;
-template<class MEMBACKEND> struct SupportsHostMemSpace;
+template<class MEMBACKENDDEST, class EXEPOLDEST, class MEMBACKENDSRC, class EXEPOLSRC, typename T>
+struct TransferImpl;
 
 /** 
  * Hardware backend wrapping a concrete memory backend and a concrete set of execution policies.
@@ -279,15 +280,16 @@ template<class MEMBACKEND> struct SupportsHostMemSpace;
  *
  * Re: execution policies, TBD.
  */
-template<class MEMBACKEND, class EXECPOLICIES=void>
+template<class MEMBACKEND, class EXECPOLICIES>
 class ExecSpace
 {
 public:
-  ExecSpace()
-  {
-  }
+  ExecSpace() = default;
+  ExecSpace(const ExecSpace&) = default;
+
   ExecSpace(const MEMBACKEND& mb)
-    : mb_(mb)
+    : mb_(mb),
+      ep_()
   {
   }
 
@@ -314,12 +316,12 @@ public:
    * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
    * `n` elements.
    * @pre `p_dest` should be managed by the memory backend of `this`.
-   * @pre `p_src` should be managed by the memory backend of `md`.
+   * @pre `p_src` should be managed by the memory backend of `ms`.
    */
-  template<class MEMSRC, typename T>
-  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const ExecSpace<MEMSRC>& md)
+  template<class MEMSRC, class EXEPOLSRC, typename T>
+  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const ExecSpace<MEMSRC,EXEPOLSRC>& ms)
   {
-    return TransferImpl<MEMBACKEND,MEMSRC,T>::do_it(p_dest, *this, p_src, md, n);
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMSRC, EXEPOLSRC, T>::do_it(p_dest, *this, p_src, ms, n);
   }
 
   /**
@@ -332,11 +334,12 @@ public:
   template<typename T>
   inline bool copy(T* p_dest, const T* p_src, const size_t& n)
   {
-    return TransferImpl<MEMBACKEND,MEMBACKEND,T>::do_it(p_dest, *this, p_src, *this, n);
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMBACKEND, EXECPOLICIES, T>::do_it(p_dest, *this, p_src, *this, n);
   }
 
 private:
   MEMBACKEND mb_;
+  EXECPOLICIES ep_;
 };
 
 //
@@ -362,13 +365,13 @@ struct AllocImpl
  * Transfers between memory backends and memory spaces should be provided by specializations
  * of `TransferImpl` class.
  */
-template<class MEMDEST, class MEMSRC, typename T>
+template<class MEMDEST, class EXEPOLDEST, class MEMSRC, class EXEPOLSRC, typename T>
 struct TransferImpl
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MEMDEST>& hwb_dest,
+                           ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MEMSRC>& hwb_src,
+                           const ExecSpace<MEMSRC, EXEPOLSRC>& hwb_src,
                            const size_t& n)
   {
     return false;
