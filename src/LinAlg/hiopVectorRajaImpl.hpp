@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorRajaPar.cpp
+ * @file hiopVectorRajaImpl.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
@@ -55,10 +55,7 @@
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
-
-#if 0
-
-#include "hiopVectorRajaPar.hpp"
+// #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
 
 #ifdef HIOP_USE_GPU
@@ -95,13 +92,12 @@ using global_index_type = index_type;
 static constexpr real_type zero = 0.0;
 static constexpr real_type one  = 1.0;
 
-using hiop_raja_exec2 = ExecPoliciesRajaCuda::hiop_raja_exec;
-  
-hiopVectorRajaPar::hiopVectorRajaPar(
-  const size_type& glob_n,
-  std::string mem_space /* = "HOST" */,
-  index_type* col_part /* = NULL */,
-  MPI_Comm comm /* = MPI_COMM_NULL */)
+template<class MEMBACKEND, class RAJACUDAPOL>
+hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::
+hiopVectorRaja(const size_type& glob_n,
+               std::string mem_space /* = "HOST" */,
+               index_type* col_part /* = NULL */,
+               MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
     hw_backend_(ExecSpace<MemBackend>(MemBackendUmpire(mem_space))),
     hw_backend_host_(ExecSpace<MemBackendHost>(MemBackendHost::new_backend_host())),
@@ -136,11 +132,11 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   assert(mem_space_ == "HOST"); 
 #endif
 
-  data_dev_ = hw_backend_.alloc_array<double>(n_local_);
+  data_dev_ = hw_backend_.template alloc_array<double>(n_local_);
   if(hw_backend_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    data_host_ = hw_backend_host_.alloc_array<double>(n_local_);    
+    data_host_ = hw_backend_host_.template alloc_array<double>(n_local_);    
   }
   else
   {
@@ -149,7 +145,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   //std::cout << "Memory space: " << mem_space_ << "\n";
 }
 
-hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
+template<class MEMBACKEND, class RAJACUDAPOL>
+hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::hiopVectorRaja(const hiopVectorRaja& v)
   : hiopVector(),
     hw_backend_(v.hw_backend_),
     hw_backend_host_(v.hw_backend_host_)
@@ -165,11 +162,11 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   assert(mem_space_ == "HOST"); 
 #endif
 
-  data_dev_ = hw_backend_.alloc_array<double>(n_local_);
+  data_dev_ = hw_backend_.template alloc_array<double>(n_local_);
   if(hw_backend_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    data_host_ = hw_backend_host_.alloc_array<double>(n_local_);    
+    data_host_ = hw_backend_host_.template alloc_array<double>(n_local_);    
   }
   else
   {
@@ -177,7 +174,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
   }
 }
 
-hiopVectorRajaPar::~hiopVectorRajaPar()
+template<class MEMBACKEND, class RAJACUDAPOL>
+hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::~hiopVectorRaja()
 {
   if(data_dev_ != data_host_) {
     hw_backend_host_.dealloc_array(data_host_);
@@ -187,14 +185,18 @@ hiopVectorRajaPar::~hiopVectorRajaPar()
   data_host_ = nullptr;
 }
 
-hiopVector* hiopVectorRajaPar::alloc_clone() const
+template<class MEM, class POL>
+hiopVector* hiopVectorRaja<MEM,POL>::alloc_clone() const
 {
-  hiopVector* v = new hiopVectorRajaPar(*this); assert(v);
+  hiopVector* v = new hiopVectorRaja<MEM,POL>(*this);
+  assert(v);
   return v;
 }
-hiopVector* hiopVectorRajaPar::new_copy () const
+template<class MEM, class POL>
+hiopVector* hiopVectorRaja<MEM,POL>::new_copy () const
 {
-  hiopVector* v = new hiopVectorRajaPar(*this); assert(v);
+  hiopVector* v = new hiopVectorRaja<MEM,POL>(*this);
+  assert(v);
   v->copyFrom(*this);
   return v;
 }
@@ -204,13 +206,15 @@ hiopVector* hiopVectorRajaPar::new_copy () const
 //
 
 /// Set all vector elements to zero
-void hiopVectorRajaPar::setToZero()
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::setToZero()
 {
   setToConstant(0.0);
 }
 
 /// Set all vector elements to constant c
-void hiopVectorRajaPar::setToConstant(double c)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::setToConstant(double c)
 {
   double* data = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
@@ -220,7 +224,8 @@ void hiopVectorRajaPar::setToConstant(double c)
     });
 }
 
-void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_dev_;
 #ifdef HIOP_USE_GPU
@@ -230,15 +235,16 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
     hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
   }
 #else
-  // TODO: add function for openmp polocy
+  // TODO: add function for openmp policy
   hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);
 #endif
 }
 
 /// Set selected elements to constant, zero otherwise
-void hiopVectorRajaPar::setToConstant_w_patternSelect(double c, const hiopVector& select)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::setToConstant_w_patternSelect(double c, const hiopVector& select)
 {
-  const hiopVectorRajaPar& s = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& s = dynamic_cast<const hiopVectorRaja&>(select);
   const double* pattern = s.local_data_const();
   double* data = data_dev_;
   RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
@@ -255,9 +261,10 @@ void hiopVectorRajaPar::setToConstant_w_patternSelect(double c, const hiopVector
  * @pre `vec` and `this` must have same partitioning.
  * @post Elements of `this` are overwritten with elements of `vec`
  */
-void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copyFrom(const hiopVector& vec)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
   assert(glob_il_ == v.glob_il_);
   assert(glob_iu_ == v.glob_iu_);
@@ -282,17 +289,19 @@ void hiopVectorRajaPar::copyFrom(const hiopVector& vec)
  * 
  * @warning Not tested - not part of the hiopVector interface.
  */
-void hiopVectorRajaPar::copyFrom(const double* local_array)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copyFrom(const double* local_array)
 {
   if(local_array) {
     hw_backend_.copy(data_dev_, local_array, n_local_);
   }
 }
 
-/// @brief Copy from vec the elements specified by the indices in index_in_src. 
-void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& index_in_src)
+/// @brief Copy from vec the elements specified by the indices in index_in_src.
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copy_from(const hiopVector& vec, const hiopVectorInt& index_in_src)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
   size_type nv = v.get_local_size();
 
@@ -310,11 +319,12 @@ void hiopVectorRajaPar::copy_from(const hiopVector& vec, const hiopVectorInt& in
     });
 }
 
-/// @brief Copy from vec the elements specified by the indices in index_in_src. 
-void hiopVectorRajaPar::copy_from_w_pattern(const hiopVector& vec, const hiopVector& select)
+/// @brief Copy from vec the elements specified by the indices in index_in_src.
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copy_from_w_pattern(const hiopVector& vec, const hiopVector& select)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
-  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
+  const hiopVectorRaja& ix = dynamic_cast<const hiopVectorRaja&>(select);
 
   assert(n_local_ == ix.n_local_);
   
@@ -332,7 +342,8 @@ void hiopVectorRajaPar::copy_from_w_pattern(const hiopVector& vec, const hiopVec
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_in_src)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copy_from(const double* vec, const hiopVectorInt& index_in_src)
 {
   const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
   assert(indexes.size() == n_local_);
@@ -350,10 +361,11 @@ void hiopVectorRajaPar::copy_from(const double* vec, const hiopVectorInt& index_
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM,POL>::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
 {
   const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vv);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vv);
 
   assert(indexes.size() == n_local_);
   
@@ -372,7 +384,8 @@ void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVector
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopVectorRajaPar::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
 {
   if(nullptr==vv) {
     return;
@@ -405,7 +418,8 @@ void hiopVectorRajaPar::copy_from_indexes(const double* vv, const hiopVectorInt&
  *
  * @warning Method casts away const from the `local_array`.
  */
-void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* v, int nv)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
   assert(start_index_in_this+nv <= n_local_);
 
@@ -427,12 +441,13 @@ void hiopVectorRajaPar::copyFromStarting(int start_index_in_this, const double* 
  * @pre start_index + src.n_local_ <= n_local_
  * @pre `this` is not distributed
  */
-void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& src)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyFromStarting(int start_index, const hiopVector& src)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(src);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(src);
   assert(start_index + v.n_local_ <= n_local_);
 
   // If there is nothing to copy, return.
@@ -457,7 +472,8 @@ void hiopVectorRajaPar::copyFromStarting(int start_index, const hiopVector& src)
  *
  * @warning Method casts away const from the `local_array`.
  */
-void hiopVectorRajaPar::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
   // If nothing to copy, return.
   if(nv == 0)
@@ -479,9 +495,10 @@ void hiopVectorRajaPar::copy_from_starting_at(const double* v, int start_index_i
  * 
  * @todo Implentation differs from CPU - check with upstream what is correct!
  */
-void hiopVectorRajaPar::startingAtCopyFromStartingAt(int start_idx_dest,
-                                                     const hiopVector& vec_src,
-                                                     int start_idx_src)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::startingAtCopyFromStartingAt(int start_idx_dest,
+                                                           const hiopVector& vec_src,
+                                                           int start_idx_src)
 {
   size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
 
@@ -490,7 +507,7 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(int start_idx_dest,
 #endif
 
   assert((start_idx_dest >= 0 && start_idx_dest < this->n_local_) || this->n_local_==0);
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec_src);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec_src);
   assert((start_idx_src >=0 && start_idx_src < v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
   const size_type howManyToCopySrc = v.n_local_-start_idx_src;  
 
@@ -516,9 +533,10 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(int start_idx_dest,
  * @pre start_index + dst.n_local_ <= n_local_
  * @pre `this` and `dst` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyToStarting(int start_index, hiopVector& dst) const
 {
-  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(dst);
+  hiopVectorRaja& v = dynamic_cast<hiopVectorRaja&>(dst);
 
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
@@ -542,9 +560,10 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
  * @pre start_index_in_dest + vec.n_local_ <= n_local_
  * @pre `this` and `vec` are not distributed
  */
-void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
-  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
+  hiopVectorRaja& v = dynamic_cast<hiopVectorRaja&>(vec);
   assert(start_index_in_dest+n_local_ <= v.n_local_);
 
   // If there is nothing to copy, return.
@@ -555,14 +574,16 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest)
   v.hw_backend_.copy(v.data_dev_ + start_index_in_dest, data_dev_, n_local_, hw_backend_);
 }
 
-void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::
+copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
 {
 #if 0  
   if(n_local_ == 0)
     return;
  
-  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
-  const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
+  hiopVectorRaja& v = dynamic_cast<hiopVectorRaja&>(vec);
+  const hiopVectorRaja& ix= dynamic_cast<const hiopVectorRaja&>(select);
   assert(n_local_ == ix.n_local_);
   
   int find_nnz = 0;
@@ -591,13 +612,14 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
 *  @pre the size of `this` = the size of `c` + the size of `d`.
 *  @pre `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
-                                                    const hiopVectorInt& c_map,
-                                                    const hiopVector& d,
-                                                    const hiopVectorInt& d_map)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copy_from_two_vec_w_pattern(const hiopVector& c,
+                                                          const hiopVectorInt& c_map,
+                                                          const hiopVector& d,
+                                                          const hiopVectorInt& d_map)
 {
-  const hiopVectorRajaPar& v1 = dynamic_cast<const hiopVectorRajaPar&>(c);
-  const hiopVectorRajaPar& v2 = dynamic_cast<const hiopVectorRajaPar&>(d);
+  const hiopVectorRaja& v1 = dynamic_cast<const hiopVectorRaja&>(c);
+  const hiopVectorRaja& v2 = dynamic_cast<const hiopVectorRaja&>(d);
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
@@ -642,13 +664,14 @@ void hiopVectorRajaPar::copy_from_two_vec_w_pattern(const hiopVector& c,
 *  @pre the size of `this` = the size of `c` + the size of `d`.
 *  @pre `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
-                                                  const hiopVectorInt& c_map,
-                                                  hiopVector& d,
-                                                  const hiopVectorInt& d_map) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copy_to_two_vec_w_pattern(hiopVector& c,
+                                                        const hiopVectorInt& c_map,
+                                                        hiopVector& d,
+                                                        const hiopVectorInt& d_map) const
 {
-  const hiopVectorRajaPar& v1 = dynamic_cast<const hiopVectorRajaPar&>(c);
-  const hiopVectorRajaPar& v2 = dynamic_cast<const hiopVectorRajaPar&>(d);
+  const hiopVectorRaja& v1 = dynamic_cast<const hiopVectorRaja&>(c);
+  const hiopVectorRaja& v2 = dynamic_cast<const hiopVectorRaja&>(d);
   const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
   const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
   
@@ -700,7 +723,8 @@ void hiopVectorRajaPar::copy_to_two_vec_w_pattern(hiopVector& c,
  * @post If num_elems < 0, elements will be copied till the end of
  * either source (`this`) or `destination` is reached
  */
-void hiopVectorRajaPar::startingAtCopyToStartingAt(
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::startingAtCopyToStartingAt(
   int start_idx_in_src, 
   hiopVector& destination, 
   int start_idx_dest, 
@@ -711,7 +735,7 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
 
-  hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
+  hiopVectorRaja& dest = dynamic_cast<hiopVectorRaja&>(destination);
 
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
@@ -741,15 +765,17 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt(
   dest.hw_backend_.copy(dest.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, hw_backend_);
 }
 
-void hiopVectorRajaPar::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
-                                                             hiopVector& destination,
-                                                             index_type start_idx_dest,
-                                                             const hiopVector& selec_dest,
-                                                             size_type num_elems/*=-1*/) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::
+startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+                                     hiopVector& destination,
+                                     index_type start_idx_dest,
+                                     const hiopVector& selec_dest,
+                                     size_type num_elems/*=-1*/) const
 {
 #if 0  
-  hiopVectorRajaPar& dest = dynamic_cast<hiopVectorRajaPar&>(destination);
-  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(selec_dest);
+  hiopVectorRaja& dest = dynamic_cast<hiopVectorRaja&>(destination);
+  const hiopVectorRaja& ix = dynamic_cast<const hiopVectorRaja&>(selec_dest);
     
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
@@ -794,10 +820,11 @@ void hiopVectorRajaPar::startingAtCopyToStartingAt_w_pattern(index_type start_id
  *
  * @post `this` is not modified
  */
-void hiopVectorRajaPar::copyTo(double* dest) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyTo(double* dest) const
 {
-  assert(nullptr != const_cast<hiopVectorRajaPar*>(this));
-  (const_cast<hiopVectorRajaPar*>(this))->hw_backend_.copy(dest, data_dev_, n_local_);
+  assert(nullptr != const_cast<hiopVectorRaja*>(this));
+  (const_cast<hiopVectorRaja*>(this))->hw_backend_.copy(dest, data_dev_, n_local_);
 }
 
 /**
@@ -807,7 +834,8 @@ void hiopVectorRajaPar::copyTo(double* dest) const
  * 
  * @todo Consider implementing with BLAS call (<D>NRM2).
  */
-double hiopVectorRajaPar::twonorm() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::twonorm() const
 {
   double* self_dev = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, double> sum(0.0);
@@ -837,9 +865,10 @@ double hiopVectorRajaPar::twonorm() const
  * 
  * @todo Consider implementing with BLAS call (<D>DOT).
  */
-double hiopVectorRajaPar::dotProductWith( const hiopVector& vec) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::dotProductWith( const hiopVector& vec) const
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
 
   double* dd = data_dev_;
@@ -867,7 +896,8 @@ double hiopVectorRajaPar::dotProductWith( const hiopVector& vec) const
  * @post `this` is not modified
  * 
  */
-double hiopVectorRajaPar::infnorm() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::infnorm() const
 {
   double nrm = infnorm_local();
 #ifdef HIOP_USE_MPI
@@ -887,7 +917,8 @@ double hiopVectorRajaPar::infnorm() const
  * @post `this` is not modified
  * 
  */
-double hiopVectorRajaPar::infnorm_local() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::infnorm_local() const
 {
   assert(n_local_ >= 0);
   double* data = data_dev_;
@@ -906,7 +937,8 @@ double hiopVectorRajaPar::infnorm_local() const
  * @post `this` is not modified
  * 
  */
-double hiopVectorRajaPar::onenorm() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::onenorm() const
 {
   double norm1 = onenorm_local();
 #ifdef HIOP_USE_MPI
@@ -924,7 +956,8 @@ double hiopVectorRajaPar::onenorm() const
  * @post `this` is not modified
  * 
  */
-double hiopVectorRajaPar::onenorm_local() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::onenorm_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
@@ -943,9 +976,10 @@ double hiopVectorRajaPar::onenorm_local() const
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::componentMult(const hiopVector& vec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::componentMult(const hiopVector& vec)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
@@ -964,9 +998,10 @@ void hiopVectorRajaPar::componentMult(const hiopVector& vec)
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::componentDiv (const hiopVector& vec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::componentDiv (const hiopVector& vec)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
@@ -986,10 +1021,11 @@ void hiopVectorRajaPar::componentDiv (const hiopVector& vec)
  * @post `vec` and `select` are not modified
  * 
  */
-void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::componentDiv_w_selectPattern(const hiopVector& vec, const hiopVector& select)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
-  const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
+  const hiopVectorRaja& ix= dynamic_cast<const hiopVectorRaja&>(select);
 #ifdef HIOP_DEEPCHECKS
   assert(v.n_local_ == n_local_);
   assert(n_local_ == ix.n_local_);
@@ -1011,7 +1047,8 @@ void hiopVectorRajaPar::componentDiv_w_selectPattern( const hiopVector& vec, con
 /**
  * @brief Set `this` vector elemenwise to the minimum of itself and the given `constant`
  */
-void hiopVectorRajaPar::component_min(const double constant)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_min(const double constant)
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(
@@ -1032,9 +1069,10 @@ void hiopVectorRajaPar::component_min(const double constant)
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::component_min(const hiopVector& vec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_min(const hiopVector& vec)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
@@ -1052,7 +1090,8 @@ void hiopVectorRajaPar::component_min(const hiopVector& vec)
 /**
  * @brief Set `this` vector elemenwise to the maximum of itself and the given `constant`
  */
-void hiopVectorRajaPar::component_max(const double constant)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_max(const double constant)
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(
@@ -1073,9 +1112,10 @@ void hiopVectorRajaPar::component_max(const double constant)
  * @post `vec` is not modified
  * 
  */
-void hiopVectorRajaPar::component_max(const hiopVector& vec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_max(const hiopVector& vec)
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
@@ -1093,7 +1133,8 @@ void hiopVectorRajaPar::component_max(const hiopVector& vec)
 /**
  * @brief Set each component to its absolute value
  */
-void hiopVectorRajaPar::component_abs ()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_abs ()
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(
@@ -1108,7 +1149,8 @@ void hiopVectorRajaPar::component_abs ()
 /**
  * @brief Set each component to its absolute value
  */
-void hiopVectorRajaPar::component_sgn ()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_sgn ()
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(
@@ -1125,7 +1167,8 @@ void hiopVectorRajaPar::component_sgn ()
  * @brief compute square root of each element
  * @pre all the elements are non-negative
  */
-void hiopVectorRajaPar::component_sqrt()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::component_sqrt()
 {
   double* dd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >(
@@ -1142,7 +1185,8 @@ void hiopVectorRajaPar::component_sqrt()
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)
  */
-void hiopVectorRajaPar::scale(double c)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::scale(double c)
 {
   if(1.0==c)
     return;
@@ -1163,9 +1207,10 @@ void hiopVectorRajaPar::scale(double c)
  * 
  * @note Consider implementing with BLAS call (<D>AXPY)
  */
-void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axpy(double alpha, const hiopVector& xvec)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
   
   double* yd = data_dev_;
   double* xd = x.data_dev_;
@@ -1178,9 +1223,10 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec)
 }
 
 /// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
-void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
   const hiopVectorIntRaja& idxs = dynamic_cast<const hiopVectorIntRaja&>(i);
 
   assert(x.get_size()==i.size());
@@ -1202,10 +1248,11 @@ void hiopVectorRajaPar::axpy(double alpha, const hiopVector& xvec, const hiopVec
 }
 
 /// @brief Performs axpy, this += alpha*x, for selected entries
-void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_ == sel.n_local_);
   assert(  n_local_ == sel.n_local_);
@@ -1226,10 +1273,11 @@ void hiopVectorRajaPar::axpy_w_pattern(double alpha, const hiopVector& xvec, con
  * @pre `this`, `xvec` and `zvec` have same partitioning.
  * @post `xvec` and `zvec` are not modified
  */
-void hiopVectorRajaPar::axzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& z = dynamic_cast<const hiopVectorRajaPar&>(zvec);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
+  const hiopVectorRaja& z = dynamic_cast<const hiopVectorRaja&>(zvec);
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_ == z.n_local_);
   assert(  n_local_ == z.n_local_);
@@ -1251,10 +1299,11 @@ void hiopVectorRajaPar::axzpy(double alpha, const hiopVector& xvec, const hiopVe
  * @pre zvec[i] != 0 forall i
  * @post `xvec` and `zvec` are not modified
  */
-void hiopVectorRajaPar::axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& z = dynamic_cast<const hiopVectorRajaPar&>(zvec);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
+  const hiopVectorRaja& z = dynamic_cast<const hiopVectorRaja&>(zvec);
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_==z.n_local_);
   assert(  n_local_==z.n_local_);
@@ -1276,15 +1325,15 @@ void hiopVectorRajaPar::axdzpy(double alpha, const hiopVector& xvec, const hiopV
  * @pre zvec[i] != 0 when select[i] = 1
  * @post `xvec`, `zvec` and `select` are not modified
  */
-void hiopVectorRajaPar::axdzpy_w_pattern( 
-  double alpha,
-  const hiopVector& xvec, 
-  const hiopVector& zvec,
-  const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::axdzpy_w_pattern(double alpha,
+                                               const hiopVector& xvec, 
+                                               const hiopVector& zvec,
+                                               const hiopVector& select)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& z = dynamic_cast<const hiopVectorRajaPar&>(zvec);
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
+  const hiopVectorRaja& z = dynamic_cast<const hiopVectorRaja&>(zvec);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_==z.n_local_);
   assert(  n_local_==z.n_local_);
@@ -1306,7 +1355,8 @@ void hiopVectorRajaPar::axdzpy_w_pattern(
  * @brief this[i] += c forall i
  * 
  */
-void hiopVectorRajaPar::addConstant(double c)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::addConstant(double c)
 {
   double *yd = data_dev_;
   RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
@@ -1322,9 +1372,10 @@ void hiopVectorRajaPar::addConstant(double c)
  * @pre `this` and `select` have same partitioning.
  * @post `select` is not modified
  */
-void  hiopVectorRajaPar::addConstant_w_patternSelect(double c, const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::addConstant_w_patternSelect(double c, const hiopVector& select)
 {
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);
   assert(this->n_local_ == sel.n_local_);
   double *data = data_dev_;
   const double *id = sel.local_data_const();
@@ -1337,7 +1388,8 @@ void  hiopVectorRajaPar::addConstant_w_patternSelect(double c, const hiopVector&
 }
 
 /// Find minimum vector element
-double hiopVectorRajaPar::min() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::min() const
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
@@ -1359,9 +1411,10 @@ double hiopVectorRajaPar::min() const
 }
 
 /// Find minimum vector element for `select` pattern
-double hiopVectorRajaPar::min_w_pattern(const hiopVector& select) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::min_w_pattern(const hiopVector& select) const
 {
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);
   assert(this->n_local_ == sel.n_local_);
   double* data = data_dev_;
   const double* id = sel.local_data_const();
@@ -1387,7 +1440,8 @@ double hiopVectorRajaPar::min_w_pattern(const hiopVector& select) const
 }
 
 /// Find minimum vector element
-void hiopVectorRajaPar::min( double& /* m */, int& /* index */) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::min( double& /* m */, int& /* index */) const
 {
   assert(false && "not implemented");
 }
@@ -1397,7 +1451,8 @@ void hiopVectorRajaPar::min( double& /* m */, int& /* index */) const
  * 
  * @note Consider implementing with BLAS call (<D>SCAL)
  */
-void hiopVectorRajaPar::negate()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::negate()
 {
   double* data = data_dev_;
   RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
@@ -1415,7 +1470,8 @@ void hiopVectorRajaPar::negate()
  * 
  * @todo Consider having HiOp-wide `small_real` constant defined.
  */
-void hiopVectorRajaPar::invert()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::invert()
 {
 #ifdef HIOP_DEEPCHECKS
 #ifndef NDEBUG
@@ -1442,23 +1498,25 @@ void hiopVectorRajaPar::invert()
  * 
  * @warning This is local method only!
  */
-double hiopVectorRajaPar::logBarrier_local(const hiopVector& select) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::logBarrier_local(const hiopVector& select) const
 {
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);
   assert(this->n_local_ == sel.n_local_);
 
   double* data = data_dev_;
   const double* id = sel.local_data_const();
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
-		RAJA_LAMBDA(RAJA::Index_type i)
+  RAJA::forall< hiop_raja_exec2 >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
 #ifdef HIOP_DEEPCHECKS
       assert(id[i] == one || id[i] == zero);
 #endif
       if(id[i] == one)
         sum += std::log(data[i]);
-		});
+    });
 
   return sum.get();
 }
@@ -1466,7 +1524,8 @@ double hiopVectorRajaPar::logBarrier_local(const hiopVector& select) const
 /**
  * @brief Sum all elements
  */
-double hiopVectorRajaPar::sum_local() const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::sum_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
@@ -1488,13 +1547,13 @@ double hiopVectorRajaPar::sum_local() const
  * @pre xvec[i] != 0 forall i
  * @post `xvec` and `select` are not modified
  */
-void hiopVectorRajaPar::addLogBarrierGrad(
-  double alpha,
-  const hiopVector& xvec,
-  const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::addLogBarrierGrad(double alpha,
+                                                const hiopVector& xvec,
+                                                const hiopVector& select)
 {
-  const hiopVectorRajaPar& x = dynamic_cast<const hiopVectorRajaPar&>(xvec);
-  const hiopVectorRajaPar& sel = dynamic_cast<const hiopVectorRajaPar&>(select);  
+  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja&>(xvec);
+  const hiopVectorRaja& sel = dynamic_cast<const hiopVectorRaja&>(select);  
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == x.n_local_);
   assert(n_local_ == sel.n_local_);
@@ -1519,14 +1578,14 @@ void hiopVectorRajaPar::addLogBarrierGrad(
  * 
  * @warning This is local method only!
  */
-double hiopVectorRajaPar::linearDampingTerm_local(
-  const hiopVector& ixleft,
-  const hiopVector& ixright,
-  const double& mu,
-  const double& kappa_d) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::linearDampingTerm_local(const hiopVector& ixleft,
+                                                        const hiopVector& ixright,
+                                                        const double& mu,
+                                                        const double& kappa_d) const
 {
-  const hiopVectorRajaPar& ixl = dynamic_cast<const hiopVectorRajaPar&>(ixleft);
-  const hiopVectorRajaPar& ixr = dynamic_cast<const hiopVectorRajaPar&>(ixright);  
+  const hiopVectorRaja& ixl = dynamic_cast<const hiopVectorRaja&>(ixleft);
+  const hiopVectorRaja& ixr = dynamic_cast<const hiopVectorRaja&>(ixright);  
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == ixl.n_local_);
   assert(n_local_ == ixr.n_local_);
@@ -1535,8 +1594,9 @@ double hiopVectorRajaPar::linearDampingTerm_local(
   const double* rd = ixr.local_data_const();
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
-		RAJA_LAMBDA(RAJA::Index_type i)
+  RAJA::forall< hiop_raja_exec2 >(
+    RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
       if (ld[i] == one && rd[i] == zero)
         sum += data[i];
@@ -1547,18 +1607,19 @@ double hiopVectorRajaPar::linearDampingTerm_local(
   return term;
 }
 
-void hiopVectorRajaPar::addLinearDampingTerm(
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::addLinearDampingTerm(
   const hiopVector& ixleft,
   const hiopVector& ixright,
   const double& alpha,
   const double& ct)
 {
 
-  assert((dynamic_cast<const hiopVectorRajaPar&>(ixleft)).n_local_ == n_local_);
-  assert((dynamic_cast<const hiopVectorRajaPar&>(ixright)).n_local_ == n_local_);
+  assert((dynamic_cast<const hiopVectorRaja&>(ixleft)).n_local_ == n_local_);
+  assert((dynamic_cast<const hiopVectorRaja&>(ixright)).n_local_ == n_local_);
 
-  const double* ixl= (dynamic_cast<const hiopVectorRajaPar&>(ixleft)).local_data_const();
-  const double* ixr= (dynamic_cast<const hiopVectorRajaPar&>(ixright)).local_data_const();
+  const double* ixl= (dynamic_cast<const hiopVectorRaja&>(ixleft)).local_data_const();
+  const double* ixr= (dynamic_cast<const hiopVectorRaja&>(ixright)).local_data_const();
 
   double* data = data_dev_;
 
@@ -1576,7 +1637,8 @@ void hiopVectorRajaPar::addLinearDampingTerm(
  * 
  * @post `this` is not modified
  */
-int hiopVectorRajaPar::allPositive()
+template<class MEM, class POL>
+int hiopVectorRaja<MEM,POL>::allPositive()
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
@@ -1604,18 +1666,18 @@ int hiopVectorRajaPar::allPositive()
  * 
  * @warning This is local method only!
  */
-bool hiopVectorRajaPar::projectIntoBounds_local(
-  const hiopVector& xlo, 
-  const hiopVector& ixl,
-	const hiopVector& xup,
-  const hiopVector& ixu,
-	double kappa1,
-  double kappa2)
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::projectIntoBounds_local(const hiopVector& xlo, 
+                                                      const hiopVector& ixl,
+                                                      const hiopVector& xup,
+                                                      const hiopVector& ixu,
+                                                      double kappa1,
+                                                      double kappa2)
 {
-  const hiopVectorRajaPar& xl = dynamic_cast<const hiopVectorRajaPar&>(xlo);
-  const hiopVectorRajaPar& il = dynamic_cast<const hiopVectorRajaPar&>(ixl);
-  const hiopVectorRajaPar& xu = dynamic_cast<const hiopVectorRajaPar&>(xup);
-  const hiopVectorRajaPar& iu = dynamic_cast<const hiopVectorRajaPar&>(ixu);
+  const hiopVectorRaja& xl = dynamic_cast<const hiopVectorRaja&>(xlo);
+  const hiopVectorRaja& il = dynamic_cast<const hiopVectorRaja&>(ixl);
+  const hiopVectorRaja& xu = dynamic_cast<const hiopVectorRaja&>(xup);
+  const hiopVectorRaja& iu = dynamic_cast<const hiopVectorRaja&>(ixu);
 
 #ifdef HIOP_DEEPCHECKS
   assert(xl.n_local_ == n_local_);
@@ -1687,9 +1749,10 @@ bool hiopVectorRajaPar::projectIntoBounds_local(
  * 
  * @warning This is local method only!
  */
-double hiopVectorRajaPar::fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const
 {
-  const hiopVectorRajaPar& d = dynamic_cast<const hiopVectorRajaPar&>(dvec);
+  const hiopVectorRaja& d = dynamic_cast<const hiopVectorRaja&>(dvec);
 #ifdef HIOP_DEEPCHECKS
   assert(d.n_local_ == n_local_);
   assert(tau > 0);
@@ -1722,13 +1785,13 @@ double hiopVectorRajaPar::fractionToTheBdry_local(const hiopVector& dvec, const 
  * 
  * @warning This is local method only!
  */
-double hiopVectorRajaPar::fractionToTheBdry_w_pattern_local(
-  const hiopVector& dvec,
-  const double& tau, 
-  const hiopVector& select) const
+template<class MEM, class POL>
+double hiopVectorRaja<MEM,POL>::fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
+                                                                  const double& tau, 
+                                                                  const hiopVector& select) const
 {
-  const hiopVectorRajaPar& d = dynamic_cast<const hiopVectorRajaPar&>(dvec);
-  const hiopVectorRajaPar& s = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& d = dynamic_cast<const hiopVectorRaja&>(dvec);
+  const hiopVectorRaja& s = dynamic_cast<const hiopVectorRaja&>(select);
 
 #ifdef HIOP_DEEPCHECKS
   assert(d.n_local_ == n_local_);
@@ -1763,9 +1826,10 @@ double hiopVectorRajaPar::fractionToTheBdry_w_pattern_local(
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
  */
-void hiopVectorRajaPar::selectPattern(const hiopVector& select)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::selectPattern(const hiopVector& select)
 {
-  const hiopVectorRajaPar& s = dynamic_cast<const hiopVectorRajaPar&>(select);
+  const hiopVectorRaja& s = dynamic_cast<const hiopVectorRaja&>(select);
 #ifdef HIOP_DEEPCHECKS
   assert(s.n_local_==n_local_);
 #endif
@@ -1786,9 +1850,10 @@ void hiopVectorRajaPar::selectPattern(const hiopVector& select)
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
  */
-bool hiopVectorRajaPar::matchesPattern(const hiopVector& pattern)
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::matchesPattern(const hiopVector& pattern)
 {  
-  const hiopVectorRajaPar& p = dynamic_cast<const hiopVectorRajaPar&>(pattern);
+  const hiopVectorRaja& p = dynamic_cast<const hiopVectorRaja&>(pattern);
 
 #ifdef HIOP_DEEPCHECKS
   assert(p.n_local_==n_local_);
@@ -1820,9 +1885,10 @@ bool hiopVectorRajaPar::matchesPattern(const hiopVector& pattern)
  * @pre Elements of `select` are either 0 or 1.
  * @post `select` is not modified
  */
-int hiopVectorRajaPar::allPositive_w_patternSelect(const hiopVector& wvec)
+template<class MEM, class POL>
+int hiopVectorRaja<MEM,POL>::allPositive_w_patternSelect(const hiopVector& wvec)
 {
-  const hiopVectorRajaPar& w = dynamic_cast<const hiopVectorRajaPar&>(wvec);
+  const hiopVectorRaja& w = dynamic_cast<const hiopVectorRaja&>(wvec);
 
 #ifdef HIOP_DEEPCHECKS
   assert(w.n_local_ == n_local_);
@@ -1857,14 +1923,14 @@ int hiopVectorRajaPar::allPositive_w_patternSelect(const hiopVector& wvec)
  * 
  * @note Implementation probably inefficient.
  */
-void hiopVectorRajaPar::adjustDuals_plh(
-  const hiopVector& xvec, 
-  const hiopVector& ixvec,
-  const double& mu,
-  const double& kappa)
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::adjustDuals_plh(const hiopVector& xvec, 
+                                              const hiopVector& ixvec,
+                                              const double& mu,
+                                              const double& kappa)
 {
-  const hiopVectorRajaPar& x  = dynamic_cast<const hiopVectorRajaPar&>(xvec) ;
-  const hiopVectorRajaPar& ix = dynamic_cast<const hiopVectorRajaPar&>(ixvec);
+  const hiopVectorRaja& x  = dynamic_cast<const hiopVectorRaja&>(xvec) ;
+  const hiopVectorRaja& ix = dynamic_cast<const hiopVectorRaja&>(ixvec);
 #ifdef HIOP_DEEPCHECKS
   assert(x.n_local_==n_local_);
   assert(ix.n_local_==n_local_);
@@ -1903,7 +1969,8 @@ void hiopVectorRajaPar::adjustDuals_plh(
  * 
  * @post `this` is not modified
  */
-bool hiopVectorRajaPar::is_zero() const
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::is_zero() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
@@ -1931,7 +1998,8 @@ bool hiopVectorRajaPar::is_zero() const
  * 
  * @warning This is local method only!
  */
-bool hiopVectorRajaPar::isnan_local() const
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::isnan_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > any(0);
@@ -1951,7 +2019,8 @@ bool hiopVectorRajaPar::isnan_local() const
  * 
  * @warning This is local method only!
  */
-bool hiopVectorRajaPar::isinf_local() const
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::isinf_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > any(0);
@@ -1971,7 +2040,8 @@ bool hiopVectorRajaPar::isinf_local() const
  * 
  * @warning This is local method only!
  */
-bool hiopVectorRajaPar::isfinite_local() const
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::isfinite_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, int > smallest(1);
@@ -1989,7 +2059,9 @@ bool hiopVectorRajaPar::isfinite_local() const
  * 
  * @pre Vector data was moved from the memory space to the host mirror.
  */
-void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::
+print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
   int myrank=0, numranks=1; 
 #ifdef HIOP_USE_MPI
@@ -2028,17 +2100,19 @@ void hiopVectorRajaPar::print(FILE* file, const char* msg/*=NULL*/, int max_elem
   }
 }
 
-void hiopVectorRajaPar::print() const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::print() const
 {
-  assert(nullptr != const_cast<hiopVectorRajaPar*>(this));
-  (const_cast<hiopVectorRajaPar*>(this))->copyFromDev();
+  assert(nullptr != const_cast<hiopVectorRaja*>(this));
+  (const_cast<hiopVectorRaja*>(this))->copyFromDev();
   for(index_type it=0; it<n_local_; it++) {
     printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
   }
   printf("\n");
 }
 
-void hiopVectorRajaPar::copyToDev()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyToDev()
 {
   if(data_dev_ == data_host_)
     return;
@@ -2046,32 +2120,16 @@ void hiopVectorRajaPar::copyToDev()
   hw_backend_.copy(data_dev_, data_host_, n_local_, hw_backend_host_);
 }
 
-void hiopVectorRajaPar::copyFromDev()
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::copyFromDev()
 {
   if(data_dev_ == data_host_)
     return;
   hw_backend_host_.copy(data_host_, data_dev_, n_local_, hw_backend_);
 }
 
-// void hiopVectorRajaPar::copyToDev() const
-// {
-//   if(data_dev_ == data_host_)
-//     return;
-//   auto& resmgr = umpire::ResourceManager::getInstance();
-//   double* data_dev = const_cast<double*>(data_dev_);
-//   resmgr.copy(data_dev, data_host_);
-// }
-
-// void hiopVectorRajaPar::copyFromDev() const
-// {
-//   if(data_dev_ == data_host_)
-//     return;
-//   auto& resmgr = umpire::ResourceManager::getInstance();
-//   double* data_host = const_cast<double*>(data_host_);
-//   resmgr.copy(data_host, data_dev_);
-// }
-
-size_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
+template<class MEM, class POL>
+size_type hiopVectorRaja<MEM,POL>::numOfElemsLessThan(const double &val) const
 {  
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
@@ -2093,7 +2151,8 @@ size_type hiopVectorRajaPar::numOfElemsLessThan(const double &val) const
   return nrm;
 }
 
-size_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
+template<class MEM, class POL>
+size_type hiopVectorRaja<MEM,POL>::numOfElemsAbsLessThan(const double &val) const
 {  
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
@@ -2115,11 +2174,12 @@ size_type hiopVectorRajaPar::numOfElemsAbsLessThan(const double &val) const
   return nrm;
 }
 
-void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
-                                          const int start, 
-                                          const int end, 
-                                          const hiopInterfaceBase::NonlinearityType* arr_src,
-                                          const int start_src) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                                const int start, 
+                                                const int end, 
+                                                const hiopInterfaceBase::NonlinearityType* arr_src,
+                                                const int start_src) const
 {
   assert(end <= n_local_ && start <= end && start >= 0 && start_src >= 0);
 
@@ -2137,10 +2197,11 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
 
 }
 
-void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
-                                          const int start, 
-                                          const int end, 
-                                          const hiopInterfaceBase::NonlinearityType arr_src) const
+template<class MEM, class POL>
+void hiopVectorRaja<MEM,POL>::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+                                                const int start, 
+                                                const int end, 
+                                                const hiopInterfaceBase::NonlinearityType arr_src) const
 {
   assert(end <= n_local_ && start <= end && start >= 0);
 
@@ -2157,10 +2218,11 @@ void hiopVectorRajaPar::set_array_from_to(hiopInterfaceBase::NonlinearityType* a
   );      
 }
 
-bool hiopVectorRajaPar::is_equal(const hiopVector& vec) const
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM,POL>::is_equal(const hiopVector& vec) const
 {
 #ifdef HIOP_DEEPCHECKS
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja&>(vec);
   assert(v.n_local_ == n_local_);
 #endif 
 
@@ -2186,4 +2248,3 @@ bool hiopVectorRajaPar::is_equal(const hiopVector& vec) const
 }
 
 } // namespace hiop
-#endif

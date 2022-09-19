@@ -54,8 +54,20 @@
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
+
+#include "hiopVectorRaja.hpp"
+
 #ifndef HIOP_VECTOR_RAJA_PAR
 #define HIOP_VECTOR_RAJA_PAR
+
+
+namespace hiop
+{
+  typedef hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaCuda> hiopVectorRajaPar;
+}
+
+#if 0 
+
 
 #include <cstdio>
 #include <string>
@@ -324,3 +336,4 @@ private:
 } // namespace hiop
 
 #endif // HIOP_VECTOR_RAJA_PAR
+#endif
