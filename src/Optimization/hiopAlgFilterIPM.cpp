@@ -1611,29 +1611,31 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
 #endif
 #endif
 
-  //
-  // all other KKT formulations -> do nothing (and return switched=false)
+  // MDS system
   // if linsol_mode = speculative, linsol_safe_mode_on = false by initialization, and hiop starts from fast mode.
   // if in safe mode and mu is large, switch back to fast model after couple of iters.
   //
-  if( linsol_safe_mode_on && 
-      (iter_num - linsol_safe_mode_last_iter_switched_on > linsol_safe_mode_max_iters) &&
-      (mu>1e-6) )
-  {
-    linsol_safe_mode_on = false;
-    switched = true;
+  if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
+    if( linsol_safe_mode_on && 
+        (iter_num - linsol_safe_mode_last_iter_switched_on > linsol_safe_mode_max_iters) &&
+        (mu>1e-6) ) {
+      linsol_safe_mode_on = false;
+      switched = true;
 
-    kkt->set_safe_mode(linsol_safe_mode_on);
-      
-    //let safe mode do more iterations next time we switch to safe mode
-    linsol_safe_mode_max_iters *= 2;
+      kkt->set_safe_mode(linsol_safe_mode_on);
+        
+      //let safe mode do more iterations next time we switch to safe mode
+      linsol_safe_mode_max_iters *= 2;
 
-    //reset last iter safe mode was switched on
-    linsol_safe_mode_last_iter_switched_on = 100000;
+      //reset last iter safe mode was switched on
+      linsol_safe_mode_last_iter_switched_on = 100000;
 
-    return kkt;
+      return kkt;
+    }
   }
 
+  // all other KKT formulations -> do nothing (and return switched=false)
+  switched = false;
   return kkt_curr;
 }
 
