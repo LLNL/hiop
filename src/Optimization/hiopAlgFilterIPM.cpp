@@ -1628,7 +1628,7 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
       //reset last iter safe mode was switched on
       linsol_safe_mode_last_iter_switched_on = 100000;
 
-      return kkt;
+      return kkt_curr;
     }
   }
 
