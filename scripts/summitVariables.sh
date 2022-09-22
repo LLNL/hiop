@@ -56,12 +56,3 @@ echo "Generated $PWD/nvblas.conf"
 export CMAKE_CACHE_SCRIPT=gcc-cuda.cmake
 
 EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=70 -DHIOP_TEST_WITH_BSUB=ON"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_MAGMA_DIR:STRING=/autofs/nccs-svm1_proj/csc359/shared_installs/spack/opt/spack/linux-rhel8-ppc64le/gcc-10.2.0/magma-2.6.2-pkzoqx76p3up5zepld4chjfmgn5h27gf"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DLAPACK_LIBRARIES:STRING=/sw/summit/spack-envs/base/opt/linux-rhel8-ppc64le/gcc-10.2.0/openblas-0.3.17-6te4qwdzetkoyitdryljjstei6jw77gg/lib/libopenblas.so"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_CTEST_LAUNCH_COMMAND:STRING='jsrun -a 1 -g 2'"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DMPI_HOME:STRING=/sw/summit/spack-envs/base/opt/linux-rhel8-ppc64le/gcc-10.2.0/spectrum-mpi-10.4.0.3-20210112-ht5bw4jruhjujvkzcvpra5lryg5vfhy4"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DMPI_C_COMPILER:STRING=/sw/summit/spack-envs/base/opt/linux-rhel8-ppc64le/gcc-10.2.0/spectrum-mpi-10.4.0.3-20210112-ht5bw4jruhjujvkzcvpra5lryg5vfhy4/bin/mpicc"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DMPI_CXX_COMPILER:STRING=/sw/summit/spack-envs/base/opt/linux-rhel8-ppc64le/gcc-10.2.0/spectrum-mpi-10.4.0.3-20210112-ht5bw4jruhjujvkzcvpra5lryg5vfhy4/bin/mpicxx"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DMPI_Fortran_COMPILER:STRING=/sw/summit/spack-envs/base/opt/linux-rhel8-ppc64le/gcc-10.2.0/spectrum-mpi-10.4.0.3-20210112-ht5bw4jruhjujvkzcvpra5lryg5vfhy4/bin/mpif90"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_UMFPACK_DIR:STRING=/autofs/nccs-svm1_proj/csc359/shared_installs/spack/opt/spack/linux-rhel8-ppc64le/gcc-10.2.0/suite-sparse-5.10.1-bgorozsknorc3meyrd3qtg3yzxwlcv2q"
-EXTRA_CMAKE_ARGS="$EXTRA_CMAKE_ARGS -DHIOP_COINHSL_DIR:STRING=/autofs/nccs-svm1_proj/csc359/shared_installs/spack/opt/spack/linux-rhel8-ppc64le/gcc-10.2.0/coinhsl-2015.06.23-kio55bvmdzjlsqpn63nlywbtlijky6pu"
