@@ -322,6 +322,9 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
   {
+    using vec = gko::matrix::Dense<double>;
+    using arr = gko::array<double>;
+    auto host = exec_->get_master();
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
     assert(x_.get_size()==M_->n());
@@ -333,12 +336,13 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
-    auto x_array = gko::Array<double>::view(exec_->get_master(), n_, dx);
-    auto b_array = gko::Array<double>::view(exec_, n_, drhs);
-    auto dense_x_host = gko::matrix::Dense<double>::create(exec_->get_master(), gko::dim<2>{n_, 1}, gko::Array<double>::view(exec_->get_master(), n_, dx), 1);
-    auto dense_x= gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1});
+    const auto size = gko::dim<2>{n_, 1};
+    auto dense_x_host = vec::create(host, size, arr::view(host, n_, dx), 1);
+    auto dense_x = vec::create(exec_, size);
     dense_x->copy_from(dense_x_host.get());
-    auto dense_b = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, b_array, 1);
+    auto dense_b_host = vec::create(host, size, arr::view(host, n_, drhs), 1);
+    auto dense_b = vec::create(exec_, size);
+    dense_b->copy_from(dense_b_host.get());
 
     gko_solver_->apply(dense_b.get(), dense_x.get());
     nlp_->runStats.linsolv.tmTriuSolves.stop();
