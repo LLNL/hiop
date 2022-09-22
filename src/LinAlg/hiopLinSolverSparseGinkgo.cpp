@@ -182,12 +182,13 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
 
 void update_matrix(hiopMatrixSparse* M_,
                    std::shared_ptr<gko::matrix::Csr<double, int>> mtx,
+                   std::shared_ptr<gko::matrix::Csr<double, int>> host_mtx,
                    int* index_covert_CSR2Triplet_,
                    int* index_covert_extra_Diag2CSR_)
 {
     int n_ = mtx->get_size()[0];
     int nnz_= mtx->get_num_stored_elements();
-    auto values = mtx->get_values();
+    auto values = host_mtx->get_values();
     int rowID_tmp{0};
     for(int k=0; k<nnz_; k++) {
         values[k] = M_->M()[index_covert_CSR2Triplet_[k]];
@@ -196,6 +197,10 @@ void update_matrix(hiopMatrixSparse* M_,
         if(index_covert_extra_Diag2CSR_[i] != -1) {
             values[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
         }
+    }
+    auto exec = mtx->get_executor();
+    if (exec != exec->get_master()) {
+        mtx->copy_from(host_mtx.get());
     }
 }
 
@@ -283,9 +288,10 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_==M_->n() && M_->n()==M_->m());
     assert(n_>0);
 
-    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
+    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));
 
-    mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
+    host_mtx_ = transferTripletToCSR(exec_->get_master(), n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
+    mtx_ = exec_ == (exec_->get_master()) ? host_mtx_ : gko::clone(exec_, host_mtx_);
     nnz_ = mtx_->get_num_stored_elements();
 
     reusable_factory_ = setup_solver_factory(exec_, mtx_);
@@ -301,7 +307,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     if( !mtx_ ) {
       this->firstCall();
     } else {
-      update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
+      update_matrix(M_, mtx_, host_mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
     
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
@@ -341,90 +347,5 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     delete rhs; rhs=nullptr;
     return 1;
   }
-
-
-  hiopLinSolverNonSymSparseGinkgo::hiopLinSolverNonSymSparseGinkgo(const int& n,
-                                                                   const int& nnz,
-                                                                   hiopNlpFormulation* nlp)
-    : hiopLinSolverNonSymSparse(n, nnz, nlp),
-      index_covert_CSR2Triplet_{nullptr},
-      index_covert_extra_Diag2CSR_{nullptr},
-      n_{n},
-      nnz_{0}
-  {}
-
-  hiopLinSolverNonSymSparseGinkgo::~hiopLinSolverNonSymSparseGinkgo()
-  {
-    if(index_covert_CSR2Triplet_) {
-      delete [] index_covert_CSR2Triplet_;
-    }
-    if(index_covert_extra_Diag2CSR_) {
-      delete [] index_covert_extra_Diag2CSR_;
-    }
-  }
-  
-  void hiopLinSolverNonSymSparseGinkgo::firstCall()
-  {
-    nlp_->log->printf(hovSummary, "Setting up Ginkgo solver ... \n");
-    assert(n_==M_->n() && M_->n()==M_->m());
-    assert(n_>0);
-
-    exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));//gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
-
-    mtx_ = transferTripletToCSR(exec_, n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
-    nnz_ = mtx_->get_num_stored_elements();
-
-    reusable_factory_ = setup_solver_factory(exec_, mtx_);
-  }
-
-  int hiopLinSolverNonSymSparseGinkgo::matrixChanged()
-  {
-    assert(n_==M_->n() && M_->n()==M_->m());
-    assert(n_>0);
-
-    nlp_->runStats.linsolv.tmFactTime.start();
-
-    if( !mtx_ ) {
-      this->firstCall();
-    } else {
-      update_matrix(M_, mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
-    }
-
-    gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
-
-    // Temporary solution for the ginkgo GLU integration.
-    auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
-    auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
-    auto status = precond->get_factorization_status();
-    
-    return status == gko::experimental::factorization::status::success ? 0 : -1;
-  }
-
-  bool hiopLinSolverNonSymSparseGinkgo::solve(hiopVector& x_)
-  {
-    assert(n_==M_->n() && M_->n()==M_->m());
-    assert(n_>0);
-    assert(x_.get_size()==M_->n());
-
-    nlp_->runStats.linsolv.tmTriuSolves.start();
-
-    hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
-    assert(x != NULL);
-    hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
-    double* dx = x->local_data();
-    double* drhs = rhs->local_data();
-    auto x_array = gko::Array<double>::view(exec_, n_, dx);
-    auto b_array = gko::Array<double>::view(exec_, n_, drhs);
-    auto dense_x = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, x_array, 1);
-    auto dense_b = gko::matrix::Dense<double>::create(exec_, gko::dim<2>{n_, 1}, b_array, 1);
-
-    gko_solver_->apply(dense_b.get(), dense_x.get());
-
-    nlp_->runStats.linsolv.tmTriuSolves.stop();
-    
-    delete rhs; rhs=nullptr;
-    return 1;
-  }
-
 
 } //end namespace hiop
