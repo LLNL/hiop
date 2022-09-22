@@ -1621,8 +1621,6 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
         (mu>1e-6) ) {
       linsol_safe_mode_on = false;
       switched = true;
-
-      kkt->set_safe_mode(linsol_safe_mode_on);
         
       //let safe mode do more iterations next time we switch to safe mode
       linsol_safe_mode_max_iters *= 2;
