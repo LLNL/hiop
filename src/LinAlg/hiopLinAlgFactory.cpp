@@ -66,8 +66,8 @@
 #include <hiopVectorRajaPar.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
-#include <hiopMatrixSparseCsrCuda.hpp>
 #endif // HIOP_USE_RAJA
+#include <hiopMatrixSparseCsrCuda.hpp>
 
 #include <hiopVectorIntSeq.hpp>
 #include <hiopVectorPar.hpp>
