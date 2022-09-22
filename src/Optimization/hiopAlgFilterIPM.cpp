@@ -1517,7 +1517,7 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
 #endif
 
 // TODO: turn to 0 --- keep using fast mode till linear solver (kkt->update) fails
-#if 1
+#if 0
   //
   // MDS starts with fast mode, when linsol_mode = speculative
   // Safe mode is on when IPM is arroching convergence, or a high accurate solution is required
@@ -1614,8 +1614,26 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   //
   // all other KKT formulations -> do nothing (and return switched=false)
   // if linsol_mode = speculative, linsol_safe_mode_on = false by initialization, and hiop starts from fast mode.
+  // if in safe mode and mu is large, switch back to fast model after couple of iters.
   //
-  switched = false;
+  if( linsol_safe_mode_on && 
+      (iter_num - linsol_safe_mode_last_iter_switched_on > linsol_safe_mode_max_iters) &&
+      (mu>1e-6) )
+  {
+    linsol_safe_mode_on = false;
+    switched = true;
+
+    kkt->set_safe_mode(linsol_safe_mode_on);
+      
+    //let safe mode do more iterations next time we switch to safe mode
+    linsol_safe_mode_max_iters *= 2;
+
+    //reset last iter safe mode was switched on
+    linsol_safe_mode_last_iter_switched_on = 100000;
+
+    return kkt;
+  }
+
   return kkt_curr;
 }
 
