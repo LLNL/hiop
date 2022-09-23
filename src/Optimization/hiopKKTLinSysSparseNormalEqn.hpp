@@ -173,9 +173,6 @@ private:
     } else {
       //(opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
 #ifdef HIOP_USE_CUDA
-#ifndef HIOP_USE_RAJA
-#error "RAJA build (HIOP_USE_RAJA) should be enabled when HIOP_USE_CUDA is")
-#endif      
       assert(opt_compute_mode != "gpu" && "When code is GPU-ready, remove this method");
       return "DEVICE";
 #else

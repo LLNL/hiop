@@ -268,10 +268,6 @@ if(HIOP_USE_RAJA)
   target_link_libraries(hiop_tpl INTERFACE umpire RAJA)
   message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
   message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
-else()
-  if(HIOP_USE_CUDA)
-    message(FATAL_ERROR "Momentarily RAJA is needed for building with HIOP_USE_CUDA=ON.")
-  endif()
 endif()
 
 # KLU needed with cuSolver. TODO: make this an optional dependency
