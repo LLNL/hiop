@@ -1,6 +1,6 @@
 spack:
   specs:
-  - hiop@develop+cuda+raja+sparse+mpi+deepchecking+ginkgo+cusolver cuda_arch=70 build_type=Release
+  - hiop@develop+cuda+raja+sparse+mpi+ginkgo+cusolver cuda_arch=70 build_type=Release
     ^raja@0.14.0
     ^umpire@6.0.0
     ^openblas
