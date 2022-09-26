@@ -52,6 +52,7 @@
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #ifndef HIOP_VECTOR_RAJA
@@ -306,13 +307,15 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
   
 private:
-  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> hw_backend_;
-  
+  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
   using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
-  //EXECPOLICYRAJA is used for exectution and host exec policy is not used. Anything would
-  // work as EXECPOLICYHOST
+
+  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
+  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
+  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
+  //combinations work).
   using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> hw_backend_host_;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
 
   std::string mem_space_;
   MPI_Comm comm_;

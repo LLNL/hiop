@@ -57,6 +57,7 @@
 
 #include <hiop_defs.hpp>
 #include <string>
+#include <cassert>
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // This header defines the generic execution space class and its various generic types.
@@ -163,6 +164,17 @@ private:
 /// Cuda memory backend for device memory space that is implemented using Cuda API
 struct MemBackendCuda
 {
+  MemBackendCuda() = default;
+
+  /**
+   * Constructor taking a memory space as input; provided for compatibility with other
+   * memory backends.
+   */
+  MemBackendCuda(const std::string& mem_space)
+  {
+    assert(mem_space == "DEVICE");
+  }
+  
   /// For now does not support host memory space (but can/will be implemented).
   inline static bool is_host() { return false; }
 
@@ -181,6 +193,15 @@ struct MemBackendCuda
 /// Cuda memory backend for device memory space that is implemented using Hip API
 struct MemBackendHip
 {
+  /**
+   * Constructor taking a memory space as input; provided for compatibility with other
+   * memory backends.
+   */
+  MemBackendHip(const std::string& mem_space)
+  {
+    assert(mem_space == "DEVICE");
+  }
+
   /// For now does not support host memory space (but can/will be implemented).
   inline static bool is_host() { return false; }
 

@@ -99,8 +99,8 @@ hiopVectorRaja(const size_type& glob_n,
                index_type* col_part /* = NULL */,
                MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
-    hw_backend_(ExecSpace<MEMBACKEND,RAJACUDAPOL>(MemBackendUmpire(mem_space))),
-    hw_backend_host_(ExecSpace<MEMBACKENDHOST,EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
+    exec_space_(ExecSpace<MEMBACKEND,RAJACUDAPOL>(MEMBACKEND(mem_space))),
+    exec_space_host_(ExecSpace<MEMBACKENDHOST,EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
     mem_space_(mem_space),
     comm_(comm)
 {
@@ -132,24 +132,23 @@ hiopVectorRaja(const size_type& glob_n,
   assert(mem_space_ == "HOST"); 
 #endif
 
-  data_dev_ = hw_backend_.template alloc_array<double>(n_local_);
-  if(hw_backend_.mem_backend().is_device())
+  data_dev_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    data_host_ = hw_backend_host_.template alloc_array<double>(n_local_);    
+    data_host_ = exec_space_host_.template alloc_array<double>(n_local_);    
   }
   else
   {
     data_host_ = data_dev_;
   }
-  //std::cout << "Memory space: " << mem_space_ << "\n";
 }
 
 template<class MEMBACKEND, class RAJACUDAPOL>
 hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::hiopVectorRaja(const hiopVectorRaja& v)
   : hiopVector(),
-    hw_backend_(v.hw_backend_),
-    hw_backend_host_(v.hw_backend_host_)
+    exec_space_(v.exec_space_),
+    exec_space_host_(v.exec_space_host_)
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -162,11 +161,11 @@ hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::hiopVectorRaja(const hiopVectorRaja& v)
   assert(mem_space_ == "HOST"); 
 #endif
 
-  data_dev_ = hw_backend_.template alloc_array<double>(n_local_);
-  if(hw_backend_.mem_backend().is_device())
+  data_dev_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device())
   {
     // Create host mirror if the memory space is on device
-    data_host_ = hw_backend_host_.template alloc_array<double>(n_local_);    
+    data_host_ = exec_space_host_.template alloc_array<double>(n_local_);    
   }
   else
   {
@@ -178,9 +177,9 @@ template<class MEMBACKEND, class RAJACUDAPOL>
 hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::~hiopVectorRaja()
 {
   if(data_dev_ != data_host_) {
-    hw_backend_host_.dealloc_array(data_host_);
+    exec_space_host_.dealloc_array(data_host_);
   }
-  hw_backend_.dealloc_array(data_dev_);
+  exec_space_.dealloc_array(data_dev_);
   data_dev_  = nullptr;
   data_host_ = nullptr;
 }
@@ -217,27 +216,11 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::setToConstant(double c)
 {
   double* data = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       data[i] = c;
     });
-}
-
-template<class MEM, class POL> 
-void hiopVectorRaja<MEM,POL>::set_to_random_uniform(double minv, double maxv)
-{
-  double* data = data_dev_;
-#ifdef HIOP_USE_GPU
-  if(mem_space_ == "DEVICE") {
-    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
-  } else {
-    hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
-  }
-#else
-  // TODO: add function for openmp policy
-  hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);
-#endif
 }
 
 /// Set selected elements to constant, zero otherwise
@@ -247,7 +230,7 @@ void hiopVectorRaja<MEM,POL>::setToConstant_w_patternSelect(double c, const hiop
   const hiopVectorRaja& s = dynamic_cast<const hiopVectorRaja&>(select);
   const double* pattern = s.local_data_const();
   double* data = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) {
       data[i] = pattern[i]*c;
     });
@@ -269,7 +252,7 @@ void hiopVectorRaja<MEM,POL>::copyFrom(const hiopVector& vec)
   assert(glob_il_ == v.glob_il_);
   assert(glob_iu_ == v.glob_iu_);
 
-  hw_backend_.copy(data_dev_, v.data_dev_, n_local_, v.hw_backend_);
+  exec_space_.copy(data_dev_, v.data_dev_, n_local_, v.exec_space_);
 }
 
 /**
@@ -293,7 +276,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::copyFrom(const double* local_array)
 {
   if(local_array) {
-    hw_backend_.copy(data_dev_, local_array, n_local_);
+    exec_space_.copy(data_dev_, local_array, n_local_);
   }
 }
 
@@ -311,7 +294,7 @@ void hiopVectorRaja<MEM,POL>::copy_from(const hiopVector& vec, const hiopVectorI
   double* vd = v.data_dev_;
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
 
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i]<nv);
@@ -332,7 +315,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_w_pattern(const hiopVector& vec, const h
   double* vd = v.data_dev_;
   double* id = ix.data_dev_;
 
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
        if(id[i] == one) {
@@ -353,7 +336,7 @@ void hiopVectorRaja<MEM,POL>::copy_from(const double* vec, const hiopVectorInt& 
   double* vd = const_cast<double*>(vec);
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
 
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] = vd[id[i]];
@@ -375,7 +358,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_indexes(const hiopVector& vv, const hiop
 
   size_type nv = v.get_local_size();
   
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i]<nv);
@@ -396,7 +379,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_indexes(const double* vv, const hiopVect
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
   
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] = vv[id[i]];
@@ -428,7 +411,7 @@ void hiopVectorRaja<MEM,POL>::copyFromStarting(int start_index_in_this, const do
     return;
 
   //TODO: data_dev_+start_index_in_this   -> is not portable, may not work on the device. RAJA loop should be used
-  hw_backend_.copy(data_dev_+start_index_in_this, v, nv);
+  exec_space_.copy(data_dev_+start_index_in_this, v, nv);
 }
 
 /**
@@ -455,7 +438,7 @@ void hiopVectorRaja<MEM,POL>::copyFromStarting(int start_index, const hiopVector
     return;
 
   //TODO: data_dev_+start_index   -> is not portable, may not work on the device. RAJA loop should be used
-  hw_backend_.copy(data_dev_+start_index, v.data_dev_, v.n_local_, v.hw_backend_);
+  exec_space_.copy(data_dev_+start_index, v.data_dev_, v.n_local_, v.exec_space_);
 }
 
 /**
@@ -480,7 +463,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_starting_at(const double* v, int start_i
     return;
   
   //TODO: v+start_index_in_v   -> is not portable, may not work on the device. RAJA loop should be used
-  hw_backend_.copy(data_dev_, v+start_index_in_v, nv);
+  exec_space_.copy(data_dev_, v+start_index_in_v, nv);
 }
 
 /**
@@ -518,10 +501,10 @@ void hiopVectorRaja<MEM,POL>::startingAtCopyFromStartingAt(int start_idx_dest,
   assert(howManyToCopyDest <= howManyToCopySrc);
 
   //TODO: this also looks like is not portable
-  hw_backend_.copy(data_dev_+start_idx_dest,
+  exec_space_.copy(data_dev_+start_idx_dest,
                    v.data_dev_+start_idx_src,
                    howManyToCopyDest,
-                   v.hw_backend_);
+                   v.exec_space_);
 }
 
 /**
@@ -548,7 +531,7 @@ void hiopVectorRaja<MEM,POL>::copyToStarting(int start_index, hiopVector& dst) c
     return;
 
   //TODO: pointer arithmetic on host should be avoided
-  v.hw_backend_.copy(v.data_dev_, this->data_dev_ + start_index, v.n_local_, hw_backend_);
+  v.exec_space_.copy(v.data_dev_, this->data_dev_ + start_index, v.n_local_, exec_space_);
 }
 
 /**
@@ -571,7 +554,7 @@ void hiopVectorRaja<MEM,POL>::copyToStarting(hiopVector& vec, int start_index_in
     return;
 
   //TODO: pointer arithmetic on host should be avoided
-  v.hw_backend_.copy(v.data_dev_ + start_index_in_dest, data_dev_, n_local_, hw_backend_);
+  v.exec_space_.copy(v.data_dev_ + start_index_in_dest, data_dev_, n_local_, exec_space_);
 }
 
 template<class MEM, class POL>
@@ -592,7 +575,7 @@ copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopV
   double* id = ix.data_dev_;
   
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     [&](RAJA::Index_type i)
     {
       assert(id[i] == zero || id[i] == one);
@@ -640,7 +623,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_two_vec_w_pattern(const hiopVector& c,
   int n1_local_int = (int) n1_local;
   int n2_local_int = (int) n2_local;
 
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n1_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -649,7 +632,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_two_vec_w_pattern(const hiopVector& c,
     }
   );
 
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n2_local_int),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -688,7 +671,7 @@ void hiopVectorRaja<MEM,POL>::copy_to_two_vec_w_pattern(hiopVector& c,
   const index_type* id1 = ix1.local_data_const();
   const index_type* id2 = ix2.local_data_const();
   
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, (int)n1_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -697,7 +680,7 @@ void hiopVectorRaja<MEM,POL>::copy_to_two_vec_w_pattern(hiopVector& c,
     }
   );
 
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, (int)n2_local),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -762,7 +745,7 @@ void hiopVectorRaja<MEM,POL>::startingAtCopyToStartingAt(
 
   //rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
   //TODO: fix pointer arithmetic on host
-  dest.hw_backend_.copy(dest.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, hw_backend_);
+  dest.exec_space_.copy(dest.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, exec_space_);
 }
 
 template<class MEM, class POL>
@@ -798,7 +781,7 @@ startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
   double* vd = dest.data_dev_;
   double* id = ix.data_dev_;
 
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     [&](RAJA::Index_type i)
     {
       assert(id[i] == zero || id[i] == one);
@@ -824,7 +807,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::copyTo(double* dest) const
 {
   assert(nullptr != const_cast<hiopVectorRaja*>(this));
-  (const_cast<hiopVectorRaja*>(this))->hw_backend_.copy(dest, data_dev_, n_local_);
+  (const_cast<hiopVectorRaja*>(this))->exec_space_.copy(dest, data_dev_, n_local_);
 }
 
 /**
@@ -839,7 +822,7 @@ double hiopVectorRaja<MEM,POL>::twonorm() const
 {
   double* self_dev = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, double> sum(0.0);
-  RAJA::forall<hiop_raja_exec2>(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += self_dev[i] * self_dev[i];
@@ -874,7 +857,7 @@ double hiopVectorRaja<MEM,POL>::dotProductWith( const hiopVector& vec) const
   double* dd = data_dev_;
   double* vd = v.data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, double> dot(0.0);
-  RAJA::forall<hiop_raja_exec2>( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) {
       dot += dd[i] * vd[i];
     });
@@ -923,7 +906,7 @@ double hiopVectorRaja<MEM,POL>::infnorm_local() const
   assert(n_local_ >= 0);
   double* data = data_dev_;
   RAJA::ReduceMax< hiop_raja_reduce, double > norm(0.0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       norm.max(fabs(data[i]));
@@ -961,7 +944,7 @@ double hiopVectorRaja<MEM,POL>::onenorm_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += fabs(data[i]);
@@ -983,7 +966,7 @@ void hiopVectorRaja<MEM,POL>::componentMult(const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] *= vd[i];
@@ -1005,7 +988,7 @@ void hiopVectorRaja<MEM,POL>::componentDiv (const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] /= vd[i];
@@ -1033,7 +1016,7 @@ void hiopVectorRaja<MEM,POL>::componentDiv_w_selectPattern(const hiopVector& vec
   double* dd = data_dev_;
   double* vd = v.data_dev_;
   double* id = ix.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i] == zero || id[i] == one);
@@ -1051,7 +1034,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::component_min(const double constant)
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1076,7 +1059,7 @@ void hiopVectorRaja<MEM,POL>::component_min(const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1094,7 +1077,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::component_max(const double constant)
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1119,7 +1102,7 @@ void hiopVectorRaja<MEM,POL>::component_max(const hiopVector& vec)
   assert(n_local_ == v.n_local_);
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1137,7 +1120,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::component_abs ()
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1153,7 +1136,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::component_sgn ()
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1171,7 +1154,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::component_sqrt()
 {
   double* dd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1192,7 +1175,7 @@ void hiopVectorRaja<MEM,POL>::scale(double c)
     return;
   
   double* data = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       data[i] *= c;
@@ -1214,7 +1197,7 @@ void hiopVectorRaja<MEM,POL>::axpy(double alpha, const hiopVector& xvec)
   
   double* yd = data_dev_;
   double* xd = x.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       // y := a * x + y
@@ -1238,7 +1221,7 @@ void hiopVectorRaja<MEM,POL>::axpy(double alpha, const hiopVector& xvec, const h
   index_type* id = const_cast<index_type*>(idxs.local_data_const());
   auto tmp_n_local = n_local_;
 
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i]<tmp_n_local);
@@ -1260,7 +1243,7 @@ void hiopVectorRaja<MEM,POL>::axpy_w_pattern(double alpha, const hiopVector& xve
   double *dd       = data_dev_;
   const double *xd = x.local_data_const();
   const double *id = sel.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] += alpha * xd[i] * id[i];        
@@ -1285,7 +1268,7 @@ void hiopVectorRaja<MEM,POL>::axzpy(double alpha, const hiopVector& xvec, const 
   double *dd       = data_dev_;
   const double *xd = x.local_data_const();
   const double *zd = z.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] += alpha*xd[i]*zd[i];
@@ -1311,7 +1294,7 @@ void hiopVectorRaja<MEM,POL>::axdzpy(double alpha, const hiopVector& xvec, const
   double *yd       = data_dev_;
   const double *xd = x.local_data_const();
   const double *zd = z.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       yd[i] += alpha*xd[i]/zd[i];
@@ -1342,7 +1325,7 @@ void hiopVectorRaja<MEM,POL>::axdzpy_w_pattern(double alpha,
   const double* xd = x.local_data_const();
   const double* zd = z.local_data_const(); 
   const double* id = sel.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) 
     {
       assert(id[i] == one || id[i] == zero);
@@ -1359,7 +1342,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::addConstant(double c)
 {
   double *yd = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       yd[i] += c;
@@ -1379,7 +1362,7 @@ void hiopVectorRaja<MEM,POL>::addConstant_w_patternSelect(double c, const hiopVe
   assert(this->n_local_ == sel.n_local_);
   double *data = data_dev_;
   const double *id = sel.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i] == one || id[i] == zero);
@@ -1393,7 +1376,7 @@ double hiopVectorRaja<MEM,POL>::min() const
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1420,7 +1403,7 @@ double hiopVectorRaja<MEM,POL>::min_w_pattern(const hiopVector& select) const
   const double* id = sel.local_data_const();
   
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(std::numeric_limits<double>::max());
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1455,7 +1438,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::negate()
 {
   double* data = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       data[i] *= -1;
@@ -1479,7 +1462,7 @@ void hiopVectorRaja<MEM,POL>::invert()
 #endif
 #endif
   double *data = data_dev_;
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
 #ifdef HIOP_DEEPCHECKS
@@ -1507,7 +1490,7 @@ double hiopVectorRaja<MEM,POL>::logBarrier_local(const hiopVector& select) const
   double* data = data_dev_;
   const double* id = sel.local_data_const();
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1529,7 +1512,7 @@ double hiopVectorRaja<MEM,POL>::sum_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(0.0);
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1561,7 +1544,7 @@ void hiopVectorRaja<MEM,POL>::addLogBarrierGrad(double alpha,
   double* data = data_dev_;
   const double* xd = x.local_data_const();
   const double* id = sel.local_data_const();
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) 
     {
       if (id[i] == 1.0) 
@@ -1594,7 +1577,7 @@ double hiopVectorRaja<MEM,POL>::linearDampingTerm_local(const hiopVector& ixleft
   const double* rd = ixr.local_data_const();
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1623,7 +1606,7 @@ void hiopVectorRaja<MEM,POL>::addLinearDampingTerm(
 
   double* data = data_dev_;
 
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       // y := a * x + ...
@@ -1642,7 +1625,7 @@ int hiopVectorRaja<MEM,POL>::allPositive()
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
-  RAJA::forall< hiop_raja_exec2 >(RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
                                  RAJA_LAMBDA(RAJA::Index_type i)
                                  {
                                    minimum.min(data[i]);
@@ -1693,7 +1676,7 @@ bool hiopVectorRaja<MEM,POL>::projectIntoBounds_local(const hiopVector& xlo,
   double* xd = data_dev_; 
   // Perform preliminary check to see of all upper value
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         minimum.min(xud[i] - xld[i]);
@@ -1703,7 +1686,7 @@ bool hiopVectorRaja<MEM,POL>::projectIntoBounds_local(const hiopVector& xlo,
 
   const double small_real = std::numeric_limits<double>::min() * 100;
 
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       double aux  = zero;
@@ -1763,7 +1746,7 @@ double hiopVectorRaja<MEM,POL>::fractionToTheBdry_local(const hiopVector& dvec, 
   const double* xd = data_dev_;
 
   RAJA::ReduceMin< hiop_raja_reduce, double > minimum(one);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(dd[i] >= zero)
@@ -1804,7 +1787,7 @@ double hiopVectorRaja<MEM,POL>::fractionToTheBdry_w_pattern_local(const hiopVect
   const double* id = s.local_data_const();
 
   RAJA::ReduceMin< hiop_raja_reduce, double > aux(one);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(id[i] == one || id[i] == zero);
@@ -1836,7 +1819,7 @@ void hiopVectorRaja<MEM,POL>::selectPattern(const hiopVector& select)
 
   double* data = data_dev_;
   double* sd = s.data_dev_;
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) {
       if(sd[i] == zero)
         data[i] = zero;
@@ -1862,7 +1845,7 @@ bool hiopVectorRaja<MEM,POL>::matchesPattern(const hiopVector& pattern)
   double* data = data_dev_;
   double* pd = p.data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
-  RAJA::forall<hiop_raja_exec2>( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (data[i] != 0.0 && pd[i] == 0.0);
@@ -1897,7 +1880,7 @@ int hiopVectorRaja<MEM,POL>::allPositive_w_patternSelect(const hiopVector& wvec)
   const double* wd = w.local_data_const();
   const double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) 
     {
       if(wd[i] != zero && data[i] <= zero)
@@ -1939,7 +1922,7 @@ void hiopVectorRaja<MEM,POL>::adjustDuals_plh(const hiopVector& xvec,
   const double* id = ix.local_data_const();
   double* z = data_dev_; //the dual
 
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       double a,b;
@@ -1974,7 +1957,7 @@ bool hiopVectorRaja<MEM,POL>::is_zero() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(data[i] != 0.0) {
@@ -2003,7 +1986,7 @@ bool hiopVectorRaja<MEM,POL>::isnan_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > any(0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(std::isnan(data[i]))
@@ -2024,7 +2007,7 @@ bool hiopVectorRaja<MEM,POL>::isinf_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > any(0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(std::isinf(data[i]))
@@ -2045,7 +2028,7 @@ bool hiopVectorRaja<MEM,POL>::isfinite_local() const
 {
   double* data = data_dev_;
   RAJA::ReduceMin< hiop_raja_reduce, int > smallest(1);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(!std::isfinite(data[i]))
@@ -2116,8 +2099,8 @@ void hiopVectorRaja<MEM,POL>::copyToDev()
 {
   if(data_dev_ == data_host_)
     return;
-  assert(hw_backend_.mem_backend().is_device() && "should have data_dev_==data_host_");
-  hw_backend_.copy(data_dev_, data_host_, n_local_, hw_backend_host_);
+  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
+  exec_space_.copy(data_dev_, data_host_, n_local_, exec_space_host_);
 }
 
 template<class MEM, class POL>
@@ -2125,7 +2108,7 @@ void hiopVectorRaja<MEM,POL>::copyFromDev()
 {
   if(data_dev_ == data_host_)
     return;
-  hw_backend_host_.copy(data_host_, data_dev_, n_local_, hw_backend_);
+  exec_space_host_.copy(data_host_, data_dev_, n_local_, exec_space_);
 }
 
 template<class MEM, class POL>
@@ -2133,7 +2116,7 @@ size_type hiopVectorRaja<MEM,POL>::numOfElemsLessThan(const double &val) const
 {  
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
-  RAJA::forall<hiop_raja_exec2>( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += (data[i]<val);
@@ -2156,7 +2139,7 @@ size_type hiopVectorRaja<MEM,POL>::numOfElemsAbsLessThan(const double &val) cons
 {  
   double* data = data_dev_;
   RAJA::ReduceSum<hiop_raja_reduce, size_type> sum(0);
-  RAJA::forall<hiop_raja_exec2>( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall<hiop_raja_exec>( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       sum += static_cast<size_type>(fabs(data[i]) < val);
@@ -2187,7 +2170,7 @@ void hiopVectorRaja<MEM,POL>::set_array_from_to(hiopInterfaceBase::NonlinearityT
   if(end - start == 0)
     return;
   
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(0, end-start),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -2209,7 +2192,7 @@ void hiopVectorRaja<MEM,POL>::set_array_from_to(hiopInterfaceBase::NonlinearityT
   if(end - start == 0)
     return;
 
-  RAJA::forall< hiop_raja_exec2 >(
+  RAJA::forall< hiop_raja_exec >(
     RAJA::RangeSegment(start, end),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -2229,7 +2212,7 @@ bool hiopVectorRaja<MEM,POL>::is_equal(const hiopVector& vec) const
   const double* data_v = vec.local_data_const();
   const double* data = data_dev_;
   RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
-  RAJA::forall< hiop_raja_exec2 >( RAJA::RangeSegment(0, n_local_),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i) 
     {
       if(data[i]!=data_v[i]) {
