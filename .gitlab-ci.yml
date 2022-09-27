@@ -156,8 +156,7 @@ build_on_marianas:
     MY_CLUSTER: "marianas"
     TIMELIMIT: '1:30:00'
     SLURM_ARGS: --gres=gpu:1 --exclusive
-  # Through the steps, the argument to -E is automatically surrounded by quotes
-    CTEST_CMD: 'ctest -VV -E NlpSparse1_6|NlpSparse2_5'
+    CTEST_CMD: 'ctest -VV'
   <<: *pnnl_tags_definition
   <<: *pnnl_script_definition
   rules:
