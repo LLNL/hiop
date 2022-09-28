@@ -35,14 +35,14 @@ If HiOp needs to solve a feasibility problem internally, it treats the feasibili
 
 \subsubsection{Termination criteria and output}
 
-\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value $10$.
+\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value: $10$.
 \medskip
 
 \noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. 
-Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
+Double values in $[10^{-14},0.1]$. Default value: $10^{-6}$.
 \medskip
 
-\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3000$.
 \medskip
 
 \noindent \textbf{rel\_tolerance}: error tolerance for the NLP relative to errors at the initial point. A null value disables this option. Double values in $[0, 0.1]$. Default value: $0$.
@@ -61,10 +61,10 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \noindent \textbf{mu0}: initial log-barrier parameter mu. Double values in $[10^{-16},10^3]$. Default value: $1.0$. 
 \medskip
 
-\noindent \textbf{kappa\_eps}: mu is reduced when when log-bar error is below kappa\_eps $\times$ mu. Double values in $[10^{-6}, 1\,000]$. Default value: $10$.
+\noindent \textbf{kappa\_eps}: $\mu$ is reduced when when log-barrier error is below kappa\_eps $\times$ $\mu$. Double values in $[10^{-6}, 1000]$. Default value: $10$.
 \medskip
 
-\noindent \textbf{kappa\_mu}: linear reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[10^{-8},0.999]$. Default value: $0.2$.
+\noindent \textbf{kappa\_mu}: linear reduction coefficient for $\mu$ (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[10^{-8},0.999]$. Default value: $0.2$.
 \medskip
 
 \noindent \textbf{kappa1}: sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point. Double values in $[10^{-16},0.1]$. Default value: $0.01$.
@@ -73,11 +73,11 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \noindent \textbf{kappa2}: shift projection parameter used in initialization for doubly bounded variables. Double values in $[10^{-15},0.49999]$. Default value: $0.01$.
 \medskip
 
-\noindent \textbf{theta\_mu}: exponential reduction coefficient for mu (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[1, 2]$. Default value: $1.5$.
+\noindent \textbf{theta\_mu}: exponential reduction coefficient for $\mu$ (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[1, 2]$. Default value: $1.5$.
 \medskip
 
 
-\noindent \textbf{eta\_phi}: parameter of (suff. decrease) in Armijo Rule. Double values in $[ 0, 0.01]$. Default value $10^{-8}$.
+\noindent \textbf{eta\_phi}: parameter of (suff. decrease) in Armijo Rule. Double values in $[ 0, 0.01]$. Default value: $10^{-8}$.
 \medskip
 
 \noindent \textbf{smax}: the primal-dual IPM equations are rescaled when the average value of the is larger than this threshold value. Double values in $[1,10^7]$. Default value: $100$.
@@ -90,19 +90,19 @@ Double values in $[10^{-14},0.1]$. Default value $10^{-6}$.
 \end{itemize}
 \medskip
 
-\noindent \textbf{sigma0}: initial value of the initial multiplier of the identity in the secant approximation. Numeric values in $[0,10^7]$. Default value $1$.
+\noindent \textbf{sigma0}: initial value of the initial multiplier of the identity in the secant approximation. Numeric values in $[0,10^7]$. Default value: $1$.
 \medskip
 
-\noindent \textbf{sigma\_update\_strategy}: string option specifying the updating strategy for the multiplier of the identity in the secant approximation. Possible values are ``sigma0'', ``sty'', `` sty\_inv'', ``snrm\_ynrm'' and ``sty\_srnm\_ynrm''. Default value is ``sty''.
+\noindent \textbf{sigma\_update\_strategy}: string option specifying the updating strategy for the multiplier of the identity in the secant approximation. Possible values are ``sigma0'', ``sty'', `` sty\_inv'', ``snrm\_ynrm'' and ``sty\_srnm\_ynrm''. Default value: is ``sty''.
 \medskip
 
-\noindent \textbf{secant\_memory\_len}: size of the memory (number of $(s,y)$ pairs) of the Hessian secant approximation. Integer values between $0$ and $256$. Default value $6$.
+\noindent \textbf{secant\_memory\_len}: size of the memory (number of $(s,y)$ pairs) of the Hessian secant approximation. Integer values between $0$ and $256$. Default value: $6$.
 \medskip
 
-\noindent \textbf{kappa\_soc}: factor to decrease the constraint violation in second order correction. Double values in $[0, 10^{20}]$. Default value $0.99$.
-medskip
+\noindent \textbf{kappa\_soc}: factor to decrease the constraint violation in second order correction. Double values in $[0, 10^{20}]$. Default value: $0.99$.
+\medskip
 
-\noindent \textbf{warm\_start}: string option with ``yes'' or ``no'' values deciding whether \Hi uses warm start from the user provided primal-dual point. Note that all the primal, dual and slack variables must be provided. Default value ``no''.
+\noindent \textbf{warm\_start}: string option with ``yes'' or ``no'' values deciding whether \Hi uses warm start from the user provided primal-dual point. Note that all the primal, dual and slack variables must be provided. Default value: ``no''.
 \medskip
 
 
@@ -116,16 +116,16 @@ medskip
 \end{itemize}
 \medskip
 
-\noindent \textbf{neg\_curv\_test\_fact}: apply curvature test to check if a factorization is acceptable. This is the scaling factor used to determines if a direction is considered to have sufficiently positive curvature. Only valid when parameter \texttt{fact\_acceptor} is set to \texttt{inertia\_free}. Double values in $[0, 10^{20}]$. Default value $10^{-11}$.
+\noindent \textbf{neg\_curv\_test\_fact}: apply curvature test to check if a factorization is acceptable. This is the scaling factor used to determines if a direction is considered to have sufficiently positive curvature. Only valid when parameter \texttt{fact\_acceptor} is set to \texttt{inertia\_free}. Double values in $[0, 10^{20}]$. Default value: $10^{-11}$.
 \medskip
 
-\noindent \textbf{min\_step\_size}: minimum step size allowed in line-search. If step size is less than this number, feasibility restoration problem is activated. Double values in $[0, 10^{6}]$. Default value $10^{-16}$.
-medskip
+\noindent \textbf{min\_step\_size}: minimum step size allowed in line-search. If step size is less than this number, feasibility restoration problem is activated. Double values in $[0, 10^{6}]$. Default value: $10^{-16}$.
+\medskip
  
-\noindent \textbf{theta\_max\_fact}: maximum constraint violation ($theta\_max$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{4}$.
+\noindent \textbf{theta\_max\_fact}: maximum constraint violation ($\theta_{max}$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{4}$.
 \medskip
 
-\noindent \textbf{theta\_min\_fact}: minimum constraint violation ($theta\_min$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{-4}$.
+\noindent \textbf{theta\_min\_fact}: minimum constraint violation ($\theta_{min}$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{-4}$.
 \medskip
 
 \noindent \textbf{tau\_min}: fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}). Double values in $[0.9, 0.99999]$. Default value: $0.99$. 
@@ -134,33 +134,33 @@ medskip
 \noindent \textbf{accept\_every\_trial\_stepduals}: disable the line-search and take the close-to-boundary step. String values: ``no'' (default) and ``yes''.
 \medskip
 
-\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to the equality constraints. Possible values one of the the strings ``lsq'' (least-square (LSQ) solve initialization) and ``zero'' (multipliers are set identically to zero). Default value is ``lsq''.
+\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to the equality constraints. Possible values one of the the strings ``lsq'' (least-square (LSQ) solve initialization) and ``zero'' (multipliers are set identically to zero). Default value: is ``lsq''.
 \medskip
 
-\noindent \textbf{duals\_lsq\_ini\_max}: max inf-norm allowed for initial duals when computed with LSQ (see \textbf{duals\_init}); if norm is greater, the duals for the equality constraints will be set to zero. Double values between $10^{-16}$ and $10^{10}$. Default value: $1\,000$.
+\noindent \textbf{duals\_lsq\_ini\_max}: max inf-norm allowed for initial duals when computed with LSQ (see \textbf{duals\_init}); if norm is greater, the duals for the equality constraints will be set to zero. Double values between $10^{-16}$ and $10^{10}$. Default value: $1000$.
 \medskip
 
-\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When ``Hessian'' is ``quasinewton\_approx'' the default value for this options is ``lsq''. When ``Hessian'' is ``analytical\_exact'' the default value is ``linear''.
+\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When \texttt{Hessian} is ``quasinewton\_approx'' the default value for this options is ``lsq''. When ``Hessian'' is ``analytical\_exact'' the default value is ``linear''.
 \medskip
 
-\noindent \textbf{recalc\_lsq\_duals\_tol}: threshold for inf-norm under which the LSQ computation of duals is used. If the inf-norm of the duals of the equality constraints is larger than the value of this options, these duals are set to zero. This options requires ``duals\_update\_type'' to be ``lsq'' (the option is ignored otherwise). Double values in $[0,10^{10}]$. Default value $10^{-6}$.
+\noindent \textbf{recalc\_lsq\_duals\_tol}: threshold for inf-norm under which the LSQ computation of duals is used. If the inf-norm of the duals of the equality constraints is larger than the value of this options, these duals are set to zero. This options requires \texttt{duals\_update\_type} to be ``lsq'' (the option is ignored otherwise). Double values in $[0,10^{10}]$. Default value: $10^{-6}$.
 \medskip
 
-\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When ``Hessian'' is ``quasinewton\_approx'' the default value for this options is ``lsq''. When ``Hessian'' is ``analytical\_exact'' the default value is ``linear''.
+\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When \texttt{Hessian} is ``quasinewton\_approx'' the default value for this options is ``lsq''. When \texttt{Hessian} is ``analytical\_exact'' the default value is ``linear''.
 \medskip
 
 
 
 \subsubsection{Feasibility restoration}
 
-\noindent \textbf{force\_resto}: string option with ``yes'' or ``no'' values deciding whether \Hi forces applying feasibility restoration. Default value ``no''.
+\noindent \textbf{force\_resto}: string option with ``yes'' or ``no'' values deciding whether \Hi forces applying feasibility restoration. Default value: ``no''.
 \medskip
 
-\noindent \textbf{options\_file\_fr\_prob}: string option indicates the name of the option file for the feasibility restoration problem. Default value ``hiop\_fr\_ci.options''.
+\noindent \textbf{options\_file\_fr\_prob}: string option indicates the name of the option file for the feasibility restoration problem. Default value: ``hiop\_fr\_ci.options''.
 \medskip
 
-\noindent \textbf{kappa\_resto}: factor to decrease the constraint violation in feasibility restoration. Double values in $[0, 1]$. Default value $0.9$.
-medskip
+\noindent \textbf{kappa\_resto}: factor to decrease the constraint violation in feasibility restoration. Double values in $[0, 1]$. Default value: $0.9$.
+\medskip
 
 
 
@@ -174,14 +174,6 @@ medskip
 \item ``correct\_it\_adjust\_bound'': tightens the bounds, corrects the slacks and slack duals, and adjusts the bounds again from the modified iterate when $\mu$ changes.
 \end{itemize}
 \medskip
-  
-\noindent \textbf{elastic\_bound\_strategy}: Strategy used to tighen the bounds, when $\mu$ changes:
-\begin{itemize}
-\item ``mu\_projected'' (default): sets the new bound relax factor to \\
-$(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initial}-{bound\_relax\_perturb\_final}) + {bound\_relax\_perturb\_final}$ 
-\item ``mu\_scaled '': sets the new bound relax factor to $0.995*\mu$
-\end{itemize}
-\medskip
 
 \noindent \textbf{elastic\_bound\_strategy}: Strategy used to tighen the bounds, when $\mu$ changes:
 \begin{itemize}
@@ -191,11 +183,11 @@ $(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initi
 \end{itemize}
 \medskip
 
-\noindent \textbf{elastic\_mode\_bound\_relax\_final}: final/minimum bound relaxation factor in the elastic mode. This value must be less or equal to elastic\_mode\_bound\_relax\_initial. If user provides elastic\_mode\_bound\_relax\_final > elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value $10^{-12}$.
-medskip
+\noindent \textbf{elastic\_mode\_bound\_relax\_final}: the final/minimum bound relaxation factor in the elastic mode. This value must be less or equal to elastic\_mode\_bound\_relax\_initial. If user provides elastic\_mode\_bound\_relax\_final $>$ elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-12}$.
+\medskip
 
-\noindent \textbf{elastic\_mode\_bound\_relax\_initial}: initial bound relaxation factor in the elastic mode. This value must be greater or equal to elastic\_mode\_bound\_relax\_final. If user provides elastic\_mode\_bound\_relax\_final > elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value $10^{-2}$.
-medskip
+\noindent \textbf{elastic\_mode\_bound\_relax\_initial}: the initial bound relaxation factor in the elastic mode. This value must be greater or equal to elastic\_mode\_bound\_relax\_final. If user provides elastic\_mode\_bound\_relax\_final $>$ elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-2}$.
+\medskip
 
 
 
@@ -204,31 +196,31 @@ medskip
 \noindent \textbf{delta\_0\_bar}: first perturbation of the Hessian block for inertia correction. Double values in $[0,10^{40}]$. Default value: $10^{-4}$. 
 \medskip
 
-\noindent \textbf{delta\_c\_bar}: factor for regularization for potentially rank-deficient Jacobian ($delta_c=\bar{\delta_c}*\mu^\kappa_c$). Double values in $[10^{-20},10^{40}]$. Default value: $10^{-8}$. 
+\noindent \textbf{delta\_c\_bar}: factor for regularization for potentially rank-deficient Jacobian ($\delta_c=\texttt{delta\_c\_bar}*\mu^\kappa_c$). Double values in $[10^{-20},10^{40}]$. Default value: $10^{-8}$. 
 \medskip
 
 \noindent \textbf{delta\_w\_max\_bar}: largest perturbation of the Hessian block for inertia correction. Double values in $[10^{-40},10^{40}]$. Default value: $10^{20}$. 
 \medskip
 
-\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1\,000]$. Default value: $10^{-20}$. 
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
 \medskip
 
-\noindent \textbf{kappa\_c}: exponent of $\mu$ when computing regularization for potentially rank-deficient Jacobian ($delta_c=\bar{\delta_c}*\mu^\kappa_c$). Double values in $[0,10^{40}]$. Default value: $0.25$. 
+\noindent \textbf{kappa\_c}: exponent of $\mu$ when computing regularization for potentially rank-deficient Jacobian ($\delta_c=\texttt{delta\_c\_bar}*\mu^\kappa_c$). Double values in $[0,10^{40}]$. Default value: $0.25$. 
 \medskip
 
-\noindent \textbf{kappa\_w\_minus }: factor to decrease the most recent successful perturbation for inertia correction. Double values in $[10^{-20}, 1]$. Default value $0.3333$.
-medskip
-
-\noindent \textbf{kappa\_w\_plus}: factor to increase perturbation when it did not provide correct inertia correction (not first iteration). Double values in $[1, 10^{40}]$. Default value $8$.
-medskip
-
-\noindent \textbf{kappa\_w\_plus\_bar}: factor to increase perturbation when it did not provide correct inertia correction (first iteration when scale not known). Double values in $[1, 10^{40}]$. Default value $100$.
-medskip
-
-\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1\,000]$. Default value: $10^{-20}$. 
+\noindent \textbf{kappa\_w\_minus }: factor to decrease the most recent successful perturbation for inertia correction. Double values in $[10^{-20}, 1]$. Default value: $0.3333$.
 \medskip
 
-\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1\,000]$. Default value: $10^{-20}$. 
+\noindent \textbf{kappa\_w\_plus}: factor to increase perturbation when it did not provide correct inertia correction (not first iteration). Double values in $[1, 10^{40}]$. Default value: $8$.
+\medskip
+
+\noindent \textbf{kappa\_w\_plus\_bar}: factor to increase perturbation when it did not provide correct inertia correction (first iteration when scale not known). Double values in $[1, 10^{40}]$. Default value: $100$.
+\medskip
+
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
+\medskip
+
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
 \medskip
 
 \noindent \textbf{regularization\_method}: whether randomized method is used to compute regularizations.
@@ -249,29 +241,29 @@ medskip
 
 \subsubsection{Solving internal linear systems}
 
-\noindent \textbf{duals\_init\_linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the least-square problem in dual initialization (see \textbf{duals\_init}). Possible values are `auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value is ``auto''.
+\noindent \textbf{duals\_init\_linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the least-square problem in dual initialization (see \textbf{duals\_init}). Possible values are `auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
 \medskip
 
-\noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value is ``auto''.
+\noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
 \medskip
 
-\noindent \textbf{ir\_inner\_cusolver\_maxit}: FGMRES maximum number of iterations. Integer values in $[0, 1\,000]$. Default value $50$.
-medskip
+\noindent \textbf{ir\_inner\_cusolver\_maxit}: FGMRES maximum number of iterations. Integer values in $[0, 1000]$. Default value: $50$.
+\medskip
 
-\noindent \textbf{ir\_inner\_cusolver\_restart}: FGMRES restart value. Integer values in $[0, 100]$. Default value $20$.
-medskip
+\noindent \textbf{ir\_inner\_cusolver\_restart}: FGMRES restart value. Integer values in $[0, 100]$. Default value: $20$.
+\medskip
 
-\noindent \textbf{ir\_inner\_cusolver\_tol }: FGMRES tolerance. Double values in $[10^{-16}, 0.1]$. Default value $10^{-12}$.
-medskip
+\noindent \textbf{ir\_inner\_cusolver\_tol }: FGMRES tolerance. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-12}$.
+\medskip
 
-\noindent \textbf{ir\_outer\_maxit}: max number of outer iterative refinement iterations. Setting this to 0 deactivates the outer iterative refinement. Integer values in $[0, 100]$. Default value $8$.
-medskip
+\noindent \textbf{ir\_outer\_maxit}: max number of outer iterative refinement iterations. Setting this to 0 deactivates the outer iterative refinement. Integer values in $[0, 100]$. Default value: $8$.
+\medskip
 
-\noindent \textbf{ir\_outer\_tol\_factor}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 1]$. Default value $0.01$.
-medskip
+\noindent \textbf{ir\_outer\_tol\_factor}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 1]$. Default value: $0.01$.
+\medskip
 
-\noindent \textbf{ir\_outer\_tol\_min}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 10^{20}]$. Default value $10^{-6}$.
-medskip
+\noindent \textbf{ir\_outer\_tol\_min}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 10^{20}]$. Default value: $10^{-6}$.
+\medskip
 
 \noindent \textbf{ir\_inner\_cusolver\_gs\_scheme}: Gram-Schmidt orthogonalization version for FMGRES:
 \begin{itemize}
@@ -282,13 +274,13 @@ medskip
 \end{itemize}
 \medskip
 
-\noindent \textbf{ginkgo\_exec }: string option with ``cuda'', ``hip'' or ``reference'' values selecting the hardware architecture to run the Ginkgo linear solver on. Only valid when parameter \texttt{linear\_solver\_sparse} is set to \texttt{ginkgo}. Default value ``reference''.
+\noindent \textbf{ginkgo\_exec }: string option with ``cuda'', ``hip'' or ``reference'' values selecting the hardware architecture to run the Ginkgo linear solver on. Only valid when parameter \texttt{linear\_solver\_sparse} is set to \texttt{ginkgo}. Default value: ``reference''.
 \medskip
 
 \noindent \textbf{cusolver\_lu\_factorization }: so far, only `klu' option is available.
 \medskip
 
-\noindent \textbf{cusolver\_lu\_refactorization}: numerical refactorization function after sparsity pattern of factors is computed. 'glu' is  and 'rf' is 
+\noindent \textbf{cusolver\_lu\_refactorization}: numerical refactorization function after sparsity pattern of factors is computed. `glu' is  and `rf' is 
 \begin{itemize}
 \item ``glu '' (default): experimental approach
 \item ``rf'': NVIDIA's stable refactorization
@@ -395,6 +387,7 @@ This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10
 (x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{bound\_relax\_perturb}.
 \end{align*}
 This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-8}$.
+\medskip
 
 %%%% scaling
 \noindent \textbf{scaling\_type}: scaling method for the user's NLP
@@ -404,11 +397,11 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 \end{itemize}
 \medskip
 
-\noindent \textbf{scaling\_max\_grad}: the user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value $100$.
-medskip
+\noindent \textbf{scaling\_max\_grad}: the user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value: $100$.
+\medskip
 
-\noindent \textbf{eq\_relax\_factor}: perturbation of the equalities to allow posing them as inequalities. This factor is relative to the maximum between the magnitude of the equalities rhs and 1.0. Used only by `hiopNlpSparseIneq' formulation class. Double values in $[10^{-15}, 1]$. Default value $10^{-8}$.
-medskip
+\noindent \textbf{eq\_relax\_factor}: perturbation of the equalities to allow posing them as inequalities. This factor is relative to the maximum between the magnitude of the equalities rhs and 1.0. Used only by `hiopNlpSparseIneq' formulation class. Double values in $[10^{-15}, 1]$. Default value: $10^{-8}$.
+\medskip
 
 
 
@@ -418,13 +411,13 @@ medskip
 \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. Those larger values are explained in hiopLogger.hpp. The higher the value the more verbose the output will be.
 \medskip
 
-\noindent \textbf{print\_options}: string option with ``yes'', ``no'' or ``short'' values deciding whether the options should be printed on the output before solver (re)starts. Setting this option to `yes' prints all the parameter names, values and descriptions, while `short' only prints the parameter names and values. Default value ``no''.
+\noindent \textbf{print\_options}: string option with ``yes'', ``no'' or ``short'' values deciding whether the options should be printed on the output before solver (re)starts. Setting this option to `yes' prints all the parameter names, values and descriptions, while `short' only prints the parameter names and values. Default value: ``no''.
 \medskip
 
-\noindent \textbf{write\_kkt}: string option with ``yes'' or ``no'' values deciding whether \Hi writes internal KKT linear system (matrix, rhs, sol) to external files. Default value ``no''.
+\noindent \textbf{write\_kkt}: string option with ``yes'' or ``no'' values deciding whether \Hi writes internal KKT linear system (matrix, rhs, sol) to external files. Default value: ``no''.
 \medskip
 
-\noindent \textbf{time\_kkt}: string option with ``on'' or ``off'' values deciding whether \Hi turns on/off performance timers and reporting of the computational constituents of the KKT solve process. Default value ``off''.
+\noindent \textbf{time\_kkt}: string option with ``on'' or ``off'' values deciding whether \Hi turns on/off performance timers and reporting of the computational constituents of the KKT solve process. Default value: ``off''.
 \medskip
 
 
@@ -454,14 +447,14 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
   \medskip
 
-  \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3\,000$.
+  \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3000$.
   \medskip
   
-  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value $10^{-3}$.
+  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value: $10^{-3}$.
 
   \medskip
 
-  \noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which PriDec solver terminates. Integer values between $1$ and $10^6$. Default value $25$.
+  \noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which PriDec solver terminates. Integer values between $1$ and $10^6$. Default value: $25$.
 
   \medskip
 
@@ -493,7 +486,7 @@ Here we list the options that are recognized by the \Hi's PriDec solver.
 
 \medskip
 
-\noindent \textbf{print\_options}: string option with ``yes'' or ``no'' values deciding whether the options should be printed on the output before solver (re)starts. Default value ``no''.
+\noindent \textbf{print\_options}: string option with ``yes'' or ``no'' values deciding whether the options should be printed on the output before solver (re)starts. Default value: ``no''.
 
 %\input{old_stuff}
 
