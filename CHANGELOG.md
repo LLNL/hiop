@@ -4,6 +4,7 @@ All notable changes to HiOp are documented in this file.
 ## Version 0.7.0: Fortran interface and misc fixes and improvements:
 - Fortran interface and examples
 - Bug fixing for sparse device linear solvers
+- Implementation of CUDA CSR matrices
 - Iterative refinement within CUSOLVER linear solver class
 - Improved robustness and performance of mixed dense-sparse solver for AMD/HIP
 
