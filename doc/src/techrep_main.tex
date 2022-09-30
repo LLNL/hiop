@@ -294,7 +294,12 @@ Starting version 0.3, \Hi offers support for offloading computations to NVIDIA G
 
 Starting version 0.6, \Hi offers support for offloading computations to AMD GPU accelerators when solving NLPs in the mixed dense-sparse (MDS) form. Support for HIP should be enabled during the build by using \texttt{cmake} options \texttt{-DHIOP\_USE\_GPU}  and \texttt{-DHIOP\_USE\_HIP}, which will result in using the HIP accelerators for the internal linear solves.
 
-\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later, rocm library version 4.5.0 or later and a recent Magma linear solver library (as well as a physical NVIDIA/AMD GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries, AMD libraries and/or Magma solver as well as for advanced troubleshooting. The user is referred to \texttt{cmake/FindHiopCudaLibraries.cmake}, \texttt{cmake/FindHiopHipLibraries.cmake} and \texttt{cmake/FindHiOpMagma.cmake} scripts.
+\Hi's \texttt{cmake} build system is quite versatile to find the dependencies required to offload computations to the device GPUs since was developed and tested on a few GPU-enabled HPC platforms at Oak Ridge, Lawrence Livermore, and Pacific Northwest National Laboratories. These dependencies consist of CUDA library version 10.1 or later, rocm library version 4.5.0 or later and a recent Magma linear solver library (as well as a physical NVIDIA/AMD GPU device). \Hi offers an extensive build support for using customized NVIDIA libraries, AMD libraries, and/or Magma solver as well as for advanced troubleshooting. The user is referred to the following CMake scripts for more details:
+\begin{itemize}
+\item \texttt{cmake/FindHiopCudaLibraries.cmake}
+\item \texttt{cmake/FindHiopHipLibraries.cmake}
+\item \texttt{cmake/FindHiOpMagma.cmake} scripts.
+\end{itemize}
 
 \warningcp{Note: } Installing NVIDIA CUDA, AMD HIP, and/or building Magma can be quite challenging. The user is encouraged to rely on preinstalled versions of these, as they are available via \texttt{module} utility on virtually all high-performance computing machines. An example of how to satisfy all the GPU dependencies on Summit supercomputer at Oak Ridge National Lab with a one commands are available at \url{https://github.com/LLNL/hiop/blob/master/README_summit.md}.
 
