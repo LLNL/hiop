@@ -754,7 +754,6 @@ namespace hiop
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     buffer_size_ = size_M_;
-    //cudaFree(d_work_);
     checkCudaErrors(cudaMalloc((void**)&d_work_, buffer_size_));
 
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_, info_M_, d_work_);
