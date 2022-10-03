@@ -191,14 +191,14 @@ build_on_incline:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 pnnl_cleanup:
-  stage: test
-  dependencies:
-    - build_on_incline
+  stage: .pre
   script:
+  # clears directory of files more than 6 hours/360 minutes old
   - |
     set -xv
-    export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
-    rm -rf "$WORKDIR"
+    export WORKDIR="$HOME/gitlab/"
+    find $WORKDIR -type d -mmin +360 -prune -print -exec rm -rf {} \; || true
+    ls -hal $WORKDIR
   <<: *pnnl_tags_definition
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
