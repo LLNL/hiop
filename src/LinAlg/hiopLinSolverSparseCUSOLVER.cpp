@@ -222,6 +222,11 @@ namespace hiop
       cusolverSpDestroyGluInfo(info_M_);
     }
 
+    if(refact_ == "rf") {
+      cudaFree(d_P_);
+      cudaFree(d_Q_);
+      cudaFree(d_T_);
+    }
     klu_free_symbolic(&Symbolic_, &Common_);
     klu_free_numeric(&Numeric_, &Common_);
     delete [] mia_;
@@ -749,7 +754,6 @@ namespace hiop
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
 
     buffer_size_ = size_M_;
-    cudaFree(d_work_);
     checkCudaErrors(cudaMalloc((void**)&d_work_, buffer_size_));
 
     sp_status_ = cusolverSpDgluAnalysis(handle_cusolver_, info_M_, d_work_);
@@ -970,6 +974,16 @@ namespace hiop
                                        handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
+ 
+    //clean up 
+    cudaFree(d_Lp_csr);
+    cudaFree(d_Li_csr);
+    cudaFree(d_Lx_csr);
+    
+    cudaFree(d_Up_csr);
+    cudaFree(d_Ui_csr);
+    cudaFree(d_Ux_csr);
+    
     return 0;
   }
 
@@ -1061,7 +1075,11 @@ namespace hiop
     cudaFree(d_V_);
     cudaFree(d_Z_);
     cudaFree(d_rvGPU_);
-    cudaFree(d_H_col_);
+    cudaFree(d_Hcolumn_);
+     
+    if(orth_option_ == "cgs2") {
+      cudaFree(d_H_col_);
+    }
     // delete all CPU GMRES variables
     delete[] h_H_;
 
