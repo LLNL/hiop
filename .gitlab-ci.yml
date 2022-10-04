@@ -192,6 +192,8 @@ build_on_incline:
 
 pnnl_cleanup:
   stage: .pre
+  variables:
+    GIT_STRATEGY: none
   script:
   # clears directory of files more than 6 hours/360 minutes old
   - |
@@ -215,6 +217,8 @@ build_on_login_node:
 
 test_on_compute_node:
   stage: test
+  variables:
+    GIT_STRATEGY: none
   dependencies:
     - build_on_login_node
   tags:
@@ -239,6 +243,7 @@ build_on_quartz:
 test_on_quartz:
   stage: test
   variables:
+    GIT_STRATEGY: none
     MY_CLUSTER: quartz
   dependencies:
     - build_on_quartz
@@ -261,6 +266,7 @@ build_on_lassen:
 test_on_lassen:
   stage: test
   variables:
+    GIT_STRATEGY: none
     MY_CLUSTER: lassen
   dependencies:
     - build_on_lassen
