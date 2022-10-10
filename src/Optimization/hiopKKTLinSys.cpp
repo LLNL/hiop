@@ -340,7 +340,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-      if(nlp_->options->GetString("regularization_method")=="scala") {
+      if(nlp_->options->GetString("regularization_method")=="scalar") {
         nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
                           delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0], num_refactorization);  
       } else {
@@ -397,7 +397,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-  if(nlp_->options->GetString("regularization_method")=="scala") {
+  if(nlp_->options->GetString("regularization_method")=="scalar") {
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
                       delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
   } else {
@@ -431,7 +431,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       assert(1==continue_re_fact);
     }
 
-    if(nlp_->options->GetString("regularization_method")=="scala") {
+    if(nlp_->options->GetString("regularization_method")=="scalar") {
       nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
     }  else {
         nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e \n",

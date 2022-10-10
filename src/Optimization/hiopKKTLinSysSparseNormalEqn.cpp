@@ -318,7 +318,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
 
   t.reset(); t.start();
 
-  if(pdreg.get_curr_delta_type() != DeltasUpdateType::DualUpdate) {
+  if(pdreg.get_curr_delta_type() != hiopPDPerturbation::DeltasUpdateType::DualUpdate) {
     // build the diagonal Hxd_inv_copy_ = [H+Dx+delta_wx, Dd+delta_wd ]^{-1}
     Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
     Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
@@ -502,7 +502,7 @@ int hiopKKTLinSysSparseNormalEqn::factorizeWithCurvCheck()
   size_type n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
   if(n_neg_eig == -1) {
-    nlp_->log->printf(hovWarning,
+    nlp_->log->printf(hovScalars,
                 "KKT_SPARSE_NormalEqn linsys: Detected null eigenvalues.\n");
     n_neg_eig = -1;
   } else {

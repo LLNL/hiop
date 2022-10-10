@@ -7,18 +7,19 @@
 namespace hiop
 {
 
-enum DeltasUpdateType
-{
-  None  = -2,
-  Initialized  = -1,
-  DualUpdate   =  0,
-  PrimalUpdate =  1,
-  PDUpdate     =  2
-};
-
 class hiopPDPerturbation
 {
 public:
+
+  enum DeltasUpdateType
+  {
+    None  = -2,
+    Initialized  = -1,
+    DualUpdate   =  0,
+    PrimalUpdate =  1,
+    PDUpdate     =  2
+  };
+
   /** Default constructor 
    * Provides complete initialization, but uses algorithmic parameters from the Ipopt
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
@@ -212,7 +213,7 @@ protected: //methods
 };
 
 /* method used for quasi newton's method */
-class hiopPDPerturbationDummy : public hiopPDPerturbation
+class hiopPDPerturbationNull : public hiopPDPerturbation
 {
 public:
   /** Default constructor 
@@ -220,8 +221,8 @@ public:
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
-  hiopPDPerturbationDummy() : hiopPDPerturbation() {}
-  virtual ~hiopPDPerturbationDummy() {}
+  hiopPDPerturbationNull() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationNull() {}
 
   /** Called when a new linear system is attempted to be factorized 
    */
@@ -242,8 +243,11 @@ protected: //methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid) {}              
 };
 
-
-class hiopPDPerturbationPrimalFirstScala : public hiopPDPerturbation
+/**
+ * @brief When inertia correction is required, update primal regularization before dual regularzation.
+ *        Both regularizations are computed as \delta*I, i.e., a scalar times an identity matrix
+ */
+class hiopPDPerturbationPrimalFirstScalar : public hiopPDPerturbation
 {
 public:
   /** Default constructor 
@@ -251,8 +255,8 @@ public:
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
-  hiopPDPerturbationPrimalFirstScala() : hiopPDPerturbation() {}
-  virtual ~hiopPDPerturbationPrimalFirstScala() {}
+  hiopPDPerturbationPrimalFirstScalar() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationPrimalFirstScalar() {}
 
   /** Called when a new linear system is attempted to be factorized 
    */
@@ -284,10 +288,15 @@ protected: // methods
 
 };
 
-class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScala
+/**
+ * @brief When inertia correction is required, update primal regularization before dual regularzation.
+ *        Both regularizations are computed as a random vector.
+ *        v0.7: uniform distribution has been implemented
+ */
+class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScalar
 {
 public:
-  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScala() {}
+  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScalar() {}
 
   virtual ~hiopPDPerturbationPrimalFirstRand() {}
 
@@ -296,13 +305,16 @@ protected: // methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid);  
 };
 
-
-class hiopPDPerturbationDualFirstScala : public hiopPDPerturbation
+/**
+ * @brief When inertia correction is required, update dual regularization before primal regularzation.
+ *        Both regularizations are computed as \delta*I, i.e., a scalar times an identity matrix
+ */
+class hiopPDPerturbationDualFirstScalar : public hiopPDPerturbation
 {
 public:
-  hiopPDPerturbationDualFirstScala();
+  hiopPDPerturbationDualFirstScalar();
 
-  virtual ~hiopPDPerturbationDualFirstScala();
+  virtual ~hiopPDPerturbationDualFirstScalar();
 
   /** Called when a new linear system is attempted to be factorized 
    */
@@ -338,24 +350,17 @@ protected: // methods
 
 };
 
-class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScala
+/**
+ * @brief When inertia correction is required, update dual regularization before primal regularzation.
+ *        Both regularizations are computed as a random vector.
+ *        v0.7: uniform distribution has been implemented
+ */
+class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScalar
 {
 public:
-  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScala() {}
+  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScalar() {}
 
   virtual ~hiopPDPerturbationDualFirstRand() {}
-
-protected: // methods
-  virtual void set_delta_curr_vec(DeltasUpdateType taskid); 
-  virtual void set_delta_last_vec(DeltasUpdateType taskid);  
-};
-
-class hiopPDPerturbationDualFirstDynamic : public hiopPDPerturbationDualFirstScala
-{
-public:
-  hiopPDPerturbationDualFirstDynamic() : hiopPDPerturbationDualFirstScala() {}
-
-  virtual ~hiopPDPerturbationDualFirstDynamic() {}
 
 protected: // methods
   virtual void set_delta_curr_vec(DeltasUpdateType taskid); 

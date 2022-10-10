@@ -974,8 +974,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
 
-  // assign an dummy pd_perturb, i.e., all the deltas = 0.0
-  pd_perturb_ = new hiopPDPerturbationDummy();
+  // assign an Null pd_perturb, i.e., all the deltas = 0.0
+  pd_perturb_ = new hiopPDPerturbationNull();
   if(!pd_perturb_->initialize(nlp)) {
     delete kkt;
     return SolveInitializationError;
@@ -1457,8 +1457,18 @@ hiopKKTLinSys* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormul
         return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
       } else if(strKKT == "condensed") {
         return new hiopKKTLinSysCondensedSparse(nlp);
-      } else if(strKKT == "normaleqn") {
-        return new hiopKKTLinSysSparseNormalEqn(nlp);
+      } else if(strKKT == "normaleqn" ) {
+        if(nlp->m()>0) {
+          return new hiopKKTLinSysSparseNormalEqn(nlp);
+        } else {
+          if(nlp->options->is_user_defined("KKTLinsys")) {
+            nlp->log->printf(hovWarning,
+                             "The option 'KKTLinsys = %s' is not valid for unconstrainted problem. "
+                             "Will use 'KKTLinsys = XYcYd'.[2]\n",
+                             strKKT.c_str());
+          }
+          return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
+        }
       } else {
         //'auto' or 'XYcYd'
         return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
@@ -1738,13 +1748,13 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     if(nlp->options->GetString("regularization_method")=="randomized") {
       pd_perturb_ = new hiopPDPerturbationDualFirstRand();
     } else {
-      pd_perturb_ = new hiopPDPerturbationDualFirstScala();
+      pd_perturb_ = new hiopPDPerturbationDualFirstScalar();
     }
   } else {
     if(nlp->options->GetString("regularization_method")=="randomized") {
       pd_perturb_ = new hiopPDPerturbationPrimalFirstRand();
     } else {
-      pd_perturb_ = new hiopPDPerturbationPrimalFirstScala();
+      pd_perturb_ = new hiopPDPerturbationPrimalFirstScalar();
     }
   }
 
