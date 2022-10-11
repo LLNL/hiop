@@ -17,6 +17,8 @@ set(hiopOptimization_SRC
 
 set(hiopOptimization_SPARSE_SRC
   hiopKKTLinSysSparse.cpp
+  hiopKKTLinSysSparseCondensed.cpp
+  hiopKKTLinSysSparseNormalEqn.cpp
   )
 
 set(hiopOptimization_INTERFACE_HEADERS
@@ -39,10 +41,6 @@ set(hiopOptimization_INTERFACE_HEADERS
   hiopPDPerturbation.hpp
   hiopResidual.hpp
   )
-
-if(HIOP_USE_RAJA)
-  list(APPEND hiopOptimization_SPARSE_SRC hiopKKTLinSysSparseCondensed.cpp hiopKKTLinSysSparseNormalEqn.cpp)
-endif()
 
 if(HIOP_SPARSE)
   list(APPEND hiopOptimization_SRC ${hiopOptimization_SPARSE_SRC})

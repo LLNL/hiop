@@ -57,15 +57,15 @@
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
-#ifdef HIOP_USE_CUDA
-#include "hiopLinSolverCholCuSparse.hpp"
-
 #ifdef HIOP_USE_RAJA
 #include "hiopVectorRajaPar.hpp"
+
+#ifdef HIOP_USE_CUDA
+#include "hiopLinSolverCholCuSparse.hpp"
 #else
 #error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
+#endif // HIOP_USE_CUDA
 #endif // HIOP_USE_RAJA
-#endif
 
 #include "hiopMatrixSparseCSRSeq.hpp"
 
