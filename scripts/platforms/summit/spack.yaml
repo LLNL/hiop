@@ -1,0 +1,84 @@
+spack:
+  specs:
+  - hiop@develop+cuda+raja+sparse+mpi+ginkgo+cusolver cuda_arch=70 build_type=Release
+    ^raja@0.14.0
+    ^umpire@6.0.0
+    ^openblas
+  compilers:
+  - compiler:
+      spec: gcc@10.2.0
+      paths:
+        cc: /sw/summit/gcc/10.2.0-2/bin/gcc
+        cxx: /sw/summit/gcc/10.2.0-2/bin/g++
+        f77: /sw/summit/gcc/10.2.0-2/bin/gfortran
+        fc: /sw/summit/gcc/10.2.0-2/bin/gfortran
+      flags: {}
+      operating_system: rhel8
+      target: ppc64le
+      modules: [gcc/10.2.0]
+      environment: {}
+      extra_rpaths: []
+  config:
+    concretizer: clingo
+  concretizer: 
+    unify: true
+    targets:
+      granularity: generic
+  packages:
+    all:
+      providers:
+        mpi: [spectrum-mpi]
+        blas: [openblas]
+        lapack: [openblas]
+    python:
+      externals:
+      - spec: python@3.8.10
+        modules: [python/3.8.10]
+      buildable: false
+    spectrum-mpi:
+      externals:
+      - spec: spectrum-mpi@10.4.0.3-20210112
+        modules: [spectrum-mpi/10.4.0.3-20210112]
+      buildable: false
+    ipopt:
+      version: [3.12.10]
+      variants: +coinhsl+metis~mumps
+    coinhsl:
+      variants: +blas
+    cuda:
+      externals:
+      - spec: cuda@11.5.2
+        modules: [cuda/11.5.2]
+      buildable: false
+    raja:
+      version: [0.14.0]
+      variants: +cuda cuda_arch=70 build_type=Release
+    umpire:
+      version: [6.0.0]
+      variants: ~c+cuda cuda_arch=70 build_type=Release
+    magma:
+      version: [2.6.1]
+      variants: +cuda cuda_arch=70 build_type=Release
+    cmake:
+      externals:
+      - spec: cmake@3.21.3
+        modules: [cmake/3.21.3]
+      buildable: false
+    metis:
+      externals:
+      - spec: metis@5.1.0
+        modules: [metis/5.1.0]
+      buildable: false
+    openblas:
+      externals:
+      - spec: openblas@0.17.0
+        modules: [openblas/0.3.17-omp]
+      buildable: false
+    perl:
+      externals:
+      - spec: perl@5.30.1
+        modules: [perl/5.30.1]
+      buildable: false
+    ginkgo:
+      version: [glu_experimental]
+      variants: +cuda cuda_arch=70

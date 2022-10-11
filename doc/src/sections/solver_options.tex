@@ -1,0 +1,578 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Solver options
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Solver options}
+The user can control \Hi's options in two ways:
+\begin{itemize}
+\item via the options file(s) that should be placed in the same directory where the application driver using \Hi is executed. The format of an option file is very basic, each of its lines should contain a single pair \texttt{ option\_name option\_value}. Lines that begin with '\#' or consist of only white characters are discarded. The option value is checked to have the correct type (numeric, integer, or string) and to be in the expected range. If the checks fail, then the option is set to the default value and a warning message is displayed.
+\item at runtime via the \Hi's API using the \texttt{options} member of the various NLP formulation and PriDec solver classes. The options object has three methods that allows the user to set options based on their types:
+\begin{lstlisting}
+ bool SetNumericValue(const char* name, const double& value);
+ bool SetIntegerValue(const char* name, const int& value);
+ bool SetStringValue (const char* name,  const char* value);
+\end{lstlisting}
+\end{itemize}
+
+\warningcp{} Each option i. should be of one of types numeric/double, integer, and string; ii. has a value associated; iii. may have a range of values;  and, iv. has a default value. 
+
+The NLP solvers load options from the file \texttt{hiop.options}. The PriDec solver will look for and load options from up to three files:
+\begin{itemize}
+\item \texttt{hiop\_pridec.options} specifies options for the \textbf{PriDec} algorithm/solver
+\item \texttt{hiop\_pridec\_master.options} specifies options for the NLP solver used to solve the \textbf{master} problem. This master NLP solver does not necessarily have to be one of \Hi's NLP solvers. The name of this file can be controlled via the string option \texttt{options\_file\_master\_prob} of the PriDec solver, in \texttt{hiop\_pridec.options}.
+\item \texttt{hiop.options} specifies the options for the \textbf{worker} NLP solver. This applies only when the worker NLP solver is one of the \Hi's solvers. This file will not be used by worker solvers other than \Hi; they will use their default option files.
+\end{itemize}
+
+For example, when the PriDec solver is used with \Hi's NLP solvers for both the master and the worker subproblems, the user should create the three options files above to customize the PriDec, master, and worker solvers. As another example, when Ipopt is used for both master and worker subproblems, the user should use the default ``ipopt.opt`` file for the worker and use ``hiop\_pridec\_master.options'' for Ipopt options for the master subproblem (or, if another file needs to be used, change the name of the master options file via \texttt{options\_file\_master\_prob} in PriDec's \texttt{hiop\_pridec.options} option file).
+
+If HiOp needs to solve a feasibility problem internally, it treats the feasibility problem as a new optimization problem and launchs a standalone internal process to solve the problem. The file, \texttt{hiop\_fr.options}, can be used to control the options for solving the feasibility problem by HiOp. The name of this option file can be tuned by parameter `options\_file\_fr\_prob'.
+
+\warningcp{Note:} If an option file is not present, \Hi will use default values (unless the user changes the options at runtime via the API).
+
+\warningcp{Note:} Options set in the options files overwrite options set at runtime via the above API.
+
+\subsection{Options for NLP solvers}
+
+
+\subsubsection{Termination criteria and output}
+
+\noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which HiOp terminates. Integer values between $1$ and $10^6$. Default value: $10$.
+\medskip
+
+\noindent \textbf{acceptable\_tolerance}: HiOp will terminate if the inf-norm of the NLP optimality residuals is below this value for \texttt{acceptable\_iterations} many consecutive iterations. 
+Double values in $[10^{-14},0.1]$. Default value: $10^{-6}$.
+\medskip
+
+\noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3000$.
+\medskip
+
+\noindent \textbf{rel\_tolerance}: error tolerance for the NLP relative to errors at the initial point. A null value disables this option. Double values in $[0, 0.1]$. Default value: $0$.
+\medskip
+
+\noindent \textbf{tolerance}: maximum (absolute) NLP optimality error allowed at the optimal solution. Double values in $[10^{-14},0.1]$. Default value: $10^{-8}$. 
+\medskip
+
+\noindent \textbf{max\_soc\_iter}: maximum number of iterations in second order correction. Integer values between $1$ to $10^6$. Default value: $4$.
+\medskip
+
+
+
+\subsubsection{Filter-IPM algorithm selection and parameters}
+
+\noindent \textbf{mu0}: initial log-barrier parameter mu. Double values in $[10^{-16},10^3]$. Default value: $1.0$. 
+\medskip
+
+\noindent \textbf{kappa\_eps}: $\mu$ is reduced when when log-barrier error is below kappa\_eps $\times$ $\mu$. Double values in $[10^{-6}, 1000]$. Default value: $10$.
+\medskip
+
+\noindent \textbf{kappa\_mu}: linear reduction coefficient for $\mu$ (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[10^{-8},0.999]$. Default value: $0.2$.
+\medskip
+
+\noindent \textbf{kappa1}: sufficiently-away-from-the-boundary projection parameter used in the shift of the user-provided initial point. Double values in $[10^{-16},0.1]$. Default value: $0.01$.
+\medskip
+
+\noindent \textbf{kappa2}: shift projection parameter used in initialization for doubly bounded variables. Double values in $[10^{-15},0.49999]$. Default value: $0.01$.
+\medskip
+
+\noindent \textbf{theta\_mu}: exponential reduction coefficient for $\mu$ (eqn. (7) in~\cite{waecther_05_ipopt0}). Double values in $[1, 2]$. Default value: $1.5$.
+\medskip
+
+
+\noindent \textbf{eta\_phi}: parameter of (suff. decrease) in Armijo Rule. Double values in $[ 0, 0.01]$. Default value: $10^{-8}$.
+\medskip
+
+\noindent \textbf{smax}: the primal-dual IPM equations are rescaled when the average value of the is larger than this threshold value. Double values in $[1,10^7]$. Default value: $100$.
+\medskip
+
+\noindent \textbf{Hessian}: type of Hessian used with the filter IPM.
+\begin{itemize}
+\item ``quasinewton\_approx'' (default) - HiOp will build secant BFGS approximation for the Hessian and use a quasi-Newton filter IPM;
+\item ``analytical\_exact'' - Hessian provided by the user and a Newton filter IPM algorithm will be used.
+\end{itemize}
+\medskip
+
+\noindent \textbf{sigma0}: initial value of the initial multiplier of the identity in the secant approximation. Numeric values in $[0,10^7]$. Default value: $1$.
+\medskip
+
+\noindent \textbf{sigma\_update\_strategy}: string option specifying the updating strategy for the multiplier of the identity in the secant approximation. Possible values are ``sigma0'', ``sty'', `` sty\_inv'', ``snrm\_ynrm'' and ``sty\_srnm\_ynrm''. Default value: is ``sty''.
+\medskip
+
+\noindent \textbf{secant\_memory\_len}: size of the memory (number of $(s,y)$ pairs) of the Hessian secant approximation. Integer values between $0$ and $256$. Default value: $6$.
+\medskip
+
+\noindent \textbf{kappa\_soc}: factor to decrease the constraint violation in second order correction. Double values in $[0, 10^{20}]$. Default value: $0.99$.
+\medskip
+
+\noindent \textbf{warm\_start}: string option with ``yes'' or ``no'' values deciding whether \Hi uses warm start from the user provided primal-dual point. Note that all the primal, dual and slack variables must be provided. Default value: ``no''.
+\medskip
+
+
+
+\subsubsection{Line search and step computation}
+
+\noindent \textbf{fact\_acceptor}: the criteria used to accept a factorization:
+\begin{itemize}
+\item ``inertia\_correction'' (default): the most stable approch which requires inertia information provided by the given linear solvers (see parameter \textbf{linear\_solver\_sparse}); 
+\item ``inertia\_free'': apply inertia free method. This approch is typically used when the given linear solver cannot provide inertia information.
+\end{itemize}
+\medskip
+
+\noindent \textbf{neg\_curv\_test\_fact}: apply curvature test to check if a factorization is acceptable. This is the scaling factor used to determines if a direction is considered to have sufficiently positive curvature. Only valid when parameter \texttt{fact\_acceptor} is set to \texttt{inertia\_free}. Double values in $[0, 10^{20}]$. Default value: $10^{-11}$.
+\medskip
+
+\noindent \textbf{min\_step\_size}: minimum step size allowed in line-search. If step size is less than this number, feasibility restoration problem is activated. Double values in $[0, 10^{6}]$. Default value: $10^{-16}$.
+\medskip
+ 
+\noindent \textbf{theta\_max\_fact}: maximum constraint violation ($\theta_{max}$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{4}$.
+\medskip
+
+\noindent \textbf{theta\_min\_fact}: minimum constraint violation ($\theta_{min}$) is scaled by this fact before using in the fileter line-search algorithm. (eqn (21) in~\cite{waecther_05_ipopt0}). Double values in $[0, 10^7]$. Default value: $10^{-4}$.
+\medskip
+
+\noindent \textbf{tau\_min}: fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}). Double values in $[0.9, 0.99999]$. Default value: $0.99$. 
+\medskip
+
+\noindent \textbf{accept\_every\_trial\_stepduals}: disable the line-search and take the close-to-boundary step. String values: ``no'' (default) and ``yes''.
+\medskip
+
+\noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to the equality constraints. Possible values one of the the strings ``lsq'' (least-square (LSQ) solve initialization) and ``zero'' (multipliers are set identically to zero). Default value: is ``lsq''.
+\medskip
+
+\noindent \textbf{duals\_lsq\_ini\_max}: max inf-norm allowed for initial duals when computed with LSQ (see \textbf{duals\_init}); if norm is greater, the duals for the equality constraints will be set to zero. Double values between $10^{-16}$ and $10^{10}$. Default value: $1000$.
+\medskip
+
+\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When \texttt{Hessian} is ``quasinewton\_approx'' the default value for this options is ``lsq''. When ``Hessian'' is ``analytical\_exact'' the default value is ``linear''.
+\medskip
+
+\noindent \textbf{recalc\_lsq\_duals\_tol}: threshold for inf-norm under which the LSQ computation of duals is used. If the inf-norm of the duals of the equality constraints is larger than the value of this options, these duals are set to zero. This options requires \texttt{duals\_update\_type} to be ``lsq'' (the option is ignored otherwise). Double values in $[0,10^{10}]$. Default value: $10^{-6}$.
+\medskip
+
+\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When \texttt{Hessian} is ``quasinewton\_approx'' the default value for this options is ``lsq''. When \texttt{Hessian} is ``analytical\_exact'' the default value is ``linear''.
+\medskip
+
+
+
+\subsubsection{Feasibility restoration}
+
+\noindent \textbf{force\_resto}: string option with ``yes'' or ``no'' values deciding whether \Hi forces applying feasibility restoration. Default value: ``no''.
+\medskip
+
+\noindent \textbf{options\_file\_fr\_prob}: string option indicates the name of the option file for the feasibility restoration problem. Default value: ``hiop\_fr\_ci.options''.
+\medskip
+
+\noindent \textbf{kappa\_resto}: factor to decrease the constraint violation in feasibility restoration. Double values in $[0, 1]$. Default value: $0.9$.
+\medskip
+
+
+
+\subsubsection{Elastic mode}
+
+\noindent \textbf{elastic\_mode}: type of elastic mode used within \Hi:
+\begin{itemize}
+\item ``none'' (default): does not apply elastic mode;
+\item ``tighten\_bound '': tightens the bounds when $\mu$ changes.
+\item ``correct\_it'': tightens the bounds, and corrects the slacks and slack duals when $\mu$ changes.
+\item ``correct\_it\_adjust\_bound'': tightens the bounds, corrects the slacks and slack duals, and adjusts the bounds again from the modified iterate when $\mu$ changes.
+\end{itemize}
+\medskip
+
+\noindent \textbf{elastic\_bound\_strategy}: Strategy used to tighen the bounds, when $\mu$ changes:
+\begin{itemize}
+\item ``mu\_projected'' (default): sets the new bound relax factor to \\
+$(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initial}-{bound\_relax\_perturb\_final}) + {bound\_relax\_perturb\_final}$ 
+\item ``mu\_scaled '': sets the new bound relax factor to $0.995*\mu$
+\end{itemize}
+\medskip
+
+\noindent \textbf{elastic\_mode\_bound\_relax\_final}: the final/minimum bound relaxation factor in the elastic mode. This value must be less or equal to elastic\_mode\_bound\_relax\_initial. If user provides elastic\_mode\_bound\_relax\_final $>$ elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-12}$.
+\medskip
+
+\noindent \textbf{elastic\_mode\_bound\_relax\_initial}: the initial bound relaxation factor in the elastic mode. This value must be greater or equal to elastic\_mode\_bound\_relax\_final. If user provides elastic\_mode\_bound\_relax\_final $>$ elastic\_mode\_bound\_relax\_initial, HiOp will use the default values for both parameters. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-2}$.
+\medskip
+
+
+
+\subsubsection{Regularization}
+
+\noindent \textbf{delta\_0\_bar}: first perturbation of the Hessian block for inertia correction. Double values in $[0,10^{40}]$. Default value: $10^{-4}$. 
+\medskip
+
+\noindent \textbf{delta\_c\_bar}: factor for regularization for potentially rank-deficient Jacobian ($\delta_c=\texttt{delta\_c\_bar}*\mu^\kappa_c$). Double values in $[10^{-20},10^{40}]$. Default value: $10^{-8}$. 
+\medskip
+
+\noindent \textbf{delta\_w\_max\_bar}: largest perturbation of the Hessian block for inertia correction. Double values in $[10^{-40},10^{40}]$. Default value: $10^{20}$. 
+\medskip
+
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
+\medskip
+
+\noindent \textbf{kappa\_c}: exponent of $\mu$ when computing regularization for potentially rank-deficient Jacobian ($\delta_c=\texttt{delta\_c\_bar}*\mu^\kappa_c$). Double values in $[0,10^{40}]$. Default value: $0.25$. 
+\medskip
+
+\noindent \textbf{kappa\_w\_minus }: factor to decrease the most recent successful perturbation for inertia correction. Double values in $[10^{-20}, 1]$. Default value: $0.3333$.
+\medskip
+
+\noindent \textbf{kappa\_w\_plus}: factor to increase perturbation when it did not provide correct inertia correction (not first iteration). Double values in $[1, 10^{40}]$. Default value: $8$.
+\medskip
+
+\noindent \textbf{kappa\_w\_plus\_bar}: factor to increase perturbation when it did not provide correct inertia correction (first iteration when scale not known). Double values in $[1, 10^{40}]$. Default value: $100$.
+\medskip
+
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
+\medskip
+
+\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
+\medskip
+
+\noindent \textbf{regularization\_method}: whether randomized method is used to compute regularizations.
+\begin{itemize}
+\item ``standard'' (default) - no randomized method is used. Regularization is computed as a scala times an identiy matrix, i.e., $\delta I$.
+\item ``randomized'' - use randomized regularizations.
+\end{itemize}
+\medskip
+
+\noindent \textbf{normaleqn\_regularization\_priority }: when normal equation is used and the iterate matrix is not p.d., updating dual regularization is more efficient than updating the primal ones. Only valid when option \texttt{KKTLinsys} is set to \texttt{normaleqn}
+\begin{itemize}
+\item ``primal\_first'' - update primal regularizations to correct positive definiteness. If primal regularization is larger than the value provided by option \textbf{delta\_w\_max\_bar}, \Hi will try to increase dual regularitions. 
+\item ``dual\_first'' (default) - update dual regularizations to correct positive definiteness. If dual regularization is larger than the value provided by option \textbf{delta\_w\_max\_bar}, \Hi will try to increase primal regularitions. 
+\end{itemize}
+\medskip
+
+
+
+\subsubsection{Solving internal linear systems}
+
+\noindent \textbf{duals\_init\_linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the least-square problem in dual initialization (see \textbf{duals\_init}). Possible values are `auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
+\medskip
+
+\noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
+\medskip
+
+\noindent \textbf{ir\_inner\_cusolver\_maxit}: FGMRES maximum number of iterations. Integer values in $[0, 1000]$. Default value: $50$.
+\medskip
+
+\noindent \textbf{ir\_inner\_cusolver\_restart}: FGMRES restart value. Integer values in $[0, 100]$. Default value: $20$.
+\medskip
+
+\noindent \textbf{ir\_inner\_cusolver\_tol }: FGMRES tolerance. Double values in $[10^{-16}, 0.1]$. Default value: $10^{-12}$.
+\medskip
+
+\noindent \textbf{ir\_outer\_maxit}: max number of outer iterative refinement iterations. Setting this to 0 deactivates the outer iterative refinement. Integer values in $[0, 100]$. Default value: $8$.
+\medskip
+
+\noindent \textbf{ir\_outer\_tol\_factor}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 1]$. Default value: $0.01$.
+\medskip
+
+\noindent \textbf{ir\_outer\_tol\_min}: iterative refinement (IR) is applied if the inf-norm of the full KKT residual is larger than $\min (\mu*ir\_outer\_tol\_factor,ir\_outer\_tol\_min)$. Double values in $[10^{-20}, 10^{20}]$. Default value: $10^{-6}$.
+\medskip
+
+\noindent \textbf{ir\_inner\_cusolver\_gs\_scheme}: Gram-Schmidt orthogonalization version for FMGRES:
+\begin{itemize}
+\item ``mgs '' (default): modified Gram-Schmidt
+\item ``cgs2'': reorthogonalized classical Gram-Schmidt (three synchs)
+\item ``mgs\_two\_synch'': two synch (stable) MGS
+\item ``mgs\_pm'': post-modern MGS, two synchs
+\end{itemize}
+\medskip
+
+\noindent \textbf{ginkgo\_exec }: string option with ``cuda'', ``hip'' or ``reference'' values selecting the hardware architecture to run the Ginkgo linear solver on. Only valid when parameter \texttt{linear\_solver\_sparse} is set to \texttt{ginkgo}. Default value: ``reference''.
+\medskip
+
+\noindent \textbf{cusolver\_lu\_factorization }: so far, only `klu' option is available.
+\medskip
+
+\noindent \textbf{cusolver\_lu\_refactorization}: numerical refactorization function after sparsity pattern of factors is computed. `glu' is  and `rf' is 
+\begin{itemize}
+\item ``glu '' (default): experimental approach
+\item ``rf'': NVIDIA's stable refactorization
+\end{itemize}
+\medskip
+
+\noindent \textbf{linear\_solver\_sparse\_ordering}: permutation to promote sparsity in the (Chol) factorization:
+\begin{itemize}
+\item ``metis '': based on a wrapper of METIS\_NodeND
+\item ``symamd-eigen'' (default): based on EIGEN implementation of approx. min. degree (AMD) orderings in its symmetric form
+\item ``symamd-cuda '': based on CUDA implementation of AMD orderings in its symmetric form
+\item ``symrcm '': based on CUDA implementation of reverse Cuthill-McKee orderings in its symmetric form
+\item ``amd-ssparse '': based on AMD from Suite Sparse library
+\item ``colamd-ssparse '': based on column AMD from Suite Sparse library
+\end{itemize}
+\medskip
+
+
+
+\subsubsection{Linear algebra computational kernels}
+
+\noindent \textbf{KKTLinsys}: type of KKT linear system \textit{formulation} used internally:
+\begin{itemize}
+\item ``auto'' (default): decided by \Hi based on the type of interface/NLP solved and ``compute\_mode'' and ``Hessian'' options;
+\item ``xycyd'': symmetric indefinite (less stable but smaller size);
+\item ``xdycyd'': symmetric indefinite (more stable but  larger size);
+\item  ``full'': unsymmetric suitable for LU solvers (experimental).
+\item  ``condensed'': symmetric condensed linear system that is suitable for sparse Cholesky solvers (available when no eq. constraints are present). See Section~\ref{kkt:condensed} for more information
+\item  ``normaleqn'': symmetric normal equation system that is suitable for sparse Cholesky solvers (available when problem is LP or separable convex QP). See Section~\ref{kkt:normaeqn} for more information
+\end{itemize}
+The last five options are available only with option \texttt{Hessian} setting to \texttt{analyticalExact}.
+\medskip
+
+\noindent \textbf{linsol\_mode}: for some problem classes and KKT linearizations, one can instruct \Hi to switch between strategies for solving the IPM linear systems:
+\begin{itemize}
+\item ``stable'' (default): the most stable factorization is used;
+\item ``speculative'': switch to faster linear solvers when is detected to be safe to do so. This is available for MDS problems and can offer considerable speed-up for these problems. The option is experimental and should be used only by advanced users;
+\item ``forcequick'' rely on fast solvers (experimental, avoid).
+\end{itemize}
+\medskip
+
+\noindent \textbf{compute\_mode}: offloading of computations to GPUs:
+\begin{itemize}
+\item ``auto'' (default): identical to ``hybrid'';
+\item ``cpu'': run everything on the CPU;
+\item ``hybrid'':  \Hi will decide internally based on the type of NLP problem solved and other options which computational kernels will be offloaded to GPU. It usually runs the expensive linear solves on GPU but the remaining computations on the host/CPU;
+\item ``gpu'': run the all the computational kernels on the device; some computations (\textit{e.g.}, logic and control loop) will run on CPU. It is fully tested with MDS NLPs; for other NLPs this option is experimental, should be used only by advanced users (as of v0.5). This option requires Umpire to be used as the memory manager with \texttt{mem\_space} option being set to \texttt{device} or \texttt{um}.
+\end{itemize}
+\medskip
+
+%% memory space selection
+\noindent \textbf{mem\_space}: determines the memory space in which future internal linear algebra objects will be created. When \Hi is built with RAJA/Umpire, user can set this option to either `default', `host', `device' or `um', and internally the data of HiOp vectors/matrices will be managed by Umpire. If HiOp was built without RAJA/Umpire support, only `default' is available for this option.:
+\begin{itemize}
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
+\item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space; the option is supported only for MDS NLPs and requires the user's model evaluation on the device;
+\item ``um'': allocations via Umpire's unified memory model, known as ``UM''.
+\end{itemize}
+\medskip
+
+\noindent \textbf{callback\_mem\_space}: determines the memory space to which \Hi will return the solutions. When \Hi is built with RAJA/Umpire and option \textbf{mem\_space} is set to `device', user can set this option to either `default', `host' or `device'. If HiOp was built without RAJA/Umpire support, only `default' is available for this option.:
+\begin{itemize}
+\item ``default'' (default): returns the solutions pointers on the cpu's memory space;
+\item ``host'':  returns the solutions pointers allocated by Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': returns the solutions pointers allocated by Umpire in Umpire's ``DEVICE'' device memory space; 
+\item ``um'': returns the solutions pointers allocated by Umpire's unified memory, known as ``UM''. Only available when \textbf{mem\_space} is set to `um'.
+\end{itemize}
+\medskip
+
+
+
+
+
+
+
+\subsubsection{Problem preprocessing}
+
+\noindent \textbf{fixed\_var}: treatment of variables that are detected to be fixed (according to the tolerance specified by ``fixed\_var\_tolerance''):
+\begin{itemize}
+\item ``none'' (default): will not handle fixed variable and will exit with an error message if such variable is encountered;
+\item ``relax'':  relax the fixed variables accordingly to ``fixed\_var\_perturb'' option below;
+\item ``'remove'': remove variables from the (internal) NLP formulation.
+\end{itemize}
+\medskip
+
+\noindent \textbf{fixed\_var\_tolerance}: a variable (say the $i$th) is considered fixed if 
+\begin{displaymath}
+|(x_u)_i-(x_l)_i| < \textnormal{fixed\_var\_tolerance} \times \max(|(x_u)_i|,1).
+\end{displaymath}
+This option takes double values in $[10^{-30}, 10^{-2}]$ and has a default value $10^{-15}$.
+\medskip
+
+\noindent \textbf{fixed\_var\_perturb}: fixed variable perturbation of the lower and upper bounds for fixed variables relative their  magnitude. A variable (say the $i$th) (that is detected to be fixed) is ``relaxed'' accordingly to 
+\begin{align*}
+(x_l)_i & =  (x_l)_i -  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}, \\
+(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{fixed\_var\_perturb}.
+\end{align*}
+This option takes double values in $[10^{-14}, 0.1]$ and has a default value $10^{-8}$.
+\medskip
+
+\noindent \textbf{bound\_relax\_perturb}: perturbation of the lower and upper bounds for all variables and all constraints relative to their magnitude. A variable or constraint (say the $i$th) with lower and upper bounds $(x_l)_i$ and $(x_u)_i$, respectively,  is ``relaxed'' accordingly to 
+\begin{align*}
+(x_l)_i & =  (x_l)_i -  \max(|(x_l)_i|,1) \times \textnormal{bound\_relax\_perturb}, \\
+(x_u)_i & =  (x_u)_i +  \max(|(x_u)_i|,1) \times \textnormal{bound\_relax\_perturb}.
+\end{align*}
+This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-8}$.
+\medskip
+
+%%%% scaling
+\noindent \textbf{scaling\_type}: scaling method for the user's NLP
+\begin{itemize}
+\item ``none'' (default): perform no problem scaling;
+\item ``gradient'':  will scale the problem such that the inf-norm of gradient at the initial point is less or equal to the value of ``scaling\_max\_grad'' option.
+\end{itemize}
+\medskip
+
+\noindent \textbf{scaling\_max\_grad}: the user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value: $100$.
+\medskip
+
+\noindent \textbf{eq\_relax\_factor}: perturbation of the equalities to allow posing them as inequalities. This factor is relative to the maximum between the magnitude of the equalities rhs and 1.0. Used only by `hiopNlpSparseIneq' formulation class. Double values in $[10^{-15}, 1]$. Default value: $10^{-8}$.
+\medskip
+
+
+
+
+\subsubsection{Miscellaneous options}
+
+\noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ also outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with \Hi's convergence metrics at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. Those larger values are explained in hiopLogger.hpp. The higher the value the more verbose the output will be.
+\medskip
+
+\noindent \textbf{print\_options}: string option with ``yes'', ``no'' or ``short'' values deciding whether the options should be printed on the output before solver (re)starts. Setting this option to `yes' prints all the parameter names, values and descriptions, while `short' only prints the parameter names and values. Default value: ``no''.
+\medskip
+
+\noindent \textbf{write\_kkt}: string option with ``yes'' or ``no'' values deciding whether \Hi writes internal KKT linear system (matrix, rhs, sol) to external files. Default value: ``no''.
+\medskip
+
+\noindent \textbf{time\_kkt}: string option with ``on'' or ``off'' values deciding whether \Hi turns on/off performance timers and reporting of the computational constituents of the KKT solve process. Default value: ``off''.
+\medskip
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Options for PriDec solver}
+
+Here we list the options that are recognized by the \Hi's PriDec solver.
+ \subsubsection{Termination criteria and output}
+
+ \noindent \textbf{tolerance}: maximum (absolute) error allowed. This value is compared against the decrease of the objective predicted by the solution to the subproblem with the approximation model ($q(x)$ in~\eqref{pridemobj}). Double values in $[10^{-14},0.1]$. Default value: $10^{-5}$.
+
+  \medskip
+
+  \noindent \textbf{max\_iter}: maximum number of iterations. Integer values between $1$ to $10^6$. Default value: $3000$.
+  \medskip
+  
+  \noindent \textbf{acceptable\_tolerance}: PriDec solver will terminate if the inf-norm of the decrease in objective value is below this value for \texttt{acceptable\_iterations} many consecutive iterations. Double values in $[10^{-14},0.1]$. Default value: $10^{-3}$.
+
+  \medskip
+
+  \noindent \textbf{acceptable\_iterations}: number of iterations passing the acceptable tolerance (see \textbf{acceptable\_tolerance}) after which PriDec solver terminates. Integer values between $1$ and $10^6$. Default value: $25$.
+
+  \medskip
+
+ \noindent \textbf{verbosity\_level}: integer between $0$ and $12$ specifying the verbosity of \Hi's output. A value of $0$ disables any output (but still outputs fatal errors). A value of $1$ outputs warnings. The value of $2$ is reserved for future use. A value of $3$ will also output a table with PriDec solver's convergence metrics and trust-region type of measure of the quality of the approximation model at each iteration. A value of $4$ and higher will display additional info related to the internals of the algorithm and is generally used only for debugging/development purposes. The higher the value the more verbose the output will be.
+
+
+\subsubsection{Algorithm selection and parameters}
+  \noindent \textbf{alpha\_min}: lower bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[10^{-8},10^3]$. Default value: $10^{-5}$.
+
+  \medskip
+
+  \noindent \textbf{alpha\_max}: upper bound for the scalar quadratic coefficient in the approximation model of the objective. It is a global value and has higher priority than the update rule of alpha. Double values in $[1,10^{14}]$. Default value: $10^6$. An assert error will be reported if \textbf{alpha\_min} is bigger than \textbf{alpha\_max}.
+%
+%-- to follow --
+
+\subsubsection{Miscellaneous options}
+
+%% memory space selection aaaa
+
+\noindent \textbf{mem\_space}: specifies the primary memory space in which PriDec solver's internal linear algebra objects will be created:
+\begin{itemize}
+\item ``default'' (default): allocations are done by \Hi in the cpu's memory space;
+\item ``host'':  allocations via Umpire in Umpire's ``HOST'' memory space, typically CPU memory;
+\item ``device'': allocations via Umpire in Umpire's ``DEVICE'' device memory space;
+\item ``um'': allocations via Umpire's unified memory model, know as ``UM''.
+\end{itemize}
+\warningcp{} The memory space for PriDec solver must match the memory space used by the master NLP solver, otherwise undefined behaviour will occur. This consistency is not checked by HiOp since it is impossible to do so when black-box NLP solvers are used for the master problem. It is the user's responsibility to ensure that the memory spaces match. When HiOp is used a master solver, the PriDec solver's \texttt{mem\_space} option must match the master HiOp's option \texttt{mem\_space}. When a CPU master solver is used with PriDec solver, the PriDec's \texttt{mem\_space} option must be set to ``default''.
+
+
+\medskip
+
+\noindent \textbf{print\_options}: string option with ``yes'' or ``no'' values deciding whether the options should be printed on the output before solver (re)starts. Default value: ``no''.
+
+%\input{old_stuff}
+
+\section{Licensing and copyright}
+HiOp is free software; you can modify it and/or redistribute it under the terms of the following  modified BSD 3-clause license:
+
+\noindent\begin{center}\fcolorbox{black}{mypink}{\begin{minipage}{0.9\textwidth} \footnotesize
+\noindent Copyright (c) 2017-2021, Lawrence Livermore National Security, LLC.
+
+\noindent Produced at the Lawrence Livermore National Laboratory (LLNL).
+
+\noindent Written by Cosmin G. Petra, petra1@llnl.gov. LLNL-CODE-742473. All rights reserved.
+
+\bigskip
+
+\noindent HiOp is released under the BSD 3-clause license (https://github.com/LLNL/hiop/blob/master/LICENSE). 
+Please also read “Additional BSD Notice” below.
+
+\bigskip
+
+\noindent Redistribution and use in source and binary forms, with or without modification, 
+are permitted provided that the following conditions are met:
+\begin{itemize}
+\item[i.] Redistributions of source code must retain the above copyright notice, this list 
+of conditions and the disclaimer below.
+\item[ii.] Redistributions in binary form must reproduce the above copyright notice, 
+this list of conditions and the disclaimer (as noted below) in the documentation and/or 
+other materials provided with the distribution.
+\item[iii.] Neither the name of the LLNS/LLNL nor the names of its contributors may be used to 
+endorse or promote products derived from this software without specific prior written 
+permission.
+\end{itemize}
+
+\medskip
+
+\noindent THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND ANY 
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
+SHALL LAWRENCE LIVERMORE NATIONAL SECURITY, LLC, THE U.S. DEPARTMENT OF ENERGY OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+\medskip
+
+Additional BSD Notice
+\begin{itemize}
+\item[1.] This notice is required to be provided under our contract with the U.S. Department 
+of Energy (DOE). This work was produced at Lawrence Livermore National Laboratory under 
+Contract No. DE-AC52-07NA27344 with the DOE.
+\item[2.] Neither the United States Government nor Lawrence Livermore National Security, LLC 
+nor any of their employees, makes any warranty, express or implied, or assumes any 
+liability or responsibility for the accuracy, completeness, or usefulness of any 
+information, apparatus, product, or process disclosed, or represents that its use would
+not infringe privately-owned rights.
+\item[3.] Also, reference herein to any specific commercial products, process, or services by 
+trade name, trademark, manufacturer or otherwise does not necessarily constitute or 
+imply its endorsement, recommendation, or favoring by the United States Government or 
+Lawrence Livermore National Security, LLC. The views and opinions of authors expressed 
+herein do not necessarily state or reflect those of the United States Government or 
+Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
+product endorsement purposes.
+\end{itemize}
+\end{minipage}}\end{center}
+
+\section{Acknowledgments}
+This work performed under the auspices of the U.S. Department of Energy by Lawrence Livermore National Laboratory under Contract DE-AC52-07NA27344. The author also acknowledges the support from the LDRD Program of Lawrence Livermore National Laboratory under the projects 16-ERD-025 and 17-SI-005.
+
+
+%\section{Implementation details}
+
+%\section{Solver API}
+
+\bibliographystyle{abbrv}
+\bibliography{petra,hiop}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{appendix}
+
+
+\end{document}
