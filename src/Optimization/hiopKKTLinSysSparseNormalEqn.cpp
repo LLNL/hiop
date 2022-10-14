@@ -219,7 +219,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   //temporary code, see above note
   {
     if(mem_space_internal == "DEVICE") {
-#ifdef HIOP_USE_CUDA
+#ifdef HIOP_USE_RAJA
       auto Hess_diag_raja = dynamic_cast<hiopVectorRajaPar*>(Hess_diag_copy_);
       auto Hess_diag_par = dynamic_cast<hiopVectorPar*>(Hess_diag_);
       auto Hx_raja = dynamic_cast<hiopVectorRajaPar*>(Hx_copy_);
@@ -411,12 +411,13 @@ hiopLinSolverSymSparse* hiopKKTLinSysSparseNormalEqn::determine_and_create_linsy
 
     assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
 
+#ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_NormalEqn linsys: alloc cuSOLVER-chol matrix size %d\n", n);
     assert(M_normaleqn_);
     linSys_ = new hiopLinSolverCholCuSparse(M_normaleqn_, nlp_);
-
+#endif
 #endif
 
     //Return NULL (and assert) if a GPU sparse linear solver is not present
