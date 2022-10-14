@@ -1242,7 +1242,7 @@ void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 {
 #ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
+  assert(dynamic_cast<const hiopVectorRajaPar*>(&diag_out) && "input vector must be Raja (and data on the device)");
 #else
   assert( "input vector must be Raja (and data on the device)");
 #endif
