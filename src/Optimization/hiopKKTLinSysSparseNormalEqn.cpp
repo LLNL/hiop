@@ -63,7 +63,7 @@
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
 #else
-#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
+//#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
 #endif // HIOP_USE_CUDA
 #endif // HIOP_USE_RAJA
 
