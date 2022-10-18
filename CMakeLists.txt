@@ -477,10 +477,8 @@ if (HIOP_WITH_MAKETEST)
   if(HIOP_USE_MPI)
     add_test(NAME MatrixTest_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:testMatrixDense>")
   endif(HIOP_USE_MPI)
-  if(HIOP_SPARSE)
-    add_test(NAME SparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
-    add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
-  endif(HIOP_SPARSE)
+  add_test(NAME SparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSparse>")
+  add_test(NAME SymmetricSparseMatrixTest COMMAND ${RUNCMD} "$<TARGET_FILE:testMatrixSymSparse>")
 
   # Test drivers in the form of user applications
   add_subdirectory(src/Drivers)
