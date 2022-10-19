@@ -42,12 +42,8 @@ set(hiopOptimization_INTERFACE_HEADERS
   hiopResidual.hpp
   )
 
-if(HIOP_USE_RAJA)
-  list(APPEND hiopOptimization_SPARSE_SRC hiopKKTLinSysSparseCondensed.cpp )
-endif()
-
 if(HIOP_SPARSE)
-  list(APPEND hiopOptimization_SRC ${hiopOptimization_SPARSE_SRC} hiopKKTLinSysSparseNormalEqn.cpp)
+  list(APPEND hiopOptimization_SRC ${hiopOptimization_SPARSE_SRC})
 endif()
 
 install(
