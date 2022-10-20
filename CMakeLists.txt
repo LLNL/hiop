@@ -181,7 +181,7 @@ if(HIOP_DEVELOPER_MODE)
   install(TARGETS hiop_options hiop_warnings EXPORT hiop-targets)
 endif()
 
-if(NOT (HIOP_USE_GPU AND HIOP_USE_HIP))
+if(HIOP_USE_RAJA AND (NOT (HIOP_USE_GPU AND HIOP_USE_HIP)))
   find_package(OpenMP)
   target_link_libraries(hiop_tpl INTERFACE OpenMP::OpenMP_CXX)
 endif()
