@@ -192,6 +192,7 @@ build_on_incline:
 
 pnnl_cleanup:
   stage: .pre
+  when: manual
   variables:
     GIT_STRATEGY: none
   script:
@@ -199,7 +200,7 @@ pnnl_cleanup:
   - |
     set -xv
     export WORKDIR="$HOME/gitlab/"
-    find $WORKDIR -type d -mmin +360 -prune -print -exec rm -rf {} \; || true
+    find $WORKDIR -type d --mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
     ls -hal $WORKDIR
   <<: *pnnl_tags_definition
   rules:
