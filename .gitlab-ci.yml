@@ -192,7 +192,6 @@ build_on_incline:
 
 pnnl_cleanup:
   stage: .pre
-  when: manual
   variables:
     GIT_STRATEGY: none
   script:
