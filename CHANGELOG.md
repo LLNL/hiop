@@ -1,6 +1,9 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 0.7.1: Miscellaneous fixes to build system
+This minor release fixes a couple of issues found in the build system after the major release 0.7 of HiOp. 
+
 ## Version 0.7.0: Fortran interface and misc fixes and improvements:
 - Fortran interface and examples
 - Bug fixing for sparse device linear solvers
