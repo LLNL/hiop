@@ -94,7 +94,7 @@ $> make install
 
 ### Dependencies
 
-A complete list of dependencies is maintained at: https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/hiop/package.py
+A complete list of dependencies is maintained [here](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/hiop/package.py).
 
 For a minimal build, HiOp requires LAPACK and BLAS. These dependencies are automatically detected by the build system. MPI is optional and by default enabled. To disable use cmake option '-DHIOP_USE_MPI=OFF'.
 
