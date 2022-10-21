@@ -199,7 +199,7 @@ pnnl_cleanup:
   - |
     set -xv
     export WORKDIR="$HOME/gitlab/"
-    find $WORKDIR -type d --mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
+    find $WORKDIR -type d -mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
     ls -hal $WORKDIR
   <<: *pnnl_tags_definition
   rules:
