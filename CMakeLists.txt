@@ -199,11 +199,18 @@ endif(NOT DEFINED LAPACK_LIBRARIES)
 target_link_libraries(hiop_tpl INTERFACE ${LAPACK_LIBRARIES})
 message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
-include(HiOpCheckGitSubmodules)
-if(HIOP_USE_EIGEN)
-  message(STATUS "Eigen enabled")
-  # We don't want target_include_directories as the headers are not installed
-  include_directories(${PROJECT_SOURCE_DIR}/tpl/eigen)
+if(NOT DEFINED HIOP_EIGEN_DIR)
+  include(HiOpCheckGitSubmodules)
+  if(HIOP_USE_EIGEN)
+    message(STATUS "Eigen enabled")
+    # We don't want target_include_directories as the headers are not installed
+    include_directories(${PROJECT_SOURCE_DIR}/tpl/eigen)
+  endif()
+else()
+  if(HIOP_USE_EIGEN)
+    message(STATUS "Eigen enabled using user-provided path '${HIOP_EIGEN_DIR}'")
+    include_directories(${HIOP_EIGEN_DIR})
+  endif()
 endif()
 
 if(HIOP_USE_GPU)
