@@ -1452,12 +1452,10 @@ hiopKKTLinSys* hiopAlgFilterIPMNewton::decideAndCreateLinearSystem(hiopNlpFormul
         return new hiopKKTLinSysSparseFull(nlp);
       } else if(strKKT == "xdycyd") {
         return new hiopKKTLinSysCompressedSparseXDYcYd(nlp);
-#ifdef HIOP_USE_RAJA
       } else if(strKKT == "condensed") {
         return new hiopKKTLinSysCondensedSparse(nlp);
       } else if(strKKT == "normaleqn") {
         return new hiopKKTLinSysSparseNormalEqn(nlp);
-#endif
       } else {
         //'auto' or 'XYcYd'
         return new hiopKKTLinSysCompressedSparseXYcYd(nlp);
@@ -1486,7 +1484,6 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
                                             bool& switched)
 {
 #ifdef HIOP_SPARSE
-#ifdef HIOP_USE_RAJA
   if(linsol_safe_mode_on) {
     //attempt switching only when running under "condensed" KKT formulation 
     auto* kkt_condensed = dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt_curr);
@@ -1520,7 +1517,6 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
       return kkt;
     } // end of if(kkt)
   }
-#endif
 #endif
 
 // TODO: turn to 0 --- keep using fast mode till linear solver (kkt->update) fails
@@ -1571,7 +1567,6 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   assert("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode")));
   
 #ifdef HIOP_SPARSE
-#ifdef HIOP_USE_RAJA
   //
   // Switch to quick mode for condensed
   //
@@ -1616,7 +1611,6 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
     }  
   }
 #endif
-#endif
 
   // MDS system
   // if linsol_mode = speculative, linsol_safe_mode_on = false by initialization, and hiop starts from fast mode.
@@ -1651,15 +1645,13 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiop
   std::string strKKT = nlp->options->GetString("fact_acceptor");
   if(strKKT == "inertia_free")
   {
-#ifdef HIOP_SPARSE   
-#ifdef HIOP_USE_RAJA
+#ifdef HIOP_SPARSE
     if(nullptr != dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
       // for LinSysCondensedSparse correct inertia is different
       assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
              "wrong combination of optimization objects was created");
       return new hiopFactAcceptorInertiaFreeDWD(p, 0);      
     }
-#endif
 #endif
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {

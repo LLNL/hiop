@@ -93,9 +93,12 @@ $> make install
 * *-DCMAKE_CXX_FLAGS="-O3"* will enable a high level of compiler code optimization
 
 ### Dependencies
-HiOp requires LAPACK and BLAS. These dependencies are automatically detected by the build system. MPI is optional and by default enabled. To disable use cmake option '-DHIOP_USE_MPI=OFF'.
 
-HiOp has some support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs, use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
+A complete list of dependencies is maintained [here](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/hiop/package.py).
+
+For a minimal build, HiOp requires LAPACK and BLAS. These dependencies are automatically detected by the build system. MPI is optional and by default enabled. To disable use cmake option '-DHIOP_USE_MPI=OFF'.
+
+HiOp has support for NVIDIA **GPU-based computations** via CUDA and Magma. To enable the use of GPUs, use cmake with '-DHIOP_USE_GPU=ON'. The build system will automatically search for CUDA Toolkit. For non-standard CUDA Toolkit installations, use '-DHIOP_CUDA_LIB_DIR=/path' and '-DHIOP_CUDA_INCLUDE_DIR=/path'. For "very" non-standard CUDA Toolkit installations, one can specify the directory of cuBlas libraries as well with '-DHIOP_CUBLAS_LIB_DIR=/path'.
 
 ### Using RAJA and Umpire portability libraries
 

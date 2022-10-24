@@ -57,16 +57,16 @@
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
+#ifdef HIOP_USE_RAJA
+#include "hiopVectorRajaPar.hpp"
+
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
 #include "hiopMatrixSparseCsrCuda.hpp"
-
-#ifdef HIOP_USE_RAJA
-#include "hiopVectorRajaPar.hpp"
 #else
-#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
-#endif // HIOP_USE_RAJA
+//#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
 #endif // HIOP_USE_CUDA
+#endif // HIOP_USE_RAJA
 
 #include "hiopMatrixSparseTripletStorage.hpp"
 #include "hiopMatrixSparseCSRSeq.hpp"
@@ -173,7 +173,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   //temporary code, see above note
   {
     if(mem_space_internal == "DEVICE") {
-#ifdef HIOP_USE_CUDA
+#ifdef HIOP_USE_RAJA
       auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
       assert(Hd_raja && "incorrect type for vector class");
@@ -500,12 +500,13 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys()
 
     assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
     
+#ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc cuSOLVER-chol matrix size %d\n", n);
     assert(M_condensed_);
     linSys_ = new hiopLinSolverCholCuSparse(M_condensed_, nlp_);
-
+#endif
 #endif    
     
     //Return NULL (and assert) if a GPU sparse linear solver is not present
