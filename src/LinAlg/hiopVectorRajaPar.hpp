@@ -60,11 +60,12 @@
 #ifndef HIOP_VECTOR_RAJA_PAR
 #define HIOP_VECTOR_RAJA_PAR
 
-
+#ifdef HIOP_USE_RAJA
 namespace hiop
 {
   typedef hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaCuda> hiopVectorRajaPar;
 }
+#endif
 
 #if 0 
 
