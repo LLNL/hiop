@@ -132,11 +132,6 @@
       done
       echo "finished batch job: $res"
       exit $res
-  after_script:
-    - |
-      set -xv
-      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
-      rm -rf "$WORKDIR"
 
 .pnnl_tags_template: &pnnl_tags_definition
   tags:
@@ -169,7 +164,7 @@ build_on_marianas:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
-  allow_failure: true
+  allow_failure: false 
   stage: default_build
   variables:
     SLURM_Q: "newell_shared"
@@ -195,6 +190,21 @@ build_on_incline:
   rules:
     - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
+pnnl_cleanup:
+  stage: .pre
+  variables:
+    GIT_STRATEGY: none
+  script:
+  # clears directory of files more than 6 hours/360 minutes old
+  - |
+    set -xv
+    export WORKDIR="$HOME/gitlab/"
+    find $WORKDIR -type d -mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
+    ls -hal $WORKDIR
+  <<: *pnnl_tags_definition
+  rules:
+    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
+
 # For Ascent CI
 build_on_login_node:
   stage: build
@@ -207,6 +217,8 @@ build_on_login_node:
 
 test_on_compute_node:
   stage: test
+  variables:
+    GIT_STRATEGY: none
   dependencies:
     - build_on_login_node
   tags:
@@ -231,6 +243,7 @@ build_on_quartz:
 test_on_quartz:
   stage: test
   variables:
+    GIT_STRATEGY: none
     MY_CLUSTER: quartz
   dependencies:
     - build_on_quartz
@@ -253,6 +266,7 @@ build_on_lassen:
 test_on_lassen:
   stage: test
   variables:
+    GIT_STRATEGY: none
     MY_CLUSTER: lassen
   dependencies:
     - build_on_lassen

@@ -522,29 +522,29 @@ public:
     return true;
   }
   bool get_starting_point(const size_type& n,
-                                  const size_type& m,
-                                  double* x0,
-                                  bool& duals_avail,
-                                  double* z_bndL0, 
-                                  double* z_bndU0,
-                                  double* lambda0,
-                                  bool& slacks_avail,
-                                  double* ineq_slack)
+                          const size_type& m,
+                          double* x0,
+                          bool& duals_avail,
+                          double* z_bndL0, 
+                          double* z_bndU0,
+                          double* lambda0,
+                          bool& slacks_avail,
+                          double* ineq_slack)
   {
     duals_avail = false;
     slacks_avail = false;
     return false;
   }
 
-  bool get_starting_point(const size_type& n,
-                          const size_type& m,
-                          double* x0,
-                          double* z_bndL0, 
-                          double* z_bndU0,
-                          double* lambda0,
-                          double* ineq_slack,
-                          double* vl0,
-                          double* vu0)
+  bool get_warmstart_point(const size_type& n,
+                           const size_type& m,
+                           double* x0,
+                           double* z_bndL0, 
+                           double* z_bndU0,
+                           double* lambda0,
+                           double* ineq_slack,
+                           double* vl0,
+                           double* vu0)
   {
     return false;
   }

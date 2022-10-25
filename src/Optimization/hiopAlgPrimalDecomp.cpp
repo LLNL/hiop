@@ -766,7 +766,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
   {
     log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
-    if(options_->GetString("print_options") == "yes") {
+    if(options_->GetString("print_options") != "no") {
       log_->write(nullptr, *options_, hovSummary);
     }
     
@@ -1233,7 +1233,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
   {
     log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
     log_->printf(hovSummary, "===============\nUsing local accumulation OPTION\n===============\n");
-    if(options_->GetString("print_options") == "yes") {
+    if(options_->GetString("print_options") != "no") {
       log_->write(nullptr, *options_, hovSummary);
     }
     if(comm_size_==1) {
@@ -1740,7 +1740,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 hiopSolveStatus hiopAlgPrimalDecomposition::run()
 {
   log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
-  if(options_->GetString("print_options") == "yes") {
+  if(options_->GetString("print_options") != "no") {
     log_->write(nullptr, *options_, hovSummary);
   }
   return run_single(); // call the serial solver

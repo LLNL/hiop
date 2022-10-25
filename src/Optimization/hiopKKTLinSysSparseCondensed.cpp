@@ -57,16 +57,16 @@
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
+#ifdef HIOP_USE_RAJA
+#include "hiopVectorRajaPar.hpp"
+
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
 #include "hiopMatrixSparseCsrCuda.hpp"
-
-#ifdef HIOP_USE_RAJA
-#include "hiopVectorRajaPar.hpp"
 #else
-#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
-#endif // HIOP_USE_RAJA
+//#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
 #endif // HIOP_USE_CUDA
+#endif // HIOP_USE_RAJA
 
 #include "hiopMatrixSparseTripletStorage.hpp"
 #include "hiopMatrixSparseCSRSeq.hpp"
@@ -142,7 +142,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   // hybrid compute mode -> linear algebra objects used internally by the class will be allocated on the device. Most of the inputs
   // to this class will be however on HOST under hybrid mode, so some objects are copied/replicated/transfered to device
   // gpu copute mode -> not yet supported
-  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeinity
+  // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeneity
   //
   // REMARK: The objects that are copied/replicated are temporary and will be removed later on as the remaining sparse KKT computations
   // will be ported to device
@@ -171,7 +171,7 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   //temporary code, see above note
   {
     if(mem_space_internal == "DEVICE") {
-#ifdef HIOP_USE_CUDA
+#ifdef HIOP_USE_RAJA
       auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
       assert(Hd_raja && "incorrect type for vector class");
@@ -320,8 +320,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   }
 
   fflush(stdout);
-  
-  int nnz_condensed = M_condensed_->numberOfNonzeros();
 
   //
   // instantiate linear solver class based on values of compute_mode, safe mode, and other options
@@ -497,12 +495,13 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys()
 
     assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
     
+#ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc cuSOLVER-chol matrix size %d\n", n);
     assert(M_condensed_);
     linSys_ = new hiopLinSolverCholCuSparse(M_condensed_, nlp_);
-
+#endif
 #endif    
     
     //Return NULL (and assert) if a GPU sparse linear solver is not present

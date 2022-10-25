@@ -350,15 +350,15 @@ public:
                           bool& slacks_avail,
                           double* ineq_slack);
 
-  bool get_starting_point(const size_type& n,
-                          const size_type& m,
-                          double* x0,
-                          double* z_bndL0, 
-                          double* z_bndU0,
-                          double* lambda0,
-                          double* ineq_slack,
-                          double* vl0,
-                          double* vu0)
+  bool get_warmstart_point(const size_type& n,
+                           const size_type& m,
+                           double* x0,
+                           double* z_bndL0, 
+                           double* z_bndU0,
+                           double* lambda0,
+                           double* ineq_slack,
+                           double* vl0,
+                           double* vu0)
   {
     return false;
   }

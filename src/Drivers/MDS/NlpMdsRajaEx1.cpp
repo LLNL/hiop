@@ -723,7 +723,7 @@ bool MdsEx1::get_starting_point(const size_type& n,
                                 double* z_bndU0,
                                 double* lambda0,
                                 bool& slacks_avail,
-                                double* )
+                                double* ineq_slack)
 {
   slacks_avail = false;
   

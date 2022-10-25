@@ -110,7 +110,11 @@ int main(int argc, char **argv)
 #endif
 
   // Set memory space where to create models and perform NLP solve
+#ifdef HIOP_USE_GPU
   std::string mem_space = "device";
+#else
+  std::string mem_space = "host";
+#endif
 
   bool selfCheck, one_call_cons;
   bool has_empty_sp_row;

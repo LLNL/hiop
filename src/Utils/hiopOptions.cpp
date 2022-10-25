@@ -493,35 +493,56 @@ void hiopOptions::print(FILE* file, const char* msg) const
   if(nullptr==msg) fprintf(file, "#\n# Hiop options\n#\n");
   else          fprintf(file, "%s ", msg);
 
+  bool short_ver{false};
+  if(GetString("print_options") == "short"){
+    short_ver = true;
+  }
+
   map<string,Option*>::const_iterator it = mOptions_.begin();
   for(; it!=mOptions_.end(); it++) {
     fprintf(file, "%s ", it->first.c_str());
-    it->second->print(file);
+    it->second->print(file, short_ver);
     fprintf(file, "\n");
   }
   fprintf(file, "# end of Hiop options\n\n");
 }
 
-void hiopOptions::OptionNum::print(FILE* f) const
+void hiopOptions::OptionNum::print(FILE* f, bool short_ver) const
 {
-  fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
+  if(!short_ver) {
+    fprintf(f, "%.3e \t# (numeric) %g to %g [%s]", val, lb, ub, descr.c_str());
+  } else {
+    fprintf(f, "%.3e", val);
+  }
 }
-void hiopOptions::OptionInt::print(FILE* f) const
+void hiopOptions::OptionInt::print(FILE* f, bool short_ver) const
 {
-  fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
+  if(!short_ver) {
+    fprintf(f, "%d \t# (integer)  %d to %d [%s]", val, lb, ub, descr.c_str());
+  } else {
+    fprintf(f, "%d", val);
+  }
 }
 
-void hiopOptions::OptionStr::print(FILE* f) const
+void hiopOptions::OptionStr::print(FILE* f, bool short_ver) const
 {
   //empty range means the string option is not bound to a range of values
   if(range.empty()) {
-    fprintf(f, "%s \t# (string) [%s]", val.c_str(), descr.c_str());
-  } else {
-    stringstream ssRange; ssRange << " ";
-    for(int i=0; i<range.size(); i++) {
-      ssRange << range[i] << " ";
+    if(!short_ver) {
+      fprintf(f, "%s \t# (string) [%s]", val.c_str(), descr.c_str());
+    } else {
+      fprintf(f, "%s", val.c_str());
     }
-    fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+  } else {
+    if(!short_ver) {
+      stringstream ssRange; ssRange << " ";
+      for(int i=0; i<range.size(); i++) {
+        ssRange << range[i] << " ";
+      }
+      fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());
+    } else {
+      fprintf(f, "%s", val.c_str());
+    }
   }
 }
 
@@ -707,7 +728,7 @@ void hiopOptionsNLP::register_options()
     register_str_option("warm_start",
                         "no",
                         range,
-                        "Wart start from the user provided primal-dual point. (default no)");    
+                        "Warm start from the user provided primal-dual point. (default no)");    
   }
 
   // scaling
@@ -716,15 +737,15 @@ void hiopOptionsNLP::register_options()
     register_str_option("scaling_type",
                         "gradient",
                         range,
-                        "The method used for scaling the problem before solving it."
-                        "Setting this option to 'gradient' will scale the problem, guaranteeing the maximum "
-                        "gradient at the initial point is less or equal to scaling_max_grad (default 'gradient')");
+                        "The method used for scaling the problem before solving it. "
+                        "Setting this option to 'gradient' will scale the problem such that the inf-norm of gradient at the "
+                        "initial point is less or equal to to the value of scaling_max_grad option (default 'gradient')");
     
     register_num_option("scaling_max_grad",
                         100,
                         1e-20,
                         1e+20,
-                        "The problem will be rescaled if the inf-norm of the gradient at the starting point is "
+                        "The user's NLP will be rescaled if the inf-norm of the gradient at the starting point is "
                         "larger than the value of this option (default 100)");
   }
 
@@ -748,16 +769,16 @@ void hiopOptionsNLP::register_options()
                         8,
                         0,
                         100, 
-                        "Max number of outer iterative refinement iterations (default 8)."
+                        "Max number of outer iterative refinement iterations (default 8). "
                         "Setting it to 0 deactivates the outer iterative refinement");
   }
-
+ 
   // relax bounds
   {
     register_num_option("bound_relax_perturb", 1e-8, 0.0, 1e20,
                         "Perturbation of the lower and upper bounds for variables and constraints relative"
-                        "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)*"
-                        "bound_relax_perturb (default 1e-8)");
+                        "to its magnitude: lower/upper_bound -=/+= bound_relax_perturb*max(abs(lower/upper_bound),1)"
+                        "(default 1e-8)");
 
     //relax equalities internally to two-sided inequalties and pose the NLP as an NLP with inequalities only
     register_num_option("eq_relax_factor",
@@ -967,7 +988,7 @@ void hiopOptionsNLP::register_options()
                         1e+20,
                         "Apply curvature test to check if a factorization is acceptable. "
                         "This is the scaling factor used to determines if the "
-                        "direction is considered to be sufficiently positive. (1e-11 by default)");
+                        "direction is considered to have sufficiently positive curvature (1e-11 by default)");
   }  
   //computations
   {
@@ -1039,7 +1060,7 @@ void hiopOptionsNLP::register_options()
     register_str_option("regularization_method",
                         "standard",
                         range,
-                        "The method used to compute dual regularization. (TODO)");
+                        "The method used to compute regularizations. (TODO)");
     
   }
   // performance profiling
@@ -1060,7 +1081,7 @@ void hiopOptionsNLP::register_options()
     register_str_option("elastic_mode",
                         "none",
                         range,
-                        "Type of elastic mode used with the HiOp: 'none' does not use elastic mode (default option); "
+                        "Type of elastic mode used within HiOp: 'none' does not use elastic mode (default option); "
                         "'tighten_bound' tightens the bounds when `mu` changes; "
                         "'correct_it' tightens the bounds and corrects the slacks and slack duals when `mu` changes; "
                         "'correct_it_adjust_bound' tightens the bounds, corrects the slacks and slack duals, "
@@ -1080,8 +1101,8 @@ void hiopOptionsNLP::register_options()
                         1e-8,
                         1e-1,
                         "Initial bound relaxation factor in the elastic mode (default: 1e-2). "
-                        "This value must be less or equal to elastic_mode_bound_relax_initial. "
-                        "If user provides elastic_mode_bound_relax_initial > elastic_mode_bound_relax_last, "
+                        "This value must be greater or equal to `elastic_mode_bound_relax_final'. "
+                        "If user provides elastic_mode_bound_relax_final > elastic_mode_bound_relax_initial, "
                         "HiOp will use the default values for both parameters.");
 
     register_num_option("elastic_mode_bound_relax_final",
@@ -1089,8 +1110,8 @@ void hiopOptionsNLP::register_options()
                         1e-16,
                         1e-1,
                         "Final/minimum bound relaxation factor in the elastic mode (default: 1e-12). "
-                        "This value must be less or equal to elastic_mode_bound_relax_final. "
-                        "If user provides elastic_mode_bound_relax_final > elastic_mode_bound_relax_last, "
+                        "This value must be less or equal to `elastic_mode_bound_relax_initial'. "
+                        "If user provides elastic_mode_bound_relax_final > elastic_mode_bound_relax_initial, "
                         "HiOp will use the default values for both parameters.");
   }
 
@@ -1103,7 +1124,7 @@ void hiopOptionsNLP::register_options()
                         "write internal KKT linear system (matrix, rhs, sol) to file (default 'no')");
     register_str_option("print_options",
                         "no", // default value for the option
-                        vector<string>({"yes", "no"}), // range
+                        vector<string>({"yes", "no", "short"}), // range
                         "prints options before algorithm starts (default 'no')");
   }
   
@@ -1122,7 +1143,14 @@ void hiopOptionsNLP::register_options()
     register_str_option("mem_space",
                         range[0],
                         range,
-                        "Determines the memory space in which future linear algebra objects will be created");
+                        "Determines the memory space in which future internal linear algebra objects will be created. "
+                        "When HiOp is built with RAJA/Umpire, user can set this option to either `default`, `host`, "
+                        "`device` or `um`, and internally the data of HiOp vectors/matrices will be managed by Umpire. "
+                        "If HiOp was built without RAJA/Umpire support, only `default` is available for this option.");
+    register_str_option("callback_mem_space",
+                        range[0],
+                        range,
+                        "Determines the memory space to which HiOp will return the solutions. By default,");
   }
 }
 
@@ -1277,6 +1305,21 @@ void hiopOptionsNLP::ensure_consistence()
     set_val("mem_space", "default");
   }
 #endif
+
+  if(GetString("mem_space") != GetString("callback_mem_space")) {
+    if(   (is_user_defined("callback_mem_space") && GetString("mem_space")!="device") 
+       || (GetString("callback_mem_space")=="um" && GetString("mem_space")=="device") ) {
+      log_printf(hovWarning,
+                "option 'callback_mem_space' was changed to the value '%s' of 'mem_space' options since the provided "
+                "value '%s' is not supported by HiOp with the provided values of 'mem_space'.\n",
+                GetString("mem_space").c_str(),
+                GetString("callback_mem_space").c_str());
+      set_val("callback_mem_space", GetString("mem_space").c_str());
+    } else if(GetString("callback_mem_space") == "default") {
+      // user didn't specify this option, set it to the value of `mem_space`
+      set_val("callback_mem_space", GetString("mem_space").c_str());
+    }
+  }
 
   // No hybrid or GPU compute mode if HiOp is built without GPU linear solvers
 #ifndef HIOP_USE_GPU

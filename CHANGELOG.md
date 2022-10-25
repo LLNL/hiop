@@ -1,6 +1,16 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 0.7.1: Miscellaneous fixes to build system
+This minor release fixes a couple of issues found in the build system after the major release 0.7 of HiOp. 
+
+## Version 0.7.0: Fortran interface and misc fixes and improvements:
+- Fortran interface and examples
+- Bug fixing for sparse device linear solvers
+- Implementation of CUDA CSR matrices
+- Iterative refinement within CUSOLVER linear solver class
+- Improved robustness and performance of mixed dense-sparse solver for AMD/HIP
+
 ## Version 0.6.2:  Initial ginkgo solver integration and misc fixes
 This tag provides an initial integration with ginko, fixes a couple of issues, and add options for (outer) iterative refinement.
 
@@ -8,9 +18,9 @@ This tag provides an initial integration with ginko, fixes a couple of issues, a
 This version/tag provides a workaround for an issue in the HIP BLAS and updates the RAJA code to better operate with the newer versions of RAJA.
 
 ## Version 0.6.0: Release of the PriDec optimization and improved GPU computations (March 31, 2022)
-The salient features of v0.6.0 are 
+The salient features of v0.6.0 are
 
-- the release of the primal decomposition (PriDec) solver for structured two-stage problems 
+- the release of the primal decomposition (PriDec) solver for structured two-stage problems
 - improved support for (NVIDIA) GPUs for solving sparse optimization problems via NVIDIA's cuSOLVER API and newly developed condensed optimization kernels.
 
 Other notable capabilities include

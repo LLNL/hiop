@@ -281,17 +281,22 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
   bool ret_bool = false;
   
   if(nlp->options->GetString("warm_start")=="yes") {
-    ret_bool = nlp->get_starting_point(*it_ini.get_x(),
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
-                                       *it_ini.get_d(),
-                                       *it_ini.get_vl(), *it_ini.get_vu());
+    ret_bool = nlp->get_warmstart_point(*it_ini.get_x(),
+                                        *it_ini.get_zl(),
+                                        *it_ini.get_zu(),
+                                        *it_ini.get_yc(),
+                                        *it_ini.get_yd(),
+                                        *it_ini.get_d(),
+                                        *it_ini.get_vl(),
+                                        *it_ini.get_vu());
     warmstart_avail = duals_avail = slacks_avail = true;
   } else {
     ret_bool = nlp->get_starting_point(*it_ini.get_x(),
                                        duals_avail,
-                                       *it_ini.get_zl(), *it_ini.get_zu(),
-                                       *it_ini.get_yc(), *it_ini.get_yd(),
+                                       *it_ini.get_zl(),
+                                       *it_ini.get_zu(),
+                                       *it_ini.get_yc(), 
+                                       *it_ini.get_yd(),
                                        slacks_avail,
                                        *it_ini.get_d());
     
@@ -938,7 +943,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
@@ -1464,7 +1469,7 @@ hiopKKTLinSys*
 hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
                                             const double& mu,
                                             const int& iter_num,
-                                            const bool& linsol_safe_mode_on,
+                                            bool& linsol_safe_mode_on,
                                             const int& linsol_safe_mode_max_iters,
                                             int& linsol_safe_mode_last_iter_switched_on,
                                             double& theta_mu,
@@ -1506,6 +1511,33 @@ hiopAlgFilterIPMNewton::switch_to_safer_KKT(hiopKKTLinSys* kkt_curr,
     } // end of if(kkt)
   }
 #endif
+
+// TODO: turn to 0 --- keep using fast mode till linear solver (kkt->update) fails
+#if 0
+  //
+  // MDS starts with fast mode, when linsol_mode = speculative
+  // Safe mode is on when IPM is arroching convergence, or a high accurate solution is required
+  //
+  if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
+    if("speculative"==hiop::tolower(nlp->options->GetString("linsol_mode"))) {
+      const double target_mu = nlp->options->GetNumeric("tolerance");
+      if( (false==linsol_safe_mode_on) &&
+          (iter_num - linsol_safe_mode_last_iter_switched_on < linsol_safe_mode_max_iters) &&
+          (mu < target_mu*10) ){
+        // keep using safe mode for couple of iterations when close to convergence
+        linsol_safe_mode_on=true;
+        switched = true;
+      }
+    } else {
+      //
+      // don't switch, keep using the same mode
+      //
+      switched = false;
+    }
+    return kkt_curr;
+  }
+#endif
+
   //
   // all other KKT formulations -> never switch back to safe mode
   //
@@ -1573,35 +1605,28 @@ hiopAlgFilterIPMNewton::switch_to_fast_KKT(hiopKKTLinSys* kkt_curr,
   }
 #endif
 
+  // MDS system
+  // if linsol_mode = speculative, linsol_safe_mode_on = false by initialization, and hiop starts from fast mode.
+  // if in safe mode and mu is large, switch back to fast model after couple of iters.
   //
-  // MDS safe mode is on for the first three iterations for MDS under speculative linsol mode
-  //        
-  //TODO: maybe the newly developed adjust slacks and push bounds features make the MDS probles less
-  //challenging and we don't need safe mode in the first three iterations for MDS under 'speculative'
-  // IR should also make this robust.
-
   if(nullptr!=dynamic_cast<hiopNlpMDS*>(nlp)) {
+    if( linsol_safe_mode_on && 
+        (iter_num - linsol_safe_mode_last_iter_switched_on > linsol_safe_mode_max_iters) &&
+        (mu>1e-6) ) {
+      linsol_safe_mode_on = false;
+      switched = true;
+        
+      //let safe mode do more iterations next time we switch to safe mode
+      linsol_safe_mode_max_iters *= 2;
 
-    //first two iteration are safe-mode : TODO: this likely can be relaxed
-    if(iter_num<=2) {   
-      linsol_safe_mode_on=true;
-      switched = false;
-    } else {
-      if(linsol_safe_mode_on==true) {
-        switched = true;
-        linsol_safe_mode_on = false;
-      } else {
-        assert(false==linsol_safe_mode_on);
-        switched = false;
-      }
+      //reset last iter safe mode was switched on
+      linsol_safe_mode_last_iter_switched_on = 100000;
+
+      return kkt_curr;
     }
-    kkt_curr->set_safe_mode(linsol_safe_mode_on);
-    return kkt_curr;
   }
 
-  //
   // all other KKT formulations -> do nothing (and return switched=false)
-  //
   switched = false;
   return kkt_curr;
 }
@@ -1613,7 +1638,7 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiop
   std::string strKKT = nlp->options->GetString("fact_acceptor");
   if(strKKT == "inertia_free")
   {
-#ifdef HIOP_SPARSE    
+#ifdef HIOP_SPARSE
     if(nullptr != dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
       // for LinSysCondensedSparse correct inertia is different
       assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
@@ -1624,12 +1649,14 @@ decideAndCreateFactAcceptor(hiopPDPerturbation* p, hiopNlpFormulation* nlp, hiop
     return new hiopFactAcceptorInertiaFreeDWD(p, nlp->m_eq()+nlp->m_ineq());
   } else {
 #ifdef HIOP_SPARSE    
+#ifdef HIOP_USE_RAJA
     if(nullptr != dynamic_cast<hiopKKTLinSysCondensedSparse*>(kkt)) {
       // for LinSysCondensedSparse correct inertia is different
       assert(nullptr != dynamic_cast<hiopNlpSparseIneq*>(nlp) &&
              "wrong combination of optimization objects was created");
       return new hiopFactAcceptorIC(p, 0);      
     }
+#endif
 #endif    
     return new hiopFactAcceptorIC(p, nlp->m_eq()+nlp->m_ineq());
 
@@ -1666,7 +1693,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
   ////////////////////////////////////////////////////////////////////////////////////
 
   nlp->log->printf(hovSummary, "===============\nHiop SOLVER\n===============\n");
-  if(nlp->options->GetString("print_options") == "yes") {
+  if(nlp->options->GetString("print_options") != "no") {
     nlp->log->write(nullptr, *nlp->options, hovSummary);
   }
 
@@ -1870,7 +1897,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     
     nlp->runStats.kkt.start_optimiz_iteration();
     //
-    // this is the linear solve (computeDirections) loop that iterates at most two times
+    // this is the linear solve (compute_search_direction) loop that iterates at most two times
     //
     //  - two times when the step is small (search direction is assumed to be invalid, of ascent): first time
     // linear solve with safe mode=off failed; second time with safe mode on
@@ -1946,7 +1973,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             return solver_status_ = Err_Step_Computation;
           }
 
-          //turn on safe mode to repeat linear solve (kkt->update(...) and kkt->computeDirections(...)
+          //turn on safe mode to repeat linear solve (kkt->update(...) and kkt->compute_directions_w_IR(...)
           //(meaning additional accuracy and stability is requested, possibly from a new kkt class)
           linsol_safe_mode_on = true;
           //linsol_safe_mode_lastiter = iter_num;
@@ -1970,7 +1997,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
-          // safe mode was turned on in the above call because kkt->computeDirections(...) failed 
+          // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed 
           continue;
         } 
       } else {
@@ -1984,7 +2011,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             delete kkt;
             return solver_status_ = Err_Step_Computation;
           }
-          // safe mode was turned on in the above call because kkt->computeDirections(...) failed or the number
+          // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed or the number
           // of inertia corrections reached max number allowed
           continue;
         }         
@@ -2160,20 +2187,20 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           filter.add(theta_trial, logbar->f_logbar_trial);
         }
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==2) {
         //switching condition does not hold for the trial
         filter.add(theta_trial, logbar->f_logbar_trial);
 
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==3) {
         //Armijo (and switching condition) hold, nothing to do.
 
         nlp->runStats.tmSolverInternal.stop();
-        break; //from the linear solve (computeDirections) loop
+        break; //from the linear solve (compute_search_direction) loop
 
       } else if(lsStatus==0) {
 
@@ -2191,7 +2218,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             solver_status_ = NlpSolve_Pending;
           }
 
-          // exit the linear solve (computeDirections) loop
+          // exit the linear solve (compute_search_direction) loop
           nlp->runStats.tmSolverInternal.stop();
           break;
         } else {
@@ -2203,7 +2230,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
             // however take the update;
             // if the update doesn't pass the convergence test, the optimiz. loop will exit
 
-            // first exit the linear solve (computeDirections) loop
+            // first exit the linear solve (compute_search_direction) loop
             nlp->runStats.tmSolverInternal.stop();
             break;
           }
@@ -2215,7 +2242,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                            "Requesting additional accuracy and stability from the KKT linear system "
                            "at iteration %d (safe mode ON) [2]\n", iter_num);
 
-          // repeat linear solve (computeDirections) in safe mode (meaning additional accuracy
+          // repeat linear solve (compute_search_direction) in safe mode (meaning additional accuracy
           // and stability is requested)
           nlp->runStats.tmSolverInternal.stop();
           continue;
@@ -2225,7 +2252,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         nlp->runStats.tmSolverInternal.stop();
         assert(false && "unrecognized value for lsStatus");
       }
-    } // end of the linear solve (computeDirections) loop
+    } // end of the linear solve (compute_search_direction) loop
 
     if(NlpSolve_Pending!=solver_status_) {
       break; //failure of the line search or user stopped.
@@ -2747,7 +2774,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       }
       // compute rhs for soft feasibility restoration. Use resid_trial since it hasn't been used
       resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
-      bret = kkt->computeDirections(resid_trial, soft_dir); 
+      bret = kkt->compute_directions_w_IR(resid_trial, soft_dir); 
     }    
     assert(bret);
 

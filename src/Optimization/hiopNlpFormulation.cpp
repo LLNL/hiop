@@ -782,14 +782,14 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   return bret;
 }
 
-bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
-                                            hiopVector& zL0_for_hiop,
-                                            hiopVector& zU0_for_hiop,
-                                            hiopVector& yc0_for_hiop,
-                                            hiopVector& yd0_for_hiop,
-                                            hiopVector& d0,
-                                            hiopVector& vl0,
-                                            hiopVector& vu0)
+bool hiopNlpFormulation::get_warmstart_point(hiopVector& x0_for_hiop,
+                                             hiopVector& zL0_for_hiop,
+                                             hiopVector& zU0_for_hiop,
+                                             hiopVector& yc0_for_hiop,
+                                             hiopVector& yd0_for_hiop,
+                                             hiopVector& d0,
+                                             hiopVector& vl0,
+                                             hiopVector& vu0)
 {
   bool bret; 
 
@@ -804,15 +804,15 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
   double* vl_for_user = vl0.local_data();
   double* vu_for_user = vu0.local_data();
   
-  bret = interface_base.get_starting_point(nlp_transformations_.n_pre(),
-                                           n_cons_,
-                                           x0_for_user->local_data(),
-                                           zL0_for_user,
-                                           zU0_for_user,
-                                           lambda_for_user,
-                                           d_for_user,
-                                           vl_for_user,
-                                           vu_for_user);
+  bret = interface_base.get_warmstart_point(nlp_transformations_.n_pre(),
+                                            n_cons_,
+                                            x0_for_user->local_data(),
+                                            zL0_for_user,
+                                            zU0_for_user,
+                                            lambda_for_user,
+                                            d_for_user,
+                                            vl_for_user,
+                                            vu_for_user);
   {
     double* yc0d = yc0_for_hiop.local_data();
     double* yd0d = yd0_for_hiop.local_data();
@@ -1082,16 +1082,34 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   //! todo -> test this when fixed variables are removed -> the internal
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
-  interface_base.solution_callback(status, 
-                                   (int)n_vars_,
-                                   x.local_data_const(),
-                                   z_L.local_data_const(),
-                                   z_U.local_data_const(),
-                                   (int)n_cons_,
-                                   cons_body_->local_data_const(),
-                                   cons_lambdas_->local_data_const(),
-                                   inv_obj_scale*obj_value);
-                                   
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
+    
+    hiopVector& xc = const_cast<hiopVector&>(x);
+    xc.copyFromDev();
+    z_L.copyFromDev();
+    z_U.copyFromDev();
+    cons_body_->copyFromDev();
+    cons_lambdas_->copyFromDev();
+    interface_base.solution_callback(status,
+                                    (int)n_vars_,
+                                    x.local_data_host_const(),
+                                    z_L.local_data_host_const(),
+                                    z_U.local_data_host_const(),
+                                    (int)n_cons_,
+                                    cons_body_->local_data_host_const(),
+                                    cons_lambdas_->local_data_host_const(),
+                                    inv_obj_scale*obj_value); 
+  } else {
+    interface_base.solution_callback(status,
+                                    (int)n_vars_,
+                                    x.local_data_const(),
+                                    z_L.local_data_const(),
+                                    z_U.local_data_const(),
+                                    (int)n_cons_,
+                                    cons_body_->local_data_const(),
+                                    cons_lambdas_->local_data_const(),
+                                    inv_obj_scale*obj_value);
+  }                         
 
 }
 
@@ -1135,25 +1153,60 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
 
-  return interface_base.iterate_callback(iter,
-                                         obj_value/this->get_obj_scale(),
-                                         logbar_obj_value,
-                                         (int)n_vars_,
-                                         x.local_data_const(),
-                                         z_L.local_data_const(),
-                                         z_U.local_data_const(),
-                                         (int)n_cons_ineq_,
-                                         s.local_data_const(),
-                                         (int)n_cons_,
-                                         cons_body_->local_data_const(),
-                                         cons_lambdas_->local_data_const(),
-                                         inf_pr,
-                                         inf_du,
-                                         onenorm_pr,
-                                         mu,
-                                         alpha_du,
-                                         alpha_pr,
-                                         ls_trials);
+  bool bret{false};
+
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
+    hiopVector& xc = const_cast<hiopVector&>(x);
+    xc.copyFromDev();
+    hiopVector& sc = const_cast<hiopVector&>(s);
+    sc.copyFromDev();
+    hiopVector& z_Lc = const_cast<hiopVector&>(z_L);
+    z_Lc.copyFromDev();
+    hiopVector& z_Uc = const_cast<hiopVector&>(z_U);
+    z_Uc.copyFromDev();
+    cons_body_->copyFromDev();
+    cons_lambdas_->copyFromDev();
+    bret = interface_base.iterate_callback(iter,
+                                           obj_value/this->get_obj_scale(),
+                                           logbar_obj_value,
+                                           (int)n_vars_,
+                                           x.local_data_host_const(),
+                                           z_L.local_data_host_const(),
+                                           z_U.local_data_host_const(),
+                                           (int)n_cons_ineq_,
+                                           s.local_data_host_const(),
+                                           (int)n_cons_,
+                                           cons_body_->local_data_host_const(),
+                                           cons_lambdas_->local_data_host_const(),
+                                           inf_pr,
+                                           inf_du,
+                                           onenorm_pr,
+                                           mu,
+                                           alpha_du,
+                                           alpha_pr,
+                                           ls_trials);
+  } else {
+    bret = interface_base.iterate_callback(iter,
+                                           obj_value/this->get_obj_scale(),
+                                           logbar_obj_value,
+                                           (int)n_vars_,
+                                           x.local_data_const(),
+                                           z_L.local_data_const(),
+                                           z_U.local_data_const(),
+                                           (int)n_cons_ineq_,
+                                           s.local_data_const(),
+                                           (int)n_cons_,
+                                           cons_body_->local_data_const(),
+                                           cons_lambdas_->local_data_const(),
+                                           inf_pr,
+                                           inf_du,
+                                           onenorm_pr,
+                                           mu,
+                                           alpha_du,
+                                           alpha_pr,
+                                           ls_trials);
+  }   
+  return bret; 
 }
 
 bool hiopNlpFormulation::user_force_update(int iter,
