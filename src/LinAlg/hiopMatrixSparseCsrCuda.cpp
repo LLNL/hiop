@@ -303,13 +303,20 @@ void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector&
 #else
   assert( "input vector must be Raja (and data on the device)");
 #endif
-  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, alpha, D.local_data_const());
+  hiop::cuda::csr_add_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  alpha,
+                                  D.local_data_const(),
+                                  exec_space_.exec_policies());
 }
 
 void hiopMatrixSparseCSRCUDA::addDiagonal(const double& val)
 {
   assert(nrows_ == ncols_ && "Matrix must be square");
-  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
+  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val, exec_space_.exec_policies());
 }
 void hiopMatrixSparseCSRCUDA::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
@@ -1030,7 +1037,7 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
 
   assert(irowptr_ && jcolind_ && values_);
 
-  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_);
+  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_, exec_space_.exec_policies());
 }
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
@@ -1065,7 +1072,14 @@ void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
 #else
   assert( "input vector must be Raja (and data on the device)");
 #endif
-  hiop::cuda::csr_scalerows_kernel(nrows_, ncols_, nnz_, irowptr_, jcolind_, values_, D.local_data_const());
+  hiop::cuda::csr_scalerows_kernel(nrows_,
+                                   ncols_,
+                                   nnz_,
+                                   irowptr_,
+                                   jcolind_,
+                                   values_,
+                                   D.local_data_const(),
+                                   exec_space_.exec_policies());
 }
 
 // sparsity pattern of M=X+Y, where X is `this`
@@ -1239,7 +1253,13 @@ void hiopMatrixSparseCSRCUDA::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
 void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 {
   assert(irowptr_ && jcolind_ && values_);
-  hiop::cuda::csr_set_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
+  hiop::cuda::csr_set_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  val,
+                                  exec_space_.exec_policies());
 }
 
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
@@ -1249,7 +1269,13 @@ void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 #else
   assert( "input vector must be Raja (and data on the device)");
 #endif
-  hiop::cuda::csr_get_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, diag_out.local_data());
+  hiop::cuda::csr_get_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  diag_out.local_data(),
+                                  exec_space_.exec_policies());
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()

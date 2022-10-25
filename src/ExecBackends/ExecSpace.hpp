@@ -228,8 +228,17 @@ struct ExecPolicySeq
 #ifdef HIOP_USE_CUDA
 struct ExecPolicyCuda
 {
-  unsigned short int num_blocks_vector;
-  unsigned short int num_blocks_search;
+  ExecPolicyCuda()
+    : bl_sz_binary_search(16),
+      bl_sz_vector_loop(256)
+  {
+  }
+  /** Block size for kernels performing binary search (e.g., updating or getting diagonal 
+   *  in CSR CUDA matrices. Default value 16.
+   */
+  unsigned short int bl_sz_binary_search;
+  /// Block size for kernels performing element-wise ops on vectors. Default 256.
+  unsigned short int bl_sz_vector_loop;
 };
 #endif
 
@@ -324,6 +333,11 @@ public:
   const MEMBACKEND& mem_backend() const
   {
     return mb_;
+  }
+
+  const EXECPOLICIES& exec_policies() const
+  {
+    return ep_;
   }
   
   template<typename T>
