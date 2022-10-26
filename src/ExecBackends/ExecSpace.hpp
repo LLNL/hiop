@@ -70,7 +70,9 @@ namespace hiop
 {
 
 /** 
- * Runtime information about the execution space. Closely related to HiOp's options.
+ * Runtime information about the execution space, namely memory space, memory backend, and execution policies. 
+ * Closely related to HiOp's option 'mem_space', 'compute_mode', 'mem_backend', and 'exec_policies'.
+ * //todo : do we need this?
  */
 struct ExecSpaceInfo
 {
@@ -282,7 +284,7 @@ struct ExecPolicyRajaOmp
  * ExecPolicyRajaHip, and/or ExecPolicyRajaOmp. The class is specialized in HiOp's vendor-specific
  * Raja execution policies source files. Namely, the class' inner types are specialized to 
  * vendor-specific RAJA policies types. The inner type below are just for reference and this
- * generic templated struct should not be used.
+ * generic templated struct is/should not be used.
  */
 template<class RAJAEXECPOLICIES>
 struct ExecRajaPoliciesBackend
@@ -311,11 +313,6 @@ struct TransferImpl;
 
 /** 
  * Hardware backend wrapping a concrete memory backend and a concrete set of execution policies.
- * 
- * Re: memory backends, this class provides methods for i. allocations and deallocations of "raw"
- * arrays and ii. copy of arrays between memory backends.
- *
- * Re: execution policies, TBD.
  */
 template<class MEMBACKEND, class EXECPOLICIES>
 class ExecSpace

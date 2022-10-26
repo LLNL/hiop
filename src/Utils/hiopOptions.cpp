@@ -990,15 +990,7 @@ void hiopOptionsNLP::register_options()
                         "This is the scaling factor used to determines if the "
                         "direction is considered to have sufficiently positive curvature (1e-11 by default)");
   }  
-  //computations
-  {
-    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
-    register_str_option("compute_mode",
-                        "auto",
-                        range,
-                        "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
-                        "'cpu', 'gpu' and 'hybrid' based on the other options passed");
-  }
+
   //inertia correction and Jacobian regularization
   {
     //Hessian related
@@ -1424,6 +1416,49 @@ void hiopOptionsPriDec::register_options()
                         "Determines the memory space used by PriDec solver for linear algebra objects. Must match the "
                         "the memory space in which the master solve is going to be done.");
   }
+  {
+    //! todo: proposing to remove this option
+    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
+    register_str_option("compute_mode",
+                        "auto",
+                        range,
+                        "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
+                        "'cpu', 'gpu' and 'hybrid' based on the other options passed");
+  }
+
+  //memory backend
+  {
+    // auto - solver decides which memory backend to use (mem_space controls the memory space)
+    // stdcpp - C++ mem backend (HOST mem_space)
+    // umpire - use umpire; mem_space controls the mem_space
+    // cuda - cuda mem backend (works only with DEVICE mem_space)
+    // hip - hip mem backend  (works only with DEVICE mem_space)
+    //
+    // note: mem_space can control the selection of the memory backend (maybe we don't need mem_backend option?)
+    vector<string> range = {"auto", "stdcpp", "umpire", "cuda", "hip"};
+    register_str_option("mem_backend",
+                        "auto",
+                        range,
+                        "'auto', 'stdcpp', 'umpire', 'cuda', 'hip'");
+  }
+  //execution policies
+  {
+    // auto - solver decides based on its capabilities and values of mem_space and mem_backend
+    // seq  - cpu sequential (compatible only with HOST mem_space and stdcpp mem_backend
+    // raja - RAJA backend
+    //          - raja-openmp execution; requires mem_space = 'HOST'   mem_backend = 'stdcpp' or 'umpire'
+    //          - raja-cuda execution;   requires mem_space = 'DEVICE' mem_backend = 'cuda' or 'umpire'
+    //          - raja-hip execution;    requires mem_space = 'DEVICE' mem_backend = 'hip' or 'umpire'
+    // cuda - only cuda kernels;         requires mem_space = 'DEVICE' mem_backend = 'cuda' or 'umpire'
+    // hip  - only hip kernels;          requires mem_space = 'DEVICE' mem_backend = 'hip' or 'umpire'
+
+    vector<string> range = {"auto", "seq", "raja", "cuda", "hip"};
+    register_str_option("exec_policies",
+                        "auto",
+                        range,
+                        "");
+  }
+
   
   // option for local accumulation of function value and subgradient on evaluator ranks, then reduce
   {
