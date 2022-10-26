@@ -310,13 +310,19 @@ void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector&
                                   values_,
                                   alpha,
                                   D.local_data_const(),
-                                  exec_space_.exec_policies());
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 void hiopMatrixSparseCSRCUDA::addDiagonal(const double& val)
 {
   assert(nrows_ == ncols_ && "Matrix must be square");
-  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val, exec_space_.exec_policies());
+  hiop::cuda::csr_add_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  val,
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 void hiopMatrixSparseCSRCUDA::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
@@ -1037,7 +1043,7 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
 
   assert(irowptr_ && jcolind_ && values_);
 
-  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_, exec_space_.exec_policies());
+  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_, exec_space_.exec_policies().bl_sz_vector_loop);
 }
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
@@ -1079,7 +1085,7 @@ void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
                                    jcolind_,
                                    values_,
                                    D.local_data_const(),
-                                   exec_space_.exec_policies());
+                                   exec_space_.exec_policies().bl_sz_vector_loop);
 }
 
 // sparsity pattern of M=X+Y, where X is `this`
@@ -1259,7 +1265,7 @@ void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
                                   jcolind_,
                                   values_,
                                   val,
-                                  exec_space_.exec_policies());
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
@@ -1275,7 +1281,7 @@ void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
                                   jcolind_,
                                   values_,
                                   diag_out.local_data(),
-                                  exec_space_.exec_policies());
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()

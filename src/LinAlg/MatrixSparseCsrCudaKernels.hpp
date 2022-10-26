@@ -75,7 +75,7 @@ void csr_set_diag_kernel(int n,
                          int* jcoldind,
                          double* values,
                          double val,
-                         const ExecPolicyCuda& exepol);
+                         int block_size);
 
 /**
  * Add the constant `val` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
@@ -91,7 +91,7 @@ void csr_add_diag_kernel(int n,
                          int* jcoldind,
                          double* values,
                          double Dval,
-                         const ExecPolicyCuda& exepol);
+                         int block_size);
 
 /**
  * Add entries of the array `values` to the diagonal of the CSR matrix. Performs a binary search on the column indexes
@@ -109,7 +109,7 @@ void csr_add_diag_kernel(int n,
                          double* values,
                          double alpha,
                          const double* Dvalues,
-                         const ExecPolicyCuda& exepol);
+                         int block_size);
 
 /**
  * Copies the diagonal of a CSR matrix into the array `diag_out`. All pointers are on the device. The
@@ -124,12 +124,12 @@ void csr_get_diag_kernel(int n,
                          const int* jcoldind,
                          const double* values,
                          double* diag_out,
-                         const ExecPolicyCuda& exepol);
+                         int block_size);
 
 /**
  * Populates the row pointers and column indexes array to hold a CSR diagonal matrix of size `n`.
  */
-void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind, const ExecPolicyCuda& exepol);
+void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind, int block_size);
 
 /**
  * Scales rows of the sparse CSR matrix with the diagonal matrix given by array `D`
@@ -144,7 +144,7 @@ void csr_scalerows_kernel(int nrows,
                           int* jcoldind,
                           double* values,
                           const double* D,
-                          const ExecPolicyCuda& exepol);
+                          int block_size);
 } //end of namespace cuda
 } //end of namespace hiop
 
