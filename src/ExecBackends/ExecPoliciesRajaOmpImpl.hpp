@@ -60,7 +60,10 @@
 #ifndef HIOP_EXEC_POL_RAJA_OMP
 #define HIOP_EXEC_POL_RAJA_OMP
 
-#if defined(HIOP_USE_RAJA) && defined(HIOP_USE_OMP)
+#if defined(HIOP_USE_RAJA)
+
+//todo: need HIOP_USE_OMP or similar
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 
 #include "ExecSpace.hpp"
 
@@ -90,5 +93,6 @@ struct ExecRajaPoliciesBackend<ExecPolicyRajaOmp>
     >;
 };
 }
-#endif //defined(HIOP_USE_RAJA) && defined(HIOP_USE_OMP)
+#endif // !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#endif // defined(HIOP_USE_RAJA)
 #endif

@@ -63,12 +63,22 @@
 #ifdef HIOP_USE_RAJA
 namespace hiop
 {
+#ifdef HIOP_USE_CUDA
   typedef hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaCuda> hiopVectorRajaPar;
-}
 #endif
 
-#if 0 
+#ifdef HIOP_USE_HIP
+  typedef hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaHip> hiopVectorRajaPar;
+#endif
 
+//todo: we need a macro for openmp raja
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+  typedef hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaOmp> hiopVectorRajaPar;
+#endif
+}
+#endif //HIOP_USE_RAJA
+
+#if 0 
 
 #include <cstdio>
 #include <string>
@@ -334,6 +344,5 @@ private:
 };
 
 } // namespace hiop
-
+#endif 
 #endif // HIOP_VECTOR_RAJA_PAR
-#endif

@@ -77,9 +77,9 @@ using namespace hiop::tests;
 
 int main(int argc, char** argv)
 {
-  if(argc > 1)
+  if(argc > 1) {
     std::cout << "Executable " << argv[0] << " doesn't take any input.";
-
+  }
   hiop::hiopOptionsNLP options;
 
   local_ordinal_type M_local = 5;
@@ -214,8 +214,12 @@ int main(int argc, char** argv)
 #ifdef HIOP_USE_RAJA
   // Test RAJA sparse matrix
   {
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+    const std::string mem_space = "HOST";
+#else
     const std::string mem_space = "DEVICE";
-    std::cout << "\nTesting hiopMatrixRajaSparseTriplet\n";
+#endif    
+    std::cout << "\nTesting hiopMatrixRajaSparseTriplet mem_space=" << mem_space << "\n" ;
 
     hiop::tests::MatrixTestsRajaSparseTriplet test;
     test.set_mem_space(mem_space);

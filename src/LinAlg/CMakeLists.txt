@@ -60,11 +60,20 @@ set(hiopLinAlg_RAJA_SRC
   hiopVectorIntRaja.cpp
   hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
-  hiopVectorRajaCuda.cpp
 )
+
 if(HIOP_USE_CUDA)
-  #list(APPEND ${hiopLinAlg_RAJA_SRC} hiopVectorRajaCuda.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
+  message(WARNING "->${hiopLinAlg_RAJA_SRC}<--")
+else()
+  if(HIOP_USE_HIP)
+    #todo
+  else()
+    #raja - omp
+    list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
+  endif()
 endif()
+
 
 set(hiopLinAlg_MAGMA_SRC
   hiopLinSolverSymDenseMagma.cpp

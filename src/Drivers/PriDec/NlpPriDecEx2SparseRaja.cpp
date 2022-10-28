@@ -16,6 +16,12 @@ using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hi
 using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
 #endif
 
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_exec;
+using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_reduce;
+#endif
+
 using namespace hiop;
 
 PriDecMasterProbleEx2Sparse::

@@ -77,6 +77,11 @@ using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
 using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
 #endif
 
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaOmp;
+#endif
+
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
 #include <cstring>

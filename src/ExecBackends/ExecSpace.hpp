@@ -61,9 +61,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // This header defines the generic execution space class and its various generic types.
-// It should be used from a concrete execution space class, for example
-// ExecSpaceHost.hpp or ExecSpaceCuda.hpp. The concrete execution space class should be
-// then included in the code.
 ///////////////////////////////////////////////////////////////////////////////////////
 
 namespace hiop
@@ -107,12 +104,24 @@ struct ExecSpaceInfo
 /// Standard C++ memory backend on host 
 struct MemBackendCpp
 {
+  /** Constructor that makes this class compatible to use as a memory backend with RAJA
+   * linear algebra objects (i.e., it is exchangeable with Umpire "HOST" memory backend.
+   *
+   * @pre: input string should be always be "HOST"
+   */
+  MemBackendCpp(std::string mem_space = "HOST")
+  {
+    assert(mem_space == "HOST");
+  }
+ 
   /// Always on host memory space
   static bool is_host() { return true; }
 
   /// No host memory space is supported.
   static bool is_device() { return false; }
 
+  //for when the class is used as memory backend with RAJA
+  using MemBackendHost = MemBackendCpp;
   /// Returns a backend set up for host memory space
   static MemBackendCpp new_backend_host()
   {
@@ -166,13 +175,11 @@ private:
 /// Cuda memory backend for device memory space that is implemented using Cuda API
 struct MemBackendCuda
 {
-  MemBackendCuda() = default;
-
   /**
-   * Constructor taking a memory space as input; provided for compatibility with other
-   * memory backends.
+   * Constructor taking a memory space as input; provided for exchangeability with
+   * other memory backends.
    */
-  MemBackendCuda(const std::string& mem_space)
+  MemBackendCuda(std::string mem_space = "DEVICE")
   {
     assert(mem_space == "DEVICE");
   }
@@ -196,10 +203,10 @@ struct MemBackendCuda
 struct MemBackendHip
 {
   /**
-   * Constructor taking a memory space as input; provided for compatibility with other
-   * memory backends.
+   * Constructor taking a memory space as input; provided for exchangeability with 
+   * other memory backends.
    */
-  MemBackendHip(const std::string& mem_space)
+  MemBackendHip(std::string mem_space = "DEVICE")
   {
     assert(mem_space == "DEVICE");
   }
@@ -256,6 +263,7 @@ struct ExecPolicyHip
 // RAJA execution policies
 //////////////////////////
 #ifdef HIOP_USE_RAJA
+
 #ifdef HIOP_USE_CUDA
 struct ExecPolicyRajaCuda
 {
@@ -270,14 +278,13 @@ struct ExecPolicyRajaHip
 };
 #endif
 
-//RAJA OMP execution policies backend present but not tested
-#define HIOP_USE_RAJAOMP 0
-#if defined(HIOP_USE_RAJAOMP)
+//RAJA OMP execution policies backend
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 struct ExecPolicyRajaOmp
 {
   //empty since no runtime info is stored
 };
-#endif //HIOP_USE_RAJA
+#endif
 
 /**
  * The backend RAJA policies that needs to be provided for each one of the ExecPolicyRajaCuda,
@@ -298,7 +305,7 @@ struct ExecRajaPoliciesBackend
   using hiop_thread_x_loop = void;
   template<typename T> using hiop_kernel = void;
 };
-#endif
+#endif //HIOP_USE_RAJA
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // The generic/template execution backend class

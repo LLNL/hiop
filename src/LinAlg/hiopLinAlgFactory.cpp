@@ -105,8 +105,16 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
 #ifdef HIOP_USE_RAJA
       if(hi.mem_backend == "UMPIRE") {
         //return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
+#ifdef HIOP_USE_CUDA
         return new hiop::hiopVectorRaja<hiop::MemBackendUmpire,hiop::ExecPolicyRajaCuda>(glob_n, mem_space_upper, col_part, comm);
-        //return new hiop::hiopVectorRaja<MemBackendCuda,ExecPoliciesRajaCuda>(glob_n, mem_space_upper, col_part, comm);
+#endif        
+#ifdef HIOP_USE_HIP
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire,hiop::ExecPolicyRajaHip>(glob_n, mem_space_upper, col_part, comm);
+#endif        
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire,hiop::ExecPolicyRajaOmp>(glob_n, mem_space_upper, col_part, comm);
+#endif
+  
       } else {
         assert(false && "to be implemented");
         return nullptr;

@@ -71,7 +71,7 @@
 #include "hiopVectorRajaPar.hpp"
 
 #include "hiop_blasdefs.hpp"
-//TODO: introduce hip and cuda .cpp
+//TODO: introduce hip, cuda, and omp .cpp
 #ifdef HIOP_USE_CUDA
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
@@ -80,6 +80,11 @@ using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
 #ifdef HIOP_USE_HIP
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
+#endif
+
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using ExecPolicyRajaType = hiop::ExecPolicyRajaOmp;
 #endif
 
 namespace hiop
