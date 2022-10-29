@@ -108,11 +108,18 @@ hiopKKTLinSysCondensedSparse::~hiopKKTLinSysCondensedSparse()
   delete Hess_lower_csr_;
 }
 
-bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_in,
-                                                    const hiopVector& delta_wd_in,
-                                                    const hiopVector& dcc,
-                                                    const hiopVector& dcd)
+bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopPDPerturbation& pdreg)
 {
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
+
+  const hiopVector& delta_wx_in = *delta_wx_;
+  const hiopVector& delta_wd_in = *delta_wd_;
+  const hiopVector& dcc = *delta_cc_;
+  const hiopVector& dcd = *delta_cd_;
+
   nlp_->runStats.kkt.tmUpdateInit.start();
 
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);

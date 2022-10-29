@@ -87,10 +87,6 @@ public:
    */
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
                                      const int& n_neg_eig,
-                                     hiopVector& delta_wx,
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd,
                                      const bool force_reg=false) = 0;
       
 protected:  
@@ -114,11 +110,7 @@ public:
   {}
    
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
-                                     const int& n_neg_eig, 
-                                     hiopVector& delta_wx,
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd,
+                                     const int& n_neg_eig,
                                      const bool force_reg=false);
  
 protected:
@@ -141,11 +133,7 @@ public:
   {}
    
   virtual int requireReFactorization(const hiopNlpFormulation& nlp,
-                                     const int& n_neg_eig, 
-                                     hiopVector& delta_wx,
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd,
+                                     const int& n_neg_eig,
                                      const bool force_reg=false);
  
 protected:
