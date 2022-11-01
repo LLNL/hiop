@@ -954,6 +954,7 @@ bool hiopNlpFormulation::eval_c_d(hiopVector& x, bool new_x, hiopVector& c, hiop
     runStats.nEvalCons_eq++;
     runStats.nEvalCons_ineq++;
     
+    RANGE_POP();
     return bret;
   }
   RANGE_POP();
