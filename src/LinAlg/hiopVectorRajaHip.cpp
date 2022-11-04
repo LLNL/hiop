@@ -1,6 +1,7 @@
 #include "hiopVectorRaja.hpp"
 
 #include "MemBackendUmpireImpl.hpp"
+#include "MemBackendHipImpl.hpp"
 #include "ExecPoliciesRajaHipImpl.hpp"
 
 

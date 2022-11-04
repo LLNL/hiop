@@ -53,8 +53,7 @@
  */
 
 /**
- * This file contains HIP implementation of memory backend. Should be generally included 
- * in HIP compilation units.
+ * This file contains HIP implementation of memory backend. 
  */
 
 #ifndef HIOP_MEM_SPACE_HIP
@@ -101,7 +100,7 @@ struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T>
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
-    return false; //cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
+    return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToDevice);
   }
 };
 
@@ -114,7 +113,7 @@ struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
-    return false; //cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
+    return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyHostToDevice);
   }
 };
 
@@ -127,7 +126,7 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T>
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
                            const size_t& n)
   {
-    return false; //cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
+    return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToHost);
   }
 };
 
