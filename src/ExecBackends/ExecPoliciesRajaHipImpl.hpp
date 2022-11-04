@@ -65,7 +65,7 @@
 
 #include "ExecSpace.hpp"
 
-#include <hip.h>
+#include <hip/hip_runtime.h>
 #include <RAJA/RAJA.hpp>
 
 namespace hiop

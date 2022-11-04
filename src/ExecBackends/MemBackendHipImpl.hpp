@@ -64,7 +64,7 @@
 
 #ifdef HIOP_USE_HIP
 
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 #include <cassert>
 
 namespace hiop
@@ -78,14 +78,14 @@ struct AllocImpl<MemBackendHip, T>
   inline static T* alloc(MemBackendHip& mb, const size_t& n)
   {
     T* p = nullptr;
-    //auto err = cudaMalloc((void**)&p, n*sizeof(T));
-    //assert(cudaSuccess==err);
+    auto err = hipMalloc((void**)&p, n*sizeof(T));
+    assert(hipSuccess==err);
     return p;
   }
   inline static void dealloc(MemBackendHip& mb, T* p)
   {
-    //auto err = cudaFree((void*)p);
-    //assert(cudaSuccess==err);
+    auto err = hipFree((void*)p);
+    assert(hipSuccess==err);
   }  
 };
 

@@ -64,10 +64,9 @@ set(hiopLinAlg_RAJA_SRC
 
 if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
-  message(WARNING "->${hiopLinAlg_RAJA_SRC}<--")
 else()
   if(HIOP_USE_HIP)
-    #todo
+    list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
   else()
     #raja - omp
     list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
