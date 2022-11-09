@@ -239,7 +239,7 @@ void hiopVectorRajaPar::set_to_random_uniform(double minv, double maxv)
     hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
   }
 #else
-  // TODO: add function for openmp polocy
+  // TODO: add function for openmp policy
   hiop::host::array_random_uniform_kernel(n_local_, data, minv, maxv);
 #endif
 }

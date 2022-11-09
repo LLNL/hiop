@@ -32,6 +32,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorInt.hpp
   hiopVectorIntRaja.hpp
   hiopVectorIntSeq.hpp
+  hiopVectorCuda.hpp
   hiopVectorPar.hpp
   hiopVectorRajaPar.hpp
   hiopLinearOperator.hpp
@@ -60,6 +61,10 @@ set(hiopLinAlg_RAJA_SRC
   hiopVectorIntRaja.cpp
   hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
+)
+
+set(hiopLinAlg_CUDAVEC_SRC
+  hiopVectorCuda.cpp
 )
 
 set(hiopLinAlg_MAGMA_SRC
@@ -95,7 +100,9 @@ set(hiopLinAlg_FGMRESKERNELS_SRC
 set(hiopLinAlg_CUDASPARSE_SRC
   hiopMatrixSparseCsrCuda.cpp
 )
-
+set(hiopLinAlg_CUDAVECTOR_SRC
+  hiopVectorCuda.cu
+)
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
 )
@@ -135,7 +142,8 @@ endif()
 if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
   set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})
+  set_source_files_properties(${hiopLinAlg_CUDAVECTOR_SRC} PROPERTIES LANGUAGE CUDA)
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC} ${hiopLinAlg_CUDAVECTOR_SRC})
 endif(HIOP_USE_CUDA)
 
 # Add RAJA/Umpire sources when enabled

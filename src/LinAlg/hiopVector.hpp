@@ -68,7 +68,7 @@ public:
   virtual void setToZero() = 0;
   /// @brief Set all elements to c
   virtual void setToConstant( double c ) = 0;
-  /// @brief Set all elements to random values uniformly distributed between `minv` and `maxv`.  TODO: add unit test
+  /// @brief Set all elements to random values uniformly distributed between `minv` and `maxv`.
   virtual void set_to_random_uniform(double minv, double maxv) = 0;
   /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect( double c, const hiopVector& ix)=0;
