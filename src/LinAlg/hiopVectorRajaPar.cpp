@@ -565,32 +565,52 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest)
 
 void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
 {
-#if 0  
   if(n_local_ == 0)
     return;
  
   hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
-  const hiopVectorRajaPar& ix= dynamic_cast<const hiopVectorRajaPar&>(select);
-  assert(n_local_ == ix.n_local_);
+  const hiopVectorRajaPar& selected= dynamic_cast<const hiopVectorRajaPar&>(select);
+  assert(n_local_ == selected.n_local_);
   
-  int find_nnz = 0;
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  double* id = ix.data_dev_;
-  
-  RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    [&](RAJA::Index_type i)
+  const double* pattern = selected.local_data_const();
+
+  auto& resmgr = umpire::ResourceManager::getInstance();
+  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
+  index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n_local_+1)*sizeof(index_type)));
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_local_+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
     {
-      assert(id[i] == zero || id[i] == one);
-      if(id[i] == one){
-        vd[start_index_in_dest+find_nnz] = dd[i];
-        find_nnz++;
+      if(i==0) {
+        row_start_dev[i] = 0;
+      } else {
+        // from i=1..n
+        if(pattern[i-1]!=0.0){
+          row_start_dev[i] = 1;
+        } else {
+          row_start_dev[i] = 0;        
+        }
       }
-    });
-#else
-  assert(false && "not needed / implemented");
-#endif    
+    }
+  );
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n_local_+1), RAJA::operators::plus<index_type>());
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(1, n_local_+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(row_start_dev[i] != row_start_dev[i-1]){
+        assert(row_start_dev[i] == row_start_dev[i-1] + 1);
+        index_type idx_dest = row_start_dev[i-1] + start_index_in_dest;
+        vd[idx_dest] = dd[i-1];
+      }
+    }
+  );
+
+  devalloc.deallocate(row_start_dev);
 }
 
 /* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.
