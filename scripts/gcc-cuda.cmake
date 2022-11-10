@@ -25,7 +25,7 @@ set(HIOP_SPARSE ON CACHE BOOL "")
 message(STATUS "Enabling HiOp's deepchecking")
 set(HIOP_DEEPCHECKS ON CACHE BOOL "")
 
-message(STATUS "Setting default cuda architecture to 60")
-set(CMAKE_CUDA_ARCHITECTURES 60 CACHE STRING "")
+set(CMAKE_CUDA_ARCHITECTURES 60 70 75 80 CACHE STRING "")
+message(STATUS "Setting default cuda architecture to ${CMAKE_CUDA_ARCHITECTURES}")
 
 message(STATUS "Done preloading CMake cache with values for continuous integration")
