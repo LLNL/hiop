@@ -1008,7 +1008,7 @@ get_dual_solutions(const hiopIterate& it, double* zl_a, double* zu_a, double* la
     cons_lambdas_->copy_from_two_vec_w_pattern(*it.get_yc(), *cons_eq_mapping_, *it.get_yd(), *cons_ineq_mapping_);
     cons_lambdas_->copyTo(lambda_a);  
   } else {
-    double inv_obj_scale = this->get_obj_scale();
+    const double inv_obj_scale = 1/this->get_obj_scale();
     if(temp_x_ == nullptr) {
       temp_x_ = this->alloc_primal_vec();
     }
@@ -1051,7 +1051,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   assert(y_c.get_size() == n_cons_eq_);
   assert(y_d.get_size() == n_cons_ineq_);
 
-  double inv_obj_scale = this->get_obj_scale();
+  const double inv_obj_scale = 1/this->get_obj_scale();
   if(cons_lambdas_ == nullptr) {
     cons_lambdas_ = this->alloc_dual_vec();
   }
