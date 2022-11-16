@@ -269,7 +269,8 @@ void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/) 
 
 void hiopVectorPar::copyToStartingAt_w_pattern(hiopVector& v_,
                                                index_type start_index/*_in_dest*/,
-                                               const hiopVector& select) const
+                                               const hiopVector& select,
+                                               hiopVectorInt* idx_map) const
 {
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
   const hiopVectorPar& ix = dynamic_cast<const hiopVectorPar&>(select);

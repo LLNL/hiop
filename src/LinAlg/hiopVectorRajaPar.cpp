@@ -55,6 +55,7 @@
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
+#include "hiopLinAlgFactory.hpp"
 #include "hiopVectorRajaPar.hpp"
 #include "hiopVectorIntRaja.hpp"
 
@@ -563,10 +564,14 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest)
   rm.copy(v.data_dev_ + start_index_in_dest, this->data_dev_, this->n_local_*sizeof(double));
 }
 
-void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
+void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
+                                                   int start_index_in_dest,
+                                                   const hiopVector& select,
+                                                   hiopVectorInt* idx_map) const
 {
-  if(n_local_ == 0)
+  if(n_local_ == 0) {
     return;
+  }
  
   hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
   const hiopVectorRajaPar& selected= dynamic_cast<const hiopVectorRajaPar&>(select);
@@ -576,41 +581,41 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec, int start_in
   double* vd = v.data_dev_;
   const double* pattern = selected.local_data_const();
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  index_type* row_start_dev = static_cast<index_type*>(devalloc.allocate((n_local_+1)*sizeof(index_type)));
-
-  RAJA::forall<hiop_raja_exec>(
-    RAJA::RangeSegment(0, n_local_+1),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      if(i==0) {
-        row_start_dev[i] = 0;
-      } else {
-        // from i=1..n
-        if(pattern[i-1]!=0.0){
-          row_start_dev[i] = 1;
+  if(nullptr == idx_map) {
+    idx_map = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
+    index_type* nnz_in_row = idx_map->local_data();
+  
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_local_+1),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if(i==0) {
+          nnz_in_row[i] = 0;
         } else {
-          row_start_dev[i] = 0;        
+          // from i=1..n
+          if(pattern[i-1]!=0.0){
+            nnz_in_row[i] = 1;
+          } else {
+            nnz_in_row[i] = 0;        
+          }
         }
       }
-    }
-  );
-  RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(row_start_dev,n_local_+1), RAJA::operators::plus<index_type>());
+    );
+    RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(nnz_in_row,n_local_+1), RAJA::operators::plus<index_type>());
+  }
 
+  index_type* nnz_in_row = idx_map->local_data();
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n_local_+1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(row_start_dev[i] != row_start_dev[i-1]){
-        assert(row_start_dev[i] == row_start_dev[i-1] + 1);
-        index_type idx_dest = row_start_dev[i-1] + start_index_in_dest;
+      if(nnz_in_row[i] != nnz_in_row[i-1]){
+        assert(nnz_in_row[i] == nnz_in_row[i-1] + 1);
+        index_type idx_dest = nnz_in_row[i-1] + start_index_in_dest;
         vd[idx_dest] = dd[i-1];
       }
     }
   );
-
-  devalloc.deallocate(row_start_dev);
 }
 
 /* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.

@@ -782,9 +782,19 @@ namespace hiop
    * *************************************************************************
    */
   hiopKKTLinSysSparseFull::hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysFull(nlp), rhs_(nullptr),
-      Hx_(nullptr), Hd_(nullptr), HessSp_(nullptr), Jac_cSp_(nullptr), Jac_dSp_(nullptr),
-      write_linsys_counter_(-1), csr_writer_(nlp)
+    : hiopKKTLinSysFull(nlp),
+      rhs_(nullptr),
+      Hx_(nullptr),
+      Hd_(nullptr),
+      HessSp_(nullptr),
+      Jac_cSp_(nullptr),
+      Jac_dSp_(nullptr),
+      write_linsys_counter_(-1),
+      csr_writer_(nlp),
+      xl_map_to_full_vec_{nullptr},
+      xu_map_to_full_vec_{nullptr},
+      dl_map_to_full_vec_{nullptr},
+      du_map_to_full_vec_{nullptr}
   {
     nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
     assert(nlpSp_);
@@ -795,6 +805,10 @@ namespace hiop
     delete rhs_;
     delete Hx_;
     delete Hd_;
+    delete xl_map_to_full_vec_;
+    delete xu_map_to_full_vec_;
+    delete dl_map_to_full_vec_;
+    delete du_map_to_full_vec_;
   }
 
   hiopLinSolverNonSymSparse*
@@ -1091,14 +1105,14 @@ namespace hiop
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+neq);
     rd.copyToStarting(*rhs_, nx + neq + nineq);
-    rvl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd, nlp_->get_idl());
-    rvu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl, nlp_->get_idu());
-    rzl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu, nlp_->get_ixl());
-    rzu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl, nlp_->get_ixu());
-    rsdl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu, nlp_->get_idl());
-    rsdu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl, nlp_->get_idu());
-    rsxl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu, nlp_->get_ixl());
-    rsxu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl, nlp_->get_ixu());
+    rvl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd, nlp_->get_idl(), dl_map_to_full_vec_);
+    rvu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl, nlp_->get_idu(), du_map_to_full_vec_);
+    rzl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu, nlp_->get_ixl(), xl_map_to_full_vec_);
+    rzu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl, nlp_->get_ixu(), xu_map_to_full_vec_);
+    rsdl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu, nlp_->get_idl(), dl_map_to_full_vec_);
+    rsdu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl, nlp_->get_idu(), du_map_to_full_vec_);
+    rsxl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu, nlp_->get_ixl(), xl_map_to_full_vec_);
+    rsxu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl, nlp_->get_ixu(), xu_map_to_full_vec_);
 
     if(write_linsys_counter_>=0)
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
