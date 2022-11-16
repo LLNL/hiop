@@ -101,6 +101,7 @@ hiopVectorRajaPar::hiopVectorRajaPar(
   index_type* col_part /* = NULL */,
   MPI_Comm comm /* = MPI_COMM_NULL */)
   : hiopVector(),
+    idx_cumsum_{nullptr},
     mem_space_(mem_space),
     comm_(comm)
 {
@@ -149,7 +150,8 @@ hiopVectorRajaPar::hiopVectorRajaPar(
 }
 
 hiopVectorRajaPar::hiopVectorRajaPar(const hiopVectorRajaPar& v)
-  : hiopVector()
+  : hiopVector(),
+   idx_cumsum_{nullptr}
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -190,6 +192,7 @@ hiopVectorRajaPar::~hiopVectorRajaPar()
   devalloc.deallocate(data_dev_);
   data_dev_  = nullptr;
   data_host_ = nullptr;
+  delete idx_cumsum_;
 }
 
 hiopVector* hiopVectorRajaPar::alloc_clone() const
@@ -376,7 +379,7 @@ void hiopVectorRajaPar::copy_from_indexes(const hiopVector& vv, const hiopVector
     {
       assert(id[i]<nv);
       dd[i] = vd[id[i]];
-    });  
+    });
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
@@ -395,7 +398,8 @@ void hiopVectorRajaPar::copy_from_indexes(const double* vv, const hiopVectorInt&
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] = vv[id[i]];
-    }); 
+    });
+
 }
 
 
@@ -527,7 +531,7 @@ void hiopVectorRajaPar::startingAtCopyFromStartingAt(
  */
 void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(dst);
+  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(dst);
 
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
@@ -553,7 +557,7 @@ void hiopVectorRajaPar::copyToStarting(int start_index, hiopVector& dst) const
  */
 void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
-  const hiopVectorRajaPar& v = dynamic_cast<const hiopVectorRajaPar&>(vec);
+  hiopVectorRajaPar& v = dynamic_cast<hiopVectorRajaPar&>(vec);
   assert(start_index_in_dest+n_local_ <= v.n_local_);
 
   // If there is nothing to copy, return.
@@ -566,8 +570,7 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest)
 
 void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
                                                    int start_index_in_dest,
-                                                   const hiopVector& select,
-                                                   hiopVectorInt* idx_map) const
+                                                   const hiopVector& select)
 {
   if(n_local_ == 0) {
     return;
@@ -581,9 +584,9 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
   double* vd = v.data_dev_;
   const double* pattern = selected.local_data_const();
 
-  if(nullptr == idx_map) {
-    idx_map = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
-    index_type* nnz_in_row = idx_map->local_data();
+  if(nullptr == idx_cumsum_) {
+    idx_cumsum_ = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
+    index_type* nnz_in_row = idx_cumsum_->local_data();
   
     RAJA::forall<hiop_raja_exec>(
       RAJA::RangeSegment(0, n_local_+1),
@@ -604,18 +607,21 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
     RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(nnz_in_row,n_local_+1), RAJA::operators::plus<index_type>());
   }
 
-  index_type* nnz_in_row = idx_map->local_data();
+  index_type* nnz_cumsum_ = idx_cumsum_->local_data();
+  index_type v_n_local = v.n_local_;
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n_local_+1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(nnz_in_row[i] != nnz_in_row[i-1]){
-        assert(nnz_in_row[i] == nnz_in_row[i-1] + 1);
-        index_type idx_dest = nnz_in_row[i-1] + start_index_in_dest;
+      if(nnz_cumsum_[i] != nnz_cumsum_[i-1]){
+        assert(nnz_cumsum_[i] == nnz_cumsum_[i-1] + 1);
+        index_type idx_dest = nnz_cumsum_[i-1] + start_index_in_dest;
+        assert(idx_dest < v_n_local);
         vd[idx_dest] = dd[i-1];
       }
     }
   );
+
 }
 
 /* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.

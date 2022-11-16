@@ -1105,14 +1105,14 @@ namespace hiop
     ryc.copyToStarting(*rhs_, nx);
     ryd.copyToStarting(*rhs_, nx+neq);
     rd.copyToStarting(*rhs_, nx + neq + nineq);
-    rvl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd, nlp_->get_idl(), dl_map_to_full_vec_);
-    rvu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl, nlp_->get_idu(), du_map_to_full_vec_);
-    rzl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu, nlp_->get_ixl(), xl_map_to_full_vec_);
-    rzu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl, nlp_->get_ixu(), xu_map_to_full_vec_);
-    rsdl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu, nlp_->get_idl(), dl_map_to_full_vec_);
-    rsdu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl, nlp_->get_idu(), du_map_to_full_vec_);
-    rsxl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu, nlp_->get_ixl(), xl_map_to_full_vec_);
-    rsxu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl, nlp_->get_ixu(), xu_map_to_full_vec_);
+    rvl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd, nlp_->get_idl());
+    rvu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl, nlp_->get_idu());
+    rzl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu, nlp_->get_ixl());
+    rzu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl, nlp_->get_ixu());
+    rsdl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu, nlp_->get_idl());
+    rsdu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl, nlp_->get_idu());
+    rsxl.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu, nlp_->get_ixl());
+    rsxu.copyToStartingAt_w_pattern(*rhs_, nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl, nlp_->get_ixu());
 
     if(write_linsys_counter_>=0)
       csr_writer_.writeRhsToFile(*rhs_, write_linsys_counter_);
