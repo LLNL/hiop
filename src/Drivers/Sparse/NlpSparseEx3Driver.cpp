@@ -130,7 +130,7 @@ static void usage(const char* exeName)
 {
   printf("hiOp driver %s that solves a synthetic convex problem of variable size.\n", exeName);
   printf("Usage: \n");
-  printf("  '$ %s problem_size scala -selfcheck'\n", exeName);
+  printf("  '$ %s problem_size scalar -selfcheck'\n", exeName);
   printf("Arguments:\n");
   printf("  'problem_size': number of decision variables [optional, default is 50]\n");
   printf("  'scala_a': small pertubation added to the inequality bounds [optional, default is 1e-6]\n");

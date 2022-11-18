@@ -49,6 +49,7 @@
 #include "hiopKKTLinSys.hpp"
 #include "hiopLinAlgFactory.hpp"
 #include "hiop_blasdefs.hpp"
+#include "hiopPDPerturbation.hpp"
 
 #include <cmath>
 
@@ -77,14 +78,6 @@ hiopKKTLinSys::hiopKKTLinSys(hiopNlpFormulation* nlp)
 {
   perf_report_ = "on"==hiop::tolower(nlp_->options->GetString("time_kkt"));
   mu_ = nlp_->options->GetNumeric("mu0");
-  delta_wx_ = nlp_->alloc_primal_vec();
-  delta_wd_ = nlp_->alloc_dual_ineq_vec();
-  delta_cc_ = nlp_->alloc_dual_eq_vec();
-  delta_cd_ = nlp_->alloc_dual_ineq_vec();
-  delta_wx_->setToZero();
-  delta_wd_->setToZero();
-  delta_cc_->setToZero();
-  delta_cd_->setToZero();
 }
 
 hiopKKTLinSys::~hiopKKTLinSys()
@@ -94,24 +87,21 @@ hiopKKTLinSys::~hiopKKTLinSys()
   delete ir_rhs_;
   delete ir_x0_;
   delete bicgIR_;
-  delete delta_wx_;
-  delete delta_wd_;
-  delete delta_cc_;
-  delete delta_cd_;
 }
 
 //computes the solve error for the KKT Linear system; used only for correctness checking
 double hiopKKTLinSys::errorKKT(const hiopResidual* resid, const hiopIterate* sol)
 {
   nlp_->log->printf(hovLinAlgScalars, "KKT LinSys::errorKKT KKT_large residuals norm:\n");
+  assert(perturb_calc_ && "perturb_calc_ is not assigned");
 
   if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
+    delta_wx_ = perturb_calc_->get_curr_delta_wx();
+    delta_wd_ = perturb_calc_->get_curr_delta_wd();
+    delta_cc_ = perturb_calc_->get_curr_delta_cc();
+    delta_cd_ = perturb_calc_->get_curr_delta_cd();      
   } else {
-    delta_wx_->setToZero();
-    delta_wd_->setToZero();
-    delta_cc_->setToZero();
-    delta_cd_->setToZero();
+    
   }
 
   double derr=1e20, aux;
@@ -339,24 +329,31 @@ bool hiopKKTLinSysCurvCheck::factorize()
   size_t num_refactorization = 0;
   int continue_re_fact;
 
-  if(!perturb_calc_->compute_initial_deltas(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_)) {
+  if(!perturb_calc_->compute_initial_deltas()) {
     nlp_->log->printf(hovWarning, "linsys: Regularization perturbation on new linsys failed.\n");
     RANGE_POP();
     return false;
   }
 
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
+  
   while(num_refactorization <= max_refactorization) {
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-      if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+      if(nlp_->options->GetString("regularization_method")=="scalar") {
         nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-                          delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0], num_refactorization);  
+                          delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0], num_refactorization);  
+      } else {
+        nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e (ic %d)\n",
+                          delta_wx_->twonorm(), delta_cc_->twonorm(), num_refactorization); 
       }
 
-
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    this->build_kkt_matrix(*perturb_calc_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -365,7 +362,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 
     nlp_->runStats.kkt.tmUpdateInnerFact.stop();
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, n_neg_eig);
     
     if(-1==continue_re_fact) {
       RANGE_POP();
@@ -398,20 +395,26 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   int non_singular_mat = 1;
   int continue_re_fact;
 
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
-  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_, true);
+  continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, non_singular_mat, true);
 
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-  if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
+  if(nlp_->options->GetString("regularization_method")=="scalar") {
     nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
-                      delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+                      delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
+  } else {
+    nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e \n",
+                      delta_wx_->twonorm(), delta_cc_->twonorm());
   }
-      
+
   // the update of the linear system, including IC perturbations
-  this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+  this->build_kkt_matrix(*perturb_calc_);
 
   nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -427,7 +430,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
   while(num_refactorization<=max_refactorization && solver_flag < 0) {
     nlp_->log->printf(hovWarning, "linsys: matrix becomes singular after adding primal regularization!\n");
 
-    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag, *delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    continue_re_fact = fact_acceptor_->requireReFactorization(*nlp_, solver_flag);
     
     if(-1==continue_re_fact) {
       RANGE_POP();
@@ -436,14 +439,16 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       // this while loop is used to correct singularity
       assert(1==continue_re_fact);
     }
-      
-    
-    if(delta_wx_->get_size() == 1 && delta_cc_->get_size() == 1) {
-      nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host()[0], delta_cc_->local_data_host()[0]);  
+
+    if(nlp_->options->GetString("regularization_method")=="scalar") {
+      nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
+    }  else {
+        nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e \n",
+                          delta_wx_->twonorm(), delta_cc_->twonorm());
     }
-  
+
     // the update of the linear system, including IC perturbations
-    this->build_kkt_matrix(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
+    this->build_kkt_matrix(*perturb_calc_);
 
     nlp_->runStats.kkt.tmUpdateInnerFact.start();
 
@@ -489,8 +494,11 @@ bool hiopKKTLinSysCompressed::test_direction(const hiopIterate* dir, hiopMatrix*
   double dWd = 0;
   double xs_nrmsq = 0.0;
   double dbl_wrk;
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);
-
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
+  
   /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
   Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);
   dWd += x_wrk_->dotProductWith(*sol_x);
@@ -719,15 +727,11 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 		      const hiopVector& dx, const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXYcYd::errorCompressedLinsys residuals norm:\n");
-
-  if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
-  } else {
-    delta_wx_->setToZero();
-    delta_wd_->setToZero();
-    delta_cc_->setToZero();
-    delta_cd_->setToZero();
-  }
+  assert(perturb_calc_);
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
   double derr=1e20, aux;
   hiopVector *RX=rx.new_copy();
@@ -1039,15 +1043,11 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
 		      const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
-
-  if(perturb_calc_) {
-    perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
-  } else {
-    delta_wx_->setToZero();
-    delta_wd_->setToZero();
-    delta_cc_->setToZero();
-    delta_cd_->setToZero();
-  }
+  assert(perturb_calc_);
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();  
 
   double derr=-1., aux;
   hiopVector *RX=rx.new_copy();
@@ -1786,15 +1786,13 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_wd = kkt_->delta_wd_;
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
-  if(kkt_->get_perturb_calc()) {
-    kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);
-  } else {
-    delta_wx->setToZero();
-    delta_wd->setToZero();
-    delta_cc->setToZero();
-    delta_cd->setToZero();
-  }
+  assert(kkt_->get_perturb_calc());
 
+  delta_wx = kkt_->perturb_calc_->get_curr_delta_wx();
+  delta_wd = kkt_->perturb_calc_->get_curr_delta_wd();
+  delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
+  delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
+  
   bool bret = split_vec_to_build_it(x);
 
   //rx = H*dx + delta_wx*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
@@ -1896,14 +1894,12 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   hiopVector* delta_wd = kkt_->delta_wd_;
   hiopVector* delta_cc = kkt_->delta_cc_;
   hiopVector* delta_cd = kkt_->delta_cd_;
-  if(kkt_->get_perturb_calc()) {
-    kkt_->get_perturb_calc()->get_curr_perturbations(*delta_wx, *delta_wd, *delta_cc, *delta_cd);
-  } else {
-    delta_wx->setToZero();
-    delta_wd->setToZero();
-    delta_cc->setToZero();
-    delta_cd->setToZero();
-  }
+  assert(kkt_->get_perturb_calc());
+
+  delta_wx = kkt_->perturb_calc_->get_curr_delta_wx();
+  delta_wd = kkt_->perturb_calc_->get_curr_delta_wd();
+  delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
+  delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
 
   bool bret = split_vec_to_build_it(x);
 
@@ -2318,7 +2314,11 @@ bool hiopKKTLinSysFull::test_direction(const hiopIterate* dir, hiopMatrix* Hess)
   double xs_nrmsq = 0.0;
   double dbl_wrk;
 
-  perturb_calc_->get_curr_perturbations(*delta_wx_, *delta_wd_, *delta_cc_, *delta_cd_);  
+  assert(perturb_calc_);
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
   /* compute xWx = x(H+Dx_)x (for primal var [x,d] */
   Hess_->timesVec(0.0, *x_wrk_, 1.0, *sol_x);

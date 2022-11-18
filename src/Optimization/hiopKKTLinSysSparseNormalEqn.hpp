@@ -93,10 +93,7 @@ public:
   hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp);
   virtual ~hiopKKTLinSysSparseNormalEqn();
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
-                                const hiopVector& delta_wd,
-                                const hiopVector& delta_cc,
-                                const hiopVector& delta_cd);
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg);
 
   virtual bool solveCompressed(hiopVector& ryc_tilde,
                                hiopVector& ryd_tilde,

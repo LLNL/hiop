@@ -27,6 +27,7 @@ if(HIOP_BUILD_STATIC)
     CUDA::cublasLt_static
     CUDA::curand_static
     CUDA::nvToolsExt
+    CUDA::culibos  
     )
 endif()
 

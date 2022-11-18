@@ -173,15 +173,17 @@ namespace hiop
   }
 
 
-  bool hiopKKTLinSysCompressedMDSXYcYd::build_kkt_matrix(const hiopVector& delta_wx, 
-                                                         const hiopVector& delta_wd,
-                                                         const hiopVector& delta_cc,
-                                                         const hiopVector& delta_cd)
+  bool hiopKKTLinSysCompressedMDSXYcYd::build_kkt_matrix(const hiopPDPerturbation& pdreg)
   {
     RANGE_PUSH(__FUNCTION__);
     assert(linSys_);
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
     assert(linSys);
+
+    delta_wx_ = perturb_calc_->get_curr_delta_wx();
+    delta_wd_ = perturb_calc_->get_curr_delta_wd();
+    delta_cc_ = perturb_calc_->get_curr_delta_cc();
+    delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
     int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
     int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
@@ -215,7 +217,7 @@ namespace hiop
     //update -> add Dxd to (1,1) block of KKT matrix (Hd = HessMDS_->de_mat already added above)
     Msys.addSubDiagonal(0, alpha, *Dx_, nxs, nxd);
     //add perturbation 'delta_wx' for xd
-    Msys.addSubDiagonal(0, alpha, delta_wx, nxs, nxd);
+    Msys.addSubDiagonal(0, alpha, *delta_wx_, nxs, nxd);
 
     //build the diagonal Hxs = Hsparse+Dxs
     if(NULL == Hxs_) {
@@ -226,7 +228,7 @@ namespace hiop
     Hxs_->startingAtCopyFromStartingAt(0, *Dx_, 0);
 	
     //a good time to add the IC 'delta_wx' perturbation
-    Hxs_wrk_->startingAtCopyFromStartingAt(0, delta_wx, 0);
+    Hxs_wrk_->startingAtCopyFromStartingAt(0, *delta_wx_, 0);
     Hxs_->axpy(1., *Hxs_wrk_);
   
     //Hxs +=  diag(HessMDS->sp_mat());
@@ -245,7 +247,7 @@ namespace hiop
     //printf("addMDinvMtransToDiagBlockOfSymDeMatUTri 111 took %g sec\n", tm.getElapsedTime());
     //tm.reset();
 
-    Msys.addSubDiagonal(-1., nxd, delta_cc);
+    Msys.addSubDiagonal(-1., nxd, *delta_cc_);
 	
     /* we've just done above the (1,1) and (2,2) blocks of
      *
@@ -280,7 +282,7 @@ namespace hiop
 
     // add -{Dd}^{-1}
     // Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd * I
-    Dd_inv_->copyFrom(delta_wd);
+    Dd_inv_->copyFrom(*delta_wd_);
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
 #ifdef HIOP_DEEPCHECKS
@@ -290,7 +292,7 @@ namespace hiop
 	
     alpha=-1.;
     Msys.addSubDiagonal(alpha, nxd+neq, *Dd_inv_);
-    Msys.addSubDiagonal(alpha, nxd+neq, delta_cd);
+    Msys.addSubDiagonal(alpha, nxd+neq, *delta_cd_);
 	
     nlp_->log->write("KKT_MDS_XYcYd linsys:", Msys, hovMatrices);
       

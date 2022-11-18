@@ -82,12 +82,13 @@ public:
     delete rhsXYcYd;
   }
 
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
-                                const hiopVector& delta_wd,
-                                const hiopVector& delta_cc,
-                                const hiopVector& delta_cd)
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg)
   {
     RANGE_PUSH(__FUNCTION__);
+    delta_wx_ = perturb_calc_->get_curr_delta_wx();
+    delta_wd_ = perturb_calc_->get_curr_delta_wd();
+    delta_cc_ = perturb_calc_->get_curr_delta_cc();
+    delta_cd_ = perturb_calc_->get_curr_delta_cd();
     assert(nlp_);
 
     int nx  = Hess_->m();
@@ -135,10 +136,10 @@ public:
     Jac_d_->transAddToSymDenseMatrixUpperTriangle(0, nx+neq, alpha, Msys);
       
     Msys.addSubDiagonal(alpha, 0, *Dx_);
-    Msys.addSubDiagonal(alpha, 0, delta_wx);
+    Msys.addSubDiagonal(alpha, 0, *delta_wx_);
 
     //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu + delta_wd*I
-    Dd_inv_->copyFrom(delta_wd);
+    Dd_inv_->copyFrom(*delta_wd_);
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vl, *iter_->sdl, nlp_->get_idl());
     Dd_inv_->axdzpy_w_pattern(1.0, *iter_->vu, *iter_->sdu, nlp_->get_idu());
 #ifdef HIOP_DEEPCHECKS
@@ -152,7 +153,7 @@ public:
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-    Msys.addSubDiagonal(alpha, nx, delta_cd);
+    Msys.addSubDiagonal(alpha, nx, *delta_cd_);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 
@@ -246,13 +247,14 @@ public:
   * [    Jc        0     0      0    ] [dyc] = [   ryc    ]
   * [    Jd       -I     0      0    ] [dyd]   [   ryd    ]
   */
-  virtual bool build_kkt_matrix(const hiopVector& delta_wx,
-                                const hiopVector& delta_wd,
-                                const hiopVector& delta_cc,
-                                const hiopVector& delta_cd)
+  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg)
   {
     assert(nlp_);
-   
+    delta_wx_ = perturb_calc_->get_curr_delta_wx();
+    delta_wd_ = perturb_calc_->get_curr_delta_wd();
+    delta_cc_ = perturb_calc_->get_curr_delta_cc();
+    delta_cd_ = perturb_calc_->get_curr_delta_cd();
+
     int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
     int neq = Jac_c_->m(), nineq = Jac_d_->m();
     assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
@@ -291,10 +293,10 @@ public:
 	
     //add diagonals and IC perturbations
     Msys.addSubDiagonal(alpha, 0, *Dx_);
-    Msys.addSubDiagonal(alpha, 0, delta_wx);
+    Msys.addSubDiagonal(alpha, 0, *delta_wx_);
 
     Msys.addSubDiagonal(alpha, nx, *Dd_);
-    Msys.addSubDiagonal(alpha, nx, delta_wd);
+    Msys.addSubDiagonal(alpha, nx, *delta_wd_);
 	
     //add -I (of size nineq) starting at index (nx, nx+nineq+neq)
     int col_start = nx+nineq+neq;
@@ -309,9 +311,9 @@ public:
     }
 
 #ifdef HIOP_DEEPCHECKS
-      assert(delta_cc.is_equal(delta_cd));
+      assert(delta_cc_->is_equal(*delta_cd_));
 #endif
-    Msys.addSubDiagonal(-alpha, nx+nineq, delta_cd);
+    Msys.addSubDiagonal(-alpha, nx+nineq, *delta_cd_);
 
     nlp_->log->write("KKT Linsys:", Msys, hovMatrices);
 
