@@ -790,11 +790,7 @@ namespace hiop
       Jac_cSp_(nullptr),
       Jac_dSp_(nullptr),
       write_linsys_counter_(-1),
-      csr_writer_(nlp),
-      xl_map_to_full_vec_{nullptr},
-      xu_map_to_full_vec_{nullptr},
-      dl_map_to_full_vec_{nullptr},
-      du_map_to_full_vec_{nullptr}
+      csr_writer_(nlp)
   {
     nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
     assert(nlpSp_);
@@ -805,10 +801,6 @@ namespace hiop
     delete rhs_;
     delete Hx_;
     delete Hd_;
-    delete xl_map_to_full_vec_;
-    delete xu_map_to_full_vec_;
-    delete dl_map_to_full_vec_;
-    delete du_map_to_full_vec_;
   }
 
   hiopLinSolverNonSymSparse*

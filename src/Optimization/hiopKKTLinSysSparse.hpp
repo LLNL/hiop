@@ -225,12 +225,6 @@ protected:
   hiopMatrixSparse* HessSp_;
   const hiopMatrixSparse* Jac_cSp_;
   const hiopMatrixSparse* Jac_dSp_;
-  
-  // mappings
-  hiopVectorInt* xl_map_to_full_vec_;
-  hiopVectorInt* xu_map_to_full_vec_;
-  hiopVectorInt* dl_map_to_full_vec_;
-  hiopVectorInt* du_map_to_full_vec_;
 
   // -1 when disabled; otherwise acts like a counter, 0,1,... incremented each time
   // 'solve' is called; activated by the 'write_kkt' option

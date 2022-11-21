@@ -607,15 +607,15 @@ void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
     RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(nnz_in_row,n_local_+1), RAJA::operators::plus<index_type>());
   }
 
-  index_type* nnz_cumsum_ = idx_cumsum_->local_data();
+  index_type* nnz_cumsum = idx_cumsum_->local_data();
   index_type v_n_local = v.n_local_;
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n_local_+1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(nnz_cumsum_[i] != nnz_cumsum_[i-1]){
-        assert(nnz_cumsum_[i] == nnz_cumsum_[i-1] + 1);
-        index_type idx_dest = nnz_cumsum_[i-1] + start_index_in_dest;
+      if(nnz_cumsum[i] != nnz_cumsum[i-1]){
+        assert(nnz_cumsum[i] == nnz_cumsum[i-1] + 1);
+        index_type idx_dest = nnz_cumsum[i-1] + start_index_in_dest;
         assert(idx_dest < v_n_local);
         vd[idx_dest] = dd[i-1];
       }
