@@ -129,7 +129,7 @@ public:
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
   virtual void copyToStartingAt_w_pattern(hiopVector& v,
                                           int start_index_in_dest,
-                                          const hiopVector& ix) = 0;
+                                          const hiopVector& ix) const = 0;
 
   /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
   virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 

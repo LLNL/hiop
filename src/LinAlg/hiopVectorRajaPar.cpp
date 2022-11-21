@@ -570,7 +570,7 @@ void hiopVectorRajaPar::copyToStarting(hiopVector& vec, int start_index_in_dest)
 
 void hiopVectorRajaPar::copyToStartingAt_w_pattern(hiopVector& vec,
                                                    int start_index_in_dest,
-                                                   const hiopVector& select)
+                                                   const hiopVector& select) const
 {
   if(n_local_ == 0) {
     return;
