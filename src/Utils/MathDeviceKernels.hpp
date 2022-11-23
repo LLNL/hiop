@@ -70,10 +70,10 @@ namespace device
   void set_to_val_kernel(int n, double* values, double val); 
 
   /// set dest[mapping[i]] = src[i];
-  void copy_src_to_mapped_dest_kernel(int n, double* src, double* dest, int* mapping);
+  void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping);
 
   /// set dest[i] = src[mapping[i]];
-  void copy_mapped_src_to_dest_kernel(int n, double* src, double* dest, int* mapping);
+  void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping);
 
 } //end of namespace device
 } //end of namespace hiop

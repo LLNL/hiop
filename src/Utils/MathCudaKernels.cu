@@ -90,7 +90,7 @@ __global__ void set_to_constant_cu(int n, double *vec, double val)
   }
 }
 
-__global__ void copy_to_mapped_dest_cu(int n, double* src, double* dest, int* mapping)
+__global__ void copy_to_mapped_dest_cu(int n, const double* src, double* dest, const int* mapping)
 {
 
   const int num_threads = blockDim.x * gridDim.x;
@@ -100,7 +100,7 @@ __global__ void copy_to_mapped_dest_cu(int n, double* src, double* dest, int* ma
   }
 }
 
-__global__ void copy_from_mapped_src_cu(int n, double* src, double* dest, int* mapping)
+__global__ void copy_from_mapped_src_cu(int n, const double* src, double* dest, const int* mapping)
 {
 
   const int num_threads = blockDim.x * gridDim.x;
@@ -149,14 +149,14 @@ void set_to_val_kernel(int n, double* values, double val)
   set_to_constant_cu<<<num_blocks,block_size>>>(n, values, val);
 }
 
-void copy_src_to_mapped_dest_kernel(int n, double* src, double* dest, int* mapping)
+void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping)
 {
   int block_size=256;
   int num_blocks = (n+block_size-1)/block_size;
   copy_to_mapped_dest_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
 }
 
-void copy_mapped_src_to_dest_kernel(int n, double* src, double* dest, int* mapping)
+void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping)
 {
   int block_size=256;
   int num_blocks = (n+block_size-1)/block_size;

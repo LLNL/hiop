@@ -275,16 +275,15 @@ public:
   /// @brief max{a\in(0,1]| x+ad >=(1-tau)x}
   virtual double fractionToTheBdry_local(const hiopVector& dx, const double& tau) const = 0;
   virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dx,
-						   const double& tau,
-						   const hiopVector& ix) const = 0;
+                                                   const double& tau,
+                                                   const hiopVector& ix) const = 0;
   /// @brief Entries corresponding to zeros in ix are set to zero
   virtual void selectPattern(const hiopVector& ix) = 0;
   /// @brief checks whether entries in this matches pattern in ix
   virtual bool matchesPattern(const hiopVector& ix) = 0;
 
   /// @brief dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian
-  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix,
-			       const double& mu, const double& kappa)=0;
+  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa) = 0;
 
   /// @brief True if all elements of this are zero. TODO: add unit test
   virtual bool is_zero() const = 0;
