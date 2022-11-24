@@ -70,8 +70,8 @@
 namespace hiop
 {
 
-class hiopVectorCuda 
-//class hiopVectorCuda : public hiopVector
+//class hiopVectorCuda 
+class hiopVectorCuda : public hiopVector
 {
 public:
   hiopVectorCuda(const size_type& glob_n, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
@@ -149,8 +149,7 @@ public:
   virtual void componentMult( const hiopVector& v );
   /** @brief Divide the components of this hiopVector by the components of v. */
   virtual void componentDiv ( const hiopVector& v );
-  
-  #if 0 
+
   /**
    * @brief Elements of this that corespond to nonzeros in ix are divided by elements of v.
    * The rest of elements of this are set to zero.
@@ -283,7 +282,6 @@ public:
   virtual hiopVector* alloc_clone() const;
   /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const;
-#endif
 
   /* more accessers */
   inline size_type get_local_size() const { return n_local_; }
@@ -292,7 +290,6 @@ public:
   inline double* local_data_host() { return data_host_; }
   inline const double* local_data_host_const() const { return data_host_; }
 
-#if 0
   virtual void copyToDev();
   virtual void copyFromDev();
   virtual void copyToDev() const;
@@ -320,7 +317,6 @@ public:
 
   /// @brief check if `this` vector is identical to `vec`
   virtual bool is_equal(const hiopVector& vec) const;
-#endif
 
   /* functions for this class */
   inline MPI_Comm get_mpi_comm() const { return comm_; }
@@ -342,7 +338,7 @@ private:
 
   // FIXME_NY
   // from hiopVector. remove these later
-  size_type n_;
+//  size_type n_;
 };
 
 } // namespace hiop

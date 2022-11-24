@@ -257,7 +257,7 @@ __global__ void axpy_w_map_cu(int n, double* yd, const double* xd, const int* id
   }
 }
 
-__global__ void axzpy_cu(int n, double* yd, const double* xd, const * zd, double alpha)
+__global__ void axzpy_cu(int n, double* yd, const double* xd, const double* zd, double alpha)
 {
 
   const int num_threads = blockDim.x * gridDim.x;
@@ -277,7 +277,7 @@ __global__ void axdzpy_cu(int n, double* yd, const double* xd, const double* zd,
   }
 }
 
-__global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const double* zd, const int* id, double alpha)
+__global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const double* zd, const double* id, double alpha)
 {
 
   const int num_threads = blockDim.x * gridDim.x;
@@ -287,7 +287,7 @@ __global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const d
   }
 }
 
-__global__ void adxpy_w_pattern_cu(int n, double* yd, const double* xd, const int* id, double alpha)
+__global__ void adxpy_w_pattern_cu(int n, double* yd, const double* xd, const double* id, double alpha)
 {
 
   const int num_threads = blockDim.x * gridDim.x;
@@ -306,7 +306,7 @@ __global__ void add_constant_cu(int n, double* yd, double c)
   }
 }
 
-__global__ void add_constant_w_pattern_cu(int n, double* yd, double c, const int* id)
+__global__ void add_constant_w_pattern_cu(int n, double* yd, double c, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
@@ -773,8 +773,8 @@ void select_pattern_kernel(int n_local, double* yd, const double* id)
   select_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, id);
 }
 
-/** @brief Checks if `this` matches nonzero pattern of `select`. */
-bool match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id)
+/** @brief Checks if each component in `this` matches nonzero pattern of `select`.  */
+void component_match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id)
 {
   // compute linear damping term
   int block_size=256;
@@ -877,6 +877,255 @@ void thrust_component_div_kernel(int n, double* d1, double* d2)
                     div_op);
 }
 
+void thrust_component_abs_kernel(int n, double* d1)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_abs<double> abs_op;
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  
+  // compute abs
+  thrust::transform(dev_v1, dev_v1+n, dev_v1, abs_op);
+}
+
+void thrust_component_sgn_kernel(int n, double* d1)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_sig<double> sig_op;
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  
+  // compute abs
+  thrust::transform(dev_v1, dev_v1+n, dev_v1, sig_op);
+}
+
+void thrust_component_sqrt_kernel(int n, double* d1)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_sqrt<double> sqrt_op;
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  
+  // compute abs
+  thrust::transform(dev_v1, dev_v1+n, dev_v1, sqrt_op);
+}
+
+void thrust_negate_kernel(int n, double* d1)
+{
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  thrust::transform(dev_v1, dev_v1+n, dev_v1, thrust::negate<double>());
+}
+
+double log_barr_obj_kernel(int n, double* d1, const double* id)
+{
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(d1);
+  thrust::device_ptr<const double> id_v = thrust::device_pointer_cast(id);
+
+  // wrap raw pointer with a device_ptr 
+  thrust_log_select<double> log_select_op;
+  thrust::plus<double> plus_op;
+  thrust::multiplies<double> mult_op;
+  
+  // TODO: how to avoid this temp vec?
+  thrust::device_ptr<double> v_temp = thrust::device_malloc(n);
+
+  // compute x*id
+  thrust::transform(thrust::device, dev_v, dev_v+n, id_v, v_temp, mult_op);
+  // compute log(y) for y > 0
+  double sum = thrust::transform_reduce(thrust::device, v_temp, v_temp+n, log_select_op, 0.0, plus_op);
+
+  thrust::device_free(v_temp);
+
+  return sum;
+}
+
+double thrust_sum_kernel(int n, double* d1)
+{
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  // compute sum
+  return thrust::reduce(dev_v1, dev_v1+n, 0.0, thrust::plus<double>());
+}
+
+/**
+ * @brief Linear damping term */
+double linear_damping_term_kernel(int n,
+                                  const double* vd,
+                                  const double* ld,
+                                  const double* rd,
+                                  double mu,
+                                  double kappa_d)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_vector<double> v_temp(n);
+  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+
+  // compute linear damping term
+  hiop::cuda::set_linear_damping_term_kernel(n, dv_ptr, vd, ld, rd);
+
+  double term = thrust::reduce(v_temp.begin(), v_temp.end(), 0.0, thrust::plus<double>());
+
+  term *= mu;
+  term *= kappa_d;
+  return term;
+}
+
+double min_local_kernel(int n, double* d1)
+{
+  thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
+  thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dev_v1, dev_v1+n);
+  
+  double* ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
+  return *ret_ptr;
+}
+
+int all_positive_w_pattern_kernel(int n, const double* d1, const double* id)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_vector<double> v_temp(n);
+  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+
+  // compute linear damping term
+  hiop::cuda::is_posive_w_pattern_kernel(n, dv_ptr, d1, id);
+  
+  return thrust::reduce(v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
+}
+
+double min_w_pattern_kernel(int n, const double* d1, const double* id, double max_val)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n);
+  double* d_ptr = thrust::raw_pointer_cast(dv_ptr);
+
+  // set value with pattern
+  hiop::cuda::set_val_w_pattern_kernel(n, d_ptr, d1, id, max_val);
+
+  thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n);
+
+  double result = *(thrust::raw_pointer_cast(ret_dev_ptr));
+
+  thrust::device_free(dv_ptr);
+  
+  return result;
+}
+
+bool check_bounds_kernel(int n, const double* xld, const double* xud)
+{
+  // Perform preliminary check to see of all upper value
+  thrust::minus<double> minus_op;
+  thrust::device_ptr<double> dev_xud = thrust::device_pointer_cast(const_cast<double*>(xud));
+  thrust::device_ptr<double> dev_xld = thrust::device_pointer_cast(const_cast<double*>(xld));
+
+  // TODO: how to avoid this temp vec?
+  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n);
+
+  thrust::transform(thrust::device,
+                    dev_xud, dev_xud+n,
+                    dev_xld, dv_ptr,
+                    minus_op);  
+
+  thrust::device_ptr<double> ret_dv_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr + n);
+  double* ret_ptr = thrust::raw_pointer_cast(ret_dv_ptr);
+  
+  bool bval = (*ret_ptr > 0.0) ? 1 : 0;
+
+  thrust::device_free(dv_ptr);
+  
+  if(false == bval) 
+    return false;
+
+  return true;
+}
+
+double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double tau)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_vector<double> v_temp(n);
+  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+
+  // set values
+  hiop::cuda::fraction_to_the_boundry_kernel(n, dv_ptr, xd, dd, tau);
+  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n));
+  
+  return alpha;
+}
+
+double min_frac_to_bds_w_pattern_kernel(int n,
+                                        const double* xd,
+                                        const double* dd,
+                                        const double* id,
+                                        double tau)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_vector<double> v_temp(n);
+  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+
+  // set value with pattern
+  hiop::cuda::fraction_to_the_boundry_w_pattern_kernel(n, dv_ptr, xd, dd, id, tau);
+  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n));
+
+  return alpha;
+}
+
+bool match_pattern_kernel(int n, const double* xd, const double* id)
+{
+  // TODO: how to avoid this temp vec?
+  thrust::device_vector<bool> v_temp(n);
+  bool* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+
+  // check if xd matches the pattern given by id
+  hiop::cuda::component_match_pattern_kernel(n, dv_ptr, xd, id);
+
+  thrust_istrue istrue_op;
+
+  return thrust::all_of(dv_ptr, dv_ptr+n, istrue_op);
+}
+
+bool is_zero_kernel(int n, double* xd)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_iszero<double> iszero_op;
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+
+  return thrust::all_of(dev_v, dev_v+n, iszero_op);
+}
+
+bool isnan_kernel(int n, double* xd)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_isnan<double> isnan_op;
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+
+  return thrust::all_of(dev_v, dev_v+n, isnan_op);
+}
+
+bool isinf_kernel(int n, double* xd)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_isinf<double> isinf_op;
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+
+  return thrust::all_of(dev_v, dev_v+n, isinf_op);
+}
+
+bool isfinite_kernel(int n, double* xd)
+{
+  // wrap raw pointer with a device_ptr 
+  thrust_isfinite<double> isfinite_op;
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+
+  return thrust::all_of(dev_v, dev_v+n, isfinite_op);
+}
+
+int num_of_elem_less_than_kernel(int n, double* xd, double val)
+{
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+  int rval = thrust::transform_reduce(dev_v, dev_v+n, thrust_less(val), (int) 0, thrust::plus<int>());
+  return rval;
+}
+
+int num_of_elem_absless_than_kernel(int n, double* xd, double val)
+{
+  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
+  int rval = thrust::transform_reduce(dev_v, dev_v+n, thrust_abs_less(val), (int) 0, thrust::plus<int>());
+  return rval;
+}
 
 }
 

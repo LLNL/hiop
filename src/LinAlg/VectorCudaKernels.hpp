@@ -152,7 +152,8 @@ void project_into_bounds_kernel(int n_local,
                                 const double* xud,
                                 const double* iud,
                                 double kappa1,
-                                double kappa2);
+                                double kappa2,
+                                double small_real);
 
 void fraction_to_the_boundry_kernel(int n_local,
                                     double* yd,
@@ -169,7 +170,7 @@ void fraction_to_the_boundry_w_pattern_kernel(int n_local,
 
 void select_pattern_kernel(int n_local, double* yd, const double* id);
 
-bool match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id);
+void component_match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id);
 
 void adjustDuals_plh_kernel(int n_local,
                             double* yd,
@@ -200,6 +201,35 @@ double onenorm_local_kernel(int n, double* data_dev);
 
 void thrust_component_mult_kernel(int n, double* d1, double* d2);
 void thrust_component_div_kernel(int n, double* d1, double* d2);
+void thrust_component_abs_kernel(int n, double* d1);
+void thrust_component_sgn_kernel(int n, double* d1);
+void thrust_component_sqrt_kernel(int n, double* d1);
+void thrust_negate_kernel(int n, double* d1);
+double log_barr_obj_kernel(int n, double* d1, const double* id);
+double thrust_sum_kernel(int n, double* d1);
+double linear_damping_term_kernel(int n,
+                                  const double* vd,
+                                  const double* ld,
+                                  const double* rd,
+                                  double mu,
+                                  double kappa_d);
+double min_local_kernel(int n, double* d1);
+int all_positive_w_pattern_kernel(int n, const double* d1, const double* id);
+double min_w_pattern_kernel(int n, const double* d1, const double* id, double max_val);
+bool check_bounds_kernel(int n, const double* xld, const double* xud);
+double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double tau);
+double min_frac_to_bds_w_pattern_kernel(int n,
+                                        const double* xd,
+                                        const double* dd,
+                                        const double* id,
+                                        double tau);
+bool match_pattern_kernel(int n, const double* xd, const double* id);
+bool is_zero_kernel(int n, double* xd);
+bool isnan_kernel(int n, double* xd);
+bool isinf_kernel(int n, double* xd);
+bool isfinite_kernel(int n, double* xd);
+int num_of_elem_less_than_kernel(int n, double* xd, double val);
+int num_of_elem_absless_than_kernel(int n, double* xd, double val);
 
 }
 }

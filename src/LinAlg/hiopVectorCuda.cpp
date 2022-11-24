@@ -65,7 +65,8 @@ namespace hiop
 {
 
 hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MPI_Comm comm)
-  : comm_(comm)
+  : hiopVector(),
+    comm_(comm)
 {
   n_ = glob_n;
 
@@ -106,6 +107,7 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
 }
 
 hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
+ : hiopVector()
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -435,7 +437,6 @@ void hiopVectorCuda::componentDiv( const hiopVector& vec )
   hiop::cuda::thrust_component_div_kernel(n_local_, data_dev_, v.data_dev_);
 }
 
-#if 0 
 void hiopVectorCuda::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
 {
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
@@ -477,32 +478,17 @@ void hiopVectorCuda::component_max(const hiopVector& vec)
 
 void hiopVectorCuda::component_abs()
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_abs<double> abs_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  
-  // compute abs
-  thrust::transform(dev_v, dev_v+n_local_, dev_v, abs_op);
+  hiop::cuda::thrust_component_abs_kernel(n_local_, data_dev_);
 }
 
 void hiopVectorCuda::component_sgn ()
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_sig<double> sig_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  
-  // compute sig
-  thrust::transform(dev_v, dev_v+n_local_, dev_v, sig_op);
+  hiop::cuda::thrust_component_sgn_kernel(n_local_, data_dev_);
 }
 
 void hiopVectorCuda::component_sqrt()
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_sqrt<double> sqrt_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  
-  // compute sqrt
-  thrust::transform(dev_v, dev_v+n_local_, dev_v, sqrt_op);
+  hiop::cuda::thrust_component_sqrt_kernel(n_local_, data_dev_);
 }
 
 /// Scale each element of this  by the constant alpha
@@ -632,8 +618,7 @@ double hiopVectorCuda::dotProductWith( const hiopVector& v ) const
 /// @brief Negate all the elements of this
 void hiopVectorCuda::negate()
 {
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  thrust::transform(dev_v, dev_v+n_local_, dev_v, thrust::negate<double>());
+  hiop::cuda::thrust_negate_kernel(n_local_, data_dev_);
 }
 
 /// @brief Invert (1/x) the elements of this
@@ -649,24 +634,7 @@ double hiopVectorCuda::logBarrier_local(const hiopVector& select) const
   assert(n_local_ == sel.n_local_);
   const double* id = sel.local_data_const();
 
-  // wrap raw pointer with a device_ptr 
-  thrust_log_select<double> log_select_op;
-  thrust::plus<double> plus_op;
-  thrust::multiplies<double> mult_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  thrust::device_ptr<const double> id_v = thrust::device_pointer_cast(id);
-  
-  // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> v_temp = thrust::device_malloc(n_local_);
-
-  // compute x*id
-  thrust::transform(thrust::device, dev_v, dev_v+n_local_, id_v, v_temp, mult_op);
-  // compute log(y) for y > 0
-  double sum = thrust::transform_reduce(thrust::device, v_temp, v_temp+n_local_, log_select_op, 0.0, plus_op);
-
-  thrust::device_free(v_temp);
-
-  return sum;
+  return hiop::cuda::log_barr_obj_kernel(n_local_, data_dev_, id);
 }
 
 /**  @brief add 1/(this[i]) */
@@ -684,15 +652,13 @@ void hiopVectorCuda::addLogBarrierGrad(double alpha,
   const double* xd = x.local_data_const();
   const double* id = sel.local_data_const();
 
-  hiop::cuda::adxpy_w_pattern_kernel(n_local_, yd, xd, id);
+  hiop::cuda::adxpy_w_pattern_kernel(n_local_, yd, xd, id, alpha);
 }
 
 /** @brief Sum all elements */
 double hiopVectorCuda::sum_local() const
 {
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  // compute sum
-  return thrust::reduce(dev_v, dev_v+n_local_, 0.0, thrust::plus<double>());
+  return hiop::cuda::thrust_sum_kernel(n_local_, data_dev_);
 }
 
 /**
@@ -710,20 +676,9 @@ double hiopVectorCuda::linearDampingTerm_local(const hiopVector& ixleft,
 #endif
   const double* ld = ixl.local_data_const();
   const double* rd = ixr.local_data_const();
-  double* vd = data_dev_;
+  const double* vd = data_dev_;
 
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n_local_);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
-
-  // compute linear damping term
-  hiop::cuda::set_linear_damping_term_kernel(n_local_, dv_ptr, vd, ld, rd);
-
-  double term = thrust::reduce(v_temp.begin(), v_temp.end(), 0.0, thrust::plus<double>());
-
-  term *= mu;
-  term *= kappa_d;
-  return term;
+  return hiop::cuda::linear_damping_term_kernel(n_local_, vd, ld, rd, mu, kappa_d);
 }
 
 void hiopVectorCuda::addLinearDampingTerm(const hiopVector& ixleft,
@@ -747,12 +702,9 @@ void hiopVectorCuda::addLinearDampingTerm(const hiopVector& ixleft,
 /** @brief Check if all elements of the vector are positive */
 int hiopVectorCuda::allPositive()
 {
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dev_v, dev_v+n_local_);
+  double min_val = hiop::cuda::min_local_kernel(n_local_, data_dev_);
 
-  double* ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
-
-  int allPos = (*ret_ptr > 0.0) ? 1 : 0;
+  int allPos = (min_val > 0.0) ? 1 : 0;
 
 #ifdef HIOP_USE_MPI
   int allPosG;
@@ -774,14 +726,7 @@ int hiopVectorCuda::allPositive_w_patternSelect(const hiopVector& wvec)
   const double* id = w.local_data_const();
   const double* data = data_dev_;
 
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n_local_);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
-
-  // compute linear damping term
-  hiop::cuda::is_posive_w_pattern_kernel(n_local_, dv_ptr, data, id);
-
-  int allPos = thrust::reduce(v_temp.begin(), v_temp.end(), 0.0, thrust::plus<int>());
+  int allPos = hiop::cuda::all_positive_w_pattern_kernel(n_local_, data, id);
   
   allPos = (allPos==n_local_) ? 1 : 0;
   
@@ -797,17 +742,14 @@ int hiopVectorCuda::allPositive_w_patternSelect(const hiopVector& wvec)
 /// Find minimum vector element
 double hiopVectorCuda::min() const
 {
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-  thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dev_v, dev_v+n_local_);
-
-  double* result = thrust::raw_pointer_cast(ret_dev_ptr);
+  double result = hiop::cuda::min_local_kernel(n_local_, data_dev_);
 
 #ifdef HIOP_USE_MPI
   double resultG;
-  double ierr=MPI_Allreduce(result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  double ierr=MPI_Allreduce(&result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
   return resultG;
 #endif
-  return *result;
+  return result;
 }
 
 /// Find minimum vector element for `select` pattern
@@ -819,20 +761,7 @@ double hiopVectorCuda::min_w_pattern(const hiopVector& select) const
   const double* id = sel.local_data_const();
   
   double max_val = std::numeric_limits<double>::max();
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-
-  // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n_local_);
-  double* d_ptr = thrust::raw_pointer_cast(dv_ptr);
-
-  // set value with pattern
-  hiop::cuda::set_val_w_pattern_kernel(n_local_, d_ptr, data, id, max_val);
-
-  thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n_local_);
-
-  double result = *(thrust::raw_pointer_cast(ret_dev_ptr));
-
-  thrust::device_free(dv_ptr);
+  double result = hiop::cuda::min_w_pattern_kernel(n_local_, data, id, max_val);
 
 #ifdef HIOP_USE_MPI
   double resultG;
@@ -873,29 +802,10 @@ bool hiopVectorCuda::projectIntoBounds_local(const hiopVector& xlo,
   const double* xud = xu.local_data_const();
   const double* iud = iu.local_data_const();
   double* xd = data_dev_;
-
-  thrust::device_ptr<const double> dev_v = thrust::device_pointer_cast(data_dev_);
-
+  
   // Perform preliminary check to see of all upper value
-  thrust::minus<double> minus_op;
-  thrust::device_ptr<const double> dev_xud = thrust::device_pointer_cast(xud);
-  thrust::device_ptr<const double> dev_xld = thrust::device_pointer_cast(xld);
+  bool bval = hiop::cuda::check_bounds_kernel(n_local_, xld, xud);
 
-  // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n_local_);
-
-  thrust::transform(thrust::device,
-                    dev_xud, dev_xud+n_local_,
-                    dev_xld, dv_ptr,
-                    minus_op);  
-
-  thrust::device_ptr<double> ret_dv_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr + n_local_);
-  double* ret_ptr = thrust::raw_pointer_cast(ret_dv_ptr);
-  
-  bool bval = (*ret_ptr > 0.0) ? 1 : 0;
-
-  thrust::device_free(dv_ptr);
-  
   if(false == bval) 
     return false;
 
@@ -919,13 +829,7 @@ double hiopVectorCuda::fractionToTheBdry_local(const hiopVector& dvec, const dou
   const double* dd = d.local_data_const();
   const double* xd = data_dev_;
 
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n_local_);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
-
-  // set values
-  hiop::cuda::fraction_to_the_boundry_kernel(n_local_, dv_ptr, xd, dd, tau);
-  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n_local_));
+  double alpha = hiop::cuda::min_frac_to_bds_kernel(n_local_, xd, dd, tau);
 
   return alpha;
 }
@@ -947,13 +851,8 @@ double hiopVectorCuda::fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
   const double* dd = d.local_data_const();
   const double* xd = data_dev_;
   const double* id = s.local_data_const();
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n_local_);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
 
-  // set value with pattern
-  hiop::cuda::fraction_to_the_boundry_w_pattern_kernel(n_local_, dv_ptr, xd, dd, id, tau);
-  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n_local_));
+  double alpha = hiop::cuda::min_frac_to_bds_w_pattern_kernel(n_local_, xd, dd, id, tau);
 
   return alpha;
 }
@@ -985,16 +884,7 @@ bool hiopVectorCuda::matchesPattern(const hiopVector& pattern)
   double* xd = data_dev_;
   double* id = p.data_dev_;
 
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<bool> v_temp(n_local_);
-  bool* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
-
-  // compute linear damping term
-  hiop::cuda::match_pattern_kernel(n_local_, dv_ptr, xd, id);
-
-  thrust_istrue istrue_op;
-
-  return thrust::all_of(dv_ptr, dv_ptr+n_local_, istrue_op);
+  return hiop::cuda::match_pattern_kernel(n_local_, xd, id);
 }
 
 /** @brief Adjusts duals. */
@@ -1019,21 +909,13 @@ void hiopVectorCuda::adjustDuals_plh(const hiopVector& xvec,
 /** @brief Check if all elements of the vector are zero */
 bool hiopVectorCuda::is_zero() const
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_iszero<double> iszero_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-
-  return thrust::all_of(dev_v, dev_v+n_local_, iszero_op);
+  return hiop::cuda::is_zero_kernel(n_local_, data_dev_);
 }
 
 /** @brief Returns true if any element of `this` is NaN. */
 bool hiopVectorCuda::isnan_local() const
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_isnan<double> isnan_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-
-  return thrust::all_of(dev_v, dev_v+n_local_, isnan_op);
+  return hiop::cuda::isnan_kernel(n_local_, data_dev_);
 }
 
 /**
@@ -1045,21 +927,13 @@ bool hiopVectorCuda::isnan_local() const
  */
 bool hiopVectorCuda::isinf_local() const
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_isinf<double> isinf_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-
-  return thrust::all_of(dev_v, dev_v+n_local_, isinf_op);
+  return hiop::cuda::isinf_kernel(n_local_, data_dev_);
 }
 
 /** @brief Returns true if all elements of `this` are finite. */
 bool hiopVectorCuda::isfinite_local() const
 {
-  // wrap raw pointer with a device_ptr 
-  thrust_isfinite<double> isfinite_op;
-  thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);
-
-  return thrust::all_of(dev_v, dev_v+n_local_, isfinite_op);
+  return hiop::cuda::isfinite_kernel(n_local_, data_dev_);
 }
 
 /** @brief Prints vector data to a file in Matlab format. */
@@ -1109,16 +983,13 @@ void hiopVectorCuda::copyFromDev() const
 }
 
 size_type hiopVectorCuda::numOfElemsLessThan(const double &val) const
-{  
-  int rval = thrust::transform_reduce(data_dev_, data_dev_+n_local_, thrust_less(val), (int) 0, thrust::plus<int>());
-  return (size_type) rval;
+{
+  return hiop::cuda::num_of_elem_less_than_kernel(n_local_, data_dev_, val);
 }
 
 size_type hiopVectorCuda::numOfElemsAbsLessThan(const double &val) const
-{  
-  //thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(data_dev_);  
-  int rval = thrust::transform_reduce(data_dev_, data_dev_+n_local_, thrust_abs_less(val), (int) 0, thrust::plus<int>());
-  return (size_type) rval;
+{
+  return hiop::cuda::num_of_elem_absless_than_kernel(n_local_, data_dev_, val);
 }
 
 void hiopVectorCuda::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
@@ -1164,7 +1035,7 @@ bool hiopVectorCuda::is_equal(const hiopVector& vec) const
   assert(false&&"NOT needed. Remove this func. TODO");
 }
 
-#endif
+
 
 } // namespace hiop
 
