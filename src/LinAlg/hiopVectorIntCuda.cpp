@@ -52,21 +52,14 @@
  *
  */
 #include "hiopVectorIntCuda.hpp"
+#include "VectorCudaKernels.hpp"
 #include "MathDeviceKernels.hpp"
 #include <cuda_runtime.h>
 
 namespace hiop
 {
 
-__global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
-{
 
-  const int num_threads = blockDim.x * gridDim.x;
-  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-  for (int i = tid; i < n; i += num_threads) {
-    vec[i] = i0 + i*di;	
-  }
-}
 
 hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   : hiopVectorInt(sz),
@@ -80,18 +73,12 @@ hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   assert(cudaSuccess == cuerr);
   
   // Allocate memory on host
-  if(mem_space_ == "DEVICE") {
-    buf_host_ = new index_type[bytes];
-  } else {
-    buf_host_ = buf_;
-  }
+  buf_host_ = new index_type[bytes];
 }
 
 hiopVectorIntCuda::~hiopVectorIntCuda()
 {
-  if(mem_space_ == "DEVICE") {
-    delete buf_host_;
-  }
+  delete buf_host_;
 
   // Delete workspaces and handles
   cudaFree(buf_);
@@ -146,9 +133,7 @@ void hiopVectorIntCuda::set_to_constant(const index_type c)
  */ 
 void hiopVectorIntCuda::linspace(const index_type& i0, const index_type& di)
 {
-  int block_size=256;
-  int num_blocks = (sz_+block_size-1)/block_size;
-  set_to_linspace_cu<<<num_blocks,block_size>>>(sz_, buf_, i0, di);
+  hiop::cuda::set_to_linspace_kernel(sz_, buf_, i0, di);
 }
   
 } // namespace hiop

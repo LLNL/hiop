@@ -100,6 +100,7 @@ set(hiopLinAlg_CUDASPARSE_SRC
 
 set(hiopLinAlg_CUDAVECTOR_SRC
   hiopVectorCuda.cpp
+  hiopVectorIntCuda.cpp
 )
 set(hiopLinAlg_CUDAVECTORKERNELS_SRC
   VectorCudaKernels.cu

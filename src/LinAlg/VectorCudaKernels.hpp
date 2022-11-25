@@ -231,6 +231,10 @@ bool isfinite_kernel(int n, double* xd);
 int num_of_elem_less_than_kernel(int n, double* xd, double val);
 int num_of_elem_absless_than_kernel(int n, double* xd, double val);
 
+
+/// for hiopVectorIntCuda
+void set_to_linspace_kernel(int sz, int* buf, int i0, int di);
+
 }
 }
 #endif

@@ -93,6 +93,14 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
   const std::string mem_space_upper = toupper(mem_space);
   if(mem_space_upper == "DEFAULT") {
     return new hiopVectorPar(glob_n, col_part, comm);
+  } else if(mem_space_upper == "CUDA") {
+    #ifdef HIOP_USE_CUDA
+      return new hiopVectorCUDA(glob_n, col_part, comm);
+    #else
+      assert(false && "requested memory space not available because Hiop was not"
+                      "built with CUDA support");
+      return new hiopVectorPar(glob_n, col_part, comm);
+    #endif
   } else {
 #ifdef HIOP_USE_RAJA
     return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
@@ -117,6 +125,14 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
   const std::string mem_space_upper = toupper(mem_space);
   if(mem_space_upper == "DEFAULT") {
     return new hiopVectorIntSeq(size);
+  } else if(mem_space_upper == "CUDA") {
+    #ifdef HIOP_USE_CUDA
+      return new hiopVectorIntCUDA(size, mem_space_upper);
+    #else
+      assert(false && "requested memory space not available because Hiop was not"
+                      "built with CUDA support");
+      return new hiopVectorPar(glob_n, col_part, comm);
+    #endif
   } else {
 #ifdef HIOP_USE_RAJA
     return new hiopVectorIntRaja(size, mem_space_upper);

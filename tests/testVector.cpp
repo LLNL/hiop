@@ -114,6 +114,14 @@ int main(int argc, char** argv)
   if (rank == 0)
     std::cout << "\nTesting HiOp default vector implementation:\n";
   fail += runTests<VectorTestsPar>("default", comm);
+#ifdef HIOP_USE_CUDA
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp CUDA vector\n";
+    std::cout << "  ... using CUDA memory space:\n";
+  }
+  fail += runTests<VectorTestsCuda>("cuda", comm);
+#endif
 #ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_GPU
   if (rank == 0)

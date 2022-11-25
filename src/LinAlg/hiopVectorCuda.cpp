@@ -96,7 +96,7 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
   size_t bytes = n_local_ * sizeof(double);
   
   // Allocate memory on host
-  data_host_ = new double[bytes];
+  data_host_ = new double[n_local_];
  
   // Allocate memory on GPU
   cudaError_t cuerr = cudaMalloc(&data_dev_, bytes);
