@@ -67,11 +67,11 @@ namespace hiop { namespace tests {
  * @todo In addition to set and get element ass set and get buffer methods.
  *
  */
-class vectorTestsCuda : public VectorTests
+class VectorTestsCuda : public VectorTests
 {
 public:
-  vectorTestsCuda(){}
-  virtual ~vectorTestsCuda(){}
+  VectorTestsCuda(){}
+  virtual ~VectorTestsCuda(){}
 
 private:
   virtual const real_type* getLocalDataConst(const hiop::hiopVector* x);

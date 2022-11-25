@@ -69,8 +69,8 @@
 #include <thrust/device_free.h>
 
 
-#include <cmath>
-#include <limits>
+//#include <cmath>
+//#include <limits>
 
 template <typename T>
 struct thrust_abs_diff: public thrust::binary_function<T,T,T>
@@ -138,20 +138,20 @@ struct thrust_sqrt: public thrust::unary_function<T,T>
 };
 
 template <typename T>
-struct thrust_log_select: public thrust::unary_function<T,T>
+struct thrust_log_select: public thrust::unary_function<T,double>
 {
     __host__ __device__
-    T operator()(const T& a)
+    double operator()(const T& a)
     {
         if(a>0){
           return log(a);
         }
-        return 0; 
+        return 0.; 
     }
 };
 
 template <typename T>
-struct thrust_isinf: public thrust::unary_function<T,T>
+struct thrust_isinf: public thrust::unary_function<T,bool>
 {
     __host__ __device__
     T operator()(const T& a)
@@ -161,7 +161,7 @@ struct thrust_isinf: public thrust::unary_function<T,T>
 };
 
 template <typename T>
-struct thrust_isfinite: public thrust::unary_function<T,T>
+struct thrust_isfinite: public thrust::unary_function<T,bool>
 {
     __host__ __device__
     bool operator()(const T& a)
@@ -171,7 +171,7 @@ struct thrust_isfinite: public thrust::unary_function<T,T>
 };
 
 template <typename T>
-struct thrust_iszero: public thrust::unary_function<T,T>
+struct thrust_iszero: public thrust::unary_function<T,bool>
 {
     __host__ __device__
     bool operator()(const T& a)
@@ -181,7 +181,7 @@ struct thrust_iszero: public thrust::unary_function<T,T>
 };
 
 template <typename T>
-struct thrust_isnan: public thrust::unary_function<T,T>
+struct thrust_isnan: public thrust::unary_function<T,bool>
 {
     __host__ __device__
     bool operator()(const T& a)
@@ -190,12 +190,13 @@ struct thrust_isnan: public thrust::unary_function<T,T>
     }
 };
 
-struct thrust_istrue: public thrust::unary_function<bool,bool>
+struct thrust_istrue : public thrust::unary_function<int, bool>
 {
     __host__ __device__
-    bool operator()(const bool& a)
+    bool operator()(const int& a)
     {
       return a;
+      //return !(a==int(0));
     }
 };
 
@@ -283,7 +284,9 @@ __global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const d
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    yd[i] = (alpha * xd[i] / zd[i] + yd[i]) * id[i];
+    if(id[i] == 1.0) {
+      yd[i] = alpha * xd[i] / zd[i] + yd[i];
+    }
   }
 }
 
@@ -293,7 +296,21 @@ __global__ void adxpy_w_pattern_cu(int n, double* yd, const double* xd, const do
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    yd[i] = (alpha / xd[i] + yd[i]) * id[i];
+    if(id[i]==1.0) {
+      yd[i] = alpha / xd[i] + yd[i];
+    }
+  }
+}
+
+__global__ void component_div_w_pattern_cu(int n, double* yd, const double* xd, const double* id)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    if(id[i]==1.0) {
+      yd[i] = yd[i] / xd[i];
+    }
   }
 }
 
@@ -460,15 +477,15 @@ __global__ void fraction_to_the_boundry_w_pattern_cu(int n,
   }
 }
 
-__global__ void set_match_pattern_cu(int n, bool* yd, const double* xd, const double* id)
+__global__ void set_match_pattern_cu(int n, int* yd, const double* xd, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
     if(id[i]==0.0 && xd[i]!=0.0) {
-      yd[i] = false;
+      yd[i] = 0;
     } else {
-      yd[i] = true;
+      yd[i] = 1;
     }
   }
 }
@@ -529,6 +546,17 @@ __global__ void set_nonlinear_type_cu(const int n,
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n && i < length; i += num_threads) {
     arr[start+i] = arr_src;
+  }
+}
+
+/// for hiopVectorIntCuda
+__global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    vec[i] = i0 + i*di;	
   }
 }
 
@@ -668,6 +696,18 @@ void adxpy_w_pattern_kernel(int n_local,
   adxpy_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, alpha);
 }
 
+/**  @brief  elements of this that corespond to nonzeros in ix are divided by elements of v.
+     The rest of elements of this are set to zero.*/
+void component_div_w_pattern_kernel(int n_local,
+                                    double* yd,
+                                    const double* xd,
+                                    const double* id)
+{
+  int block_size=256;
+  int num_blocks = (n_local+block_size-1)/block_size;
+  component_div_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
+}
+
 /**
  * @brief Linear damping term */
 void set_linear_damping_term_kernel(int n_local,
@@ -774,7 +814,7 @@ void select_pattern_kernel(int n_local, double* yd, const double* id)
 }
 
 /** @brief Checks if each component in `this` matches nonzero pattern of `select`.  */
-void component_match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id)
+void component_match_pattern_kernel(int n_local, int* yd, const double* xd, const double* id)
 {
   // compute linear damping term
   int block_size=256;
@@ -820,8 +860,7 @@ void set_array_from_to_kernel(int n_local,
   set_nonlinear_type_cu<<<num_blocks,block_size>>> (n_local, length, arr, start, arr_src);
 }
 
-template <typename T>
-void thrust_fill_kernel(int n, T* ptr, T c)
+void thrust_fill_kernel(int n, double* ptr, double c)
 {
   thrust::device_ptr<double> dev_ptr = thrust::device_pointer_cast(ptr);  
   thrust::fill(thrust::device, dev_ptr, dev_ptr+n, c);
@@ -834,7 +873,7 @@ double infnorm_local_kernel(int n, double* data_dev)
   thrust::device_ptr<double> dev_ptr = thrust::device_pointer_cast(data_dev);
 
   // compute one norm
-  double norm = thrust::transform_reduce(data_dev, data_dev+n, abs_op, 0.0, max_op);
+  double norm = thrust::transform_reduce(thrust::device, data_dev, data_dev+n, abs_op, 0.0, max_op);
 
   return norm;
 }
@@ -844,9 +883,10 @@ double onenorm_local_kernel(int n, double* data_dev)
   thrust_abs<double> abs_op;
   thrust::plus<double> plus_op;
   thrust::device_ptr<double> dev_ptr = thrust::device_pointer_cast(data_dev);
+  //thrust::device_ptr<double> dev_ptr(data_dev);
 
   // compute one norm
-  double norm = thrust::transform_reduce(data_dev, data_dev+n, abs_op, 0.0, plus_op);
+  double norm = thrust::transform_reduce(thrust::device, data_dev, data_dev+n, abs_op, 0.0, plus_op);
 
   return norm;
 }
@@ -860,7 +900,7 @@ void thrust_component_mult_kernel(int n, double* d1, double* d2)
   
   thrust::transform(thrust::device,
                     dev_v1, dev_v1+n,
-                    dev_v2, dev_v2,
+                    dev_v2, dev_v1,
                     mult_op);
 }
 
@@ -873,7 +913,7 @@ void thrust_component_div_kernel(int n, double* d1, double* d2)
   
   thrust::transform(thrust::device,
                     dev_v1, dev_v1+n,
-                    dev_v2, dev_v2,
+                    dev_v2, dev_v1,
                     div_op);
 }
 
@@ -884,7 +924,7 @@ void thrust_component_abs_kernel(int n, double* d1)
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   
   // compute abs
-  thrust::transform(dev_v1, dev_v1+n, dev_v1, abs_op);
+  thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, abs_op);
 }
 
 void thrust_component_sgn_kernel(int n, double* d1)
@@ -894,7 +934,7 @@ void thrust_component_sgn_kernel(int n, double* d1)
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   
   // compute abs
-  thrust::transform(dev_v1, dev_v1+n, dev_v1, sig_op);
+  thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, sig_op);
 }
 
 void thrust_component_sqrt_kernel(int n, double* d1)
@@ -904,13 +944,13 @@ void thrust_component_sqrt_kernel(int n, double* d1)
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   
   // compute abs
-  thrust::transform(dev_v1, dev_v1+n, dev_v1, sqrt_op);
+  thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, sqrt_op);
 }
 
 void thrust_negate_kernel(int n, double* d1)
 {
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
-  thrust::transform(dev_v1, dev_v1+n, dev_v1, thrust::negate<double>());
+  thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, thrust::negate<double>());
 }
 
 double log_barr_obj_kernel(int n, double* d1, const double* id)
@@ -924,7 +964,7 @@ double log_barr_obj_kernel(int n, double* d1, const double* id)
   thrust::multiplies<double> mult_op;
   
   // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> v_temp = thrust::device_malloc(n);
+  thrust::device_ptr<double> v_temp = thrust::device_malloc(n*sizeof(double));
 
   // compute x*id
   thrust::transform(thrust::device, dev_v, dev_v+n, id_v, v_temp, mult_op);
@@ -940,7 +980,7 @@ double thrust_sum_kernel(int n, double* d1)
 {
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   // compute sum
-  return thrust::reduce(dev_v1, dev_v1+n, 0.0, thrust::plus<double>());
+  return thrust::reduce(thrust::device, dev_v1, dev_v1+n, 0.0, thrust::plus<double>());
 }
 
 /**
@@ -959,7 +999,7 @@ double linear_damping_term_kernel(int n,
   // compute linear damping term
   hiop::cuda::set_linear_damping_term_kernel(n, dv_ptr, vd, ld, rd);
 
-  double term = thrust::reduce(v_temp.begin(), v_temp.end(), 0.0, thrust::plus<double>());
+  double term = thrust::reduce(thrust::device, v_temp.begin(), v_temp.end(), 0.0, thrust::plus<double>());
 
   term *= mu;
   term *= kappa_d;
@@ -971,8 +1011,15 @@ double min_local_kernel(int n, double* d1)
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dev_v1, dev_v1+n);
   
-  double* ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
-  return *ret_ptr;
+  double *ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
+  // TODO: how to return double from device to host?
+  double *ret_host = new double[1]; 
+  cudaError_t cuerr = cudaMemcpy(ret_host, ret_ptr, (1)*sizeof(double), cudaMemcpyDeviceToHost);
+ 
+  double rv = ret_host[0];
+  delete [] ret_host;
+  
+  return rv;
 }
 
 int all_positive_w_pattern_kernel(int n, const double* d1, const double* id)
@@ -984,13 +1031,13 @@ int all_positive_w_pattern_kernel(int n, const double* d1, const double* id)
   // compute linear damping term
   hiop::cuda::is_posive_w_pattern_kernel(n, dv_ptr, d1, id);
   
-  return thrust::reduce(v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
+  return thrust::reduce(thrust::device, v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
 }
 
 double min_w_pattern_kernel(int n, const double* d1, const double* id, double max_val)
 {
   // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n);
+  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n*sizeof(double));
   double* d_ptr = thrust::raw_pointer_cast(dv_ptr);
 
   // set value with pattern
@@ -998,11 +1045,18 @@ double min_w_pattern_kernel(int n, const double* d1, const double* id, double ma
 
   thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n);
 
-  double result = *(thrust::raw_pointer_cast(ret_dev_ptr));
+  // TODO: how to return double from device to host?
+  double *ret_host = new double[1];
+  double *ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
+// TODO: fail why? see line 988
+  cudaError_t cuerr = cudaMemcpy(ret_host, ret_ptr, (1)*sizeof(double), cudaMemcpyDeviceToHost);
+
+  double ret_v = ret_host[0];
+  delete [] ret_host;
 
   thrust::device_free(dv_ptr);
   
-  return result;
+  return ret_v;
 }
 
 bool check_bounds_kernel(int n, const double* xld, const double* xud)
@@ -1013,17 +1067,19 @@ bool check_bounds_kernel(int n, const double* xld, const double* xud)
   thrust::device_ptr<double> dev_xld = thrust::device_pointer_cast(const_cast<double*>(xld));
 
   // TODO: how to avoid this temp vec?
-  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n);
+  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n*sizeof(double));
 
   thrust::transform(thrust::device,
                     dev_xud, dev_xud+n,
                     dev_xld, dv_ptr,
                     minus_op);  
 
-  thrust::device_ptr<double> ret_dv_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr + n);
-  double* ret_ptr = thrust::raw_pointer_cast(ret_dv_ptr);
+  int res_offset = thrust::min_element(thrust::device, dv_ptr, dv_ptr + n) - dv_ptr;
+  double ret_v = *(dv_ptr + res_offset);
   
-  bool bval = (*ret_ptr > 0.0) ? 1 : 0;
+// TODO: return value from device
+  bool bval = (ret_v > 0.0) ? 1 : 0;
+  //bool bval = false;
 
   thrust::device_free(dv_ptr);
   
@@ -1035,13 +1091,15 @@ bool check_bounds_kernel(int n, const double* xld, const double* xud)
 
 double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double tau)
 {
-  // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+  thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n*sizeof(double));
+  double* d_ptr = thrust::raw_pointer_cast(dv_ptr);
 
   // set values
   hiop::cuda::fraction_to_the_boundry_kernel(n, dv_ptr, xd, dd, tau);
-  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n));
+  int res_offset = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n) - dv_ptr;
+  double alpha = *(dv_ptr + res_offset);
+
+  thrust::device_free(dv_ptr);
   
   return alpha;
 }
@@ -1058,7 +1116,7 @@ double min_frac_to_bds_w_pattern_kernel(int n,
 
   // set value with pattern
   hiop::cuda::fraction_to_the_boundry_w_pattern_kernel(n, dv_ptr, xd, dd, id, tau);
-  double alpha = *(thrust::min_element(thrust::device, dv_ptr, dv_ptr + n));
+  double alpha = *(thrust::min_element(thrust::device, v_temp.begin(), v_temp.end()));
 
   return alpha;
 }
@@ -1066,15 +1124,15 @@ double min_frac_to_bds_w_pattern_kernel(int n,
 bool match_pattern_kernel(int n, const double* xd, const double* id)
 {
   // TODO: how to avoid this temp vec?
-  thrust::device_vector<bool> v_temp(n);
-  bool* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+  thrust::device_vector<int> v_temp(n);
+  int* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
 
   // check if xd matches the pattern given by id
   hiop::cuda::component_match_pattern_kernel(n, dv_ptr, xd, id);
 
   thrust_istrue istrue_op;
 
-  return thrust::all_of(dv_ptr, dv_ptr+n, istrue_op);
+  return thrust::all_of(thrust::device, v_temp.begin(), v_temp.end(), istrue_op);
 }
 
 bool is_zero_kernel(int n, double* xd)
@@ -1083,7 +1141,7 @@ bool is_zero_kernel(int n, double* xd)
   thrust_iszero<double> iszero_op;
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
 
-  return thrust::all_of(dev_v, dev_v+n, iszero_op);
+  return thrust::all_of(thrust::device, dev_v, dev_v+n, iszero_op);
 }
 
 bool isnan_kernel(int n, double* xd)
@@ -1092,7 +1150,7 @@ bool isnan_kernel(int n, double* xd)
   thrust_isnan<double> isnan_op;
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
 
-  return thrust::all_of(dev_v, dev_v+n, isnan_op);
+  return thrust::any_of(thrust::device, dev_v, dev_v+n, isnan_op);
 }
 
 bool isinf_kernel(int n, double* xd)
@@ -1101,7 +1159,7 @@ bool isinf_kernel(int n, double* xd)
   thrust_isinf<double> isinf_op;
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
 
-  return thrust::all_of(dev_v, dev_v+n, isinf_op);
+  return thrust::any_of(thrust::device, dev_v, dev_v+n, isinf_op);
 }
 
 bool isfinite_kernel(int n, double* xd)
@@ -1110,22 +1168,33 @@ bool isfinite_kernel(int n, double* xd)
   thrust_isfinite<double> isfinite_op;
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
 
-  return thrust::all_of(dev_v, dev_v+n, isfinite_op);
+  return thrust::all_of(thrust::device, dev_v, dev_v+n, isfinite_op);
 }
 
 int num_of_elem_less_than_kernel(int n, double* xd, double val)
 {
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
-  int rval = thrust::transform_reduce(dev_v, dev_v+n, thrust_less(val), (int) 0, thrust::plus<int>());
+  int rval = thrust::transform_reduce(thrust::device, dev_v, dev_v+n, thrust_less(val), (int) 0, thrust::plus<int>());
   return rval;
 }
 
 int num_of_elem_absless_than_kernel(int n, double* xd, double val)
 {
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
-  int rval = thrust::transform_reduce(dev_v, dev_v+n, thrust_abs_less(val), (int) 0, thrust::plus<int>());
+  int rval = thrust::transform_reduce(thrust::device, dev_v, dev_v+n, thrust_abs_less(val), (int) 0, thrust::plus<int>());
   return rval;
 }
+
+
+
+/// for hiopVectorIntCuda
+void set_to_linspace_kernel(int sz, int* buf, int i0, int di)
+{
+  int block_size=256;
+  int num_blocks = (sz+block_size-1)/block_size;
+  set_to_linspace_cu<<<num_blocks,block_size>>>(sz, buf, i0, di);
+}
+
 
 }
 

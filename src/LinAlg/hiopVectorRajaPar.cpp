@@ -46,10 +46,14 @@
 // product endorsement purposes.
 
 /**
- * @file VectorCudaKernels.hpp
+ * @file hiopVectorRajaPar.cpp
  *
- * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
- * 
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <cameron.rutherford@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ *
  */
 #include "hiopLinAlgFactory.hpp"
 #include "hiopVectorRajaPar.hpp"

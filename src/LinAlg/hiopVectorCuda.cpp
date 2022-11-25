@@ -99,7 +99,7 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
   data_host_ = new double[n_local_];
  
   // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc(&data_dev_, bytes);
+  cudaError_t cuerr = cudaMalloc((void**)&data_dev_, bytes);
   assert(cudaSuccess == cuerr);
 
   // handles
@@ -122,7 +122,7 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
   data_host_ = new double[bytes];
  
   // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc(&data_dev_, bytes);
+  cudaError_t cuerr = cudaMalloc((void**)&data_dev_, bytes);
   assert(cudaSuccess == cuerr);
 
   // handles
@@ -131,7 +131,7 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
 
 hiopVectorCuda::~hiopVectorCuda()
 {
-  delete data_host_;
+  delete [] data_host_;
 
   // Delete workspaces and handles
   cudaFree(data_dev_);
@@ -141,13 +141,13 @@ hiopVectorCuda::~hiopVectorCuda()
 /// Set all vector elements to zero
 void hiopVectorCuda::setToZero()
 {
-  hiop::cuda::thrust_fill_kernel<double>(n_local_, data_dev_, 0.0);
+  hiop::cuda::thrust_fill_kernel(n_local_, data_dev_, 0.0);
 }
 
 /// Set all vector elements to constant c
 void hiopVectorCuda::setToConstant(double c)
 {
-  hiop::cuda::thrust_fill_kernel<double>(n_local_, data_dev_, c);
+  hiop::cuda::thrust_fill_kernel(n_local_, data_dev_, c);
 }
 
 /// Set all elements to random values uniformly distributed between `minv` and `maxv`.
@@ -161,11 +161,9 @@ void hiopVectorCuda::set_to_random_uniform(double minv, double maxv)
 void hiopVectorCuda::setToConstant_w_patternSelect(double c, const hiopVector& select)
 {
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
-  int one = 1;
   // TODO: add one cu function to perform the following two functions
   setToConstant(c);
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, ix.data_dev_, one, data_dev_, one, data_dev_);
-  assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
+  componentMult(select);
 }
 
 void hiopVectorCuda::copyFrom(const hiopVector& v_)
@@ -187,10 +185,8 @@ void hiopVectorCuda::copyFrom(const double* v_local_data)
 void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector& select)
 {
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select); 
-  int one = 1;
   copyFrom(vv);
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, ix.data_dev_, one, data_dev_, one, data_dev_);
-  assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
+  componentMult(select);
 }
 
 void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const double* v, int nv)
@@ -418,7 +414,10 @@ double hiopVectorCuda::onenorm() const
 
 double hiopVectorCuda::onenorm_local() const
 {
-  return hiop::cuda::onenorm_local_kernel(n_local_, data_dev_);
+//  double* data = data_dev_;
+//  int n = n_local_;
+//  return hiop::cuda::onenorm_local_kernel(n, data);
+    return hiop::cuda::onenorm_local_kernel(n_local_, data_dev_);
 }
 
 void hiopVectorCuda::componentMult( const hiopVector& vec )
@@ -440,10 +439,7 @@ void hiopVectorCuda::componentDiv( const hiopVector& vec )
 void hiopVectorCuda::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
 {
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
-  int one = 1;
-  componentDiv(vec);
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, ix.data_dev_, one, data_dev_, one, data_dev_);
-  assert(ret_cublas == CUBLAS_STATUS_SUCCESS); 
+  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_dev_, v.data_dev_, ix.data);
 }
 
 void hiopVectorCuda::component_min(const double constant)
@@ -512,10 +508,8 @@ void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec)
 void hiopVectorCuda::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select) 
 {
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
-  int one = 1;
   axpy(alpha, xvec);
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, ix.data_dev_, one, data_dev_, one, data_dev_);
-  assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
+  componentMult(select);
 }
 
 /// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.

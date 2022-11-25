@@ -55,6 +55,9 @@
 #include "VectorCudaKernels.hpp"
 #include "MathDeviceKernels.hpp"
 #include <cuda_runtime.h>
+#include <cassert>
+
+//void hiop::cuda::set_to_linspace_kernel(int sz, int* buf, int i0, int di);
 
 namespace hiop
 {
@@ -66,7 +69,7 @@ hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
     mem_space_(mem_space)
 {
   // Size in bytes
-  size_t bytes = n_ * sizeof(index_type);
+  size_t bytes = sz * sizeof(index_type);
 
   // Allocate memory on GPU
   cudaError_t cuerr = cudaMalloc(&buf_, bytes);

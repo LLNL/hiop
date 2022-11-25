@@ -76,7 +76,7 @@ const real_type* VectorTestsCuda::getLocalDataConst(const hiop::hiopVector* x_in
 }
 
 /// Method to set vector _x_ element _i_ to _value_.
-void vectorTestsCuda::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
+void VectorTestsCuda::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
 {
   if(auto* x = dynamic_cast<hiop::hiopVectorCuda*>(x_in))
   {
@@ -93,7 +93,7 @@ void vectorTestsCuda::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type
 }
 
 /// Get communicator
-MPI_Comm vectorTestsCuda::getMPIComm(hiop::hiopVector* x)
+MPI_Comm VectorTestsCuda::getMPIComm(hiop::hiopVector* x)
 {
   if(auto* xvec = dynamic_cast<const hiop::hiopVectorCuda*>(x))
   {
@@ -107,7 +107,7 @@ MPI_Comm vectorTestsCuda::getMPIComm(hiop::hiopVector* x)
 }
 
 /// Wrap new command
-real_type* vectorTestsCuda::createLocalBuffer(local_ordinal_type N, real_type val)
+real_type* VectorTestsCuda::createLocalBuffer(local_ordinal_type N, real_type val)
 {
   real_type* buffer = new real_type[N];
   real_type* dev_buffer = nullptr;
@@ -118,9 +118,9 @@ real_type* vectorTestsCuda::createLocalBuffer(local_ordinal_type N, real_type va
 
 #ifdef HIOP_USE_GPU
   // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc(&dev_buffer, N*sizeof(real_type));
+  cudaError_t cuerr = cudaMalloc((void**)&dev_buffer, N*sizeof(real_type));
   assert(cudaSuccess == cuerr);
-  cudaError_t cuerr = cudaMemcpy(dev_buffer, buffer, N*sizeof(real_type), cudaMemcpyHostToDevice);
+  cuerr = cudaMemcpy(dev_buffer, buffer, N*sizeof(real_type), cudaMemcpyHostToDevice);
   assert(cuerr == cudaSuccess);
 
   delete [] buffer;
@@ -130,7 +130,7 @@ real_type* vectorTestsCuda::createLocalBuffer(local_ordinal_type N, real_type va
   return buffer;
 }
 
-local_ordinal_type* vectorTestsCuda::createIdxBuffer(local_ordinal_type N, local_ordinal_type val)
+local_ordinal_type* VectorTestsCuda::createIdxBuffer(local_ordinal_type N, local_ordinal_type val)
 {
   local_ordinal_type* buffer = new local_ordinal_type[N];
   // Set buffer elements to the initial value
@@ -141,9 +141,9 @@ local_ordinal_type* vectorTestsCuda::createIdxBuffer(local_ordinal_type N, local
 #ifdef HIOP_USE_GPU
   // Allocate memory on GPU
   local_ordinal_type* dev_buffer = nullptr;
-  cudaError_t cuerr = cudaMalloc(&dev_buffer, N*sizeof(local_ordinal_type));
+  cudaError_t cuerr = cudaMalloc((void**)&dev_buffer, N*sizeof(local_ordinal_type));
   assert(cudaSuccess == cuerr);
-  cudaError_t cuerr = cudaMemcpy(dev_buffer, buffer, N*sizeof(local_ordinal_type), cudaMemcpyHostToDevice);
+  cuerr = cudaMemcpy(dev_buffer, buffer, N*sizeof(local_ordinal_type), cudaMemcpyHostToDevice);
   assert(cuerr == cudaSuccess);
 
   delete [] buffer;
@@ -154,7 +154,7 @@ local_ordinal_type* vectorTestsCuda::createIdxBuffer(local_ordinal_type N, local
 }
 
 /// Wrap delete command
-void vectorTestsCuda::deleteLocalBuffer(real_type* buffer)
+void VectorTestsCuda::deleteLocalBuffer(real_type* buffer)
 {
   #ifdef HIOP_USE_GPU
   cudaFree(buffer);
@@ -164,7 +164,7 @@ void vectorTestsCuda::deleteLocalBuffer(real_type* buffer)
 }
 
 /// If test fails on any rank set fail flag on all ranks
-bool vectorTestsCuda::reduceReturn(int failures, hiop::hiopVector* x)
+bool VectorTestsCuda::reduceReturn(int failures, hiop::hiopVector* x)
 {
   int fail = 0;
 

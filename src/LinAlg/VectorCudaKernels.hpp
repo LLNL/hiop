@@ -121,6 +121,11 @@ void adxpy_w_pattern_kernel(int n_local,
                             const double* ld,
                              double alpha);
 
+void component_div_w_pattern_kernel(int n_local,
+                                    double* yd,
+                                    const double* xd,
+                                    const double* id);
+
 void set_linear_damping_term_kernel(int n_local,
                                     double* yd,
                                     const double* vd,
@@ -170,7 +175,7 @@ void fraction_to_the_boundry_w_pattern_kernel(int n_local,
 
 void select_pattern_kernel(int n_local, double* yd, const double* id);
 
-void component_match_pattern_kernel(int n_local, bool* yd, const double* xd, const double* id);
+void component_match_pattern_kernel(int n_local, int* yd, const double* xd, const double* id);
 
 void adjustDuals_plh_kernel(int n_local,
                             double* yd,
@@ -193,8 +198,7 @@ void set_array_from_to_kernel(int n_local,
                               hiop::hiopInterfaceBase::NonlinearityType arr_src);
 
 
-template <typename T>
-void thrust_fill_kernel(int n, T* ptr, T c);
+void thrust_fill_kernel(int n, double* ptr, double c);
 
 double infnorm_local_kernel(int n, double* data_dev);
 double onenorm_local_kernel(int n, double* data_dev);

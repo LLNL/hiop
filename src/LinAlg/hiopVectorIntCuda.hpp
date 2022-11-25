@@ -49,7 +49,7 @@
 #pragma once
 
 /**
- * @file ≈.hpp
+ * @file hiopVectorIntCuda.hpp
  *
  * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
  */

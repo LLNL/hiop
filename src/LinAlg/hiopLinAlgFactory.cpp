@@ -67,6 +67,11 @@
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #endif // HIOP_USE_RAJA
+#ifdef HIOP_USE_CUDA
+#include <hiopVectorCuda.hpp>
+#include <hiopVectorIntCuda.hpp>
+#endif
+
 #include <hiopMatrixSparseCsrCuda.hpp>
 
 #include <hiopVectorIntSeq.hpp>
@@ -95,7 +100,7 @@ hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
     return new hiopVectorPar(glob_n, col_part, comm);
   } else if(mem_space_upper == "CUDA") {
     #ifdef HIOP_USE_CUDA
-      return new hiopVectorCUDA(glob_n, col_part, comm);
+      return new hiopVectorCuda(glob_n, col_part, comm);
     #else
       assert(false && "requested memory space not available because Hiop was not"
                       "built with CUDA support");
@@ -127,7 +132,7 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
     return new hiopVectorIntSeq(size);
   } else if(mem_space_upper == "CUDA") {
     #ifdef HIOP_USE_CUDA
-      return new hiopVectorIntCUDA(size, mem_space_upper);
+      return new hiopVectorIntCuda(size, mem_space_upper);
     #else
       assert(false && "requested memory space not available because Hiop was not"
                       "built with CUDA support");
