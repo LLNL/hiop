@@ -1165,7 +1165,17 @@ void hiopOptionsNLP::register_options()
     // hip - hip mem backend  (works only with DEVICE mem_space)
     //
     // note: mem_space can control the selection of the memory backend (maybe we don't need mem_backend option?)
-    vector<string> range = {"auto", "stdcpp", "umpire", "cuda", "hip"};
+    vector<string> range = {"auto", "stdcpp"};
+#if defined(HIOP_USE_RAJA)
+    range.push_back("umpire");
+#endif
+#if defined(HIOP_USE_CUDA)
+    range.push_back("cuda");
+#endif
+#if defined(HIOP_USE_HIP)
+    range.push_back("hip");
+#endif    
+
     register_str_option("mem_backend",
                         "auto",
                         range,
@@ -1182,7 +1192,17 @@ void hiopOptionsNLP::register_options()
     // cuda - only cuda kernels;         requires mem_space = 'DEVICE' mem_backend = 'cuda' or 'umpire'
     // hip  - only hip kernels;          requires mem_space = 'DEVICE' mem_backend = 'hip' or 'umpire'
 
-    vector<string> range = {"auto", "seq", "raja", "cuda", "hip"};
+    vector<string> range = {"auto", "seq"};
+#if defined(HIOP_USE_RAJA)
+    range.push_back("raja");
+#endif
+#if defined(HIOP_USE_CUDA)
+    range.push_back("cuda");
+#endif
+#if defined(HIOP_USE_HIP)
+    range.push_back("hip");
+#endif    
+
     register_str_option("exec_policies",
                         "auto",
                         range,

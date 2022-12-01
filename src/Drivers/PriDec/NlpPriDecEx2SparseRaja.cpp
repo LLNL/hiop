@@ -4,19 +4,16 @@
 
 #include <RAJA/RAJA.hpp>
 
-#ifdef HIOP_USE_CUDA
+#if defined(HIOP_USE_CUDA)
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_exec;
 using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_reduce;
-#endif
-
-#ifdef HIOP_USE_HIP
+#elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_exec;
 using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
-#endif
-
-#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#else
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using ex9_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_exec;
 using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_reduce;
@@ -125,12 +122,12 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
 {
   assert(nx_==n);
   rval=-1e+20;
-  hiopSolveStatus status;
   double* xi;
   
 #ifdef HIOP_USE_MPI
-  double t3 =  MPI_Wtime(); 
-  double t4 = 0.; 
+  //to monitor contingency compute time
+  //double t3 =  MPI_Wtime(); 
+  //double t4 = 0.; 
 #endif 
   
   // xi can be set below 
@@ -143,13 +140,6 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
   PriDecRecourseProbleEx2Sparse* ex9_recourse;
 
   ex9_recourse = new PriDecRecourseProbleEx2Sparse(nc_, nS_, S_, x, xi, mem_space_);
-  
-  // set a few contingencies to have different sparse structures to create unbalanced load
-  /*
-  if(idx%30==0) {  
-    ex9_recourse->set_sparse(0.3);
-  }
-  */
   
   hiopNlpSparse nlp(*ex9_recourse);
   nlp.options->SetStringValue("duals_update_type", "linear");
@@ -168,9 +158,10 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
 
   hiopAlgFilterIPMNewton solver(&nlp);
 
-
-  //assert("for debugging" && false); //for debugging purpose
-  status = solver.run();
+  hiopSolveStatus status = solver.run();
+  assert(status==Solve_Success ||
+         status==Solve_Success_RelTol ||
+         status==Solve_Acceptable_Level);
   
   rval = solver.getObjective();  
   if(y_==nullptr) {
@@ -178,15 +169,16 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
   }
   solver.getSolution(y_);
   
-  #ifdef HIOP_USE_MPI
+#ifdef HIOP_USE_MPI
   // uncomment if want to monitor contingency computing time
-  /* t4 =  MPI_Wtime(); 
+  /* 
+     t4 =  MPI_Wtime(); 
      if(idx==0||idx==1) {
        printf( "Elapsed time for contingency %d is %f\n",idx, t4 - t3 ); 
        printf(" Objective for idx %d value %18.12e, xi %18.12e\n",idx,rval,xi[0]);
      }
   */
-  #endif
+#endif
 
   delete[] xi;
   delete ex9_recourse;
