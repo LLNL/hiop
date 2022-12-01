@@ -18,19 +18,21 @@ endif()
 set(CMAKE_MODULE_PATH "${ROCM_PATH}/lib/cmake" ${CMAKE_MODULE_PATH})
 
 # Set GPU Targets and Find all the HIP modules
-set(GPU_TARGETS "gfx908" CACHE STRING "The GPU TARGETs")
+set(GPU_TARGETS "gfx90a" CACHE STRING "The GPU TARGETs")
 find_package(hip REQUIRED)
 find_package(hipfft REQUIRED)
 find_package(hiprand REQUIRED)
 find_package(rocrand REQUIRED)
-message(STATUS "Found Hipblas include: ${HIPBLAS_INCLUDE_DIR}")
-message(STATUS "Found Hipblas library: ${HIPBLAS_LIBRARY}")
+message(STATUS "Found Hiprand include: ${HIPRAND_INCLUDE_DIR}")
+message(STATUS "Found Hiprand library: ${HIPRAND_LIBRARY}")
 find_package(hipblas REQUIRED)
 find_package(rocblas REQUIRED)
 message(STATUS "Found Hipblas include: ${HIPBLAS_INCLUDE_DIR}")
 message(STATUS "Found Hipblas library: ${HIPBLAS_LIBRARY}")
 find_package(hipcub REQUIRED)
 find_package(rocprim REQUIRED)
+message(STATUS "Found Hipcub include: ${HIPCUB_INCLUDE_DIR}")
+message(STATUS "Found Hipcub library: ${HIPCUB_LIBRARY}")
 
 target_link_libraries(Hipblas INTERFACE ${HIPBLAS_LIBRARY})
 target_include_directories(Hipblas INTERFACE ${HIPBLAS_INCLUDE_DIR})
@@ -40,6 +42,7 @@ include(FindHiopMagma)
 target_link_libraries(Magma    INTERFACE Hipblas)
 
 target_include_directories(hiop_hip INTERFACE ${ROCM_PATH}/hipfft/include)
+target_include_directories(hiop_hip INTERFACE ${ROCM_PATH}/roctracer/include)
 target_link_libraries(hiop_hip INTERFACE
   hip::hiprand roc::rocrand
   hip::hipfft

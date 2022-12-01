@@ -56,9 +56,15 @@
   #define RANGE_PUSH(id) nvtxRangePush(id);
   #define RANGE_POP() nvtxRangePop();
 #else
+#ifdef HIOP_USE_HIP
+  #include <roctx.h>
+  #define RANGE_PUSH(id) roctxRangePush(id);
+  #define RANGE_POP() roctxRangePop();
+#else
   #define RANGE_PUSH(id)
   #define RANGE_POP()
-#endif
+#endif // HIOP_USE_HIP
+#endif // HIOP_USE_CUDA
 
 #include <sstream>
 #include <iomanip>
