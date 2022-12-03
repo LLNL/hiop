@@ -328,17 +328,14 @@ private:
 
   size_type glob_il_, glob_iu_;
   size_type n_local_;
+  mutable hiopVectorInt* idx_cumsum_;
 
   /** needed for cuda **/
   cublasHandle_t handle_cublas_;
-//  cublasStatus_t ret_cublas_;
 
   /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorCuda(const hiopVectorCuda&);
 
-  // FIXME_NY
-  // from hiopVector. remove these later
-//  size_type n_;
 };
 
 } // namespace hiop

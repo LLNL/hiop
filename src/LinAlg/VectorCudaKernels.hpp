@@ -238,7 +238,13 @@ int num_of_elem_absless_than_kernel(int n, double* xd, double val);
 
 /// for hiopVectorIntCuda
 void set_to_linspace_kernel(int sz, int* buf, int i0, int di);
-
+void compute_cusum_kernel(int sz, int* buf, const double* id);
+void copyToStartingAt_w_pattern_kernel(int n_src, 
+                                       int n_dest,
+                                       int start_index_in_dest,
+                                       int* nnz_cumsum, 
+                                       double *vd,
+                                       const double* dd);
 }
 }
 #endif

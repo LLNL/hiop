@@ -66,6 +66,7 @@ namespace hiop
 
 hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MPI_Comm comm)
   : hiopVector(),
+    idx_cumsum_{nullptr},
     comm_(comm)
 {
   n_ = glob_n;
@@ -107,7 +108,8 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
 }
 
 hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
- : hiopVector()
+ : hiopVector(),
+   idx_cumsum_{nullptr}
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -132,10 +134,12 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
 hiopVectorCuda::~hiopVectorCuda()
 {
   delete [] data_host_;
-
   // Delete workspaces and handles
   cudaFree(data_dev_);
   cublasDestroy(handle_cublas_);
+  data_dev_  = nullptr;
+  data_host_ = nullptr;
+  delete idx_cumsum_;
 }
 
 /// Set all vector elements to zero
@@ -313,7 +317,34 @@ void hiopVectorCuda::copyToStarting(hiopVector& vec, int start_index_in_dest) co
 
 void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const
 {
-  assert(false && "not needed / implemented");
+  if(n_local_ == 0) {
+    return;
+  }
+ 
+  hiopVectorCuda& v = dynamic_cast<hiopVectorCuda&>(vec);
+  const hiopVectorCuda& selected= dynamic_cast<const hiopVectorCuda&>(select);
+  assert(n_local_ == selected.n_local_);
+  
+  double* dd = data_dev_;
+  double* vd = v.data_dev_;
+  const double* pattern = selected.local_data_const();
+
+  if(nullptr == idx_cumsum_) {
+    idx_cumsum_ = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
+    index_type* nnz_in_row = idx_cumsum_->local_data();
+
+    hiop::cuda::compute_cusum_kernel(n_local_+1, nnz_in_row, pattern);
+  }
+
+  index_type* nnz_cumsum = idx_cumsum_->local_data();
+  index_type v_n_local = v.n_local_;
+
+  hiop::cuda::copyToStartingAt_w_pattern_kernel(n_local_,
+                                                v_n_local,
+                                                start_index_in_dest,
+                                                nnz_cumsum,
+                                                vd,
+                                                dd);
 }
 
 void hiopVectorCuda::copy_from_two_vec_w_pattern(const hiopVector& c,
@@ -353,7 +384,41 @@ void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src,
                                                 int start_idx_dest, 
                                                 int num_elems /* = -1 */) const
 {
-  assert(false&&"TODO");
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==n_ && "only for local/non-distributed vectors");
+#endif  
+
+  const hiopVectorCuda& dest = dynamic_cast<hiopVectorCuda&>(destination);
+
+  assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+
+#ifndef NDEBUG  
+  if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
+#endif
+
+  if(num_elems<0)
+  {
+    num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
+  } 
+  else
+  {
+    assert(num_elems+start_idx_in_src <= this->n_local_);
+    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    //make sure everything stays within bounds (in release)
+    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
+    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+  }
+
+  if(num_elems == 0)
+    return;
+
+  cudaError_t cuerr = cudaMemcpy(dest.data_dev_ + start_idx_dest,
+                                 data_dev_ + start_idx_in_src,
+                                 (num_elems)*sizeof(double), cudaMemcpyDeviceToDevice);
+  assert(cuerr == cudaSuccess);
+}
+
 }
 
 void hiopVectorCuda::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
@@ -438,8 +503,11 @@ void hiopVectorCuda::componentDiv( const hiopVector& vec )
 
 void hiopVectorCuda::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
 {
+  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec);
+  assert(n_local_ == v.n_local_);
+
   const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
-  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_dev_, v.data_dev_, ix.data);
+  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_dev_, v.data_dev_, ix.data_dev_);
 }
 
 void hiopVectorCuda::component_min(const double constant)

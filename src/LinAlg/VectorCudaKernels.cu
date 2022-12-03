@@ -200,8 +200,6 @@ struct thrust_istrue : public thrust::unary_function<int, bool>
     }
 };
 
-
-
 __global__ void component_min_cu(int n, double* vec, const double val)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -310,6 +308,8 @@ __global__ void component_div_w_pattern_cu(int n, double* yd, const double* xd, 
   for (int i = tid; i < n; i += num_threads) {
     if(id[i]==1.0) {
       yd[i] = yd[i] / xd[i];
+    } else {
+      yd[i] = 0.0;
     }
   }
 }
@@ -557,6 +557,41 @@ __global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
     vec[i] = i0 + i*di;	
+  }
+}
+
+__global__ void compute_cusum_cu(int n, int* vec, const double val)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    if(i==0) {
+      vec[i] = 0;
+    } else {
+      // from i=1..n
+      if(pattern[i-1]!=0.0){
+        vec[i] = 1;
+      } else {
+        vec[i] = 0;        
+      }
+    }
+  }
+}
+
+__global__ void copyToStartingAt_w_pattern_cu(int n_src, 
+                                              int n_dest,
+                                              int start_index_in_dest,
+                                              int* nnz_cumsum, 
+                                              double *vd,
+                                              const double* dd)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid;+1 i < n+1; i += num_threads) {
+    if(nnz_cumsum[i] != nnz_cumsum[i-1]){
+      index_type idx_dest = nnz_cumsum[i-1] + start_index_in_dest;
+      vd[idx_dest] = dd[i-1];
+    }
   }
 }
 
@@ -1095,7 +1130,7 @@ double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double 
   double* d_ptr = thrust::raw_pointer_cast(dv_ptr);
 
   // set values
-  hiop::cuda::fraction_to_the_boundry_kernel(n, dv_ptr, xd, dd, tau);
+  hiop::cuda::fraction_to_the_boundry_kernel(n, d_ptr, xd, dd, tau);
   int res_offset = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n) - dv_ptr;
   double alpha = *(dv_ptr + res_offset);
 
@@ -1194,6 +1229,37 @@ void set_to_linspace_kernel(int sz, int* buf, int i0, int di)
   int num_blocks = (sz+block_size-1)/block_size;
   set_to_linspace_cu<<<num_blocks,block_size>>>(sz, buf, i0, di);
 }
+
+void compute_cusum_kernel(int sz, int* buf, const double* id)
+{
+  int block_size=256;
+  int num_blocks = (sz+block_size-1)/block_size;
+  compute_cusum_cu<<<num_blocks,block_size>>>(sz, buf, id);
+
+  thrust::device_ptr<int> dev_v = thrust::device_pointer_cast(buf);
+  thrust::inclusive_scan(dev_v, dev_v + sz, dev_v); // in-place scan
+}
+
+void copyToStartingAt_w_pattern_kernel(int n_src, 
+                                       int n_dest,
+                                       int start_index_in_dest,
+                                       int* nnz_cumsum, 
+                                       double *vd,
+                                       const double* dd)
+{
+  int block_size=256;
+  int num_blocks = (sz+block_size-1)/block_size;
+  copyToStartingAt_w_pattern_cu<<<num_blocks,block_size>>>(n_src,
+                                                           n_dest,
+                                                           start_index_in_dest,
+                                                           nnz_cumsum,
+                                                           vd,
+                                                           dd);
+}
+
+
+
+
 
 
 }
