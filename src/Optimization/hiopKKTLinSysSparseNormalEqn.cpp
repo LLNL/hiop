@@ -57,22 +57,21 @@
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
-#ifdef HIOP_USE_RAJA
-#include "hiopVectorRaja.hpp"
-
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
+
+#ifdef HIOP_USE_RAJA
+#include "hiopVectorRaja.hpp"
+using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #else
 //#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
-#endif // HIOP_USE_CUDA
 #endif // HIOP_USE_RAJA
+#endif // HIOP_USE_CUDA
 
 #include "hiopMatrixSparseCSRSeq.hpp"
 
 namespace hiop
 {
-
-using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
   
 hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp)
   : hiopKKTLinSysNormalEquation(nlp),
