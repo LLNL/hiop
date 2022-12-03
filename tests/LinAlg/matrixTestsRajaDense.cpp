@@ -56,8 +56,24 @@
  */
 
 #include <hiopMatrixRajaDense.hpp>
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include "matrixTestsRajaDense.hpp"
+
+//TODO: this is a quick hack. Will need to modify this class to be aware of the instantiated
+// template parameters for vector and matrix RAJA classes. Likely a better approach would be
+// to revise the tests to try out multiple configurations of the memory backends and execution
+// policies for RAJA dense matrix.
+#if defined(HIOP_USE_CUDA)
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+#elif defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaHipImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+#elif
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+#endif
 
 namespace hiop { namespace tests {
 
@@ -262,7 +278,7 @@ int MatrixTestsRajaDense::verifyAnswer(
 /// Returns size of local data array for vector _x_
 local_ordinal_type MatrixTestsRajaDense::getLocalSize(const hiop::hiopVector* x)
 {
-  const auto* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
+  const auto* xvec = dynamic_cast<const hiopVectorRajaT*>(x);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
 
@@ -275,7 +291,7 @@ void MatrixTestsRajaDense::setLocalElement(
     const local_ordinal_type i,
     const real_type val)
 {
-  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  auto* xvec = dynamic_cast<hiopVectorRajaT*>(x);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
 
@@ -290,10 +306,10 @@ real_type MatrixTestsRajaDense::getLocalElement(
     const hiop::hiopVector* x,
     local_ordinal_type i)
 {
-  const auto* xv = dynamic_cast<const hiop::hiopVectorRajaPar*>(x);
+  const auto* xv = dynamic_cast<const hiopVectorRajaT*>(x);
   if(xv == nullptr)
     THROW_NULL_DEREF;
-  auto* xvec = const_cast<hiop::hiopVectorRajaPar*>(xv);
+  auto* xvec = const_cast<hiopVectorRajaT*>(xv);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
 
@@ -305,7 +321,7 @@ real_type MatrixTestsRajaDense::getLocalElement(
 [[nodiscard]]
 int MatrixTestsRajaDense::verifyAnswer(hiop::hiopVector* x, double answer)
 {
-  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  auto* xvec = dynamic_cast<hiopVectorRajaT*>(x);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
 
@@ -334,7 +350,7 @@ int MatrixTestsRajaDense::verifyAnswer(
     hiop::hiopVector* x,
     std::function<real_type(local_ordinal_type)> expect)
 {
-  auto* xvec = dynamic_cast<hiop::hiopVectorRajaPar*>(x);
+  auto* xvec = dynamic_cast<hiopVectorRajaT*>(x);
   if(xvec == nullptr)
     THROW_NULL_DEREF;
 

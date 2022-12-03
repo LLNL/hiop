@@ -67,7 +67,7 @@
 #include "LinAlg/matrixTestsSymSparseTriplet.hpp"
 
 #ifdef HIOP_USE_RAJA
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaSymSparseTriplet.hpp"
 #endif
@@ -234,8 +234,8 @@ int main(int argc, char** argv)
     local_ordinal_type entries_per_row = 5;
     local_ordinal_type nnz = M_local * entries_per_row;
 
-    hiop::hiopVectorRajaPar vec_m(M_global, mem_space);
-    hiop::hiopVectorRajaPar vec_m_2(M_global, mem_space);
+    hiop::hiopVector* vec_m = hiop::LinearAlgebraFactory::create_vector(mem_space, M_global);
+    hiop::hiopVector* vec_m_2 = hiop::LinearAlgebraFactory::create_vector(mem_space, M_global);
     hiop::hiopMatrixRajaDense mxm_dense(2 * M_global, 2 * M_global, mem_space);
 
     hiop::hiopMatrixSparse* m_sym = 
@@ -246,15 +246,17 @@ int main(int argc, char** argv)
     hiop::hiopMatrixSparse* m2_sym = 
       hiop::LinearAlgebraFactory::create_matrix_sym_sparse(mem_space, 2*M_global, nnz_m2);
 
-    fail += test.matrixTimesVec(*m_sym, vec_m, vec_m_2);
+    fail += test.matrixTimesVec(*m_sym, *vec_m, *vec_m_2);
     fail += test.matrixAddUpperTriangleToSymDenseMatrixUpperTriangle(mxm_dense, *m_sym);
-    fail += test.matrixStartingAtAddSubDiagonalToStartingAt(vec_m, *m_sym);
+    fail += test.matrixStartingAtAddSubDiagonalToStartingAt(*vec_m, *m_sym);
 
-    fail += test.matrix_set_Hess_FR(mxm_dense, *m2_sym, *m_sym, vec_m);
+    fail += test.matrix_set_Hess_FR(mxm_dense, *m2_sym, *m_sym, *vec_m);
 
     // Destroy testing objects
     delete m_sym;
     delete m2_sym;
+    delete vec_m_2;
+    delete vec_m;
   }
 #endif
 

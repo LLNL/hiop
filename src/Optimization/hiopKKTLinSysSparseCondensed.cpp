@@ -58,7 +58,7 @@
 #endif
 
 #ifdef HIOP_USE_RAJA
-#include "hiopVectorRajaPar.hpp"
+#include "hiopVectorRaja.hpp"
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
@@ -66,6 +66,8 @@
 #else
 //#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
 #endif // HIOP_USE_CUDA
+
+
 #endif // HIOP_USE_RAJA
 
 #include "hiopMatrixSparseTripletStorage.hpp"
@@ -75,6 +77,8 @@
 namespace hiop
 {
 
+using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+  
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
     JacD_(nullptr),
@@ -172,14 +176,14 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopVector& delta_wx_i
   {
     if(mem_space_internal == "DEVICE") {
 #ifdef HIOP_USE_RAJA
-      auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_copy_);
+      auto Hd_raja = dynamic_cast<hiopVectorCuda*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
       assert(Hd_raja && "incorrect type for vector class");
       assert(Hd_par && "incorrect type for vector class");      
       Hd_raja->copy_from_host_vec(*Hd_par);
 
-      auto Dx_delta_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
-      auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
+      auto Dx_delta_raja = dynamic_cast<hiopVectorCuda*>(Dx_plus_deltawx_);
+      auto deltawx_raja = dynamic_cast<hiopVectorCuda*>(deltawx_);
       auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
       const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
       assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");

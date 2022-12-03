@@ -58,7 +58,7 @@
 #endif
 
 #ifdef HIOP_USE_RAJA
-#include "hiopVectorRajaPar.hpp"
+#include "hiopVectorRaja.hpp"
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
@@ -71,7 +71,9 @@
 
 namespace hiop
 {
- 
+
+using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+  
 hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp)
   : hiopKKTLinSysNormalEquation(nlp),
     nlpSp_{nullptr},
@@ -220,11 +222,11 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   {
     if(mem_space_internal == "DEVICE") {
 #ifdef HIOP_USE_RAJA
-      auto Hess_diag_raja = dynamic_cast<hiopVectorRajaPar*>(Hess_diag_copy_);
+      auto Hess_diag_raja = dynamic_cast<hiopVectorCuda*>(Hess_diag_copy_);
       auto Hess_diag_par = dynamic_cast<hiopVectorPar*>(Hess_diag_);
-      auto Hx_raja = dynamic_cast<hiopVectorRajaPar*>(Hx_copy_);
+      auto Hx_raja = dynamic_cast<hiopVectorCuda*>(Hx_copy_);
       auto Hx_par =  dynamic_cast<hiopVectorPar*>(Hx_);
-      auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_copy_);
+      auto Hd_raja = dynamic_cast<hiopVectorCuda*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
       assert(Hx_raja && "incorrect type for vector class");
       assert(Hx_par && "incorrect type for vector class");      
@@ -232,10 +234,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
       Hx_raja->copy_from_host_vec(*Hx_par);
       Hd_raja->copy_from_host_vec(*Hd_par);
 
-      auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
-      auto deltawd_raja = dynamic_cast<hiopVectorRajaPar*>(deltawd_);
-      auto deltacc_raja = dynamic_cast<hiopVectorRajaPar*>(deltacc_);
-      auto deltacd_raja = dynamic_cast<hiopVectorRajaPar*>(deltacd_);
+      auto deltawx_raja = dynamic_cast<hiopVectorCuda*>(deltawx_);
+      auto deltawd_raja = dynamic_cast<hiopVectorCuda*>(deltawd_);
+      auto deltacc_raja = dynamic_cast<hiopVectorCuda*>(deltacc_);
+      auto deltacd_raja = dynamic_cast<hiopVectorCuda*>(deltacd_);
       const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
       const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(delta_wd_in);
       const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(delta_cc_in);

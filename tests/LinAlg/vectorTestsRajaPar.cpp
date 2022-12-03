@@ -59,15 +59,32 @@
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include "vectorTestsRajaPar.hpp"
+
+//TODO: this is a quick hack. Will need to modify this class to be aware of the instantiated
+// vector template. Likely a better approach would be to revise the `runTests` in testVector.cpp
+// to test multiple configurations of the memory backend and execution policies for RAJA vector.
+#if defined(HIOP_USE_CUDA)
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+#elif defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaHipImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+#elif
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+#endif
+
 
 namespace hiop { namespace tests {
 
+   
 /// Returns const pointer to local vector data
 const real_type* VectorTestsRajaPar::getLocalDataConst(hiop::hiopVector* x_in)
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(x_in))
+  if(auto* x = dynamic_cast<hiopVectorRajaT*>(x_in))
   {
     x->copyFromDev();
     return x->local_data_host_const();
@@ -82,7 +99,7 @@ const real_type* VectorTestsRajaPar::getLocalDataConst(hiop::hiopVector* x_in)
 /// Method to set vector _x_ element _i_ to _value_.
 void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorRajaPar*>(x_in))
+  if(auto* x = dynamic_cast<hiopVectorRajaT*>(x_in))
   {
     x->copyFromDev();
     real_type *xdat = x->local_data_host();
@@ -99,7 +116,7 @@ void VectorTestsRajaPar::setLocalElement(hiop::hiopVector* x_in, local_ordinal_t
 /// Get communicator
 MPI_Comm VectorTestsRajaPar::getMPIComm(hiop::hiopVector* x)
 {
-  if(auto* xvec = dynamic_cast<const hiop::hiopVectorRajaPar*>(x))
+  if(auto* xvec = dynamic_cast<const hiopVectorRajaT*>(x))
   {
     return xvec->get_mpi_comm();
   }

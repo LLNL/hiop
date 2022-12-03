@@ -65,7 +65,6 @@
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <hiopVectorIntRaja.hpp>
-#include <hiopVectorRajaPar.hpp>
 #include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>

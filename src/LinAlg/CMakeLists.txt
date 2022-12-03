@@ -33,7 +33,6 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorIntRaja.hpp
   hiopVectorIntSeq.hpp
   hiopVectorPar.hpp
-  hiopVectorRajaPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
   )
@@ -56,7 +55,6 @@ set(hiopLinAlg_SRC
 )
 
 set(hiopLinAlg_RAJA_SRC
-  hiopVectorRajaPar.cpp
   hiopVectorIntRaja.cpp
   hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp

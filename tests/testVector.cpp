@@ -68,7 +68,7 @@
 #ifdef HIOP_USE_RAJA
 #include "LinAlg/vectorTestsRajaPar.hpp"
 #include "LinAlg/vectorTestsIntRaja.hpp"
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopVectorIntRaja.hpp>
 #endif
 
@@ -204,11 +204,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
 #endif
 
   T test;
-
   test.set_mem_space(mem_space);
-  //hiopOptions options;
-  //options.SetStringValue("mem_space", mem_space);
-  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;

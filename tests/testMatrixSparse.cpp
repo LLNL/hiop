@@ -68,7 +68,7 @@
 
 #ifdef HIOP_USE_RAJA
 #include <hiopVectorIntRaja.hpp>
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include "LinAlg/matrixTestsRajaSparseTriplet.hpp"
 #endif
@@ -233,9 +233,10 @@ int main(int argc, char** argv)
 
     test.initializeMatrix(mxn_sparse, entries_per_row);
   
-    hiop::hiopVectorRajaPar vec_m(M_global, mem_space);
-    hiop::hiopVectorRajaPar vec_m_2(M_global, mem_space);
-    hiop::hiopVectorRajaPar vec_n(N_global, mem_space);
+    //hiop::hiopVectorRajaPar vec_m(M_global, mem_space);
+    hiop::hiopVector* vec_m = hiop::LinearAlgebraFactory::create_vector(mem_space, M_global);
+    hiop::hiopVector* vec_m_2 = hiop::LinearAlgebraFactory::create_vector(mem_space, M_global);
+    hiop::hiopVector* vec_n = hiop::LinearAlgebraFactory::create_vector(mem_space, N_global);
 
     /// @see LinAlg/matrixTestsSparseTriplet.hpp for reasons why some tests are implemented/not implemented
     fail += test.matrixNumRows(*mxn_sparse, M_global);
@@ -243,11 +244,11 @@ int main(int argc, char** argv)
     fail += test.matrixSetToZero(*mxn_sparse);
     fail += test.matrixSetToConstant(*mxn_sparse);
     fail += test.matrixMaxAbsValue(*mxn_sparse);
-    fail += test.matrix_row_max_abs_value(*mxn_sparse, vec_m);
-    fail += test.matrix_scale_row(*mxn_sparse, vec_m);
+    fail += test.matrix_row_max_abs_value(*mxn_sparse, *vec_m);
+    fail += test.matrix_scale_row(*mxn_sparse, *vec_m);
     fail += test.matrixIsFinite(*mxn_sparse);
-    fail += test.matrixTimesVec(*mxn_sparse, vec_m, vec_n);
-    fail += test.matrixTransTimesVec(*mxn_sparse, vec_m, vec_n);
+    fail += test.matrixTimesVec(*mxn_sparse, *vec_m, *vec_n);
+    fail += test.matrixTransTimesVec(*mxn_sparse, *vec_m, *vec_n);
     
     // Need a dense matrix to store the output of the following tests
     global_ordinal_type W_delta = M_global * 10;
@@ -256,7 +257,7 @@ int main(int argc, char** argv)
 
     // local_ordinal_type test_offset = 10;
     local_ordinal_type test_offset = 4;
-    fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, vec_n, W_dense, test_offset);
+    fail += test.matrixAddMDinvMtransToDiagBlockOfSymDeMatUTri(*mxn_sparse, *vec_n, W_dense, test_offset);
 
     // testing adding sparse matrix to the upper triangular area of a symmetric dense matrix    
     //fail += test.addToSymDenseMatrixUpperTriangle(W_dense, *mxn_sparse);
@@ -278,7 +279,7 @@ int main(int argc, char** argv)
     local_ordinal_type j_offset = M2 + 1;
 
     fail += test.matrixTimesMatTrans(*mxn_sparse, *m2xn_sparse, mxm2_dense);
-    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, vec_n, W_dense, i_offset, j_offset);
+    fail += test.matrixAddMDinvNtransToSymDeMatUTri(*mxn_sparse, *m2xn_sparse, *vec_n, W_dense, i_offset, j_offset);
 
     // copy sparse matrix to dense matrix
     hiop::hiopMatrixRajaDense mxn_dense(M_global, N_global, mem_space);
@@ -292,7 +293,7 @@ int main(int argc, char** argv)
     fail += test.matrix_set_Jac_FR(m3xn3_dense, *m3xn3_sparse, *mxn_sparse, *m2xn_sparse);
 
     // functions used to build large sparse matrix from small pieces
-    fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, vec_m);
+    fail += test.matrix_copy_subdiagonal_from(m3xn3_dense, *m3xn3_sparse, *vec_m);
     fail += test.matrix_set_subdiagonal_to(m3xn3_dense, *m3xn3_sparse);
   
     hiop::hiopVectorIntRaja select(M_local, mem_space);
@@ -319,7 +320,7 @@ int main(int argc, char** argv)
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
     fail += test.matrix_copy_submatrix_from_trans(m4xn4_dense, *m4xn4_sparse, *mxn_sparse, M_global, 2*(M_global), nnz4-nnz);
 
-    hiop::hiopVectorRajaPar v_patern(N_global, mem_space);
+    hiop::hiopVector* v_pattern = hiop::LinearAlgebraFactory::create_vector(mem_space, N_global);
     local_ordinal_type nnz_to_replace = M_global;
     assert(N_global>nnz_to_replace);
 
@@ -329,12 +330,12 @@ int main(int argc, char** argv)
     
     // reset the sparsity, since previous function may change the sparsity
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
-    fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, vec_n, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
+    fail += test.matrix_copy_diag_matrix_to_subblock_w_pattern(m4xn4_dense, *m4xn4_sparse, *vec_n, *v_pattern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
     // reset the sparsity, since previous function may change the sparsity
     test.initializeMatrix(m4xn4_sparse, entries_per_row);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_colpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
-    fail += test.matrix_set_submatrix_to_constant_diag_w_rowpattern(m4xn4_dense, *m4xn4_sparse, v_patern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
+    fail += test.matrix_set_submatrix_to_constant_diag_w_colpattern(m4xn4_dense, *m4xn4_sparse, *v_pattern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
+    fail += test.matrix_set_submatrix_to_constant_diag_w_rowpattern(m4xn4_dense, *m4xn4_sparse, *v_pattern, M_global, 2*M_global, nnz4-2*nnz, nnz_to_replace);
 
     // Remove testing objects
     delete mxn_sparse;
@@ -343,6 +344,10 @@ int main(int argc, char** argv)
     delete m3xn3_sparse;
     delete m4xn4_sparse;
 
+    delete vec_m;
+    delete vec_m_2;
+    delete vec_n;
+    delete v_pattern;
   }
 #endif
 

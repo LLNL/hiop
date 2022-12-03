@@ -57,7 +57,7 @@
  *
  */
 #include "hiopMatrixRajaSparseTriplet.hpp"
-#include "hiopVectorRajaPar.hpp"
+#include "hiopVectorRaja.hpp"
 
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
@@ -66,20 +66,25 @@
 
 #include "hiop_blasdefs.hpp"
 
-//TODO: introduce hip and cuda .cpp
+//TODO:
+// - introduce hip and cuda .cpp
+// - Use vector deduced from this class' template parameters
 #ifdef HIOP_USE_CUDA
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #endif
 
 #ifdef HIOP_USE_HIP
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #endif
 
 #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using ExecPolicyRajaType = hiop::ExecPolicyRajaOmp;
+using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
 #include <algorithm> //for std::min
@@ -209,8 +214,8 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
   assert(x.get_size() == ncols_);
   assert(y.get_size() == nrows_);
 
-  auto& yy = dynamic_cast<hiopVectorRajaPar&>(y);
-  const auto& xx = dynamic_cast<const hiopVectorRajaPar&>(x);
+  auto& yy = dynamic_cast<hiopVectorRajaT&>(y);
+  const auto& xx = dynamic_cast<const hiopVectorRajaT&>(x);
 
   double* y_data = yy.local_data();
   const double* x_data = xx.local_data_const();
@@ -275,8 +280,8 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
   assert(x.get_size() == nrows_);
   assert(y.get_size() == ncols_);
 
-  hiopVectorRajaPar& yy = dynamic_cast<hiopVectorRajaPar&>(y);
-  const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(x);
+  hiopVectorRajaT& yy = dynamic_cast<hiopVectorRajaT&>(y);
+  const hiopVectorRajaT& xx = dynamic_cast<const hiopVectorRajaT&>(x);
   
   double* y_data = yy.local_data();
   const double* x_data = xx.local_data_const();
@@ -441,7 +446,7 @@ void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on
                                                       const index_type& start_on_nnz_idx,
                                                       double scal)
 {
-  const hiopVectorRajaPar& vd = dynamic_cast<const hiopVectorRajaPar&>(vec_d);
+  const hiopVectorRajaT& vd = dynamic_cast<const hiopVectorRajaT&>(vec_d);
   assert(num_elems<=vd.get_size());
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
   const double* v = vd.local_data_const();
@@ -567,7 +572,7 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
     return;
   } 
  
-  auto& vec = dynamic_cast<hiopVectorRajaPar&>(ret_vec);
+  auto& vec = dynamic_cast<hiopVectorRajaT&>(ret_vec);
   double* vd = vec.local_data();
 
   if(row_starts_==NULL) {
@@ -595,7 +600,7 @@ void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv
 {
   assert(vec_scal.get_size() == nrows_);
   
-  auto& vec = dynamic_cast<hiopVectorRajaPar&>(vec_scal);
+  auto& vec = dynamic_cast<hiopVectorRajaT&>(vec_scal);
   double* vd = vec.local_data();
 
   auto iRow = this->iRow_;
@@ -1554,7 +1559,7 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
   assert(nnz_to_copy + dest_row_st <= this->m() );
   assert(dest_nnz_st + nnz_to_copy <= this->numberOfNonzeros());
 
-  const hiopVectorRajaPar& selected= dynamic_cast<const hiopVectorRajaPar&>(ix);
+  const hiopVectorRajaT& selected= dynamic_cast<const hiopVectorRajaT&>(ix);
 
   size_type n = ix.get_local_size();
 
@@ -1640,7 +1645,7 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
   assert(nnz_to_copy + dest_col_st <= this->n() );
   assert(dest_nnz_st + nnz_to_copy <= this->numberOfNonzeros());
 
-  const hiopVectorRajaPar& selected= dynamic_cast<const hiopVectorRajaPar&>(ix);
+  const hiopVectorRajaT& selected= dynamic_cast<const hiopVectorRajaT&>(ix);
 
   size_type n = ix.get_local_size();
 
@@ -1764,8 +1769,8 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   assert(nnz_to_copy + dest_col_st <= this->n());
   assert(pattern.get_local_size() == dx.get_local_size());
 
-  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRajaPar&>(pattern);
-  const hiopVectorRajaPar& xx = dynamic_cast<const hiopVectorRajaPar&>(dx);
+  const hiopVectorRajaT& selected = dynamic_cast<const hiopVectorRajaT&>(pattern);
+  const hiopVectorRajaT& xx = dynamic_cast<const hiopVectorRajaT&>(dx);
   const double* x = xx.local_data_const();
 
   size_type n = pattern.get_local_size();
@@ -1873,8 +1878,8 @@ void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,
   assert(x.get_size() == ncols_);
   assert(y.get_size() == nrows_);
 
-  auto& yy = dynamic_cast<hiopVectorRajaPar&>(y);
-  const auto& xx = dynamic_cast<const hiopVectorRajaPar&>(x);
+  auto& yy = dynamic_cast<hiopVectorRajaT&>(y);
+  const auto& xx = dynamic_cast<const hiopVectorRajaT&>(x);
 
   double* y_data = yy.local_data();
   const double* x_data = xx.local_data_const();
@@ -1998,7 +2003,7 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
                                      int vec_start,
                                      int num_elems/*=-1*/) const
 {
-  auto& vd = dynamic_cast<hiopVectorRajaPar&>(vec_dest);
+  auto& vd = dynamic_cast<hiopVectorRajaT&>(vec_dest);
   if(num_elems < 0)
     num_elems = vd.get_size();
   assert(num_elems<=vd.get_size());
@@ -2193,7 +2198,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     double* M1values = M1.M();
     const double* M2values = M2.M();
   
-    const auto& diag_x = dynamic_cast<const hiopVectorRajaPar&>(add_diag);  
+    const auto& diag_x = dynamic_cast<const hiopVectorRajaT&>(add_diag);  
     const double* diag_data = add_diag.local_data_const();
   
     if(m2 > 0) {

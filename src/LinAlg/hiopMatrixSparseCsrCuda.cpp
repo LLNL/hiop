@@ -57,9 +57,9 @@
 #ifdef HIOP_USE_CUDA
 
 #include "hiopVectorPar.hpp"
-#include "hiopVectorRajaPar.hpp"
+#include "hiopVectorRaja.hpp"
+
 #include "MatrixSparseCsrCudaKernels.hpp"
-#include "MemBackendCudaImpl.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -78,6 +78,8 @@
 namespace hiop
 {
 
+using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+  
 hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols, size_type nnz)
   : hiopMatrixSparseCSR(rows, cols, nnz),
     irowptr_(nullptr),
@@ -299,9 +301,9 @@ void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector&
   assert(nrows_ == D.get_size());
   assert(nrows_ == ncols_ && "Matrix must be square");
 #ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be RAJA-CUDA");
 #else
-  assert( "input vector must be Raja (and data on the device)");
+  assert("input vector must be RAJA-CUDA, but HiOp was not built with RAJA");
 #endif
   hiop::cuda::csr_add_diag_kernel(nrows_,
                                   nnz_,
@@ -1051,9 +1053,9 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
   assert(D.get_size()==ncols_ && D.get_size()==nrows_ && D.get_size()==nnz_);
   assert(irowptr_ && jcolind_ && values_);
 #ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be RAJA-CUDA");
 #else
-  assert( "input vector must be Raja (and data on the device)");
+  assert("input vector must be RAJA-CUDA, but HiOp was not built with RAJA");
 #endif
   cudaError_t ret = cudaMemcpy(values_,
                                D.local_data_const(),
@@ -1073,11 +1075,13 @@ void hiopMatrixSparseCSRCUDA::scale_cols(const hiopVector& D)
 void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
 {
   assert(nrows_ == D.get_size());
+    
 #ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be RAJA-CUDA");
 #else
-  assert( "input vector must be Raja (and data on the device)");
+  assert("input vector must be RAJA-CUDA, but HiOp was not built with RAJA");
 #endif
+
   hiop::cuda::csr_scalerows_kernel(nrows_,
                                    ncols_,
                                    nnz_,
@@ -1271,10 +1275,11 @@ void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 {
 #ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&diag_out) && "input vector must be Raja (and data on the device)");
+  assert(dynamic_cast<const hiopVectorCuda*>(&diag_out) && "input vector must be RAJA-CUDA");
 #else
-  assert( "input vector must be Raja (and data on the device)");
+  assert("input vector must be RAJA-CUDA, but HiOp was not built with RAJA");
 #endif
+
   hiop::cuda::csr_get_diag_kernel(nrows_,
                                   nnz_,
                                   irowptr_,
