@@ -220,7 +220,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   //temporary code, see above note
   {
     if(mem_space_internal == "DEVICE") {
-#ifdef HIOP_USE_RAJA
+#ifdef HIOP_USE_CUDA
       auto Hess_diag_raja = dynamic_cast<hiopVectorCuda*>(Hess_diag_copy_);
       auto Hess_diag_par = dynamic_cast<hiopVectorPar*>(Hess_diag_);
       auto Hx_raja = dynamic_cast<hiopVectorCuda*>(Hx_copy_);
