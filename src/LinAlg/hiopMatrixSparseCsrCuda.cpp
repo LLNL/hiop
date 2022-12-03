@@ -60,6 +60,7 @@
 #include "hiopVectorRaja.hpp"
 
 #include "MatrixSparseCsrCudaKernels.hpp"
+#include "MemBackendCudaImpl.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -933,7 +934,7 @@ void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& 
                                          CUSPARSE_INDEX_BASE_ZERO);
   assert(CUSPARSE_STATUS_SUCCESS == st);
 
-  cudaFree(d_rowind);
+  exec_space_.dealloc_array(d_rowind);
   
   //j indexes can be just transfered
   cudaMemcpy(jcolind_, M.j_col(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);

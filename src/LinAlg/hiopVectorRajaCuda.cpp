@@ -1,6 +1,8 @@
 #include "hiopVectorRaja.hpp"
 
+#include "MemBackendCudaImpl.hpp"
 #include "MemBackendUmpireImpl.hpp"
+#include "MemBackendCppImpl.hpp"
 #include "ExecPoliciesRajaCudaImpl.hpp"
 
 
@@ -28,6 +30,6 @@ template<> void hiopVectorRaja<MemBackendCuda,ExecPolicyRajaCuda>::set_to_random
 //
 //Explicit instantiations: force compilation 
 //
-template class hiopVectorRaja<MemBackendUmpire,ExecPolicyRajaCuda>;
-template class hiopVectorRaja<MemBackendCuda,ExecPolicyRajaCuda>;
+template class hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaCuda>;
+template class hiopVectorRaja<MemBackendCuda, ExecPolicyRajaCuda>;
 }

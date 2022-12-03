@@ -76,14 +76,12 @@ struct AllocImpl<MemBackendUmpire, T>
 {
   inline static T* alloc(MemBackendUmpire& mb, const size_t& n)
   {
-    std::cout << "alloc_array umpire    loc " << mb.mem_space() << "\n";
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator devalloc  = resmgr.getAllocator(mb.mem_space());
     return static_cast<T*>(devalloc.allocate(n*sizeof(T)));
   }
   inline static void dealloc(MemBackendUmpire& mb, T* p)
   {
-    std::cout << "dealloc umpire    loc " << mb.mem_space() << "\n";
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator devalloc  = resmgr.getAllocator(mb.mem_space());
     devalloc.deallocate(p);

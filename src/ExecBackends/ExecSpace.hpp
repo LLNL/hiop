@@ -400,10 +400,12 @@ struct AllocImpl
 {
   inline static T* alloc(MEMBACKEND& mb, const size_t& n)
   {
+    assert(false && "Specialization for template parameters needs to be provided.");
     return nullptr;
   }
   inline static void dealloc(MEMBACKEND& mb, T* p)
   {
+    assert(false && "Specialization for template parameters needs to be provided."); 
   }
 };
 
