@@ -560,7 +560,7 @@ __global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
   }
 }
 
-__global__ void compute_cusum_cu(int n, int* vec, const double val)
+__global__ void compute_cusum_cu(int n, int* vec, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
@@ -569,7 +569,7 @@ __global__ void compute_cusum_cu(int n, int* vec, const double val)
       vec[i] = 0;
     } else {
       // from i=1..n
-      if(pattern[i-1]!=0.0){
+      if(id[i-1]!=0.0){
         vec[i] = 1;
       } else {
         vec[i] = 0;        
@@ -587,9 +587,9 @@ __global__ void copyToStartingAt_w_pattern_cu(int n_src,
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-  for (int i = tid;+1 i < n+1; i += num_threads) {
+  for (int i = tid+1; i < n_src+1; i += num_threads) {
     if(nnz_cumsum[i] != nnz_cumsum[i-1]){
-      index_type idx_dest = nnz_cumsum[i-1] + start_index_in_dest;
+      int idx_dest = nnz_cumsum[i-1] + start_index_in_dest;
       vd[idx_dest] = dd[i-1];
     }
   }
@@ -1248,7 +1248,7 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                        const double* dd)
 {
   int block_size=256;
-  int num_blocks = (sz+block_size-1)/block_size;
+  int num_blocks = (n_src+block_size-1)/block_size;
   copyToStartingAt_w_pattern_cu<<<num_blocks,block_size>>>(n_src,
                                                            n_dest,
                                                            start_index_in_dest,

@@ -51,6 +51,7 @@
  * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
  *
  */
+#include "hiopLinAlgFactory.hpp"
 #include "hiopVectorCuda.hpp"
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
@@ -315,7 +316,7 @@ void hiopVectorCuda::copyToStarting(hiopVector& vec, int start_index_in_dest) co
   assert(cuerr == cudaSuccess);
 }
 
-void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const
+void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
 {
   if(n_local_ == 0) {
     return;
@@ -330,7 +331,7 @@ void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& v, int start_index_i
   const double* pattern = selected.local_data_const();
 
   if(nullptr == idx_cumsum_) {
-    idx_cumsum_ = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
+    idx_cumsum_ = LinearAlgebraFactory::create_vector_int("CUDA", n_local_+1);
     index_type* nnz_in_row = idx_cumsum_->local_data();
 
     hiop::cuda::compute_cusum_kernel(n_local_+1, nnz_in_row, pattern);
@@ -417,8 +418,6 @@ void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src,
                                  data_dev_ + start_idx_in_src,
                                  (num_elems)*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
-}
-
 }
 
 void hiopVectorCuda::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
