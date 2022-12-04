@@ -73,19 +73,16 @@
 // more defs here
 
 
-#ifdef HIOP_USE_CUDA 
+#if defined(HIOP_USE_CUDA)
 #include "ExecPoliciesRajaCudaImpl.hpp"
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_reduce;
-#endif
-
-#ifdef HIOP_USE_HIP
+#elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
-#endif
-
-#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#else
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_reduce;
