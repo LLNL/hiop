@@ -48,7 +48,7 @@
 /**
  * @file hiopVectorIntCuda.cpp
  *
- * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #include "hiopVectorIntCuda.hpp"

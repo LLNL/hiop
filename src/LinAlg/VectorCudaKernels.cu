@@ -48,7 +48,7 @@
 /**
  * @file VectorCudaKernels.cu
  *
- * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #include "VectorCudaKernels.hpp"
@@ -82,7 +82,7 @@ struct thrust_abs_diff: public thrust::binary_function<T,T,T>
     }
 };
 
-/// @brief  operators for thurst
+/// @brief  operators for thrust
 template <typename T>
 struct thrust_abs: public thrust::unary_function<T,T>
 {

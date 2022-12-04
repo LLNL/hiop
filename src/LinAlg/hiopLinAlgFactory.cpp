@@ -136,7 +136,7 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
     #else
       assert(false && "requested memory space not available because Hiop was not"
                       "built with CUDA support");
-      return new hiopVectorPar(glob_n, col_part, comm);
+      return new hiopVectorIntSeq(size);
     #endif
   } else {
 #ifdef HIOP_USE_RAJA

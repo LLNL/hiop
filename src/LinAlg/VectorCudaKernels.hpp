@@ -48,7 +48,7 @@
 /**
  * @file VectorCudaKernels.hpp
  *
- * @author Nai-Yuan Chiabg <chiang7@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 #ifndef HIOP_VECTOR_CUDA_KER
