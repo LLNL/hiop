@@ -673,6 +673,14 @@ double hiopVectorCuda::dotProductWith( const hiopVector& v ) const
   double retval; 
   cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, vx.data_dev_, one, data_dev_, one, &retval);
   assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
+
+#ifdef HIOP_USE_MPI
+  double dotprodG;
+  int ierr = MPI_Allreduce(&retval, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
+  retval = dotprodG;
+#endif
+
   return retval;
 }
 
