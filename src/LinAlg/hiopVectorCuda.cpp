@@ -953,7 +953,15 @@ bool hiopVectorCuda::matchesPattern(const hiopVector& pattern)
   double* xd = data_dev_;
   double* id = p.data_dev_;
 
-  return hiop::cuda::match_pattern_kernel(n_local_, xd, id);
+  int bret = hiop::cuda::match_pattern_kernel(n_local_, xd, id);
+
+#ifdef HIOP_USE_MPI
+  int mismatch_glob = bret;
+  int ierr = MPI_Allreduce(&bret, &mismatch_glob, 1, MPI_INT, MPI_MIN, comm_);
+  assert(MPI_SUCCESS==ierr);
+  return (mismatch_glob != 0);
+#endif
+  return bret;
 }
 
 /** @brief Adjusts duals. */
