@@ -69,17 +69,22 @@
 namespace hiop {
 
 //
-// Allocators
+// Memory allocator and deallocator
 //
-template<typename T>
-struct AllocImpl<MemBackendUmpire, T>
+template<typename T, typename I>
+struct AllocImpl<MemBackendUmpire, T, I>
 {
-  inline static T* alloc(MemBackendUmpire& mb, const size_t& n)
+  inline static T* alloc(MemBackendUmpire& mb, const I& n)
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator devalloc  = resmgr.getAllocator(mb.mem_space());
     return static_cast<T*>(devalloc.allocate(n*sizeof(T)));
   }
+};
+  
+template<typename T>
+struct DeAllocImpl<MemBackendUmpire, T>
+{
   inline static void dealloc(MemBackendUmpire& mb, T* p)
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
@@ -92,14 +97,14 @@ struct AllocImpl<MemBackendUmpire, T>
 // Transfers
 //////////////////////////////////////////////////////////////////////////////////////////
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     auto& rm = umpire::ResourceManager::getInstance();
 
@@ -114,14 +119,14 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC,
 ////////////////////////////////////////////////////////////////////////////////////////
 // Transfers to/from Host C++ memory
 ////////////////////////////////////////////////////////////////////////////////////////
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendUmpire, MemBackendUmpire>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     if(hwb_src.mem_backend().is_host()) {
       std::memcpy(p_dest, p_src, n*sizeof(T));
@@ -133,14 +138,14 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     if(hwb_dest.mem_backend().is_host()) {
       std::memcpy(p_dest, p_src, n*sizeof(T));
@@ -156,14 +161,14 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
 // Transfers to/from CUDA memory
 ////////////////////////////////////////////////////////////////////////////////////////
 #ifdef HIOP_USE_CUDA
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     if(hwb_src.mem_backend().is_device()) {
       return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
@@ -178,14 +183,14 @@ struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     if(hwb_dest.mem_backend().is_device()) {
       return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);

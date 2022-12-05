@@ -69,15 +69,20 @@ namespace hiop
 {
 
 //
-// Allocator
+// Memory allocators and deallocators
 //
-template<typename T>
-struct AllocImpl<MemBackendCpp, T>
+template<typename T, typename I>
+struct AllocImpl<MemBackendCpp, T, I>
 {
-  inline static T* alloc(MemBackendCpp& mb, const size_t& n)
+  inline static T* alloc(MemBackendCpp& mb, const I& n)
   {
     return new T[n];
   }
+};
+
+template<typename T>
+struct DeAllocImpl<MemBackendCpp, T>
+{
   inline static void dealloc(MemBackendCpp& mb, T* p)
   {
     delete[] p;
@@ -87,14 +92,14 @@ struct AllocImpl<MemBackendCpp, T>
 //
 // Transfers
 //
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     std::memcpy(p_dest, p_src, n*sizeof(T));
     return true;

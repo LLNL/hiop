@@ -69,18 +69,23 @@
 namespace hiop
 {
 //
-// Allocator
+// Memory allocator and deallocator
 //
-template<typename T>
-struct AllocImpl<MemBackendHip, T>
+template<typename T, typename I>
+struct AllocImpl<MemBackendHip, T, I>
 {
-  inline static T* alloc(MemBackendHip& mb, const size_t& n)
+  inline static T* alloc(MemBackendHip& mb, const I& n)
   {
     T* p = nullptr;
     auto err = hipMalloc((void**)&p, n*sizeof(T));
     assert(hipSuccess==err);
     return p;
   }
+};
+
+template<typename T>
+struct DeAllocImpl<MemBackendHip, T>
+{
   inline static void dealloc(MemBackendHip& mb, T* p)
   {
     auto err = hipFree((void*)p);

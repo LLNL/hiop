@@ -70,18 +70,23 @@
 namespace hiop
 {
 //
-// Allocator
+// Memory management
 //
-template<typename T>
-struct AllocImpl<MemBackendCuda, T>
+template<typename T, typename I>
+struct AllocImpl<MemBackendCuda, T, I>
 {
-  inline static T* alloc(MemBackendCuda& mb, const size_t& n)
+  inline static T* alloc(MemBackendCuda& mb, const I& n)
   {
     T* p;
     auto err = cudaMalloc((void**)&p, n*sizeof(T));
     assert(cudaSuccess==err);
     return p;
   }
+};
+
+template<typename T>
+struct DeAllocImpl<MemBackendCuda, T>
+{
   inline static void dealloc(MemBackendCuda& mb, T* p)
   {
     auto err = cudaFree((void*)p);
@@ -92,40 +97,40 @@ struct AllocImpl<MemBackendCuda, T>
 //
 // Transfers
 //
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCuda, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
   }

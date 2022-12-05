@@ -314,8 +314,19 @@ struct ExecRajaPoliciesBackend
 //
 // Forward declarations of implementation internals of class ExecSpace
 //
-template<class MEMBACKEND, typename T> struct AllocImpl;
-template<class MEMBACKENDDEST, class EXEPOLDEST, class MEMBACKENDSRC, class EXEPOLSRC, typename T>
+template<class MEMBACKEND, typename T, typename I>
+struct AllocImpl;
+
+template<class MEMBACKEND, typename T, typename I=void>
+struct DeAllocImpl;
+
+
+template<class MEMBACKENDDEST,
+         class EXEPOLDEST,
+         class MEMBACKENDSRC,
+         class EXEPOLSRC,
+         typename T,
+         typename I>
 struct TransferImpl;
 
 /** 
@@ -344,16 +355,16 @@ public:
     return ep_;
   }
   
-  template<typename T>
-  inline T* alloc_array(const size_t& n)
+  template<typename T, typename I>
+  inline T* alloc_array(const I& n)
   {
-    return AllocImpl<MEMBACKEND,T>::alloc(mb_, n);
+    return AllocImpl<MEMBACKEND, T, I>::alloc(mb_, n);
   }
 
   template<typename T>
   inline void dealloc_array(T* p)
   {
-    AllocImpl<MEMBACKEND,T>::dealloc(mb_, p);
+    DeAllocImpl<MEMBACKEND, T>::dealloc(mb_, p);
   }
 
   /**
@@ -364,10 +375,10 @@ public:
    * @pre `p_dest` should be managed by the memory backend of `this`.
    * @pre `p_src` should be managed by the memory backend of `ms`.
    */
-  template<class MEMSRC, class EXEPOLSRC, typename T>
-  inline bool copy(T* p_dest, const T* p_src, const size_t& n, const ExecSpace<MEMSRC,EXEPOLSRC>& ms)
+  template<class MEMSRC, class EXEPOLSRC, typename T, typename I>
+  inline bool copy(T* p_dest, const T* p_src, const I& n, const ExecSpace<MEMSRC,EXEPOLSRC>& ms)
   {
-    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMSRC, EXEPOLSRC, T>::do_it(p_dest, *this, p_src, ms, n);
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMSRC, EXEPOLSRC, T, I>::do_it(p_dest, *this, p_src, ms, n);
   }
 
   /**
@@ -377,10 +388,10 @@ public:
    * `n` elements.
    * @pre Both `p_dest` and `p_src` should be managed by the memory backend of `this`.
    */  
-  template<typename T>
-  inline bool copy(T* p_dest, const T* p_src, const size_t& n)
+  template<typename T, typename I>
+  inline bool copy(T* p_dest, const T* p_src, const I& n)
   {
-    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMBACKEND, EXECPOLICIES, T>::do_it(p_dest, *this, p_src, *this, n);
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMBACKEND, EXECPOLICIES, T, I>::do_it(p_dest, *this, p_src, *this, n);
   }
 
 private:
@@ -395,14 +406,23 @@ private:
 /**
  * Memory allocations should be provided via `AllocImpl` for concrete memory backends. 
  */
-template<class MEMBACKEND, typename T>
+template<class MEMBACKEND, typename T, typename I>
 struct AllocImpl
 {
-  inline static T* alloc(MEMBACKEND& mb, const size_t& n)
+  inline static T* alloc(MEMBACKEND& mb, const I& n)
   {
     assert(false && "Specialization for template parameters needs to be provided.");
     return nullptr;
   }
+};
+
+/**
+ * Memory deallocations should be provided via `DeAllocImpl` for concrete memory backends.
+ * The size type `I` is not needed by current implementation and defaulted to `void`. 
+ */
+template<class MEMBACKEND, typename T, typename I/*=void*/>
+struct DeAllocImpl
+{
   inline static void dealloc(MEMBACKEND& mb, T* p)
   {
     assert(false && "Specialization for template parameters needs to be provided."); 
@@ -413,14 +433,14 @@ struct AllocImpl
  * Transfers between memory backends and memory spaces should be provided by specializations
  * of `TransferImpl` class.
  */
-template<class MEMDEST, class EXEPOLDEST, class MEMSRC, class EXEPOLSRC, typename T>
+template<class MEMDEST, class EXEPOLDEST, class MEMSRC, class EXEPOLSRC, typename T, typename I>
 struct TransferImpl
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MEMSRC, EXEPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return false;
   }
