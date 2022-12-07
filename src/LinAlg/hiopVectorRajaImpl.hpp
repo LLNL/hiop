@@ -56,8 +56,10 @@
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-
 #include "ExecSpace.hpp"
+
+#include "LinAlgFactory.hpp"
+#include "hiopVectorRajaPar.hpp"
 
 #include "hiopVectorIntRaja.hpp"
 
@@ -101,6 +103,7 @@ hiopVectorRaja(const size_type& glob_n,
   : hiopVector(),
     exec_space_(ExecSpace<MEMBACKEND,RAJACUDAPOL>(MEMBACKEND(mem_space))),
     exec_space_host_(ExecSpace<MEMBACKENDHOST,EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
+    idx_cumsum_{nullptr},
     mem_space_(mem_space),
     comm_(comm)
 {
@@ -148,7 +151,8 @@ template<class MEMBACKEND, class RAJACUDAPOL>
 hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::hiopVectorRaja(const hiopVectorRaja& v)
   : hiopVector(),
     exec_space_(v.exec_space_),
-    exec_space_host_(v.exec_space_host_)
+    exec_space_host_(v.exec_space_host_),
+    idx_cumsum_{nullptr}
 {
   n_local_ = v.n_local_;
   n_ = v.n_;
@@ -182,6 +186,7 @@ hiopVectorRaja<MEMBACKEND,RAJACUDAPOL>::~hiopVectorRaja()
   exec_space_.dealloc_array(data_dev_);
   data_dev_  = nullptr;
   data_host_ = nullptr;
+  delete idx_cumsum_;
 }
 
 template<class MEM, class POL>
@@ -363,7 +368,7 @@ void hiopVectorRaja<MEM,POL>::copy_from_indexes(const hiopVector& vv, const hiop
     {
       assert(id[i]<nv);
       dd[i] = vd[id[i]];
-    });  
+    });
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
@@ -383,7 +388,8 @@ void hiopVectorRaja<MEM,POL>::copy_from_indexes(const double* vv, const hiopVect
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       dd[i] = vv[id[i]];
-    }); 
+    });
+
 }
 
 
@@ -561,32 +567,57 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::
 copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& select) const
 {
-#if 0  
-  if(n_local_ == 0)
+  if(n_local_ == 0) {
     return;
+  }
  
+
   hiopVectorRaja& v = dynamic_cast<hiopVectorRaja<MEM, POL>&>(vec);
-  const hiopVectorRaja& ix= dynamic_cast<const hiopVectorRaja<MEM, POL>&>(select);
-  assert(n_local_ == ix.n_local_);
+  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(select);
+  assert(n_local_ == selected.n_local_);
   
-  int find_nnz = 0;
   double* dd = data_dev_;
   double* vd = v.data_dev_;
-  double* id = ix.data_dev_;
+  const double* pattern = selected.local_data_const();
+
+  if(nullptr == idx_cumsum_) {
+    idx_cumsum_ = LinearAlgebraFactory::create_vector_int(mem_space_, n_local_+1);
+    index_type* nnz_in_row = idx_cumsum_->local_data();
   
-  RAJA::ReduceSum< hiop_raja_reduce, double > sum(zero);
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
-    [&](RAJA::Index_type i)
-    {
-      assert(id[i] == zero || id[i] == one);
-      if(id[i] == one){
-        vd[start_index_in_dest+find_nnz] = dd[i];
-        find_nnz++;
+    RAJA::forall<hiop_raja_exec>(
+      RAJA::RangeSegment(0, n_local_+1),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        if(i==0) {
+          nnz_in_row[i] = 0;
+        } else {
+          // from i=1..n
+          if(pattern[i-1]!=0.0){
+            nnz_in_row[i] = 1;
+          } else {
+            nnz_in_row[i] = 0;        
+          }
+        }
       }
-    });
-#else
-  assert(false && "not needed / implemented");
-#endif    
+    );
+    RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(nnz_in_row,n_local_+1), RAJA::operators::plus<index_type>());
+  }
+
+  index_type* nnz_cumsum = idx_cumsum_->local_data();
+  index_type v_n_local = v.n_local_;
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(1, n_local_+1),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(nnz_cumsum[i] != nnz_cumsum[i-1]){
+        assert(nnz_cumsum[i] == nnz_cumsum[i-1] + 1);
+        index_type idx_dest = nnz_cumsum[i-1] + start_index_in_dest;
+        assert(idx_dest < v_n_local);
+        vd[idx_dest] = dd[i-1];
+      }
+    }
+  );
+
 }
 
 /* copy 'c' and `d` into `this`, according to the map 'c_map` and `d_map`, respectively.

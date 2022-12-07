@@ -440,6 +440,54 @@ public:
   }
 
   /**
+   * @brief Test vector method for copying data to another vector
+   * starting from prescribed index in destination vector. 
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vectorCopyToStartingAt_w_pattern(
+      hiop::hiopVector& from,
+      hiop::hiopVector& to,
+      hiop::hiopVector& pattern,
+      const int rank=0)
+  {
+    const local_ordinal_type to_size = getLocalSize(&to);
+    const local_ordinal_type from_size = getLocalSize(&from);
+    assert(to_size == to.get_size() && to_size > from_size + 2
+           && "This test cannot be ran with distributed vectors");
+    assert(getLocalSize(&pattern) == from_size && from_size > 1
+           && "pattern_size must be equal to the source size");
+    const int start_idx = to_size - from_size;
+    const real_type from_val = one;
+    const real_type from_val_st_ed = three;
+    const real_type to_val = two;
+
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    pattern.setToConstant(zero);
+    if (rank == 0) {
+      setLocalElement(&from, 0, from_val_st_ed);
+      setLocalElement(&from, from_size-1, from_val_st_ed);
+      setLocalElement(&pattern, 0, one);
+      setLocalElement(&pattern, from_size-1, one);
+    }
+
+    from.copyToStartingAt_w_pattern(to, start_idx, pattern);
+
+    // Check that the start and end values of `from' vector are copied to the `to' vector
+    const int fail = verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (rank == 0 && (i == start_idx || i == start_idx + 1) ? from_val_st_ed : to_val);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &from);    
+  }
+
+
+  /**
    * @brief Test vector method for copying data from another two vectors
    * 
    * @pre Vectors are not distributed.

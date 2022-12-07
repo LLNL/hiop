@@ -122,15 +122,17 @@ hiopKKTLinSysSparseNormalEqn::~hiopKKTLinSysSparseNormalEqn()
   delete M_normaleqn_;
 }
 
-bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_in,
-                                                    const hiopVector& delta_wd_in,
-                                                    const hiopVector& delta_cc_in,
-                                                    const hiopVector& delta_cd_in)
+bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pdreg)
 {
 
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
+
+  delta_wx_ = perturb_calc_->get_curr_delta_wx();
+  delta_wd_ = perturb_calc_->get_curr_delta_wd();
+  delta_cc_ = perturb_calc_->get_curr_delta_cc();
+  delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
   HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
   if(!HessSp_) { 
@@ -210,12 +212,12 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
   }
   //build the diagonal Hx = Dx + delta_wx + diag(Hess)
   Hx_->copyFrom(*Dx_);
-  Hx_->axpy(1., delta_wx_in);
+  Hx_->axpy(1., *delta_wx_);
   Hx_->axpy(1., *Hess_diag_);
 
   // HD = Dd_ + delta_wd
   Hd_->copyFrom(*Dd_);
-  Hd_->axpy(1., delta_wd_in);
+  Hd_->axpy(1., *delta_wd_);
 
   //temporary code, see above note
   {
@@ -237,10 +239,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
       auto deltawd_raja = dynamic_cast<hiopVectorCuda*>(deltawd_);
       auto deltacc_raja = dynamic_cast<hiopVectorCuda*>(deltacc_);
       auto deltacd_raja = dynamic_cast<hiopVectorCuda*>(deltacd_);
-      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
-      const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(delta_wd_in);
-      const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(delta_cc_in);
-      const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(delta_cd_in);
+      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(*delta_wx_in);
+      const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(*delta_wd_in);
+      const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(*delta_cc_in);
+      const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(*delta_cd_in);
 
       deltawx_raja->copy_from_host_vec(deltawx_host);
       deltawd_raja->copy_from_host_vec(deltawd_host);
@@ -254,10 +256,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
       Hess_diag_copy_->copyFrom(*Hess_diag_);
       Hx_copy_->copyFrom(*Hx_);
       Hd_copy_->copyFrom(*Hd_);
-      deltawx_->copyFrom(delta_wx_in);
-      deltawd_->copyFrom(delta_wd_in);
-      deltacc_->copyFrom(delta_cc_in);
-      deltacd_->copyFrom(delta_cd_in);
+      deltawx_->copyFrom(*delta_wx_);
+      deltawd_->copyFrom(*delta_wd_);
+      deltacc_->copyFrom(*delta_cc_);
+      deltacd_->copyFrom(*delta_cd_);
     }
   }
 
@@ -317,18 +319,20 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopVector& delta_wx_i
 
   t.reset(); t.start();
 
-  // build the diagonal Hxd_inv_copy_ = [H+Dx+delta_wx, Dd+delta_wd ]^{-1}
-  Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
-  Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
-  Hxd_inv_copy_->invert();
-  // J * D * Jt
-  JacDt_->form_transpose_from_numeric(*JacD_);
-  JacDt_->scale_rows(*Hxd_inv_copy_);
-  JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *JacDt_);
+  if(pdreg.get_curr_delta_type() != hiopPDPerturbation::DeltasUpdateType::DualUpdate) {
+    // build the diagonal Hxd_inv_copy_ = [H+Dx+delta_wx, Dd+delta_wd ]^{-1}
+    Hx_copy_->copyToStarting(*Hxd_inv_copy_, 0);
+    Hd_copy_->copyToStarting(*Hxd_inv_copy_, nx);
+    Hxd_inv_copy_->invert();
+    // J * D * Jt
+    JacDt_->form_transpose_from_numeric(*JacD_);
+    JacDt_->scale_rows(*Hxd_inv_copy_);
+    JacD_->times_mat_numeric(0.0, *JDiagJt_, 1.0, *JacDt_);
 
 #ifdef HIOP_DEEPCHECKS
-  JDiagJt_->check_csr_is_ordered();
+    JDiagJt_->check_csr_is_ordered();
 #endif
+  }
 
   if(nullptr == M_normaleqn_) {
     t.reset(); t.start();
@@ -499,7 +503,7 @@ int hiopKKTLinSysSparseNormalEqn::factorizeWithCurvCheck()
   size_type n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
   if(n_neg_eig == -1) {
-    nlp_->log->printf(hovWarning,
+    nlp_->log->printf(hovScalars,
                 "KKT_SPARSE_NormalEqn linsys: Detected null eigenvalues.\n");
     n_neg_eig = -1;
   } else {

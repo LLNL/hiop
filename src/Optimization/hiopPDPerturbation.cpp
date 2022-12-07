@@ -99,6 +99,7 @@ namespace hiop
     num_degen_iters_ = 0;
 
     deltas_test_type_ = dttNoTest;
+    deltas_curr_update_ = None;
     return true;
   }
 
@@ -157,10 +158,7 @@ namespace hiop
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  bool hiopPDPerturbationPrimalFirstScala::compute_initial_deltas(hiopVector& delta_wx,
-                                                                  hiopVector& delta_wd,
-                                                                  hiopVector& delta_cc,
-                                                                  hiopVector& delta_cd)
+  bool hiopPDPerturbationPrimalFirstScalar::compute_initial_deltas()
   {
     double delta_temp;
     double delta_temp2;
@@ -208,20 +206,13 @@ namespace hiop
     delta_wd_curr_db_ = delta_temp2;
     
     set_delta_curr_vec(PDUpdate);
-    
-    delta_wx.copyFrom(*delta_wx_curr_);
-    delta_wd.copyFrom(*delta_wd_curr_);
-    delta_cc.copyFrom(*delta_cc_curr_);
-    delta_cd.copyFrom(*delta_cd_curr_);
 
+    deltas_curr_update_ = Initialized;
     return true;
   }
 
   /** Method for correcting inertia */
-  bool hiopPDPerturbationPrimalFirstScala::compute_perturb_wrong_inertia(hiopVector& delta_wx,
-                                                                         hiopVector& delta_wd,
-                                                                         hiopVector& delta_cc,
-                                                                         hiopVector& delta_cd)
+  bool hiopPDPerturbationPrimalFirstScalar::compute_perturb_wrong_inertia()
   {    
     update_degeneracy_type();
 
@@ -245,11 +236,6 @@ namespace hiop
       set_delta_curr_vec(PrimalUpdate);
     }
 
-    delta_wx.copyFrom(*delta_wx_curr_);
-    delta_wd.copyFrom(*delta_wd_curr_);
-    delta_cc.copyFrom(*delta_cc_curr_);
-    delta_cd.copyFrom(*delta_cd_curr_);
-
     nlp_->log->printf(hovScalars, 
                       "primal regularization: %12.5e, dual regularization: %12.5e \n", 
                       delta_wx_curr_db_,delta_cc_curr_db_);
@@ -259,10 +245,7 @@ namespace hiop
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  bool hiopPDPerturbationPrimalFirstScala::compute_perturb_singularity(hiopVector& delta_wx, 
-                                                       hiopVector& delta_wd,
-                                                       hiopVector& delta_cc,
-                                                       hiopVector& delta_cd)
+  bool hiopPDPerturbationPrimalFirstScalar::compute_perturb_singularity()
   {    
     assert(delta_wx_curr_db_ == delta_wd_curr_db_);
     assert(delta_cc_curr_db_ == delta_cd_curr_db_);
@@ -285,7 +268,7 @@ namespace hiop
             bret = false;
             break;
           }
-          assert(delta_cc.is_zero() && delta_cd.is_zero());
+          assert(delta_cc_curr_db_ == 0. && delta_cd_curr_db_ == 0.);
           deltas_test_type_ = dttDeltac0Deltawpos;
         }
         break;
@@ -332,11 +315,6 @@ namespace hiop
     }
 
     set_delta_curr_vec(PDUpdate);
-    
-    delta_wx.copyFrom(*delta_wx_curr_);
-    delta_wd.copyFrom(*delta_wd_curr_);
-    delta_cc.copyFrom(*delta_cc_curr_);
-    delta_cd.copyFrom(*delta_cd_curr_);
 
     nlp_->log->printf(hovScalars, 
                       "primal regularization: %12.5e, dual regularization: %12.5e \n", 
@@ -348,7 +326,7 @@ namespace hiop
   /** 
    * Internal method implementing the computation of delta_w's to correct wrong inertia
    */
-  bool hiopPDPerturbationPrimalFirstScala::guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd)
+  bool hiopPDPerturbationPrimalFirstScalar::guts_of_compute_perturb_wrong_inertia(double& delta_wx, double& delta_wd)
   {
     assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
     assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
@@ -375,24 +353,22 @@ namespace hiop
       return false;
     }
 
-    delta_wx = delta_wx_curr_db_;
-    delta_wd = delta_wd_curr_db_;
-
     return true;
   }
 
-  double hiopPDPerturbationPrimalFirstScala::compute_delta_c(const double& mu) const
+  double hiopPDPerturbationPrimalFirstScalar::compute_delta_c(const double& mu) const
   {
     return delta_c_bar_ * std::pow(mu, kappa_c_);
   }
 
-  bool hiopPDPerturbationPrimalFirstScala::check_consistency() 
+  bool hiopPDPerturbationPrimalFirstScalar::check_consistency() 
   {
     return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
   }
 
-  void hiopPDPerturbationPrimalFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
+  void hiopPDPerturbationPrimalFirstScalar::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->setToConstant(delta_cc_curr_db_);
@@ -410,7 +386,7 @@ namespace hiop
     }
   }
 
-  void hiopPDPerturbationPrimalFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
+  void hiopPDPerturbationPrimalFirstScalar::set_delta_last_vec(DeltasUpdateType taskid)
   {
     if(DualUpdate == taskid) {
       // only update dual deltas
@@ -454,6 +430,7 @@ namespace hiop
 
   void hiopPDPerturbationPrimalFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);
@@ -475,23 +452,20 @@ namespace hiop
 
 
   /*
-  *  class hiopPDPerturbationDualFirstScala
+  *  class hiopPDPerturbationDualFirstScalar
   */
-  hiopPDPerturbationDualFirstScala::hiopPDPerturbationDualFirstScala()
+  hiopPDPerturbationDualFirstScalar::hiopPDPerturbationDualFirstScalar()
     : hiopPDPerturbation(),
       delta_c_min_bar_(1e-20),
       kappa_c_plus_(10.)
   {
   }
 
-  hiopPDPerturbationDualFirstScala::~hiopPDPerturbationDualFirstScala()
+  hiopPDPerturbationDualFirstScalar::~hiopPDPerturbationDualFirstScalar()
   {
   }
 
-  bool hiopPDPerturbationDualFirstScala::compute_initial_deltas(hiopVector& delta_wx,
-                                                                hiopVector& delta_wd,
-                                                                hiopVector& delta_cc,
-                                                                hiopVector& delta_cd)            
+  bool hiopPDPerturbationDualFirstScalar::compute_initial_deltas()            
   {
     update_degeneracy_type();
       
@@ -531,18 +505,12 @@ namespace hiop
     set_delta_curr_vec(PDUpdate);
     set_delta_last_vec(PDUpdate);
 
-    delta_wx.copyFrom(*delta_wx_curr_);
-    delta_wd.copyFrom(*delta_wd_curr_);
-    delta_cc.copyFrom(*delta_cc_curr_);
-    delta_cd.copyFrom(*delta_cd_curr_);
+    deltas_curr_update_ = Initialized;
 
     return true;
   }
 
-  bool hiopPDPerturbationDualFirstScala::compute_perturb_wrong_inertia(hiopVector& delta_wx,
-                                                                       hiopVector& delta_wd,
-                                                                       hiopVector& delta_cc,
-                                                                       hiopVector& delta_cd)  
+  bool hiopPDPerturbationDualFirstScalar::compute_perturb_wrong_inertia()  
   {    
     /** 
     * for normal equation, wrong inertia means the KKT 1x1 matrix is not PD 
@@ -567,13 +535,9 @@ namespace hiop
       ret = compute_dual_perturb_impl(mu_);
 
       set_delta_curr_vec(PrimalUpdate);
-      delta_wx.copyFrom(*delta_wx_curr_);
-      delta_wd.copyFrom(*delta_wd_curr_);
     }
     
     set_delta_curr_vec(DualUpdate);
-    delta_cc.copyFrom(*delta_cc_curr_);
-    delta_cd.copyFrom(*delta_cd_curr_);
 
     nlp_->log->printf(hovScalars, 
                       "primal regularization (mean): %12.5e, dual regularization (mean): %12.5e \n", 
@@ -581,19 +545,16 @@ namespace hiop
     return ret;
   }
 
-  bool hiopPDPerturbationDualFirstScala::compute_perturb_singularity(hiopVector& delta_wx,
-                                                                     hiopVector& delta_wd,
-                                                                     hiopVector& delta_cc,
-                                                                     hiopVector& delta_cd)
+  bool hiopPDPerturbationDualFirstScalar::compute_perturb_singularity()
   {
     /**
      * we try to corret the dual regularization first, and then primal regularizaion
-     * same implementation as  hiopPDPerturbationDualFirstScala::compute_perturb_wrong_inertia
+     * same implementation as  hiopPDPerturbationDualFirstScalar::compute_perturb_wrong_inertia
      */
-    return compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd);
+    return compute_perturb_wrong_inertia();
   }
 
-  bool hiopPDPerturbationDualFirstScala::compute_dual_perturb_impl(const double& mu)
+  bool hiopPDPerturbationDualFirstScalar::compute_dual_perturb_impl(const double& mu)
   {
     assert(delta_cc_curr_db_ == delta_cd_curr_db_ && "these should be equal");
     assert(delta_cc_last_db_ == delta_cd_last_db_ && "these should be equal");
@@ -624,7 +585,7 @@ namespace hiop
     return true;
   }
 
-  bool hiopPDPerturbationDualFirstScala::compute_primal_perturb_impl()
+  bool hiopPDPerturbationDualFirstScalar::compute_primal_perturb_impl()
   {
     assert(delta_wx_curr_db_ == delta_wd_curr_db_ && "these should be equal");
     assert(delta_wx_last_db_ == delta_wd_last_db_ && "these should be equal");
@@ -656,13 +617,14 @@ namespace hiop
     return bval;
   }
 
-  bool hiopPDPerturbationDualFirstScala::check_consistency() 
+  bool hiopPDPerturbationDualFirstScalar::check_consistency() 
   {
     return (delta_wx_curr_db_ == delta_wd_curr_db_) && (delta_cc_curr_db_ == delta_cd_curr_db_);
   }
 
-  void hiopPDPerturbationDualFirstScala::set_delta_curr_vec(DeltasUpdateType taskid)
+  void hiopPDPerturbationDualFirstScalar::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->setToConstant(delta_cc_curr_db_);
@@ -680,7 +642,7 @@ namespace hiop
     }
   }
 
-  void hiopPDPerturbationDualFirstScala::set_delta_last_vec(DeltasUpdateType taskid)
+  void hiopPDPerturbationDualFirstScalar::set_delta_last_vec(DeltasUpdateType taskid)
   {
     if(DualUpdate == taskid) {
       // only update dual deltas
@@ -724,6 +686,7 @@ namespace hiop
 
   void hiopPDPerturbationDualFirstRand::set_delta_curr_vec(DeltasUpdateType taskid)
   {
+    deltas_curr_update_ = taskid;
     if(DualUpdate == taskid) {
       // only update dual deltas
       delta_cc_curr_->set_to_random_uniform(min_uniform_ratio_*delta_cc_curr_db_, max_uniform_ratio_*delta_cc_curr_db_);

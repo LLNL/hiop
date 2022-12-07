@@ -1008,15 +1008,15 @@ get_dual_solutions(const hiopIterate& it, double* zl_a, double* zu_a, double* la
     cons_lambdas_->copy_from_two_vec_w_pattern(*it.get_yc(), *cons_eq_mapping_, *it.get_yd(), *cons_ineq_mapping_);
     cons_lambdas_->copyTo(lambda_a);  
   } else {
-    double inv_obj_scale = this->get_obj_scale();
+    const double obj_scale_ext_to_hiop = this->get_obj_scale();
     if(temp_x_ == nullptr) {
       temp_x_ = this->alloc_primal_vec();
     }
     temp_x_->copyFrom(*it.get_zl());
-    temp_x_->scale(inv_obj_scale);
+    temp_x_->scale(obj_scale_ext_to_hiop);
     temp_x_->copyTo(zl_a);
     temp_x_->copyFrom(*it.get_zu());
-    temp_x_->scale(inv_obj_scale);
+    temp_x_->scale(obj_scale_ext_to_hiop);
     temp_x_->copyTo(zu_a);
 
     if(temp_eq_ == nullptr) {
@@ -1031,7 +1031,7 @@ get_dual_solutions(const hiopIterate& it, double* zl_a, double* zu_a, double* la
     temp_eq_   = nlp_transformations_.apply_to_cons_eq(*temp_eq_, n_cons_eq_);
     temp_ineq_ = nlp_transformations_.apply_to_cons_ineq(*temp_ineq_, n_cons_ineq_);
     cons_lambdas_->copy_from_two_vec_w_pattern(*temp_eq_, *cons_eq_mapping_, *temp_ineq_, *cons_ineq_mapping_);
-    cons_lambdas_->scale(inv_obj_scale);
+    cons_lambdas_->scale(obj_scale_ext_to_hiop);
     cons_lambdas_->copyTo(lambda_a);
   }
 
@@ -1051,7 +1051,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   assert(y_c.get_size() == n_cons_eq_);
   assert(y_d.get_size() == n_cons_ineq_);
 
-  double inv_obj_scale = this->get_obj_scale();
+  const double obj_scale_ext_to_hiop = this->get_obj_scale();
   if(cons_lambdas_ == nullptr) {
     cons_lambdas_ = this->alloc_dual_vec();
   }
@@ -1061,10 +1061,10 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
     // y_unscaled = y_scale*y_scaled/obj_scale, z_unscaled = z_scaled/obj_scale
     y_c = *(nlp_transformations_.apply_to_cons_eq(y_c, n_cons_eq_));
     y_d = *(nlp_transformations_.apply_to_cons_ineq(y_d, n_cons_ineq_));
-    y_c.scale(inv_obj_scale);
-    y_d.scale(inv_obj_scale);
-    z_L.scale(inv_obj_scale);
-    z_U.scale(inv_obj_scale);
+    y_c.scale(obj_scale_ext_to_hiop);
+    y_d.scale(obj_scale_ext_to_hiop);
+    z_L.scale(obj_scale_ext_to_hiop);
+    z_U.scale(obj_scale_ext_to_hiop);
   }
   cons_lambdas_->copy_from_two_vec_w_pattern(y_c, *cons_eq_mapping_, y_d, *cons_ineq_mapping_);
 
@@ -1098,7 +1098,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                     (int)n_cons_,
                                     cons_body_->local_data_host_const(),
                                     cons_lambdas_->local_data_host_const(),
-                                    inv_obj_scale*obj_value); 
+                                    obj_value/obj_scale_ext_to_hiop); 
   } else {
     interface_base.solution_callback(status,
                                     (int)n_vars_,
@@ -1108,7 +1108,7 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
                                     (int)n_cons_,
                                     cons_body_->local_data_const(),
                                     cons_lambdas_->local_data_const(),
-                                    inv_obj_scale*obj_value);
+                                    obj_value/obj_scale_ext_to_hiop);
   }                         
 
 }

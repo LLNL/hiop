@@ -78,10 +78,6 @@ public:
    * exit is contains the solution(s).  */
   bool solve ( hiopVector& x_ );
 
-//protected:
-//  int* ipiv;
-//  hiopVector* dwork;
-
 private:
 
   int      m_;                         // number of rows of the whole matrix
@@ -93,6 +89,7 @@ private:
 
   std::shared_ptr<gko::Executor> exec_;
   std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
+  std::shared_ptr<gko::matrix::Csr<double, int>> host_mtx_;
   std::shared_ptr<gko::LinOpFactory> reusable_factory_;
   std::shared_ptr<gko::LinOp> gko_solver_;
 
@@ -102,59 +99,8 @@ public:
   /** called the very first time a matrix is factored. Allocates space
    * for the factorization and performs ordering */
   virtual void firstCall();
-//  virtual void diagonalChanged( int idiag, int extent );
-
-
-friend class hiopLinSolverNonSymSparseGinkgo;
 
 };
-
-class hiopLinSolverNonSymSparseGinkgo: public hiopLinSolverNonSymSparse
-{
-public:
-  hiopLinSolverNonSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-
-  virtual ~hiopLinSolverNonSymSparseGinkgo();
-
-  /** Triggers a refactorization of the matrix, if necessary.
-   * Overload from base class. */
-  int matrixChanged();
-
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).  */
-  bool solve ( hiopVector& x_ );
-  
-//protected:
-//  int* ipiv;
-//  hiopVector* dwork;
-
-private:
-
-  int      m_;                         // number of rows of the whole matrix
-  int      n_;                         // number of cols of the whole matrix
-  int      nnz_;                       // number of nonzeros in the matrix
-
-  int *index_covert_CSR2Triplet_;
-  int *index_covert_extra_Diag2CSR_;
-  std::unordered_map<int,int> extra_diag_nnz_map_;
-
-  std::shared_ptr<gko::Executor> exec_;
-  std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
-  std::shared_ptr<gko::LinOpFactory> reusable_factory_;
-  std::shared_ptr<gko::LinOp> gko_solver_;
-
-public:
-
-  /** called the very first time a matrix is factored. Allocates space
-   * for the factorization and performs ordering */
-  void firstCall();
-//  virtual void diagonalChanged( int idiag, int extent );
-
-friend class hiopLinSolverSymSparseGinkgo;
-
-};
-
 
 } // end namespace
 #endif

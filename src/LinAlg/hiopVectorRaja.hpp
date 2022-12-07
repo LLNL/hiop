@@ -157,7 +157,9 @@ public:
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
   /* Copy 'this' to v starting at start_index in 'v'. */
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
-  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
+  virtual void copyToStartingAt_w_pattern(hiopVector& v,
+                                          int start_index_in_dest,
+                                          const hiopVector& ix) const;
 
   /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
   virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
@@ -323,9 +325,9 @@ private:
   double* data_dev_;
   size_type glob_il_, glob_iu_;
   size_type n_local_;
+  mutable hiopVectorInt* idx_cumsum_;
   /// Copy constructor, for internal/private use only (it doesn't copy the elements.) */
   hiopVectorRaja(const hiopVectorRaja&);
-
 };
 
 } // namespace hiop

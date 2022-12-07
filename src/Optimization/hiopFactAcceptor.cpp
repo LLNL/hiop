@@ -63,10 +63,6 @@ namespace hiop
 
 int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
                                                const int& n_neg_eig,
-                                               hiopVector& delta_wx,
-                                               hiopVector& delta_wd,
-                                               hiopVector& delta_cc,
-                                               hiopVector& delta_cd,
                                                const bool force_reg)
 {
   int continue_re_fact{1};
@@ -76,7 +72,7 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
       //matrix singular
       nlp.log->printf(hovScalars, "linsys is singular.\n");
 
-      if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {\
+      if(!perturb_calc_->compute_perturb_singularity()) {\
         continue_re_fact = -1;
       }
     } else if(n_neg_eig != n_required_neg_eig_) {
@@ -84,7 +80,7 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
       nlp.log->printf(hovScalars, "linsys negative eigs mismatch: has %d expected %d.\n",
                       n_neg_eig,  n_required_neg_eig_);
 
-      if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      if(!perturb_calc_->compute_perturb_wrong_inertia()) {
         nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed.\n");
         continue_re_fact = -1;
       }
@@ -96,7 +92,7 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
       //correct for wrong intertia
       nlp.log->printf(hovScalars,  "linsys has wrong inertia (no constraints): factoriz "
                       "ret code %d\n.", n_neg_eig);
-      if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      if(!perturb_calc_->compute_perturb_wrong_inertia()) {
         nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
         continue_re_fact = -1;
       }
@@ -109,10 +105,6 @@ int hiopFactAcceptorIC::requireReFactorization(const hiopNlpFormulation& nlp,
 
 int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulation& nlp,
                                                            const int& n_neg_eig,
-                                                           hiopVector& delta_wx,
-                                                           hiopVector& delta_wd,
-                                                           hiopVector& delta_cc,
-                                                           hiopVector& delta_cd,
                                                            const bool force_reg)
 {
   int continue_re_fact{1};
@@ -121,7 +113,7 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
       //matrix singular
       nlp.log->printf(hovScalars, "linsys is singular.\n");
 
-      if(!perturb_calc_->compute_perturb_singularity(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      if(!perturb_calc_->compute_perturb_singularity()) {
         continue_re_fact = -1;
       }
     } else {
@@ -131,7 +123,7 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
       } else {
         // add regularization and accept current factorization (we do curvature test after backsolve)
         nlp.log->printf(hovScalars,  "linsys has wrong curvature. \n");
-        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+        if(!perturb_calc_->compute_perturb_wrong_inertia()) {
           nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
           continue_re_fact = -1;
         }
@@ -141,7 +133,7 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
     if(n_neg_eig < 0) {
       // Cholesky solver failes due to the lack of positive definiteness
       nlp.log->printf(hovScalars,  "Cholesky solver: factoriz ret code %d\n.", n_neg_eig);
-      if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+      if(!perturb_calc_->compute_perturb_wrong_inertia()) {
         nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
         continue_re_fact = -1;
       }
@@ -152,7 +144,7 @@ int hiopFactAcceptorInertiaFreeDWD::requireReFactorization(const hiopNlpFormulat
       } else {
         // add regularization and accept current factorization (we do curvature test after backsolve)
         nlp.log->printf(hovScalars,  "linsys has wrong curvature. \n");
-        if(!perturb_calc_->compute_perturb_wrong_inertia(delta_wx, delta_wd, delta_cc, delta_cd)) {
+        if(!perturb_calc_->compute_perturb_wrong_inertia()) {
           nlp.log->printf(hovWarning, "linsys: computing inertia perturbation failed (2).\n");
           continue_re_fact = -1;
         }

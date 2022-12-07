@@ -10,6 +10,16 @@ namespace hiop
 class hiopPDPerturbation
 {
 public:
+
+  enum DeltasUpdateType
+  {
+    None  = -2,
+    Initialized  = -1,
+    DualUpdate   =  0,
+    PrimalUpdate =  1,
+    PDUpdate     =  2
+  };
+
   /** Default constructor 
    * Provides complete initialization, but uses algorithmic parameters from the Ipopt
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
@@ -78,29 +88,20 @@ public:
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd) = 0;
+  virtual bool compute_initial_deltas() = 0;
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd) = 0;
+  virtual bool compute_perturb_wrong_inertia() = 0;
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
+  virtual bool compute_perturb_singularity() = 0;
+
+  inline bool copy_from_curr_perturbations(hiopVector& delta_wx, 
                                            hiopVector& delta_wd,
                                            hiopVector& delta_cc,
-                                           hiopVector& delta_cd) = 0;
-
-  inline bool get_curr_perturbations(hiopVector& delta_wx, 
-                                     hiopVector& delta_wd,
-                                     hiopVector& delta_cc,
-                                     hiopVector& delta_cd)
+                                           hiopVector& delta_cd)
   {
     delta_wx.copyFrom(*delta_wx_curr_);
     delta_wd.copyFrom(*delta_wd_curr_);
@@ -108,6 +109,13 @@ public:
     delta_cd.copyFrom(*delta_cd_curr_);
     return true;
   }
+
+  inline hiopVector* get_curr_delta_wx() const {return delta_wx_curr_;}
+  inline hiopVector* get_curr_delta_wd() const {return delta_wd_curr_;}
+  inline hiopVector* get_curr_delta_cc() const {return delta_cc_curr_;}
+  inline hiopVector* get_curr_delta_cd() const {return delta_cd_curr_;}
+
+  inline DeltasUpdateType get_curr_delta_type() const {return deltas_curr_update_;}
 
   virtual bool check_consistency() = 0;
 
@@ -186,15 +194,9 @@ protected:
     dttDeltacposDeltawpos
   };
 
-  enum DeltasUpdateType
-  {
-    DualUpdate = -1,
-    PrimalUpdate = 0,
-    PDUpdate
-  };
-
   /** Current status */
   DeltasTestType deltas_test_type_;
+  DeltasUpdateType deltas_curr_update_;
   
   /** Log barrier mu in the outer loop. */
   double mu_;
@@ -210,7 +212,8 @@ protected: //methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid) = 0;
 };
 
-class hiopPDPerturbationPrimalFirstScala : public hiopPDPerturbation
+/* method used for quasi newton's method */
+class hiopPDPerturbationNull : public hiopPDPerturbation
 {
 public:
   /** Default constructor 
@@ -218,29 +221,54 @@ public:
    * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
-  hiopPDPerturbationPrimalFirstScala() : hiopPDPerturbation() {}
-  virtual ~hiopPDPerturbationPrimalFirstScala() {}
+  hiopPDPerturbationNull() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationNull() {}
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx, 
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd);
+  virtual bool compute_initial_deltas() {return true;}
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd);
+  virtual bool compute_perturb_wrong_inertia() {return true;}
 
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx, 
-                                           hiopVector& delta_wd,
-                                           hiopVector& delta_cc,
-                                           hiopVector& delta_cd);
+  virtual bool compute_perturb_singularity() {return true;}
+                  
+  virtual bool check_consistency() {return true;}
+
+protected: //methods
+  virtual void set_delta_curr_vec(DeltasUpdateType taskid) {}
+  virtual void set_delta_last_vec(DeltasUpdateType taskid) {}              
+};
+
+/**
+ * @brief When inertia correction is required, update primal regularization before dual regularzation.
+ *        Both regularizations are computed as \delta*I, i.e., a scalar times an identity matrix
+ */
+class hiopPDPerturbationPrimalFirstScalar : public hiopPDPerturbation
+{
+public:
+  /** Default constructor 
+   * Provides complete initialization, but uses algorithmic parameters from the Ipopt
+   * implementation paper. \ref initialize(hiopNlpFormulation*) should be used to initialize
+   * this class based on HiOp option file or HiOp user-supplied runtime options.
+   */
+  hiopPDPerturbationPrimalFirstScalar() : hiopPDPerturbation() {}
+  virtual ~hiopPDPerturbationPrimalFirstScalar() {}
+
+  /** Called when a new linear system is attempted to be factorized 
+   */
+  virtual bool compute_initial_deltas();
+
+  /** Method for correcting inertia */
+  virtual bool compute_perturb_wrong_inertia();
+
+  /** Method for correcting singular Jacobian 
+   *  (follows Ipopt closely since the paper seems to be outdated)
+   */
+  virtual bool compute_perturb_singularity();
                   
   virtual bool check_consistency();
                          
@@ -260,10 +288,15 @@ protected: // methods
 
 };
 
-class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScala
+/**
+ * @brief When inertia correction is required, update primal regularization before dual regularzation.
+ *        Both regularizations are computed as a random vector.
+ *        v0.7: uniform distribution has been implemented
+ */
+class hiopPDPerturbationPrimalFirstRand : public hiopPDPerturbationPrimalFirstScalar
 {
 public:
-  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScala() {}
+  hiopPDPerturbationPrimalFirstRand() : hiopPDPerturbationPrimalFirstScalar() {}
 
   virtual ~hiopPDPerturbationPrimalFirstRand() {}
 
@@ -272,34 +305,28 @@ protected: // methods
   virtual void set_delta_last_vec(DeltasUpdateType taskid);  
 };
 
-
-class hiopPDPerturbationDualFirstScala : public hiopPDPerturbation
+/**
+ * @brief When inertia correction is required, update dual regularization before primal regularzation.
+ *        Both regularizations are computed as \delta*I, i.e., a scalar times an identity matrix
+ */
+class hiopPDPerturbationDualFirstScalar : public hiopPDPerturbation
 {
 public:
-  hiopPDPerturbationDualFirstScala();
+  hiopPDPerturbationDualFirstScalar();
 
-  virtual ~hiopPDPerturbationDualFirstScala();
+  virtual ~hiopPDPerturbationDualFirstScalar();
 
   /** Called when a new linear system is attempted to be factorized 
    */
-  virtual bool compute_initial_deltas(hiopVector& delta_wx,
-                                      hiopVector& delta_wd,
-                                      hiopVector& delta_cc,
-                                      hiopVector& delta_cd);
+  virtual bool compute_initial_deltas();
 
   /** Method for correcting inertia */
-  virtual bool compute_perturb_wrong_inertia(hiopVector& delta_wx, 
-                                             hiopVector& delta_wd,
-                                             hiopVector& delta_cc,
-                                             hiopVector& delta_cd);
+  virtual bool compute_perturb_wrong_inertia();
                             
   /** Method for correcting singular Jacobian 
    *  (follows Ipopt closely since the paper seems to be outdated)
    */  
-  virtual bool compute_perturb_singularity(hiopVector& delta_wx,
-                                           hiopVector& delta_wd,
-                                           hiopVector& delta_cc,
-                                           hiopVector& delta_cd);
+  virtual bool compute_perturb_singularity();
 
   virtual bool check_consistency();
                          
@@ -323,10 +350,15 @@ protected: // methods
 
 };
 
-class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScala
+/**
+ * @brief When inertia correction is required, update dual regularization before primal regularzation.
+ *        Both regularizations are computed as a random vector.
+ *        v0.7: uniform distribution has been implemented
+ */
+class hiopPDPerturbationDualFirstRand : public hiopPDPerturbationDualFirstScalar
 {
 public:
-  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScala() {}
+  hiopPDPerturbationDualFirstRand() : hiopPDPerturbationDualFirstScalar() {}
 
   virtual ~hiopPDPerturbationDualFirstRand() {}
 
