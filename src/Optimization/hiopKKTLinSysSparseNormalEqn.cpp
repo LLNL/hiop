@@ -239,10 +239,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
       auto deltawd_raja = dynamic_cast<hiopVectorCuda*>(deltawd_);
       auto deltacc_raja = dynamic_cast<hiopVectorCuda*>(deltacc_);
       auto deltacd_raja = dynamic_cast<hiopVectorCuda*>(deltacd_);
-      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(*delta_wx_in);
-      const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(*delta_wd_in);
-      const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(*delta_cc_in);
-      const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(*delta_cd_in);
+      const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(*delta_wx_);
+      const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(*delta_wd_);
+      const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(*delta_cc_);
+      const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(*delta_cd_);
 
       deltawx_raja->copy_from_host_vec(deltawx_host);
       deltawd_raja->copy_from_host_vec(deltawd_host);

@@ -59,7 +59,7 @@
 #include "ExecSpace.hpp"
 
 #include "LinAlgFactory.hpp"
-#include "hiopVectorRajaPar.hpp"
+#include "hiopVectorRaja.hpp"
 
 #include "hiopVectorIntRaja.hpp"
 
@@ -571,9 +571,8 @@ copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopV
     return;
   }
  
-
   hiopVectorRaja& v = dynamic_cast<hiopVectorRaja<MEM, POL>&>(vec);
-  const hiopVectorRajaPar& selected = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(select);
+  const hiopVectorRaja& selected = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(select);
   assert(n_local_ == selected.n_local_);
   
   double* dd = data_dev_;
