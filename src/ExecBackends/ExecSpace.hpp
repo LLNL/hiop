@@ -69,21 +69,20 @@ namespace hiop
 /** 
  * Runtime information about the execution space, namely memory space, memory backend, and execution policies. 
  * Closely related to HiOp's option 'mem_space', 'compute_mode', 'mem_backend', and 'exec_policies'.
- * //todo : do we need this?
  */
 struct ExecSpaceInfo
 {
   ExecSpaceInfo(const std::string mem_space_in)
   {
-    mem_space = mem_space_in;
-    if(mem_space == "DEFAULT") {
-      mem_backend = "STDCPP";
-      mem_backend_host = "STDCPP";
-      exec_backend = "HOST";
+    mem_space_ = mem_space_in;
+    if(mem_space_ == "DEFAULT") {
+      mem_backend_ = "STDCPP";
+      mem_backend_host_ = "STDCPP";
+      exec_backend_ = "HOST";
     } else {
-      mem_backend = "UMPIRE";
-      mem_backend_host = "UMPIRE";
-      exec_backend = "RAJA";
+      mem_backend_ = "UMPIRE";
+      mem_backend_host_ = "UMPIRE";
+      exec_backend_ = "RAJA";
     }
   }
   ExecSpaceInfo(const char* mem_space_in)
@@ -91,10 +90,10 @@ struct ExecSpaceInfo
   {
   }
   
-  std::string mem_space;
-  std::string mem_backend;
-  std::string mem_backend_host;
-  std::string exec_backend;
+  std::string mem_space_;
+  std::string mem_backend_;
+  std::string mem_backend_host_;
+  std::string exec_backend_;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
