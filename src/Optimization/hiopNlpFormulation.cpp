@@ -56,7 +56,7 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopHessianLowRank.hpp"
 #include "hiopVector.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopLogger.hpp"
 #include "hiopDualsUpdater.hpp"
 

@@ -60,7 +60,7 @@
 #include <cstring>
 
 #include <hiopOptions.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 

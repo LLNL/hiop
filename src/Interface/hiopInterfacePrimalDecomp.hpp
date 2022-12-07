@@ -3,7 +3,7 @@
 
 #include "hiopInterface.hpp"
 #include "hiopVector.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include <cassert>
 #include <cstring> //for memcpy
 #include <vector>

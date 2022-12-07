@@ -2,7 +2,7 @@
 # Set headers to be installed as part of the hiop interface
 set(hiopLinAlg_INTERFACE_HEADERS
   hiop_blasdefs.hpp
-  hiopLinAlgFactory.hpp
+  LinAlgFactory.hpp
   hiopLinSolver.hpp
   hiopLinSolverSymDenseLapack.hpp
   hiopLinSolverSymDenseMagma.hpp
@@ -43,7 +43,7 @@ set(hiopLinAlg_SRC
   hiopVectorIntSeq.cpp
   hiopMatrixDenseRowMajor.cpp
   hiopLinSolver.cpp
-  hiopLinAlgFactory.cpp
+  LinAlgFactory.cpp
   hiopMatrixMDS.cpp
   hiopMatrixComplexDense.cpp
   hiopMatrixSparseTripletStorage.cpp

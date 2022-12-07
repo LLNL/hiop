@@ -58,7 +58,7 @@
 
 // This header contains HiOp's MPI definitions
 #include <hiopOptions.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopVectorIntSeq.hpp>
 

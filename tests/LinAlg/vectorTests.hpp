@@ -65,7 +65,7 @@
 
 #include <hiopVector.hpp>
 #include <hiopVectorInt.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include "testBase.hpp"
 
 namespace hiop { namespace tests {

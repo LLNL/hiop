@@ -1,5 +1,5 @@
 #include "hiopKrylovSolver.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopVector.hpp"
 #include "hiopLinearOperator.hpp"
 

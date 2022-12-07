@@ -58,7 +58,7 @@
 
 #include <hiopOptions.hpp>
 #include <hiopMPI.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsDenseRowMajor.hpp"

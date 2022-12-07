@@ -62,7 +62,7 @@
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <RAJA/RAJA.hpp>
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #include "hiop_blasdefs.hpp"
 

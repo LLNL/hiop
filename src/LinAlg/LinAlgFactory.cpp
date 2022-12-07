@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopLinAlgFactory.cpp
+ * @file LinAlgFactory.cpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
@@ -76,7 +76,7 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixSparseTriplet.hpp>
 #include <hiopMatrixSparseCSRSeq.hpp>
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -130,7 +130,7 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
         } else {                
 #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
           assert(hi.mem_backend_ == "stdcpp" || hi.mem_backend_ == "auto");
-          return new hiop::hiopVectorRaja<hiop::MemBackendStdCpp, hiop::ExecPolicyRajaOmp>(glob_n, mem_space_upper, col_part, comm);
+          return new hiop::hiopVectorRaja<hiop::MemBackendCpp, hiop::ExecPolicyRajaOmp>(glob_n, mem_space_upper, col_part, comm);
 #endif
         }
         return nullptr;
