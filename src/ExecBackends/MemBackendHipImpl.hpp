@@ -94,40 +94,40 @@ struct DeAllocImpl<MemBackendHip, T>
 //
 // Transfers
 //
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToDevice);
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T>
+  template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+  struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyHostToDevice);
   }
 };
 
-template<class EXECPOLDEST, class EXECPOLSRC, typename T>
-struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T>
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
-                           const size_t& n)
+                           const I& n)
   {
     return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToHost);
   }
