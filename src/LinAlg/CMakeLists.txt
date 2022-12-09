@@ -62,13 +62,11 @@ set(hiopLinAlg_RAJA_SRC
 
 if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
+elseif(HIOP_USE_HIP)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
 else()
-  if(HIOP_USE_HIP)
-    list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
-  else()
-    #raja - omp
-    list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
-  endif()
+  #raja - omp
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
 endif()
 
 
