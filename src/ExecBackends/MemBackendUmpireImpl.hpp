@@ -208,7 +208,50 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T
 // Transfers to/from HIP memory
 ////////////////////////////////////////////////////////////////////////////////////////
 #ifdef HIOP_USE_HIP
-// TODO
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T, I>
+{
+  inline static bool do_it(T* p_dest,
+                           ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
+                           const T* p_src,
+                           const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
+                           const I& n)
+  {
+    if(hwb_src.mem_backend().is_device()) {
+      return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToDevice);
+    } else {
+      if(hwb_src.mem_backend().is_host()) {
+        return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyHostToDevice);
+      } else {
+        assert(false && "Transfer BACKENDS(TO:Hip,FROM:umpire) not supported with Umpire mem space 'um'");
+        return false;
+      }
+    }
+  }
+};
+
+template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
+struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
+{
+  inline static bool do_it(T* p_dest,
+                           ExecSpace<MemBackendUmpire, EXECPOLDEST>& hwb_dest,
+                           const T* p_src,
+                           const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
+                           const I& n)
+  {
+    if(hwb_dest.mem_backend().is_device()) {
+      return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToDevice);
+    } else {
+      if(hwb_dest.mem_backend().is_host()) {
+        return hipSuccess == hipMemcpy(p_dest, p_src, n*sizeof(T), hipMemcpyDeviceToHost);
+      } else {
+        assert(false && "Transfer BACKENDS(TO:Umpire,FROM:Hip) not supported with Umpire mem space 'um'");
+        return false;
+      }
+    }
+  }
+};
+
 #endif
 }  // end namespace hiop
 #endif //HIOP_MEM_BCK_UMPIRE
