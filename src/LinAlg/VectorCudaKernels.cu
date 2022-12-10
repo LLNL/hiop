@@ -206,7 +206,7 @@ struct thrust_istrue : public thrust::unary_function<int, bool>
     __host__ __device__
     bool operator()(const int& a)
     {
-      return a;
+      return a!=0;
     }
 };
 
