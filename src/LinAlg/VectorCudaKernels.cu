@@ -211,7 +211,7 @@ struct thrust_istrue : public thrust::unary_function<int, bool>
 };
 
 /** @brief Set y[i] = min(y[i],c), for i=[0,n_local-1] */
-__global__ void component_min_cu(int n, double* vec, const double c)
+__global__ void component_min_cu(int n, double* y, const double c)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
