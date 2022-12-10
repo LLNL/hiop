@@ -213,7 +213,7 @@ public:
   /// @brief compute sum{(x_i):i=1,..,n}
   virtual double sum_local() const;
 
-/**
+  /**
    * @brief Computes the log barrier's linear damping term of the Filter-IPM method of 
    * WaectherBiegler (see paper, section 3.7).
    * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
@@ -283,12 +283,12 @@ public:
   /// @brief allocates a vector that mirrors this, and copies the values
   virtual hiopVector* new_copy () const;
 
-  /* more accessers */
+  /* more accessors */
   inline size_type get_local_size() const { return n_local_; }
-  inline double* local_data() { return data_dev_; }
-  inline const double* local_data_const() const { return data_dev_; }
-  inline double* local_data_host() { return data_host_; }
-  inline const double* local_data_host_const() const { return data_host_; }
+  inline double* local_data() { return data_; }
+  inline const double* local_data_const() const { return data_; }
+  inline double* local_data_host() { return data_host_mirror_; }
+  inline const double* local_data_host_const() const { return data_host_mirror_; }
 
   virtual void copyToDev();
   virtual void copyFromDev();
@@ -323,8 +323,8 @@ public:
 
 private:
   MPI_Comm comm_;
-  double* data_host_;
-  double* data_dev_;
+  double* data_host_mirror_;
+  double* data_;
 
   size_type glob_il_, glob_iu_;
   size_type n_local_;

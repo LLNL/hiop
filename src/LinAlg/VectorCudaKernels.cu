@@ -600,12 +600,13 @@ namespace hiop
 namespace cuda
 {
 
+constexpr int block_size=256;
+
 void copy_from_index_kernel(int n_local,
                             double* yd,
                             const double* src,
                             const int* id)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   copy_from_index_cu<<<num_blocks,block_size>>>(n_local, yd, src, id);
 }
@@ -614,7 +615,6 @@ void component_min_kernel(int n_local,
                           double* yd,
                           double c)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   component_min_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
@@ -623,7 +623,6 @@ void component_min_kernel(int n_local,
                           double* yd,
                           const double* xd)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   component_min_cu<<<num_blocks,block_size>>>(n_local, yd, xd);
 }
@@ -632,7 +631,6 @@ void component_max_kernel(int n_local,
                           double* yd,
                           double c)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   component_max_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
@@ -641,7 +639,6 @@ void component_max_kernel(int n_local,
                           double* yd,
                           const double* xd)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   component_max_cu<<<num_blocks,block_size>>>(n_local, yd, xd);
 }
@@ -653,7 +650,6 @@ void axpy_w_map_kernel(int n_local,
                        const int* id,
                        double alpha)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   axpy_w_map_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, alpha);
 }
@@ -665,7 +661,7 @@ void axzpy_kernel(int n_local,
                   const double* zd,
                   double alpha)
 {
-  int block_size=256;
+  int block_size=256
   int num_blocks = (n_local+block_size-1)/block_size;
   axzpy_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, alpha);
 }
@@ -677,7 +673,6 @@ void axdzpy_kernel(int n_local,
                    const double* zd,
                    double alpha)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   axdzpy_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, alpha);
 }
@@ -690,7 +685,6 @@ void axdzpy_w_pattern_kernel(int n_local,
                              const double* id,
                              double alpha)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   axdzpy_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, id, alpha);
 }
@@ -698,7 +692,6 @@ void axdzpy_w_pattern_kernel(int n_local,
 /** @brief this[i] += c forall i */
 void add_constant_kernel(int n_local, double* yd, double c)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   add_constant_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
@@ -706,7 +699,6 @@ void add_constant_kernel(int n_local, double* yd, double c)
 /** @brief this[i] += c forall i with pattern selection */
 void  add_constant_w_pattern_kernel(int n_local, double* yd, const double* id, double c)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   add_constant_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, c, id);
 }
@@ -714,7 +706,6 @@ void  add_constant_w_pattern_kernel(int n_local, double* yd, const double* id, d
 /// @brief Invert (1/x) the elements of this
 void invert_kernel(int n_local, double* yd)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   invert_cu<<<num_blocks,block_size>>>(n_local, yd);
 }
@@ -726,7 +717,6 @@ void adxpy_w_pattern_kernel(int n_local,
                             const double* id,
                             double alpha)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   adxpy_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, alpha);
 }
@@ -738,7 +728,6 @@ void component_div_w_pattern_kernel(int n_local,
                                     const double* xd,
                                     const double* id)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   component_div_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
 }
@@ -752,7 +741,6 @@ void set_linear_damping_term_kernel(int n_local,
                                     const double* rd)
 {
   // compute linear damping term
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   set_linear_damping_term_cu<<<num_blocks,block_size>>>(n_local, yd, vd, ld, rd);
 }
@@ -764,7 +752,6 @@ void add_linear_damping_term_kernel(int n_local,
                                     double alpha,
                                     double ct)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   add_linear_damping_term_cu<<<num_blocks,block_size>>>(n_local, yd, ixl, ixr, alpha, ct);
 }
@@ -776,21 +763,17 @@ void is_posive_w_pattern_kernel(int n_local,
                                 const double* xd,
                                 const double* id)
 {
-  // compute linear damping term
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   is_posive_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
 }
 
-/// Find minimum vector element for `select` pattern
+/// set value with pattern
 void set_val_w_pattern_kernel(int n_local,
                               double* yd,
                               const double* xd,
                               const double* id,
                               double max_val)
 {
-  // set value with pattern
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   set_val_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, max_val);
 }
@@ -807,7 +790,6 @@ void project_into_bounds_kernel(int n_local,
                                 double kappa2,
                                 double small_real)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   project_into_bounds_cu<<<num_blocks,block_size>>>(n_local, xd, xld, ild, xud, iud, kappa1, kappa2, small_real);
 }
@@ -819,8 +801,6 @@ void fraction_to_the_boundry_kernel(int n_local,
                                     const double* dd,
                                     double tau)
 {
-  // set values
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   fraction_to_the_boundry_cu<<<num_blocks,block_size>>>(n_local, yd, xd, dd, tau);
 }
@@ -833,8 +813,6 @@ void fraction_to_the_boundry_w_pattern_kernel(int n_local,
                                               const double* id,
                                               double tau)
 {
-  // set value with pattern
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   fraction_to_the_boundry_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, dd, id, tau);
 }
@@ -842,8 +820,6 @@ void fraction_to_the_boundry_w_pattern_kernel(int n_local,
 /** @brief Set elements of `this` to zero based on `select`.*/
 void select_pattern_kernel(int n_local, double* yd, const double* id)
 {
-  // set value with pattern
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   select_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, id);
 }
@@ -851,8 +827,6 @@ void select_pattern_kernel(int n_local, double* yd, const double* id)
 /** @brief Checks if each component in `this` matches nonzero pattern of `select`.  */
 void component_match_pattern_kernel(int n_local, int* yd, const double* xd, const double* id)
 {
-  // compute linear damping term
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   set_match_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
 }
@@ -865,8 +839,6 @@ void adjustDuals_plh_kernel(int n_local,
                             double mu,
                             double kappa)
 {
-  // compute linear damping term
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   adjust_duals_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, mu, kappa);
 }
@@ -879,7 +851,6 @@ void set_array_from_to_kernel(int n_local,
                               const hiop::hiopInterfaceBase::NonlinearityType* arr_src,
                               int start_src) 
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   set_nonlinear_type_cu<<<num_blocks,block_size>>> (n_local, length, arr, start, arr_src, start_src);
 }
@@ -890,7 +861,6 @@ void set_array_from_to_kernel(int n_local,
                               int length,
                               hiop::hiopInterfaceBase::NonlinearityType arr_src)
 {
-  int block_size=256;
   int num_blocks = (n_local+block_size-1)/block_size;
   set_nonlinear_type_cu<<<num_blocks,block_size>>> (n_local, length, arr, start, arr_src);
 }
@@ -1225,14 +1195,12 @@ int num_of_elem_absless_than_kernel(int n, double* xd, double val)
 /// for hiopVectorIntCuda
 void set_to_linspace_kernel(int sz, int* buf, int i0, int di)
 {
-  int block_size=256;
   int num_blocks = (sz+block_size-1)/block_size;
   set_to_linspace_cu<<<num_blocks,block_size>>>(sz, buf, i0, di);
 }
 
 void compute_cusum_kernel(int sz, int* buf, const double* id)
 {
-  int block_size=256;
   int num_blocks = (sz+block_size-1)/block_size;
   compute_cusum_cu<<<num_blocks,block_size>>>(sz, buf, id);
 
@@ -1247,7 +1215,6 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                        double *vd,
                                        const double* dd)
 {
-  int block_size=256;
   int num_blocks = (n_src+block_size-1)/block_size;
   copyToStartingAt_w_pattern_cu<<<num_blocks,block_size>>>(n_src,
                                                            n_dest,

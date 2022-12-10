@@ -98,10 +98,10 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
   size_t bytes = n_local_ * sizeof(double);
   
   // Allocate memory on host
-  data_host_ = new double[n_local_];
+  data_host_mirror_ = new double[n_local_];
  
   // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc((void**)&data_dev_, bytes);
+  cudaError_t cuerr = cudaMalloc((void**)&data_, bytes);
   assert(cudaSuccess == cuerr);
 
   // handles
@@ -122,10 +122,10 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
   size_t bytes = n_local_ * sizeof(double);
   
   // Allocate memory on host
-  data_host_ = new double[bytes];
+  data_host_mirror_ = new double[bytes];
  
   // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc((void**)&data_dev_, bytes);
+  cudaError_t cuerr = cudaMalloc((void**)&data_, bytes);
   assert(cudaSuccess == cuerr);
 
   // handles
@@ -134,38 +134,37 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
 
 hiopVectorCuda::~hiopVectorCuda()
 {
-  delete [] data_host_;
+  delete [] data_host_mirror_;
   // Delete workspaces and handles
-  cudaFree(data_dev_);
+  cudaFree(data_);
   cublasDestroy(handle_cublas_);
-  data_dev_  = nullptr;
-  data_host_ = nullptr;
+  data_  = nullptr;
+  data_host_mirror_ = nullptr;
   delete idx_cumsum_;
 }
 
 /// Set all vector elements to zero
 void hiopVectorCuda::setToZero()
 {
-  hiop::cuda::thrust_fill_kernel(n_local_, data_dev_, 0.0);
+  hiop::cuda::thrust_fill_kernel(n_local_, data_, 0.0);
 }
 
 /// Set all vector elements to constant c
 void hiopVectorCuda::setToConstant(double c)
 {
-  hiop::cuda::thrust_fill_kernel(n_local_, data_dev_, c);
+  hiop::cuda::thrust_fill_kernel(n_local_, data_, c);
 }
 
 /// Set all elements to random values uniformly distributed between `minv` and `maxv`.
 void hiopVectorCuda::set_to_random_uniform(double minv, double maxv)
 {
-  double* data = data_dev_;
+  double* data = data_;
   hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
 } // namespace hiop
 
 /// Set all elements that are not zero in ix to  c, and the rest to 0
 void hiopVectorCuda::setToConstant_w_patternSelect(double c, const hiopVector& select)
 {
-  const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
   // TODO: add one cu function to perform the following two functions
   setToConstant(c);
   componentMult(select);
@@ -173,15 +172,14 @@ void hiopVectorCuda::setToConstant_w_patternSelect(double c, const hiopVector& s
 
 void hiopVectorCuda::copyFrom(const hiopVector& v_)
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(v_);
-  cudaError_t cuerr = cudaMemcpy(data_dev_, v.data_dev_, (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
+  cudaError_t cuerr = cudaMemcpy(data_, v_.local_data_const(), (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copyFrom(const double* v_local_data)
 {
   if(v_local_data) {
-    cudaError_t cuerr = cudaMemcpy(data_dev_, v_local_data, (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
+    cudaError_t cuerr = cudaMemcpy(data_, v_local_data, (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
     assert(cuerr == cudaSuccess);
   }
 }
@@ -189,7 +187,6 @@ void hiopVectorCuda::copyFrom(const double* v_local_data)
 /// @brief Copy from vec the elements specified by the indices in index_in_src
 void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector& select)
 {
-  const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select); 
   copyFrom(vv);
   componentMult(select);
 }
@@ -197,7 +194,7 @@ void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector&
 void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const double* v, int nv)
 {
   assert(start_index_in_dest+nv <= n_local_);
-  cudaError_t cuerr = cudaMemcpy(data_dev_+start_index_in_dest, v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
+  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
 
@@ -206,38 +203,34 @@ void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const hiopVector&
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(v_src);
-  assert(start_index_in_dest+v.n_local_ <= n_local_);
-  cudaError_t cuerr = cudaMemcpy(data_dev_+start_index_in_dest, v.data_dev_, (v.n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
+  assert(start_index_in_dest+v_.get_local_size() <= n_local_);
+  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v_src.local_data_const(), (v_.get_local_size())*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
-  cudaError_t cuerr = cudaMemcpy(data_dev_, v+start_index_in_v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
+  cudaError_t cuerr = cudaMemcpy(data_, v+start_index_in_v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src) 
 {
-  const hiopVectorIntCuda& idx_src = dynamic_cast<const hiopVectorIntCuda&>(index_in_src);
-  const hiopVectorCuda& v_src = dynamic_cast<const hiopVectorCuda&>(src); 
-  assert(idx_src.size() == n_local_);
+  assert(index_in_src.size() == n_local_);
 
-  int* id = const_cast<int*>(idx_src.local_data_const());
-  double* dd = data_dev_;
-  const double* vd = v_src.local_data_const();
+  int* id = const_cast<int*>(index_in_src.local_data_const());
+  double* dd = data_;
+  const double* vd = src.local_data_const();
   
   hiop::cuda::copy_from_index_kernel(n_local_, dd, vd, id);
 }
 
 void hiopVectorCuda::copy_from_indexes(const double* src, const hiopVectorInt& index_in_src)
 {
-  const hiopVectorIntCuda& idx_src = dynamic_cast<const hiopVectorIntCuda&>(index_in_src);
-  assert(idx_src.size() == n_local_);
+  assert(index_in_src.size() == n_local_);
 
-  int* id = const_cast<int*>(idx_src.local_data_const());
-  double* dd = data_dev_;
+  int* id = const_cast<int*>(index_in_src.local_data_const());
+  double* dd = data_;
   
   hiop::cuda::copy_from_index_kernel(n_local_, dd, src, id);
 }
@@ -251,11 +244,10 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
-
+  int v_size = vec_src.get_local_size();
   assert((start_idx_dest >= 0 && start_idx_dest < this->n_local_) || this->n_local_==0);
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec_src);
-  assert((start_idx_src >=0 && start_idx_src < v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
-  const size_type howManyToCopySrc = v.n_local_-start_idx_src;  
+  assert((start_idx_src >=0 && start_idx_src < v_size) || v_size==0 || v_size==start_idx_src);
+  const size_type howManyToCopySrc = v_size - start_idx_src;  
 
   if(howManyToCopyDest == 0 || howManyToCopySrc == 0) {
     return;
@@ -263,8 +255,8 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 
   assert(howManyToCopyDest <= howManyToCopySrc);
 
-  cudaError_t cuerr = cudaMemcpy(data_dev_ + start_idx_dest,
-                                 v.data_dev_ + start_idx_src,
+  cudaError_t cuerr = cudaMemcpy(data_ + start_idx_dest,
+                                 vec.local_data() + start_idx_src,
                                  (howManyToCopyDest)*sizeof(double),
                                  cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
@@ -274,7 +266,7 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 void hiopVectorCuda::copyTo(double* dest) const
 {
   cudaError_t cuerr = cudaMemcpy(dest,
-                                 data_dev_,
+                                 data_,
                                  (n_local_)*sizeof(double),
                                  cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
@@ -282,35 +274,34 @@ void hiopVectorCuda::copyTo(double* dest) const
 
 void hiopVectorCuda::copyToStarting(int start_index, hiopVector& dst) const
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(dst);
-
+  int v_size = dst.get_local_size();
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_ == n_ && "are you sure you want to call this?");
 #endif
-  assert(start_index + v.n_local_ <= n_local_);
+  assert(start_index + v_size <= n_local_);
 
   // If nowhere to copy, return.
-  if(v.n_local_ == 0)
+  if(v_size == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(v.data_dev_,
-                                 data_dev_ + start_index,
-                                 (v.n_local_)*sizeof(double),
+  cudaError_t cuerr = cudaMemcpy(dst.local_data(),
+                                 data_ + start_index,
+                                 (v_size)*sizeof(double),
                                  cudaMemcpyDeviceToDevice);
   assert(cuerr = cudaSuccess);
 }
 
 void hiopVectorCuda::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec);
-  assert(start_index_in_dest+n_local_ <= v.n_local_);
+  int v_size = dst.get_local_size();
+  assert(start_index_in_dest+n_local_ <= v_size);
 
   // If there is nothing to copy, return.
   if(n_local_ == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(v.data_dev_ + start_index_in_dest,
-                                 data_dev_,
+  cudaError_t cuerr = cudaMemcpy(vec.local_data() + start_index_in_dest,
+                                 data_,
                                  (n_local_)*sizeof(double),
                                  cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
@@ -321,13 +312,9 @@ void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& vec, int start_index
   if(n_local_ == 0) {
     return;
   }
- 
-  hiopVectorCuda& v = dynamic_cast<hiopVectorCuda&>(vec);
-  const hiopVectorCuda& selected= dynamic_cast<const hiopVectorCuda&>(select);
-  assert(n_local_ == selected.n_local_);
-  
-  double* dd = data_dev_;
-  double* vd = v.data_dev_;
+   
+  double* dd = data_;
+  double* vd = vec.local_data();
   const double* pattern = selected.local_data_const();
 
   if(nullptr == idx_cumsum_) {
@@ -338,7 +325,7 @@ void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& vec, int start_index
   }
 
   index_type* nnz_cumsum = idx_cumsum_->local_data();
-  index_type v_n_local = v.n_local_;
+  index_type v_n_local = vec.get_local_size();
 
   hiop::cuda::copyToStartingAt_w_pattern_kernel(n_local_,
                                                 v_n_local,
@@ -381,7 +368,7 @@ void hiopVectorCuda::copy_to_two_vec_w_pattern(hiopVector& c,
 }
 
 void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src, 
-                                                hiopVector& destination, 
+                                                hiopVector& dest, 
                                                 int start_idx_dest, 
                                                 int num_elems /* = -1 */) const
 {
@@ -389,33 +376,32 @@ void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src,
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
 
-  const hiopVectorCuda& dest = dynamic_cast<hiopVectorCuda&>(destination);
-
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
-  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.get_local_size());
 
+  const dest_size = dest.get_local_size();
 #ifndef NDEBUG  
-  if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
+  if(start_idx_dest==dest_size || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
 
   if(num_elems<0)
   {
-    num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
+    num_elems = std::min(this->n_local_ - start_idx_in_src, dest_size- start_idx_dest);
   } 
   else
   {
     assert(num_elems+start_idx_in_src <= this->n_local_);
-    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    assert(num_elems+start_idx_dest   <= dest_size);
     //make sure everything stays within bounds (in release)
-    num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
-    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+    num_elems = std::min(num_elems, (int) (this->n_local_-start_idx_in_src));
+    num_elems = std::min(num_elems, (int) (dest_size-start_idx_dest));
   }
 
   if(num_elems == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(dest.data_dev_ + start_idx_dest,
-                                 data_dev_ + start_idx_in_src,
+  cudaError_t cuerr = cudaMemcpy(dest.local_data() + start_idx_dest,
+                                 data_ + start_idx_in_src,
                                  (num_elems)*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
@@ -434,7 +420,7 @@ double hiopVectorCuda::twonorm() const
   int one = 1; 
   double nrm = 0.;
   if(n_local_>0) {
-    cublasStatus_t ret_cublas = cublasDnrm2(handle_cublas_, n_local_, data_dev_, one, &nrm);
+    cublasStatus_t ret_cublas = cublasDnrm2(handle_cublas_, n_local_, data_, one, &nrm);
     assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
   }
 
@@ -462,7 +448,7 @@ double hiopVectorCuda::infnorm() const
 
 double hiopVectorCuda::infnorm_local() const
 {
-  return hiop::cuda::infnorm_local_kernel(n_local_, data_dev_);
+  return hiop::cuda::infnorm_local_kernel(n_local_, data_);
 }
 
 double hiopVectorCuda::onenorm() const
@@ -478,103 +464,92 @@ double hiopVectorCuda::onenorm() const
 
 double hiopVectorCuda::onenorm_local() const
 {
-//  double* data = data_dev_;
-//  int n = n_local_;
-//  return hiop::cuda::onenorm_local_kernel(n, data);
-    return hiop::cuda::onenorm_local_kernel(n_local_, data_dev_);
+    return hiop::cuda::onenorm_local_kernel(n_local_, data_);
 }
 
 void hiopVectorCuda::componentMult( const hiopVector& vec )
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec);
-  assert(n_local_ == v.n_local_);
+  assert(n_local_ == vec.get_local_size());
 
-  hiop::cuda::thrust_component_mult_kernel(n_local_, data_dev_, v.data_dev_);
+  hiop::cuda::thrust_component_mult_kernel(n_local_, data_, vec.local_data_const());
 }
 
 void hiopVectorCuda::componentDiv( const hiopVector& vec )
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec);
-  assert(n_local_ == v.n_local_);
+  assert(n_local_ == vec.get_local_size());
 
-  hiop::cuda::thrust_component_div_kernel(n_local_, data_dev_, v.data_dev_);
+  hiop::cuda::thrust_component_div_kernel(n_local_, data_, vec.local_data_const());
 }
 
 void hiopVectorCuda::componentDiv_w_selectPattern( const hiopVector& vec, const hiopVector& select)
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec);
-  assert(n_local_ == v.n_local_);
+  assert(n_local_ == vec.get_local_size());
 
-  const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
-  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_dev_, v.data_dev_, ix.data_dev_);
+  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_, vec.local_data(), select.local_data());
 }
 
 void hiopVectorCuda::component_min(const double constant)
 {
-  hiop::cuda::component_min_kernel(n_local_, data_dev_, constant);
+  hiop::cuda::component_min_kernel(n_local_, data_, constant);
 }
 
 void hiopVectorCuda::component_min(const hiopVector& vec)
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec); 
-  assert(v.get_local_size() == n_local_);
+  assert(vec.get_local_size() == n_local_);
 
-  const double* vd = v.data_dev_;
+  const double* vd = vec.local_data_const();
   
-  hiop::cuda::component_min_kernel(n_local_, data_dev_, vd);
+  hiop::cuda::component_min_kernel(n_local_, data_, vd);
 }
 
 void hiopVectorCuda::component_max(const double constant)
 {
-  hiop::cuda::component_max_kernel(n_local_, data_dev_, constant);
+  hiop::cuda::component_max_kernel(n_local_, data_, constant);
 }
 
 void hiopVectorCuda::component_max(const hiopVector& vec)
 {
-  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(vec); 
-  assert(v.get_local_size() == n_local_);
+  assert(vec.get_local_size() == n_local_);
 
-  const double* vd = v.data_dev_;
+  const double* vd = vec.local_data_const();
   
-  hiop::cuda::component_max_kernel(n_local_, data_dev_, vd);
+  hiop::cuda::component_max_kernel(n_local_, data_, vd);
 }
 
 void hiopVectorCuda::component_abs()
 {
-  hiop::cuda::thrust_component_abs_kernel(n_local_, data_dev_);
+  hiop::cuda::thrust_component_abs_kernel(n_local_, data_);
 }
 
 void hiopVectorCuda::component_sgn ()
 {
-  hiop::cuda::thrust_component_sgn_kernel(n_local_, data_dev_);
+  hiop::cuda::thrust_component_sgn_kernel(n_local_, data_);
 }
 
 void hiopVectorCuda::component_sqrt()
 {
-  hiop::cuda::thrust_component_sqrt_kernel(n_local_, data_dev_);
+  hiop::cuda::thrust_component_sqrt_kernel(n_local_, data_);
 }
 
 /// Scale each element of this  by the constant alpha
 void hiopVectorCuda::scale(double alpha)
 {
   int one = 1;  
-  cublasStatus_t ret_cublas = cublasDscal(handle_cublas_, n_local_, &alpha, data_dev_, one);
+  cublasStatus_t ret_cublas = cublasDscal(handle_cublas_, n_local_, &alpha, data_, one);
   assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
 }
 
 /// Implementation of AXPY kernel
 void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
   int one = 1;
-  cublasStatus_t ret_cublas = cublasDaxpy(handle_cublas_, n_local_, &alpha, x.data_dev_, one, data_dev_, one);
+  cublasStatus_t ret_cublas = cublasDaxpy(handle_cublas_, n_local_, &alpha, xvec.local_data_const(), one, data_, one);
   assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
 }
 
 /// this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
 void hiopVectorCuda::axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select) 
 {
-  const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(select);
   axpy(alpha, xvec);
   componentMult(select);
 }
@@ -582,16 +557,13 @@ void hiopVectorCuda::axpy_w_pattern(double alpha, const hiopVector& xvec, const 
 /// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
 void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
-  const hiopVectorIntCuda& idxs = dynamic_cast<const hiopVectorIntCuda&>(i);
-
-  assert(x.get_size()==i.size());
-  assert(x.get_local_size()==i.size());
+  assert(xvec.get_size()==i.size());
+  assert(xvec.get_local_size()==i.size());
   assert(i.size()<=n_local_);
   
-  double* yd = data_dev_;
-  double* xd = const_cast<double*>(x.data_dev_);
-  int* id = const_cast<int*>(idxs.local_data_const());
+  double* yd = data_;
+  double* xd = const_cast<double*>(xvec.local_data());
+  int* id = const_cast<int*>(i.local_data_const());
 
   hiop::cuda::axpy_w_map_kernel(n_local_, yd, xd, id, alpha);
 }
@@ -599,15 +571,13 @@ void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec, const hiopVector
 /** @brief this[i] += alpha*x[i]*z[i] forall i */
 void hiopVectorCuda::axzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
-  const hiopVectorCuda& z = dynamic_cast<const hiopVectorCuda&>(zvec);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.n_local_ == z.n_local_);
-  assert(  n_local_ == z.n_local_);
+  assert(xvec.n_local_ == zvec.n_local_);
+  assert(     n_local_ == zvec.n_local_);
 #endif  
-  double* dd       = data_dev_;
-  const double* xd = x.local_data_const();
-  const double* zd = z.local_data_const();
+  double* dd       = data_;
+  const double* xd = xvec.local_data_const();
+  const double* zd = zvec.local_data_const();
 
   hiop::cuda::axzpy_kernel(n_local_, dd, xd, zd, alpha);
 }
@@ -615,15 +585,13 @@ void hiopVectorCuda::axzpy(double alpha, const hiopVector& xvec, const hiopVecto
 /** @brief this[i] += alpha*x[i]/z[i] forall i */
 void hiopVectorCuda::axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
-  const hiopVectorCuda& z = dynamic_cast<const hiopVectorCuda&>(zvec);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.n_local_ == z.n_local_);
-  assert(  n_local_ == z.n_local_);
+  assert(xvec.n_local_ == zvec.n_local_);
+  assert(     n_local_ == zvec.n_local_);
 #endif  
-  double*       yd = data_dev_;
-  const double* xd = x.local_data_const();
-  const double* zd = z.local_data_const();
+  double*       yd = data_;
+  const double* xd = xvec.local_data_const();
+  const double* zd = zvec.local_data_const();
 
   hiop::cuda::axdzpy_kernel(n_local_, yd, xd, zd, alpha);
 }
@@ -634,17 +602,14 @@ void hiopVectorCuda::axdzpy_w_pattern(double alpha,
                                       const hiopVector& zvec,
                                       const hiopVector& select)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
-  const hiopVectorCuda& z = dynamic_cast<const hiopVectorCuda&>(zvec);
-  const hiopVectorCuda& sel = dynamic_cast<const hiopVectorCuda&>(select);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.n_local_==z.n_local_);
-  assert(  n_local_==z.n_local_);
+  assert(xvec.n_local_==zvec.n_local_);
+  assert(     n_local_==zvec.n_local_);
 #endif
-  double* yd = data_dev_;
-  const double* xd = x.local_data_const();
-  const double* zd = z.local_data_const();
-  const double* id = sel.local_data_const();
+  double* yd = data_;
+  const double* xd = xvec.local_data_const();
+  const double* zd = zvec.local_data_const();
+  const double* id = select.local_data_const();
 
   hiop::cuda::axdzpy_w_pattern_kernel(n_local_, yd, xd, zd, id, alpha);
 }
@@ -652,26 +617,24 @@ void hiopVectorCuda::axdzpy_w_pattern(double alpha,
 /** @brief this[i] += c forall i */
 void hiopVectorCuda::addConstant(double c)
 {
-  hiop::cuda::add_constant_kernel(n_local_, data_dev_, c);
+  hiop::cuda::add_constant_kernel(n_local_, data_, c);
 }
 
 /** @brief this[i] += c forall i with pattern selection */
 void  hiopVectorCuda::addConstant_w_patternSelect(double c, const hiopVector& select)
 {
-  const hiopVectorCuda& sel = dynamic_cast<const hiopVectorCuda&>(select);
-  assert(this->n_local_ == sel.n_local_);
-  const double* id = sel.local_data_const();
+  assert(this->n_local_ == select.get_local_size());
+  const double* id = select.local_data_const();
 
-  hiop::cuda::add_constant_w_pattern_kernel(n_local_, data_dev_, id, c);
+  hiop::cuda::add_constant_w_pattern_kernel(n_local_, data_, id, c);
 }
 
 /** Return the dot product of this hiopVector with v */
 double hiopVectorCuda::dotProductWith( const hiopVector& v ) const
 {
-  const hiopVectorCuda& vx = dynamic_cast<const hiopVectorCuda&>(v);
   int one = 1;
   double retval; 
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, vx.data_dev_, one, data_dev_, one, &retval);
+  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, v.local_data(), one, data_, one, &retval);
   assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
 
 #ifdef HIOP_USE_MPI
@@ -687,23 +650,22 @@ double hiopVectorCuda::dotProductWith( const hiopVector& v ) const
 /// @brief Negate all the elements of this
 void hiopVectorCuda::negate()
 {
-  hiop::cuda::thrust_negate_kernel(n_local_, data_dev_);
+  hiop::cuda::thrust_negate_kernel(n_local_, data_);
 }
 
 /// @brief Invert (1/x) the elements of this
 void hiopVectorCuda::invert()
 {
-  hiop::cuda::invert_kernel(n_local_, data_dev_);
+  hiop::cuda::invert_kernel(n_local_, data_);
 }
 
 /** @brief Sum all selected log(this[i]) */
 double hiopVectorCuda::logBarrier_local(const hiopVector& select) const
 {
-  const hiopVectorCuda& sel = dynamic_cast<const hiopVectorCuda&>(select);
-  assert(n_local_ == sel.n_local_);
-  const double* id = sel.local_data_const();
+  assert(n_local_ == select.get_local_size());
+  const double* id = select.local_data_const();
 
-  return hiop::cuda::log_barr_obj_kernel(n_local_, data_dev_, id);
+  return hiop::cuda::log_barr_obj_kernel(n_local_, data_, id);
 }
 
 /**  @brief add 1/(this[i]) */
@@ -711,15 +673,13 @@ void hiopVectorCuda::addLogBarrierGrad(double alpha,
                                        const hiopVector& xvec,
                                        const hiopVector& select)
 {
-  const hiopVectorCuda& x = dynamic_cast<const hiopVectorCuda&>(xvec);
-  const hiopVectorCuda& sel = dynamic_cast<const hiopVectorCuda&>(select);  
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local_ == x.n_local_);
-  assert(n_local_ == sel.n_local_);
+  assert(n_local_ == xvec.get_local_size());
+  assert(n_local_ == select.get_local_size());
 #endif
-  double* yd = data_dev_;
-  const double* xd = x.local_data_const();
-  const double* id = sel.local_data_const();
+  double* yd = data_;
+  const double* xd = xvec.local_data_const();
+  const double* id = select.local_data_const();
 
   hiop::cuda::adxpy_w_pattern_kernel(n_local_, yd, xd, id, alpha);
 }
@@ -727,7 +687,7 @@ void hiopVectorCuda::addLogBarrierGrad(double alpha,
 /** @brief Sum all elements */
 double hiopVectorCuda::sum_local() const
 {
-  return hiop::cuda::thrust_sum_kernel(n_local_, data_dev_);
+  return hiop::cuda::thrust_sum_kernel(n_local_, data_);
 }
 
 /**
@@ -737,15 +697,13 @@ double hiopVectorCuda::linearDampingTerm_local(const hiopVector& ixleft,
                                                const double& mu,
                                                const double& kappa_d) const
 {
-  const hiopVectorCuda& ixl = dynamic_cast<const hiopVectorCuda&>(ixleft);
-  const hiopVectorCuda& ixr = dynamic_cast<const hiopVectorCuda&>(ixright);  
 #ifdef HIOP_DEEPCHECKS
-  assert(n_local_ == ixl.n_local_);
-  assert(n_local_ == ixr.n_local_);
+  assert(n_local_ == ixleft.get_local_size());
+  assert(n_local_ == ixright.get_local_size());
 #endif
-  const double* ld = ixl.local_data_const();
-  const double* rd = ixr.local_data_const();
-  const double* vd = data_dev_;
+  const double* ld = ixleft.local_data_const();
+  const double* rd = ixright.local_data_const();
+  const double* vd = data_;
 
   return hiop::cuda::linear_damping_term_kernel(n_local_, vd, ld, rd, mu, kappa_d);
 }
@@ -756,13 +714,13 @@ void hiopVectorCuda::addLinearDampingTerm(const hiopVector& ixleft,
                                           const double& ct)
 {
 
-  assert((dynamic_cast<const hiopVectorCuda&>(ixleft)).n_local_ == n_local_);
-  assert((dynamic_cast<const hiopVectorCuda&>(ixright)).n_local_ == n_local_);
+  assert(ixleft.get_local_size() == n_local_);
+  assert(ixright.get_local_size() == n_local_);
 
-  const double* ixl= (dynamic_cast<const hiopVectorCuda&>(ixleft)).local_data_const();
-  const double* ixr= (dynamic_cast<const hiopVectorCuda&>(ixright)).local_data_const();
+  const double* ixl= ixleft.local_data_const();
+  const double* ixr= ixright.local_data_const();
 
-  double* data = data_dev_;
+  double* data = data_;
 
   // compute linear damping term
   hiop::cuda::add_linear_damping_term_kernel(n_local_, data, ixl, ixr, alpha, ct);
@@ -771,7 +729,7 @@ void hiopVectorCuda::addLinearDampingTerm(const hiopVector& ixleft,
 /** @brief Check if all elements of the vector are positive */
 int hiopVectorCuda::allPositive()
 {
-  double min_val = hiop::cuda::min_local_kernel(n_local_, data_dev_);
+  double min_val = hiop::cuda::min_local_kernel(n_local_, data_);
 
   int allPos = (min_val > 0.0) ? 1 : 0;
 
@@ -786,14 +744,13 @@ int hiopVectorCuda::allPositive()
 /** @brief Checks if selected elements of `this` are positive */
 int hiopVectorCuda::allPositive_w_patternSelect(const hiopVector& wvec)
 {
-  const hiopVectorCuda& w = dynamic_cast<const hiopVectorCuda&>(wvec);
 
 #ifdef HIOP_DEEPCHECKS
-  assert(w.n_local_ == n_local_);
+  assert(wvec.get_local_size() == n_local_);
 #endif 
 
-  const double* id = w.local_data_const();
-  const double* data = data_dev_;
+  const double* id = wvec.local_data_const();
+  const double* data = data_;
 
   int allPos = hiop::cuda::all_positive_w_pattern_kernel(n_local_, data, id);
   
@@ -811,7 +768,7 @@ int hiopVectorCuda::allPositive_w_patternSelect(const hiopVector& wvec)
 /// Find minimum vector element
 double hiopVectorCuda::min() const
 {
-  double result = hiop::cuda::min_local_kernel(n_local_, data_dev_);
+  double result = hiop::cuda::min_local_kernel(n_local_, data_);
 
 #ifdef HIOP_USE_MPI
   double resultG;
@@ -824,10 +781,9 @@ double hiopVectorCuda::min() const
 /// Find minimum vector element for `select` pattern
 double hiopVectorCuda::min_w_pattern(const hiopVector& select) const
 {
-  const hiopVectorCuda& sel = dynamic_cast<const hiopVectorCuda&>(select);
-  assert(this->n_local_ == sel.n_local_);
-  const double* data = data_dev_;
-  const double* id = sel.local_data_const();
+  assert(this->n_local_ == select.get_local_size());
+  const double* data = data_;
+  const double* id = select.local_data_const();
   
   double max_val = std::numeric_limits<double>::max();
   double result = hiop::cuda::min_w_pattern_kernel(n_local_, data, id, max_val);
@@ -854,23 +810,19 @@ bool hiopVectorCuda::projectIntoBounds_local(const hiopVector& xlo,
                                              double kappa1,
                                              double kappa2)
 {
-  const hiopVectorCuda& xl = dynamic_cast<const hiopVectorCuda&>(xlo);
-  const hiopVectorCuda& il = dynamic_cast<const hiopVectorCuda&>(ixl);
-  const hiopVectorCuda& xu = dynamic_cast<const hiopVectorCuda&>(xup);
-  const hiopVectorCuda& iu = dynamic_cast<const hiopVectorCuda&>(ixu);
 
 #ifdef HIOP_DEEPCHECKS
-  assert(xl.n_local_ == n_local_);
-  assert(il.n_local_ == n_local_);
-  assert(xu.n_local_ == n_local_);
-  assert(iu.n_local_ == n_local_);
+  assert(xlo.get_local_size() == n_local_);
+  assert(ixl.get_local_size() == n_local_);
+  assert(xup.get_local_size()== n_local_);
+  assert(ixu.get_local_size()== n_local_);
 #endif
 
-  const double* xld = xl.local_data_const();
-  const double* ild = il.local_data_const();
-  const double* xud = xu.local_data_const();
-  const double* iud = iu.local_data_const();
-  double* xd = data_dev_;
+  const double* xld = xlo.local_data_const();
+  const double* ild = ixl.local_data_const();
+  const double* xud = xup.local_data_const();
+  const double* iud = ixu.local_data_const();
+  double* xd = data_;
   
   // Perform preliminary check to see of all upper value
   bool bval = hiop::cuda::check_bounds_kernel(n_local_, xld, xud);
@@ -888,15 +840,14 @@ bool hiopVectorCuda::projectIntoBounds_local(const hiopVector& xlo,
 /** @brief max{a\in(0,1]| x+ad >=(1-tau)x} */
 double hiopVectorCuda::fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const
 {
-  const hiopVectorCuda& d = dynamic_cast<const hiopVectorCuda&>(dvec);
 #ifdef HIOP_DEEPCHECKS
-  assert(d.n_local_ == n_local_);
+  assert(dvec.get_local_size() == n_local_);
   assert(tau > 0);
   assert(tau < 1); // TODO: per documentation above it should be tau <= 1 (?).
 #endif
 
-  const double* dd = d.local_data_const();
-  const double* xd = data_dev_;
+  const double* dd = dvec.local_data_const();
+  const double* xd = data_;
 
   double alpha = hiop::cuda::min_frac_to_bds_kernel(n_local_, xd, dd, tau);
 
@@ -908,18 +859,15 @@ double hiopVectorCuda::fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
                                                          const double& tau, 
                                                          const hiopVector& select) const
 {
-  const hiopVectorCuda& d = dynamic_cast<const hiopVectorCuda&>(dvec);
-  const hiopVectorCuda& s = dynamic_cast<const hiopVectorCuda&>(select);
-
 #ifdef HIOP_DEEPCHECKS
-  assert(d.n_local_ == n_local_);
-  assert(s.n_local_ == n_local_);
+  assert(dvec.get_local_size() == n_local_);
+  assert(select.get_local_size() == n_local_);
   assert(tau>0);
   assert(tau<1);
 #endif
-  const double* dd = d.local_data_const();
-  const double* xd = data_dev_;
-  const double* id = s.local_data_const();
+  const double* dd = dvec.local_data_const();
+  const double* xd = data_;
+  const double* id = select.local_data_const();
 
   double alpha = hiop::cuda::min_frac_to_bds_w_pattern_kernel(n_local_, xd, dd, id, tau);
 
@@ -929,13 +877,12 @@ double hiopVectorCuda::fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
 /** @brief Set elements of `this` to zero based on `select`.*/
 void hiopVectorCuda::selectPattern(const hiopVector& select)
 {
-  const hiopVectorCuda& s = dynamic_cast<const hiopVectorCuda&>(select);
 #ifdef HIOP_DEEPCHECKS
-  assert(s.n_local_==n_local_);
+  assert(select.()==n_local_);
 #endif
 
-  double* data = data_dev_;
-  double* id = s.data_dev_;
+  double* data = data_;
+  double* id = select.local_data();
 
   // set value with pattern
   hiop::cuda::select_pattern_kernel(n_local_, data, id);
@@ -943,15 +890,13 @@ void hiopVectorCuda::selectPattern(const hiopVector& select)
 
 /** @brief Checks if `this` matches nonzero pattern of `select`. */
 bool hiopVectorCuda::matchesPattern(const hiopVector& pattern)
-{  
-  const hiopVectorCuda& p = dynamic_cast<const hiopVectorCuda&>(pattern);
-
+{
 #ifdef HIOP_DEEPCHECKS
-  assert(p.n_local_==n_local_);
+  assert(pattern.get_local_size()==n_local_);
 #endif
 
-  double* xd = data_dev_;
-  double* id = p.data_dev_;
+  double* xd = data_;
+  double* id = pattern.local_data();
 
   int bret = hiop::cuda::match_pattern_kernel(n_local_, xd, id);
 
@@ -970,15 +915,13 @@ void hiopVectorCuda::adjustDuals_plh(const hiopVector& xvec,
                                      const double& mu,
                                      const double& kappa)
 {
-  const hiopVectorCuda& x  = dynamic_cast<const hiopVectorCuda&>(xvec) ;
-  const hiopVectorCuda& ix = dynamic_cast<const hiopVectorCuda&>(ixvec);
 #ifdef HIOP_DEEPCHECKS
-  assert(x.n_local_==n_local_);
-  assert(ix.n_local_==n_local_);
+  assert(xvec.get_local_size()==n_local_);
+  assert(ixvec.get_local_size()==n_local_);
 #endif
-  const double* xd =  x.local_data_const();
-  const double* id = ix.local_data_const();
-  double* zd = data_dev_; //the dual
+  const double* xd =  xvec.local_data_const();
+  const double* id = ixvec.local_data_const();
+  double* zd = data_; //the dual
 
   hiop::cuda::adjustDuals_plh_kernel(n_local_, zd, xd, id, mu, kappa);
 }
@@ -986,13 +929,13 @@ void hiopVectorCuda::adjustDuals_plh(const hiopVector& xvec,
 /** @brief Check if all elements of the vector are zero */
 bool hiopVectorCuda::is_zero() const
 {
-  return hiop::cuda::is_zero_kernel(n_local_, data_dev_);
+  return hiop::cuda::is_zero_kernel(n_local_, data_);
 }
 
 /** @brief Returns true if any element of `this` is NaN. */
 bool hiopVectorCuda::isnan_local() const
 {
-  return hiop::cuda::isnan_kernel(n_local_, data_dev_);
+  return hiop::cuda::isnan_kernel(n_local_, data_);
 }
 
 /**
@@ -1004,13 +947,13 @@ bool hiopVectorCuda::isnan_local() const
  */
 bool hiopVectorCuda::isinf_local() const
 {
-  return hiop::cuda::isinf_kernel(n_local_, data_dev_);
+  return hiop::cuda::isinf_kernel(n_local_, data_);
 }
 
 /** @brief Returns true if all elements of `this` are finite. */
 bool hiopVectorCuda::isfinite_local() const
 {
-  return hiop::cuda::isfinite_kernel(n_local_, data_dev_);
+  return hiop::cuda::isfinite_kernel(n_local_, data_);
 }
 
 /** @brief Prints vector data to a file in Matlab format. */
@@ -1035,45 +978,45 @@ hiopVector* hiopVectorCuda::new_copy () const
 
 void hiopVectorCuda::copyToDev()
 {
-  cudaError_t cuerr = cudaMemcpy(data_dev_, data_host_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
+  cudaError_t cuerr = cudaMemcpy(data_, data_host_mirror_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copyFromDev()
 {
-  cudaError_t cuerr = cudaMemcpy(data_host_, data_dev_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
+  cudaError_t cuerr = cudaMemcpy(data_host_mirror_, data_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copyToDev() const
 {
-  double* data_dev = const_cast<double*>(data_dev_);
-  cudaError_t cuerr = cudaMemcpy(data_dev, data_host_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
+  double* data_dev = const_cast<double*>(data_);
+  cudaError_t cuerr = cudaMemcpy(data_dev, data_host_mirror_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
   assert(cuerr == cudaSuccess);
 }
 
 void hiopVectorCuda::copyFromDev() const
 {
-  double* data_host = const_cast<double*>(data_host_);
-  cudaError_t cuerr = cudaMemcpy(data_host, data_dev_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
+  double* data_host = const_cast<double*>(data_host_mirror_);
+  cudaError_t cuerr = cudaMemcpy(data_host, data_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
   assert(cuerr == cudaSuccess);
 }
 
 size_type hiopVectorCuda::numOfElemsLessThan(const double &val) const
 {
-  return hiop::cuda::num_of_elem_less_than_kernel(n_local_, data_dev_, val);
+  return hiop::cuda::num_of_elem_less_than_kernel(n_local_, data_, val);
 }
 
 size_type hiopVectorCuda::numOfElemsAbsLessThan(const double &val) const
 {
-  return hiop::cuda::num_of_elem_absless_than_kernel(n_local_, data_dev_, val);
+  return hiop::cuda::num_of_elem_absless_than_kernel(n_local_, data_, val);
 }
 
 void hiopVectorCuda::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
-                                          const int start, 
-                                          const int end, 
-                                          const hiopInterfaceBase::NonlinearityType* arr_src,
-                                          const int start_src) const
+                                       const int start, 
+                                       const int end, 
+                                       const hiopInterfaceBase::NonlinearityType* arr_src,
+                                       const int start_src) const
 {
   assert(arr && arr_src);
   assert(end <= n_local_ && start <= end && start >= 0);
