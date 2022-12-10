@@ -89,6 +89,7 @@ public:
   /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& v );
   virtual void copyFrom(const double* v_local_data);
+  /// @brief Copy from vec the elements specified by the indices in select
   virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this'
   virtual void copyFromStarting(int start_index_in_dest, const double* v, int n);
@@ -107,10 +108,10 @@ public:
 
   /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const;
-  /// @brief Copy 'this' to v starting at start_index in 'this'.
+  /// @brief Copy 'this' to dst starting at start_index in 'this'.
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
-  /// @brief Copy 'this' to v starting at start_index in 'v'.
-  virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
+  /// @brief Copy 'this' to dst starting at start_index in 'dst'.
+  virtual void copyToStarting(hiopVector& dst, int start_index_in_dest) const;
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
   virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
 
@@ -130,9 +131,14 @@ public:
    * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
-   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
-   */
+  */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
+  /**
+   * @brief Copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest'
+   * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
+   * either source ('this') or destination ('dest') is reached
+   * The values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
+  */ 
   virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
 
   /** @brief Return the two norm */

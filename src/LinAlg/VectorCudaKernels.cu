@@ -72,6 +72,7 @@
 //#include <cmath>
 //#include <limits>
 
+/// @brief compute abs(b-a)
 template <typename T>
 struct thrust_abs_diff: public thrust::binary_function<T,T,T>
 {
@@ -82,7 +83,7 @@ struct thrust_abs_diff: public thrust::binary_function<T,T,T>
     }
 };
 
-/// @brief  operators for thrust
+/// @brief compute abs(a)
 template <typename T>
 struct thrust_abs: public thrust::unary_function<T,T>
 {
@@ -93,6 +94,7 @@ struct thrust_abs: public thrust::unary_function<T,T>
     }
 };
 
+/// @brief return true if abs(a) < tol_
 struct thrust_abs_less
 {
     const double tol_;
@@ -105,6 +107,7 @@ struct thrust_abs_less
     }
 };
 
+/// @brief return true if a < tol_
 struct thrust_less
 {
     const double tol_;
@@ -117,6 +120,7 @@ struct thrust_less
     }
 };
 
+/// @brief return true if (0.0 < a) - (a < 0.0)
 template <typename T>
 struct thrust_sig: public thrust::unary_function<T,T>
 {
@@ -127,6 +131,7 @@ struct thrust_sig: public thrust::unary_function<T,T>
     }
 };
 
+/// @brief compute sqrt(a)
 template <typename T>
 struct thrust_sqrt: public thrust::unary_function<T,T>
 {
@@ -137,6 +142,7 @@ struct thrust_sqrt: public thrust::unary_function<T,T>
     }
 };
 
+/// @brief compute log(a) if a > 0, otherwise returns 0
 template <typename T>
 struct thrust_log_select: public thrust::unary_function<T,double>
 {
@@ -150,16 +156,18 @@ struct thrust_log_select: public thrust::unary_function<T,double>
     }
 };
 
+/// @brief compute isinf(a)
 template <typename T>
 struct thrust_isinf: public thrust::unary_function<T,bool>
 {
     __host__ __device__
-    T operator()(const T& a)
+    bool operator()(const T& a)
     {
-      return (T) isinf(a);
+      return isinf(a);
     }
 };
 
+/// @brief compute isfinite(a)
 template <typename T>
 struct thrust_isfinite: public thrust::unary_function<T,bool>
 {
@@ -170,16 +178,18 @@ struct thrust_isfinite: public thrust::unary_function<T,bool>
     }
 };
 
+/// @brief compute a==0.0
 template <typename T>
 struct thrust_iszero: public thrust::unary_function<T,bool>
 {
     __host__ __device__
     bool operator()(const T& a)
     {
-      return a==0.0;
+      return a== (T) (0.0);
     }
 };
 
+/// @brief compute isnan(a)
 template <typename T>
 struct thrust_isnan: public thrust::unary_function<T,bool>
 {
@@ -190,55 +200,59 @@ struct thrust_isnan: public thrust::unary_function<T,bool>
     }
 };
 
+/// @brief compute (bool) (a)
 struct thrust_istrue : public thrust::unary_function<int, bool>
 {
     __host__ __device__
     bool operator()(const int& a)
     {
       return a;
-      //return !(a==int(0));
     }
 };
 
-__global__ void component_min_cu(int n, double* vec, const double val)
+/** @brief Set y[i] = min(y[i],c), for i=[0,n_local-1] */
+__global__ void component_min_cu(int n, double* vec, const double c)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    vec[i] = (vec[i]<val) ? vec[i] : val;	
+    y[i] = (y[i]<c) ? y[i] : c;	
   }
 }
 
-__global__ void component_min_cu(int n, double* vec, const double* vec2)
+/** @brief Set y[i] = min(y[i],x[i]), for i=[0,n_local-1] */
+__global__ void component_min_cu(int n, double* y, const double* x)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    vec[i] = (vec[i]<vec2[i]) ? vec[i] : vec2[i];	
+    y[i] = (y[i]<x[i]) ? y[i] : x[i];	
   }
 }
 
-__global__ void component_max_cu(int n, double* vec, const double val)
+/** @brief Set y[i] = max(y[i],c), for i=[0,n_local-1] */
+__global__ void component_max_cu(int n, double* y, const double c)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    vec[i] = (vec[i]>val) ? vec[i] : val;	
+    y[i] = (y[i]>c) ? y[i] : c;	
   }
 }
 
-__global__ void component_max_cu(int n, double* vec, const double* vec2)
+/** @brief Set y[i] = max(y[i],x[i]), for i=[0,n_local-1] */
+__global__ void component_max_cu(int n, double* y, const double* x)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
-    vec[i] = (vec[i]>vec2[i]) ? vec[i] : vec2[i];	
+    y[i] = (y[i]>x[i]) ? y[i] : x[i];	
   }
 }
 
+/// @brief Copy from src the elements specified by the indices in id. 
 __global__ void copy_from_index_cu(int n, double* vec, const double* val, const int* id)
 {
-
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
   for (int i = tid; i < n; i += num_threads) {
@@ -246,6 +260,7 @@ __global__ void copy_from_index_cu(int n, double* vec, const double* val, const 
   }
 }
 
+/// @brief Performs axpy, y += alpha*x, on the indexes in this specified by id.
 __global__ void axpy_w_map_cu(int n, double* yd, const double* xd, const int* id, double alpha)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -256,6 +271,7 @@ __global__ void axpy_w_map_cu(int n, double* yd, const double* xd, const int* id
   }
 }
 
+/** @brief this[i] += alpha*x[i]*z[i] forall i */
 __global__ void axzpy_cu(int n, double* yd, const double* xd, const double* zd, double alpha)
 {
 
@@ -265,7 +281,8 @@ __global__ void axzpy_cu(int n, double* yd, const double* xd, const double* zd, 
     yd[i] = alpha * xd[i] * zd[i] + yd[i];
   }
 }
-   
+
+/** @brief this[i] += alpha*x[i]/z[i] forall i */
 __global__ void axdzpy_cu(int n, double* yd, const double* xd, const double* zd, double alpha)
 {
 
@@ -276,6 +293,7 @@ __global__ void axdzpy_cu(int n, double* yd, const double* xd, const double* zd,
   }
 }
 
+/** @brief this[i] += alpha*x[i]/z[i] forall i with pattern selection */
 __global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const double* zd, const double* id, double alpha)
 {
 
@@ -288,6 +306,7 @@ __global__ void axdzpy_w_pattern_cu(int n, double* yd, const double* xd, const d
   }
 }
 
+/** @brief y[i] += alpha*1/x[i] + y[i] forall i with pattern selection */
 __global__ void adxpy_w_pattern_cu(int n, double* yd, const double* xd, const double* id, double alpha)
 {
 
@@ -300,6 +319,8 @@ __global__ void adxpy_w_pattern_cu(int n, double* yd, const double* xd, const do
   }
 }
 
+/**  @brief  elements of this that corespond to nonzeros in ix are divided by elements of v.
+     The rest of elements of this are set to zero.*/
 __global__ void component_div_w_pattern_cu(int n, double* yd, const double* xd, const double* id)
 {
 
@@ -314,6 +335,7 @@ __global__ void component_div_w_pattern_cu(int n, double* yd, const double* xd, 
   }
 }
 
+/** @brief y[i] += c forall i */
 __global__ void add_constant_cu(int n, double* yd, double c)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -323,6 +345,7 @@ __global__ void add_constant_cu(int n, double* yd, double c)
   }
 }
 
+/** @brief y[i] += c forall i with pattern selection */
 __global__ void add_constant_w_pattern_cu(int n, double* yd, double c, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -332,6 +355,7 @@ __global__ void add_constant_w_pattern_cu(int n, double* yd, double c, const dou
   }
 }
 
+/// @brief Invert (1/x) the elements of this
 __global__ void invert_cu(int n, double* yd)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -341,6 +365,7 @@ __global__ void invert_cu(int n, double* yd)
   }
 }
 
+/** @brief Linear damping term */
 __global__ void set_linear_damping_term_cu(int n, double* yd, const double* vd, const double* ld, const double* rd)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -354,6 +379,10 @@ __global__ void set_linear_damping_term_cu(int n, double* yd, const double* vd, 
   }
 }
 
+/** 
+* @brief Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+* ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+*/
 __global__ void add_linear_damping_term_cu(int n, double* data, const double* ixl, const double* ixr, double alpha, double ct)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -363,6 +392,7 @@ __global__ void add_linear_damping_term_cu(int n, double* data, const double* ix
   }
 }
 
+/** @brief y[i] = 1.0 if x[i] is positive and id[i] = 1.0, otherwise y[i] = 0 */
 __global__ void is_posive_w_pattern_cu(int n, double* data, const double* vd, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -372,6 +402,7 @@ __global__ void is_posive_w_pattern_cu(int n, double* data, const double* vd, co
   }
 }
 
+/** @brief y[i] = x[i] if id[i] = 1.0, otherwise y[i] = val_else */
 __global__ void set_val_w_pattern_cu(int n, double* data, const double* vd, const double* id, double val_else)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -381,6 +412,7 @@ __global__ void set_val_w_pattern_cu(int n, double* data, const double* vd, cons
   }
 }
 
+/** @brief data[i] = 0 if id[i]==0.0 */
 __global__ void select_pattern_cu(int n, double* data, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -403,6 +435,7 @@ __global__ void match_pattern_cu(int n, double* data, const double* id)
   }
 }
 
+/** @brief Project solution into bounds  */
 __global__ void project_into_bounds_cu(int n,
                                        double* xd,
                                        const double* xld,
@@ -446,6 +479,7 @@ __global__ void project_into_bounds_cu(int n,
   }
 }
 
+/** @brief max{a\in(0,1]| x+ad >=(1-tau)x} */
 __global__ void fraction_to_the_boundry_cu(int n, double* yd, const double* xd, const double* dd, double tau)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -459,6 +493,7 @@ __global__ void fraction_to_the_boundry_cu(int n, double* yd, const double* xd, 
   }
 }
 
+/** @brief max{a\in(0,1]| x+ad >=(1-tau)x} with pattern select */
 __global__ void fraction_to_the_boundry_w_pattern_cu(int n,
                                                      double* yd,
                                                      const double* xd,
@@ -477,6 +512,7 @@ __global__ void fraction_to_the_boundry_w_pattern_cu(int n,
   }
 }
 
+/** @brief y[i] = 0 if id[i]==0.0 && xd[i]!=0.0, otherwise y[i] = 1*/
 __global__ void set_match_pattern_cu(int n, int* yd, const double* xd, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -490,6 +526,7 @@ __global__ void set_match_pattern_cu(int n, int* yd, const double* xd, const dou
   }
 }
 
+/** @brief Adjusts duals. */
 __global__ void adjust_duals_cu(int n, double* zd, const double* xd, const double* id, double mu, double kappa)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -522,6 +559,7 @@ __global__ void adjust_duals_cu(int n, double* zd, const double* xd, const doubl
   }
 }
 
+/// set nonlinear type
 __global__ void set_nonlinear_type_cu(const int n,
                                       const int length,
                                       hiop::hiopInterfaceBase::NonlinearityType* arr,
@@ -536,6 +574,7 @@ __global__ void set_nonlinear_type_cu(const int n,
   }
 }
 
+/// set nonlinear type
 __global__ void set_nonlinear_type_cu(const int n,
                                       const int length,
                                       hiop::hiopInterfaceBase::NonlinearityType* arr,
@@ -550,6 +589,10 @@ __global__ void set_nonlinear_type_cu(const int n,
 }
 
 /// for hiopVectorIntCuda
+/**
+ * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
+ * incremented integers up to i0+(n-1)di, when n is the length of this vector
+ */
 __global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
 {
 
@@ -560,6 +603,7 @@ __global__ void set_to_linspace_cu(int n, int *vec, int i0, int di)
   }
 }
 
+/** @brief compute cusum from the given pattern*/
 __global__ void compute_cusum_cu(int n, int* vec, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
@@ -578,6 +622,7 @@ __global__ void compute_cusum_cu(int n, int* vec, const double* id)
   }
 }
 
+/// @brief Copy the entries in 'dd' where corresponding 'ix' is nonzero, to vd starting at start_index_in_dest.
 __global__ void copyToStartingAt_w_pattern_cu(int n_src, 
                                               int n_dest,
                                               int start_index_in_dest,
@@ -602,6 +647,7 @@ namespace cuda
 
 constexpr int block_size=256;
 
+/// @brief Copy from src the elements specified by the indices in id. 
 void copy_from_index_kernel(int n_local,
                             double* yd,
                             const double* src,
@@ -611,6 +657,7 @@ void copy_from_index_kernel(int n_local,
   copy_from_index_cu<<<num_blocks,block_size>>>(n_local, yd, src, id);
 }
 
+/** @brief Set y[i] = min(y[i],c), for i=[0,n_local-1] */
 void component_min_kernel(int n_local,
                           double* yd,
                           double c)
@@ -619,6 +666,7 @@ void component_min_kernel(int n_local,
   component_min_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
 
+/** @brief Set y[i] = min(y[i],x[i], for i=[0,n_local-1] */
 void component_min_kernel(int n_local,
                           double* yd,
                           const double* xd)
@@ -627,6 +675,7 @@ void component_min_kernel(int n_local,
   component_min_cu<<<num_blocks,block_size>>>(n_local, yd, xd);
 }
 
+/** @brief Set y[i] = max(y[i],c), for i=[0,n_local-1] */
 void component_max_kernel(int n_local,
                           double* yd,
                           double c)
@@ -635,6 +684,7 @@ void component_max_kernel(int n_local,
   component_max_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
 
+/** @brief Set y[i] = max(y[i],x[i]), for i=[0,n_local-1] */
 void component_max_kernel(int n_local,
                           double* yd,
                           const double* xd)
@@ -643,7 +693,7 @@ void component_max_kernel(int n_local,
   component_max_cu<<<num_blocks,block_size>>>(n_local, yd, xd);
 }
 
-/// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
+/// @brief Performs axpy, y += alpha*x, on the indexes in this specified by id.
 void axpy_w_map_kernel(int n_local,
                        double* yd,
                        const double* xd,
@@ -654,7 +704,7 @@ void axpy_w_map_kernel(int n_local,
   axpy_w_map_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, alpha);
 }
 
-/** @brief this[i] += alpha*x[i]*z[i] forall i */
+/** @brief y[i] += alpha*x[i]*z[i] forall i */
 void axzpy_kernel(int n_local,
                   double* yd,
                   const double* xd,
@@ -665,7 +715,7 @@ void axzpy_kernel(int n_local,
   axzpy_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, alpha);
 }
 
-/** @brief this[i] += alpha*x[i]/z[i] forall i */
+/** @brief y[i] += alpha*x[i]/z[i] forall i */
 void axdzpy_kernel(int n_local,
                    double* yd,
                    const double* xd,
@@ -676,7 +726,7 @@ void axdzpy_kernel(int n_local,
   axdzpy_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, alpha);
 }
 
-/** @brief this[i] += alpha*x[i]/z[i] forall i with pattern selection */
+/** @brief y[i] += alpha*x[i]/z[i] forall i with pattern selection */
 void axdzpy_w_pattern_kernel(int n_local,
                              double* yd,
                              const double* xd,
@@ -688,14 +738,14 @@ void axdzpy_w_pattern_kernel(int n_local,
   axdzpy_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, id, alpha);
 }
 
-/** @brief this[i] += c forall i */
+/** @brief y[i] += c forall i */
 void add_constant_kernel(int n_local, double* yd, double c)
 {
   int num_blocks = (n_local+block_size-1)/block_size;
   add_constant_cu<<<num_blocks,block_size>>>(n_local, yd, c);
 }
 
-/** @brief this[i] += c forall i with pattern selection */
+/** @brief y[i] += c forall i with pattern selection */
 void  add_constant_w_pattern_kernel(int n_local, double* yd, const double* id, double c)
 {
   int num_blocks = (n_local+block_size-1)/block_size;
@@ -709,7 +759,7 @@ void invert_kernel(int n_local, double* yd)
   invert_cu<<<num_blocks,block_size>>>(n_local, yd);
 }
 
-/**  @brief Sum all selected log(this[i]) */
+/** @brief y[i] += alpha*1/x[i] + y[i] forall i with pattern selection */
 void adxpy_w_pattern_kernel(int n_local,
                             double* yd,
                             const double* xd,
@@ -731,8 +781,7 @@ void component_div_w_pattern_kernel(int n_local,
   component_div_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
 }
 
-/**
- * @brief Linear damping term */
+/** @brief Linear damping term */
 void set_linear_damping_term_kernel(int n_local,
                                     double* yd,
                                     const double* vd,
@@ -744,6 +793,10 @@ void set_linear_damping_term_kernel(int n_local,
   set_linear_damping_term_cu<<<num_blocks,block_size>>>(n_local, yd, vd, ld, rd);
 }
 
+/** 
+* @brief Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
+* ixleft[i] and ixright[i] is 1.0 and sign=0 otherwise. 
+*/
 void add_linear_damping_term_kernel(int n_local,
                                     double* yd,
                                     const double* ixl,
@@ -754,7 +807,6 @@ void add_linear_damping_term_kernel(int n_local,
   int num_blocks = (n_local+block_size-1)/block_size;
   add_linear_damping_term_cu<<<num_blocks,block_size>>>(n_local, yd, ixl, ixr, alpha, ct);
 }
-
 
 /** @brief Checks if selected elements of `this` are positive */
 void is_posive_w_pattern_kernel(int n_local,
@@ -776,7 +828,6 @@ void set_val_w_pattern_kernel(int n_local,
   int num_blocks = (n_local+block_size-1)/block_size;
   set_val_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, max_val);
 }
-
 
 /** @brief Project solution into bounds  */
 void project_into_bounds_kernel(int n_local,
@@ -823,7 +874,7 @@ void select_pattern_kernel(int n_local, double* yd, const double* id)
   select_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, id);
 }
 
-/** @brief Checks if each component in `this` matches nonzero pattern of `select`.  */
+/** @brief y[i] = 0 if id[i]==0.0 && xd[i]!=0.0, otherwise y[i] = 1*/
 void component_match_pattern_kernel(int n_local, int* yd, const double* xd, const double* id)
 {
   int num_blocks = (n_local+block_size-1)/block_size;
@@ -842,7 +893,7 @@ void adjustDuals_plh_kernel(int n_local,
   adjust_duals_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id, mu, kappa);
 }
 
-
+/// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
 void set_array_from_to_kernel(int n_local,
                               hiop::hiopInterfaceBase::NonlinearityType* arr, 
                               int start, 
@@ -854,6 +905,7 @@ void set_array_from_to_kernel(int n_local,
   set_nonlinear_type_cu<<<num_blocks,block_size>>> (n_local, length, arr, start, arr_src, start_src);
 }
 
+/// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
 void set_array_from_to_kernel(int n_local,
                               hiop::hiopInterfaceBase::NonlinearityType* arr, 
                               int start, 
@@ -864,12 +916,14 @@ void set_array_from_to_kernel(int n_local,
   set_nonlinear_type_cu<<<num_blocks,block_size>>> (n_local, length, arr, start, arr_src);
 }
 
+/// @brief Set all elements to c.
 void thrust_fill_kernel(int n, double* ptr, double c)
 {
   thrust::device_ptr<double> dev_ptr = thrust::device_pointer_cast(ptr);  
   thrust::fill(thrust::device, dev_ptr, dev_ptr+n, c);
 }
 
+/** @brief inf norm on single rank */
 double infnorm_local_kernel(int n, double* data_dev)
 {
   thrust_abs<double> abs_op;
@@ -882,6 +936,7 @@ double infnorm_local_kernel(int n, double* data_dev)
   return norm;
 }
 
+/** @brief Return the one norm */
 double onenorm_local_kernel(int n, double* data_dev)
 {
   thrust_abs<double> abs_op;
@@ -895,6 +950,7 @@ double onenorm_local_kernel(int n, double* data_dev)
   return norm;
 }
 
+/** @brief d1[i] = d1[i] * d2[i] forall i */
 void thrust_component_mult_kernel(int n, double* d1, const double* d2)
 {
   // wrap raw pointer with a device_ptr 
@@ -908,6 +964,7 @@ void thrust_component_mult_kernel(int n, double* d1, const double* d2)
                     mult_op);
 }
 
+/** @brief d1[i] = d1[i] / d2[i] forall i */
 void thrust_component_div_kernel(int n, double* d1, const double* d2)
 {
   // wrap raw pointer with a device_ptr 
@@ -921,6 +978,7 @@ void thrust_component_div_kernel(int n, double* d1, const double* d2)
                     div_op);
 }
 
+/** @brief d1[i] = abs(d1[i]) forall i */
 void thrust_component_abs_kernel(int n, double* d1)
 {
   // wrap raw pointer with a device_ptr 
@@ -931,32 +989,36 @@ void thrust_component_abs_kernel(int n, double* d1)
   thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, abs_op);
 }
 
+/** @brief d1[i] = sign(d1[i]) forall i */
 void thrust_component_sgn_kernel(int n, double* d1)
 {
   // wrap raw pointer with a device_ptr 
   thrust_sig<double> sig_op;
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   
-  // compute abs
+  // compute sign
   thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, sig_op);
 }
 
+/** @brief d1[i] = sqrt(d1[i]) forall i */
 void thrust_component_sqrt_kernel(int n, double* d1)
 {
   // wrap raw pointer with a device_ptr 
   thrust_sqrt<double> sqrt_op;
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   
-  // compute abs
+  // compute sqrt
   thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, sqrt_op);
 }
 
+/** @brief d1[i] = -(d1[i]) forall i */
 void thrust_negate_kernel(int n, double* d1)
 {
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   thrust::transform(thrust::device, dev_v1, dev_v1+n, dev_v1, thrust::negate<double>());
 }
 
+/** @brief compute sum(log(d1[i])) forall i where id[i]=1*/
 double log_barr_obj_kernel(int n, double* d1, const double* id)
 {
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(d1);
@@ -980,6 +1042,7 @@ double log_barr_obj_kernel(int n, double* d1, const double* id)
   return sum;
 }
 
+/** @brief compute sum(d1[i]) */
 double thrust_sum_kernel(int n, double* d1)
 {
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
@@ -987,8 +1050,7 @@ double thrust_sum_kernel(int n, double* d1)
   return thrust::reduce(thrust::device, dev_v1, dev_v1+n, 0.0, thrust::plus<double>());
 }
 
-/**
- * @brief Linear damping term */
+/** @brief Linear damping term */
 double linear_damping_term_kernel(int n,
                                   const double* vd,
                                   const double* ld,
@@ -1010,13 +1072,13 @@ double linear_damping_term_kernel(int n,
   return term;
 }
 
+/** @brief compute min(d1) */
 double min_local_kernel(int n, double* d1)
 {
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
   thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dev_v1, dev_v1+n);
   
   double *ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
-  // TODO: how to return double from device to host?
   double *ret_host = new double[1]; 
   cudaError_t cuerr = cudaMemcpy(ret_host, ret_ptr, (1)*sizeof(double), cudaMemcpyDeviceToHost);
  
@@ -1026,18 +1088,19 @@ double min_local_kernel(int n, double* d1)
   return rv;
 }
 
+/** @brief Checks if selected elements of `this` are positive */
 int all_positive_w_pattern_kernel(int n, const double* d1, const double* id)
 {
   // TODO: how to avoid this temp vec?
   thrust::device_vector<double> v_temp(n);
   double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
 
-  // compute linear damping term
   hiop::cuda::is_posive_w_pattern_kernel(n, dv_ptr, d1, id);
   
   return thrust::reduce(thrust::device, v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
 }
 
+/** @brief compute min(d1) for selected elements*/
 double min_w_pattern_kernel(int n, const double* d1, const double* id, double max_val)
 {
   // TODO: how to avoid this temp vec?
@@ -1052,7 +1115,6 @@ double min_w_pattern_kernel(int n, const double* d1, const double* id, double ma
   // TODO: how to return double from device to host?
   double *ret_host = new double[1];
   double *ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
-// TODO: fail why? see line 988
   cudaError_t cuerr = cudaMemcpy(ret_host, ret_ptr, (1)*sizeof(double), cudaMemcpyDeviceToHost);
 
   double ret_v = ret_host[0];
@@ -1063,6 +1125,7 @@ double min_w_pattern_kernel(int n, const double* d1, const double* id, double ma
   return ret_v;
 }
 
+/** @brief check if xld[i] < xud[i] forall i */
 bool check_bounds_kernel(int n, const double* xld, const double* xud)
 {
   // Perform preliminary check to see of all upper value
@@ -1081,9 +1144,7 @@ bool check_bounds_kernel(int n, const double* xld, const double* xud)
   int res_offset = thrust::min_element(thrust::device, dv_ptr, dv_ptr + n) - dv_ptr;
   double ret_v = *(dv_ptr + res_offset);
   
-// TODO: return value from device
   bool bval = (ret_v > 0.0) ? 1 : 0;
-  //bool bval = false;
 
   thrust::device_free(dv_ptr);
   
@@ -1093,6 +1154,7 @@ bool check_bounds_kernel(int n, const double* xld, const double* xud)
   return true;
 }
 
+/** @brief compute max{a\in(0,1]| x+ad >=(1-tau)x} */
 double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double tau)
 {
   thrust::device_ptr<double> dv_ptr = thrust::device_malloc(n*sizeof(double));
@@ -1108,6 +1170,7 @@ double min_frac_to_bds_kernel(int n, const double* xd, const double* dd, double 
   return alpha;
 }
 
+/** @brief max{a\in(0,1]| x+ad >=(1-tau)x} with pattern id */
 double min_frac_to_bds_w_pattern_kernel(int n,
                                         const double* xd,
                                         const double* dd,
@@ -1125,6 +1188,7 @@ double min_frac_to_bds_w_pattern_kernel(int n,
   return alpha;
 }
 
+/** @brief Checks if `xd` matches nonzero pattern of `id`. */
 bool match_pattern_kernel(int n, const double* xd, const double* id)
 {
   // TODO: how to avoid this temp vec?
@@ -1139,6 +1203,7 @@ bool match_pattern_kernel(int n, const double* xd, const double* id)
   return thrust::all_of(thrust::device, v_temp.begin(), v_temp.end(), istrue_op);
 }
 
+/** @brief Checks if all x[i] = 0 */
 bool is_zero_kernel(int n, double* xd)
 {
   // wrap raw pointer with a device_ptr 
@@ -1148,6 +1213,7 @@ bool is_zero_kernel(int n, double* xd)
   return thrust::all_of(thrust::device, dev_v, dev_v+n, iszero_op);
 }
 
+/** @brief Checks if any x[i] = nan */
 bool isnan_kernel(int n, double* xd)
 {
   // wrap raw pointer with a device_ptr 
@@ -1157,6 +1223,7 @@ bool isnan_kernel(int n, double* xd)
   return thrust::any_of(thrust::device, dev_v, dev_v+n, isnan_op);
 }
 
+/** @brief Checks if any x[i] = inf */
 bool isinf_kernel(int n, double* xd)
 {
   // wrap raw pointer with a device_ptr 
@@ -1166,6 +1233,7 @@ bool isinf_kernel(int n, double* xd)
   return thrust::any_of(thrust::device, dev_v, dev_v+n, isinf_op);
 }
 
+/** @brief Checks if all x[i] != inf */
 bool isfinite_kernel(int n, double* xd)
 {
   // wrap raw pointer with a device_ptr 
@@ -1175,6 +1243,7 @@ bool isfinite_kernel(int n, double* xd)
   return thrust::all_of(thrust::device, dev_v, dev_v+n, isfinite_op);
 }
 
+/// @brief get number of values that are less than the given value 'val'.
 int num_of_elem_less_than_kernel(int n, double* xd, double val)
 {
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
@@ -1182,6 +1251,7 @@ int num_of_elem_less_than_kernel(int n, double* xd, double val)
   return rval;
 }
 
+/// @brief get number of values whose absolute value are less than the given value 'val'.
 int num_of_elem_absless_than_kernel(int n, double* xd, double val)
 {
   thrust::device_ptr<double> dev_v = thrust::device_pointer_cast(xd);
@@ -1189,24 +1259,7 @@ int num_of_elem_absless_than_kernel(int n, double* xd, double val)
   return rval;
 }
 
-
-
-/// for hiopVectorIntCuda
-void set_to_linspace_kernel(int sz, int* buf, int i0, int di)
-{
-  int num_blocks = (sz+block_size-1)/block_size;
-  set_to_linspace_cu<<<num_blocks,block_size>>>(sz, buf, i0, di);
-}
-
-void compute_cusum_kernel(int sz, int* buf, const double* id)
-{
-  int num_blocks = (sz+block_size-1)/block_size;
-  compute_cusum_cu<<<num_blocks,block_size>>>(sz, buf, id);
-
-  thrust::device_ptr<int> dev_v = thrust::device_pointer_cast(buf);
-  thrust::inclusive_scan(dev_v, dev_v + sz, dev_v); // in-place scan
-}
-
+/// @brief Copy the entries in 'dd' where corresponding 'ix' is nonzero, to vd starting at start_index_in_dest.
 void copyToStartingAt_w_pattern_kernel(int n_src, 
                                        int n_dest,
                                        int start_index_in_dest,
@@ -1225,8 +1278,26 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
 
 
 
+/// for hiopVectorIntCuda
+/**
+ * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
+ * incremented integers up to i0+(n-1)di, when n is the length of this vector
+ */
+void set_to_linspace_kernel(int sz, int* buf, int i0, int di)
+{
+  int num_blocks = (sz+block_size-1)/block_size;
+  set_to_linspace_cu<<<num_blocks,block_size>>>(sz, buf, i0, di);
+}
 
+/** @brief compute cusum from the given pattern*/
+void compute_cusum_kernel(int sz, int* buf, const double* id)
+{
+  int num_blocks = (sz+block_size-1)/block_size;
+  compute_cusum_cu<<<num_blocks,block_size>>>(sz, buf, id);
 
+  thrust::device_ptr<int> dev_v = thrust::device_pointer_cast(buf);
+  thrust::inclusive_scan(dev_v, dev_v + sz, dev_v); // in-place scan
+}
 
 }
 
