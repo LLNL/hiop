@@ -661,7 +661,6 @@ void axzpy_kernel(int n_local,
                   const double* zd,
                   double alpha)
 {
-  int block_size=256
   int num_blocks = (n_local+block_size-1)/block_size;
   axzpy_cu<<<num_blocks,block_size>>>(n_local, yd, xd, zd, alpha);
 }
@@ -896,12 +895,12 @@ double onenorm_local_kernel(int n, double* data_dev)
   return norm;
 }
 
-void thrust_component_mult_kernel(int n, double* d1, double* d2)
+void thrust_component_mult_kernel(int n, double* d1, const double* d2)
 {
   // wrap raw pointer with a device_ptr 
   thrust::multiplies<double> mult_op;
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
-  thrust::device_ptr<double> dev_v2 = thrust::device_pointer_cast(d2);
+  thrust::device_ptr<const double> dev_v2 = thrust::device_pointer_cast(d2);
   
   thrust::transform(thrust::device,
                     dev_v1, dev_v1+n,
@@ -909,12 +908,12 @@ void thrust_component_mult_kernel(int n, double* d1, double* d2)
                     mult_op);
 }
 
-void thrust_component_div_kernel(int n, double* d1, double* d2)
+void thrust_component_div_kernel(int n, double* d1, const double* d2)
 {
   // wrap raw pointer with a device_ptr 
   thrust::divides<double> div_op;
   thrust::device_ptr<double> dev_v1 = thrust::device_pointer_cast(d1);
-  thrust::device_ptr<double> dev_v2 = thrust::device_pointer_cast(d2);
+  thrust::device_ptr<const double> dev_v2 = thrust::device_pointer_cast(d2);
   
   thrust::transform(thrust::device,
                     dev_v1, dev_v1+n,

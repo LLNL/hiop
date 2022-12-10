@@ -203,8 +203,8 @@ void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const hiopVector&
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif
-  assert(start_index_in_dest+v_.get_local_size() <= n_local_);
-  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v_src.local_data_const(), (v_.get_local_size())*sizeof(double), cudaMemcpyDeviceToDevice);
+  assert(start_index_in_dest+v_src.get_local_size() <= n_local_);
+  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v_src.local_data_const(), (v_src.get_local_size())*sizeof(double), cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
 }
 
@@ -256,7 +256,7 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
   assert(howManyToCopyDest <= howManyToCopySrc);
 
   cudaError_t cuerr = cudaMemcpy(data_ + start_idx_dest,
-                                 vec.local_data() + start_idx_src,
+                                 vec_src.local_data_const() + start_idx_src,
                                  (howManyToCopyDest)*sizeof(double),
                                  cudaMemcpyDeviceToDevice);
   assert(cuerr == cudaSuccess);
@@ -293,7 +293,7 @@ void hiopVectorCuda::copyToStarting(int start_index, hiopVector& dst) const
 
 void hiopVectorCuda::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
-  int v_size = dst.get_local_size();
+  int v_size = vec.get_local_size();
   assert(start_index_in_dest+n_local_ <= v_size);
 
   // If there is nothing to copy, return.
@@ -315,7 +315,7 @@ void hiopVectorCuda::copyToStartingAt_w_pattern(hiopVector& vec, int start_index
    
   double* dd = data_;
   double* vd = vec.local_data();
-  const double* pattern = selected.local_data_const();
+  const double* pattern = select.local_data_const();
 
   if(nullptr == idx_cumsum_) {
     idx_cumsum_ = LinearAlgebraFactory::create_vector_int("CUDA", n_local_+1);
@@ -379,7 +379,7 @@ void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src,
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
   assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.get_local_size());
 
-  const dest_size = dest.get_local_size();
+  const int dest_size = dest.get_local_size();
 #ifndef NDEBUG  
   if(start_idx_dest==dest_size || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
@@ -485,7 +485,7 @@ void hiopVectorCuda::componentDiv_w_selectPattern( const hiopVector& vec, const 
 {
   assert(n_local_ == vec.get_local_size());
 
-  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_, vec.local_data(), select.local_data());
+  hiop::cuda::component_div_w_pattern_kernel(n_local_, data_, vec.local_data_const(), select.local_data_const());
 }
 
 void hiopVectorCuda::component_min(const double constant)
@@ -562,7 +562,7 @@ void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec, const hiopVector
   assert(i.size()<=n_local_);
   
   double* yd = data_;
-  double* xd = const_cast<double*>(xvec.local_data());
+  const double* xd = const_cast<const double*>(xvec.local_data_const());
   int* id = const_cast<int*>(i.local_data_const());
 
   hiop::cuda::axpy_w_map_kernel(n_local_, yd, xd, id, alpha);
@@ -634,7 +634,7 @@ double hiopVectorCuda::dotProductWith( const hiopVector& v ) const
 {
   int one = 1;
   double retval; 
-  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, v.local_data(), one, data_, one, &retval);
+  cublasStatus_t ret_cublas = cublasDdot(handle_cublas_, n_local_, v.local_data_const(), one, data_, one, &retval);
   assert(ret_cublas == CUBLAS_STATUS_SUCCESS);
 
 #ifdef HIOP_USE_MPI
@@ -882,7 +882,7 @@ void hiopVectorCuda::selectPattern(const hiopVector& select)
 #endif
 
   double* data = data_;
-  double* id = select.local_data();
+  const double* id = select.local_data_const();
 
   // set value with pattern
   hiop::cuda::select_pattern_kernel(n_local_, data, id);
@@ -896,7 +896,7 @@ bool hiopVectorCuda::matchesPattern(const hiopVector& pattern)
 #endif
 
   double* xd = data_;
-  double* id = pattern.local_data();
+  const double* id = pattern.local_data_const();
 
   int bret = hiop::cuda::match_pattern_kernel(n_local_, xd, id);
 

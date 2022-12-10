@@ -203,8 +203,8 @@ void thrust_fill_kernel(int n, double* ptr, double c);
 double infnorm_local_kernel(int n, double* data_dev);
 double onenorm_local_kernel(int n, double* data_dev);
 
-void thrust_component_mult_kernel(int n, double* d1, double* d2);
-void thrust_component_div_kernel(int n, double* d1, double* d2);
+void thrust_component_mult_kernel(int n, double* d1, const double* d2);
+void thrust_component_div_kernel(int n, double* d1, const double* d2);
 void thrust_component_abs_kernel(int n, double* d1);
 void thrust_component_sgn_kernel(int n, double* d1);
 void thrust_component_sqrt_kernel(int n, double* d1);
