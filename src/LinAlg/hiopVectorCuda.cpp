@@ -903,7 +903,7 @@ double hiopVectorCuda::fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
 void hiopVectorCuda::selectPattern(const hiopVector& select)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(select.()==n_local_);
+  assert(select.get_local_size()==n_local_);
 #endif
 
   double* data = data_;
