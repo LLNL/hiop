@@ -111,8 +111,8 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
  : hiopVector(),
    idx_cumsum_{nullptr}
 {
-  n_local_ = v.n_local_;
-  n_ = v.n_;
+  n_local_ = v.get_local_size();
+  n_ = v.get_size();
   glob_il_ = v.glob_il_;
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
@@ -596,8 +596,8 @@ void hiopVectorCuda::axpy(double alpha, const hiopVector& xvec, const hiopVector
 void hiopVectorCuda::axzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(xvec.n_local_ == zvec.n_local_);
-  assert(     n_local_ == zvec.n_local_);
+  assert(xvec.get_local_size() == zvec.get_local_size());
+  assert(             n_local_ == zvec.get_local_size());
 #endif  
   double* dd       = data_;
   const double* xd = xvec.local_data_const();
@@ -610,8 +610,8 @@ void hiopVectorCuda::axzpy(double alpha, const hiopVector& xvec, const hiopVecto
 void hiopVectorCuda::axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(xvec.n_local_ == zvec.n_local_);
-  assert(     n_local_ == zvec.n_local_);
+  assert(xvec.get_local_size() == zvec.get_local_size());
+  assert(             n_local_ == zvec.get_local_size());
 #endif  
   double*       yd = data_;
   const double* xd = xvec.local_data_const();
@@ -627,8 +627,8 @@ void hiopVectorCuda::axdzpy_w_pattern(double alpha,
                                       const hiopVector& select)
 {
 #ifdef HIOP_DEEPCHECKS
-  assert(xvec.n_local_==zvec.n_local_);
-  assert(     n_local_==zvec.n_local_);
+  assert(xvec.get_local_size()==zvec.get_local_size());
+  assert(             n_local_==zvec.get_local_size());
 #endif
   double* yd = data_;
   const double* xd = xvec.local_data_const();
