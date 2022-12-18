@@ -30,8 +30,10 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixSparseCsrCuda.hpp
   hiopVector.hpp
   hiopVectorInt.hpp
+  hiopVectorIntCuda.hpp
   hiopVectorIntRaja.hpp
   hiopVectorIntSeq.hpp
+  hiopVectorCuda.hpp
   hiopVectorPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
@@ -104,6 +106,14 @@ set(hiopLinAlg_CUDASPARSE_SRC
   hiopMatrixSparseCsrCuda.cpp
 )
 
+set(hiopLinAlg_CUDAVECTOR_SRC
+  hiopVectorCuda.cpp
+  hiopVectorIntCuda.cpp
+)
+set(hiopLinAlg_CUDAVECTORKERNELS_SRC
+  VectorCudaKernels.cu
+)
+
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
 )
@@ -141,9 +151,10 @@ endif()
 
 # Add sparse CUDA matrix code (even when HIOP_SPARSE is not defined since it can be used in MDS)
 if(HIOP_USE_CUDA)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC} ${hiopLinAlg_CUDAVECTOR_SRC})
   set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})
+  set_source_files_properties(${hiopLinAlg_CUDAVECTORKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC} ${hiopLinAlg_CUDAVECTORKERNELS_SRC})
 endif(HIOP_USE_CUDA)
 
 # Add RAJA/Umpire sources when enabled

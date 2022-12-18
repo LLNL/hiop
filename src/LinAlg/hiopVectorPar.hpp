@@ -254,7 +254,7 @@ public:
   
   virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
 
-  /* more accessers */
+  /* more accessors */
   virtual size_type get_local_size() const { return n_local_; }
   virtual double* local_data() { return data_; }
   virtual const double* local_data_const() const { return data_; }
