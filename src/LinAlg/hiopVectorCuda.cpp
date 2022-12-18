@@ -51,7 +51,7 @@
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopVectorCuda.hpp"
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
