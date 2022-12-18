@@ -61,8 +61,6 @@
 
 #include <ExecSpace.hpp>
 
-#ifdef HIOP_USE_RAJA // can/should be HIOP_USE_UMPIRE
-
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 
@@ -213,6 +211,5 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T
 // TODO
 #endif
 }  // end namespace hiop
-#endif //HIOP_USE_RAJA
 #endif //HIOP_MEM_BCK_UMPIRE
 

@@ -836,9 +836,9 @@ startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
 template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::copyTo(double* dest) const
 {
-  auto* This_const = const_cast<hiopVectorRaja*>(this);
-  assert(nullptr != This_const);
-  This_const->exec_space_.copy(dest, data_dev_, n_local_);
+  auto* this_nonconst = const_cast<hiopVectorRaja*>(this);
+  assert(nullptr != this_nonconst);
+  this_nonconst->exec_space_.copy(dest, data_dev_, n_local_);
 }
 
 /**
@@ -2084,6 +2084,11 @@ print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
   }
 #endif
+
+  if(nullptr==file) {
+    file = stdout;
+  }
+  
   if(myrank == rank || rank == -1)
   {
     if(max_elems>n_local_)
@@ -2117,9 +2122,9 @@ print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*
 template<class MEM, class POL>
 void hiopVectorRaja<MEM,POL>::print() const
 {
-  auto* This = const_cast<hiopVectorRaja<MEM, POL>* >(this);
-  assert(nullptr != This);
-  This->copyFromDev();
+  auto* inst = const_cast<hiopVectorRaja<MEM, POL>* >(this);
+  assert(nullptr != inst);
+  inst->copyFromDev();
   for(index_type it=0; it<n_local_; it++) {
     printf("vec [%d] = %1.16e\n",it+1,data_host_[it]);
   }

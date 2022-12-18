@@ -61,8 +61,6 @@
 
 #include <ExecSpace.hpp>
 
-#ifdef HIOP_USE_HIP
-
 #include <hip/hip_runtime.h>
 #include <cassert>
 
@@ -136,6 +134,5 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T>
 };
 
 } // end namespace hiop
-#endif //HIOP_USE_HIP
 #endif //HIOP_MEM_SPACE_HIP
 

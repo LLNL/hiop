@@ -919,10 +919,8 @@ void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& 
 
   //transfer coo/triplet to device
   int* d_rowind=nullptr;
-  //cudaMalloc(&d_rowind, nnz_*sizeof(index_type));
   d_rowind = exec_space_.alloc_array<index_type>(nnz_);
   assert(d_rowind);
-  //cudaMemcpy(d_rowind, M.i_row(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);
   exec_space_.copy(d_rowind, M.i_row(), nnz_, M.exec_space_);
 
   //use cuda API

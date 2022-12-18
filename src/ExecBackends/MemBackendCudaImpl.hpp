@@ -62,8 +62,6 @@
 
 #include <ExecSpace.hpp>
 
-#ifdef HIOP_USE_CUDA
-
 #include <cuda_runtime.h>
 #include <cassert>
 
@@ -137,7 +135,6 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I
 };
 
 } // end namespace hiop
-#endif //HIOP_USE_CUDA
 #endif //HIOP_MEM_BCK_CUDA
 
 
