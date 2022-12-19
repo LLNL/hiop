@@ -70,7 +70,9 @@
 namespace hiop
 {
 
-//class hiopVectorCuda 
+class hiopVectorPar;
+  
+/// Implementation of abstract class hiopVector using CUDA API
 class hiopVectorCuda : public hiopVector
 {
 public:
@@ -103,6 +105,9 @@ public:
   /// @brief Copy from src the elements specified by the indices in index_in_src. 
   virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src);
 
+  /// Copy from a (host) hiopVectorPar of the same size.
+  void copy_from_vec_par(const hiopVectorPar& src);
+  
   ///  @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
   virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src);
 
