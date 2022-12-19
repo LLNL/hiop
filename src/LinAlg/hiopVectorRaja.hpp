@@ -1,4 +1,4 @@
-// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
+// Copyright (c) 2022, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
@@ -46,16 +46,17 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorRajaPar.hpp
+ * @file hiopVectorRaja.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-#ifndef HIOP_VECTOR_RAJA_PAR
-#define HIOP_VECTOR_RAJA_PAR
+#ifndef HIOP_VECTOR_RAJA
+#define HIOP_VECTOR_RAJA
 
 #include <cstdio>
 #include <string>
@@ -70,15 +71,18 @@
 //temporary
 #include "hiopVectorPar.hpp"
 
+#include "ExecSpace.hpp"
+
 namespace hiop
 {
-
-
-class hiopVectorRajaPar : public hiopVector
+  
+template<class MEMBACKEND, class EXECPOLICYRAJA>
+class hiopVectorRaja : public hiopVector
 {
 public:
-  hiopVectorRajaPar(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
-  virtual ~hiopVectorRajaPar();
+  hiopVectorRaja(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorRaja() = delete;
+  virtual ~hiopVectorRaja();
 
   virtual void setToZero();
   virtual void setToConstant( double c );
@@ -275,7 +279,8 @@ public:
   virtual bool isinf_local() const;
   virtual bool isfinite_local() const;
   
-  virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
+  virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
+  virtual void print() const;
 
   /* more accessors */
   inline size_type get_local_size() const { return n_local_; }
@@ -287,8 +292,6 @@ public:
 
   void copyToDev();
   void copyFromDev();
-  void copyToDev() const;
-  void copyFromDev() const;
   
   virtual size_type numOfElemsLessThan(const double &val) const;
   virtual size_type numOfElemsAbsLessThan(const double &val) const;      
@@ -306,6 +309,16 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
   
 private:
+  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+
+  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
+  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
+  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
+  //combinations work).
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+
   std::string mem_space_;
   MPI_Comm comm_;
   double* data_host_;
@@ -313,11 +326,11 @@ private:
   size_type glob_il_, glob_iu_;
   size_type n_local_;
   mutable hiopVectorInt* idx_cumsum_;
-  /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
-  hiopVectorRajaPar(const hiopVectorRajaPar&);
-
+  /// Copy constructor, for internal/private use only (it doesn't copy the elements.) */
+  hiopVectorRaja(const hiopVectorRaja&);
 };
 
 } // namespace hiop
 
-#endif // HIOP_VECTOR_RAJA_PAR
+
+#endif // HIOP_VECTOR_RAJA

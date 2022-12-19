@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopKKTLinSys.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiop_blasdefs.hpp"
 #include "hiopPDPerturbation.hpp"
 

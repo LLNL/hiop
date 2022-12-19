@@ -4,7 +4,7 @@
 #include "hiopVectorPar.hpp"
 #include "hiopMatrixDenseRowMajor.hpp"
 #include "hiopMatrixSparseTriplet.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #include <algorithm>
 

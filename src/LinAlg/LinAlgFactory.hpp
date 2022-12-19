@@ -49,6 +49,7 @@
 
 #include <string>
 #include <iostream>
+#include <ExecSpace.hpp>
 #include <hiopMPI.hpp>
 #include <hiopVector.hpp>
 #include <hiopMatrixDense.hpp>
@@ -58,6 +59,7 @@
 
 namespace hiop {
 
+  
 /**
  * @brief Factory for HiOp's linear algebra objects
  * 
@@ -71,7 +73,7 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* create_vector(const std::string& mem_space,
+  static hiopVector* create_vector(const ExecSpaceInfo& hi, //const std::string& mem_space,
                                    const size_type& glob_n,
                                    index_type* col_part = nullptr,
                                    MPI_Comm comm = MPI_COMM_SELF);

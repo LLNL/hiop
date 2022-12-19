@@ -60,7 +60,7 @@
 namespace hiop { namespace tests {
 
 /// Returns const pointer to local vector data
-const real_type* VectorTestsPar::getLocalDataConst(const hiop::hiopVector* x)
+const real_type* VectorTestsPar::getLocalDataConst(hiop::hiopVector* x)
 {
   if(auto* xvec = dynamic_cast<const hiop::hiopVectorPar*>(x))
   {

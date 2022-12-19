@@ -309,8 +309,6 @@ public:
 
   virtual void copyToDev() = 0;
   virtual void copyFromDev() = 0;
-  virtual void copyToDev() const = 0;
-  virtual void copyFromDev() const = 0;
   
   /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const = 0;

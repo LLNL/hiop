@@ -254,27 +254,30 @@ namespace hiop
 namespace cuda
 {
 
-void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+void csr_set_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val, int block_size)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
-  //300 microseconds for 1Mx1M matrix with 24M nnz
-  int block_size=16;
   int num_blocks = (n+block_size-1)/block_size;
   csr_set_diag_to_val<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
 }
 
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val)
+void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double val, int block_size)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
-  int block_size=16;
   int num_blocks = (n+block_size-1)/block_size;
   csr_add_val_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, val);
 }
 
-void csr_add_diag_kernel(int n, int nnz, int* irowptr, int* jcolind, double* values, double alpha, const double* Dvalues)
+void csr_add_diag_kernel(int n,
+                         int nnz,
+                         int* irowptr,
+                         int* jcolind,
+                         double* values,
+                         double alpha,
+                         const double* Dvalues,
+                         int block_size)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
-  int block_size=16;
   int num_blocks = (n+block_size-1)/block_size;
   csr_add_vec_to_diag<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, alpha, Dvalues);
 }
@@ -284,24 +287,29 @@ void csr_get_diag_kernel(int n,
                          const int* irowptr,
                          const int* jcolind,
                          const double* values,
-                         double* diag_out)
+                         double* diag_out,
+                         int block_size)
 {
   //block of smaller sizes tend to perform 1.5-2x faster than the usual 256 or 128 blocks
-  int block_size=16;
   int num_blocks = (n+block_size-1)/block_size;
   csr_copy_diag_to_vec<<<num_blocks,block_size>>>(n, nnz, irowptr, jcolind, values, diag_out);
 }
 
-void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind)
+void csr_form_diag_symbolic_kernel(int n, int* irowptr, int* jcolind, int block_size)
 {
-  int block_size=256;
   int num_blocks = (n+block_size-1)/block_size;
   csr_form_diag_symbolic<<<num_blocks,block_size>>>(n, irowptr, jcolind);
 }
 
-void csr_scalerows_kernel(int nrows, int ncols, int nnz, int* irowptr, int* jcolind, double* values, const double* D)
+void csr_scalerows_kernel(int nrows,
+                          int ncols,
+                          int nnz,
+                          int* irowptr,
+                          int* jcolind,
+                          double* values,
+                          const double* D,
+                          int block_size)
 {
-  int block_size=256;
   int num_blocks = (nrows+block_size-1)/block_size;
   csr_scalerows<<<num_blocks,block_size>>>(nrows, ncols, nnz, irowptr, jcolind, values, D);
 }

@@ -54,7 +54,7 @@
  */
  
 #include "hiopDualsUpdater.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #include "hiopLinSolverSymDenseLapack.hpp"
 #include "hiopLinSolverSymDenseMagma.hpp"

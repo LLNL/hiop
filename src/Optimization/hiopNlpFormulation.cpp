@@ -56,7 +56,7 @@
 #include "hiopNlpFormulation.hpp"
 #include "hiopHessianLowRank.hpp"
 #include "hiopVector.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopLogger.hpp"
 #include "hiopDualsUpdater.hpp"
 
@@ -1083,7 +1083,9 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   //! zl and zu may have different sizes than what user expects since HiOp removes
   //! variables internally
   if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
-    x.copyFromDev();
+    
+    hiopVector& xc = const_cast<hiopVector&>(x);
+    xc.copyFromDev();
     z_L.copyFromDev();
     z_U.copyFromDev();
     cons_body_->copyFromDev();
@@ -1154,10 +1156,14 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   bool bret{false};
 
   if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
-    x.copyFromDev();
-    s.copyFromDev();
-    z_L.copyFromDev();
-    z_U.copyFromDev();
+    hiopVector& xc = const_cast<hiopVector&>(x);
+    xc.copyFromDev();
+    hiopVector& sc = const_cast<hiopVector&>(s);
+    sc.copyFromDev();
+    hiopVector& z_Lc = const_cast<hiopVector&>(z_L);
+    z_Lc.copyFromDev();
+    hiopVector& z_Uc = const_cast<hiopVector&>(z_U);
+    z_Uc.copyFromDev();
     cons_body_->copyFromDev();
     cons_lambdas_->copyFromDev();
     bret = interface_base.iterate_callback(iter,

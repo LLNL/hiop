@@ -73,7 +73,7 @@ public:
   virtual ~VectorTestsPar(){}
 
 private:
-  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x);
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x);
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
   virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val);

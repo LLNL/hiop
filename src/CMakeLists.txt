@@ -1,4 +1,5 @@
 add_subdirectory(Interface)
+add_subdirectory(ExecBackends)
 add_subdirectory(Optimization)
 add_subdirectory(LinAlg)
 add_subdirectory(Utils)

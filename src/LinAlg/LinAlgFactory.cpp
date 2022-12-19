@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopLinAlgFactory.cpp
+ * @file LinAlgFactory.cpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
@@ -59,11 +59,13 @@
 
 #include <hiop_defs.hpp>
 
+#include <ExecSpace.hpp>
+
 #ifdef HIOP_USE_RAJA
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <hiopVectorIntRaja.hpp>
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaDense.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #endif // HIOP_USE_RAJA
@@ -79,9 +81,10 @@
 #include <hiopMatrixDenseRowMajor.hpp>
 #include <hiopMatrixSparseTriplet.hpp>
 #include <hiopMatrixSparseCSRSeq.hpp>
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #include "hiopCppStdUtils.hpp"
+
 using namespace hiop;
 
 /**
@@ -90,30 +93,71 @@ using namespace hiop;
  * Creates legacy HiOp vector by default, RAJA vector when memory space
  * is specified.
  */
-hiopVector* LinearAlgebraFactory::create_vector(const std::string& mem_space,
+hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const std::string& mem_space,
                                                 const size_type& glob_n,
                                                 index_type* col_part,
                                                 MPI_Comm comm)
 {
-  const std::string mem_space_upper = toupper(mem_space);
+  const std::string mem_space_upper = toupper(hi.mem_space_);
   if(mem_space_upper == "DEFAULT") {
     return new hiopVectorPar(glob_n, col_part, comm);
-  } else if(mem_space_upper == "CUDA") {
-    #ifdef HIOP_USE_CUDA
-      return new hiopVectorCuda(glob_n, col_part, comm);
-    #else
-      assert(false && "requested memory space not available because Hiop was not"
-                      "built with CUDA support");
-      return new hiopVectorPar(glob_n, col_part, comm);
-    #endif
   } else {
+
+    if(hi.exec_backend_ == "RAJA") {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorRajaPar(glob_n, mem_space_upper, col_part, comm);
-#else
-    assert(false && "requested memory space not available because Hiop was not"
+      if(hi.mem_backend_ == "UMPIRE") {
+#ifdef HIOP_USE_CUDA
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(glob_n, mem_space_upper, col_part, comm);
+#endif        
+#ifdef HIOP_USE_HIP
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>(glob_n, mem_space_upper, col_part, comm);
+#endif        
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+        return new hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>(glob_n, mem_space_upper, col_part, comm);
+#endif
+  
+      } else {
+        // RAJA exec policy with non-Umpire memory backend
+        //work in progress
+        assert(false && "work in progress");
+        if(hi.mem_backend_ == "cuda") {
+#ifdef HIOP_USE_CUDA
+          assert(mem_space_upper == "DEVICE");
+          return new hiop::hiopVectorRaja<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(glob_n, mem_space_upper, col_part, comm);
+#endif          
+        }
+        if(hi.mem_backend_ == "hip") {
+#ifdef HIOP_USE_HIP
+          assert(mem_space_upper == "DEVICE");
+          return new hiop::hiopVectorRaja<hiop::MemBackendHip, hiop::ExecPolicyRajaHip>(glob_n, mem_space_upper, col_part, comm);
+#endif
+        } else {                
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+          assert(hi.mem_backend_ == "stdcpp" || hi.mem_backend_ == "auto");
+          return new hiop::hiopVectorRaja<hiop::MemBackendCpp, hiop::ExecPolicyRajaOmp>(glob_n, mem_space_upper, col_part, comm);
+#endif
+        }
+        return nullptr;
+      }
+#else  // non RAJA
+    assert(false && "requested execution space not available because Hiop was not"
            "built with RAJA support");
     return new hiopVectorPar(glob_n, col_part, comm);
 #endif
+    } else { //else for if(hi.exec_backend_ == "RAJA")
+      if(mem_space_upper == "CUDA") {
+#ifdef HIOP_USE_CUDA
+        return new hiop::hiopVectorCuda(glob_n, col_part, comm);
+#else //ifdef HIOP_USE_CUDA
+        assert(false && "requested memory space not available because Hiop was not"
+               "built with CUDA support");
+        return new hiop::hiopVectorPar(glob_n, col_part, comm);
+#endif //ifdef HIOP_USE_CUDA
+      } else {
+        assert(false && "to be implemented");
+        return nullptr;
+      }
+    }
   }
 }
 
@@ -266,6 +310,8 @@ double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, siz
   if(mem_space_upper == "DEFAULT") {
     return new double[n];
   } else {
+
+
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();
     umpire::Allocator al  = resmgr.getAllocator(mem_space_upper);

@@ -67,6 +67,7 @@
 #include <iostream>     // std::cout, std::fixed
 #include <iomanip>      // std::setprecision
 
+#include "MemBackendCppImpl.hpp"
 #include "hiopCppStdUtils.hpp"
 #include <set>
 #include <map>

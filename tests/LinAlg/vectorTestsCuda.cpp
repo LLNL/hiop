@@ -61,9 +61,9 @@
 namespace hiop { namespace tests {
 
 /// Returns const pointer to local vector data
-const real_type* VectorTestsCuda::getLocalDataConst(const hiop::hiopVector* x_in)
+const real_type* VectorTestsCuda::getLocalDataConst(hiop::hiopVector* x_in)
 {
-  if(auto* x = dynamic_cast<const hiop::hiopVectorCuda*>(x_in))
+  if(auto* x = dynamic_cast<hiop::hiopVectorCuda*>(x_in))
   {
     x->copyFromDev();
     return x->local_data_host_const();

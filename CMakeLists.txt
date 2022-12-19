@@ -388,6 +388,7 @@ configure_file(
 include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(src/Interface)
+include_directories(src/ExecBackends)
 include_directories(src/Optimization)
 include_directories(src/LinAlg)
 include_directories(src/Utils)

@@ -56,6 +56,8 @@
 
 #include "hiop_defs.hpp"
 
+#include "ExecSpace.hpp"
+
 #ifdef HIOP_USE_CUDA 
 
 #include <cuda_runtime.h>
@@ -655,7 +657,8 @@ private:
   void alloc();
   void dealloc();
 protected:
-
+  ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_; 
+  
   //// inherits nrows_, ncols_, and nnz_ from  hiopSparseMatrix
   
   /// Row pointers (starting indexes) in the column and values arrays

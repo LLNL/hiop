@@ -2,7 +2,7 @@
 # Set headers to be installed as part of the hiop interface
 set(hiopLinAlg_INTERFACE_HEADERS
   hiop_blasdefs.hpp
-  hiopLinAlgFactory.hpp
+  LinAlgFactory.hpp
   hiopLinSolver.hpp
   hiopLinSolverSymDenseLapack.hpp
   hiopLinSolverSymDenseMagma.hpp
@@ -35,7 +35,6 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorIntSeq.hpp
   hiopVectorCuda.hpp
   hiopVectorPar.hpp
-  hiopVectorRajaPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
   )
@@ -46,7 +45,7 @@ set(hiopLinAlg_SRC
   hiopVectorIntSeq.cpp
   hiopMatrixDenseRowMajor.cpp
   hiopLinSolver.cpp
-  hiopLinAlgFactory.cpp
+  LinAlgFactory.cpp
   hiopMatrixMDS.cpp
   hiopMatrixComplexDense.cpp
   hiopMatrixSparseTripletStorage.cpp
@@ -58,11 +57,20 @@ set(hiopLinAlg_SRC
 )
 
 set(hiopLinAlg_RAJA_SRC
-  hiopVectorRajaPar.cpp
   hiopVectorIntRaja.cpp
   hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
 )
+
+if(HIOP_USE_CUDA)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
+elseif(HIOP_USE_HIP)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
+else()
+  #raja - omp
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
+endif()
+
 
 set(hiopLinAlg_MAGMA_SRC
   hiopLinSolverSymDenseMagma.cpp
@@ -151,7 +159,6 @@ endif(HIOP_USE_CUDA)
 
 # Add RAJA/Umpire sources when enabled
 if(HIOP_USE_RAJA)
-  list(APPEND hiopLinAlg_INTERFACE_HEADERS hiop_raja_defs.hpp)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_RAJA_SRC})
 endif()
 
