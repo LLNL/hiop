@@ -200,8 +200,8 @@ void hiopVectorCuda::copy_from_vec_par(const hiopVectorPar& src)
   assert(n_local_ == src.get_size());
   cudaError_t cu_err = cudaMemcpy(data_,
                                  src.local_data_const(),
-                                  (n_local_)*sizeof(double),
-                                 cudaMemcpyDeviceToHost);
+                                 (n_local_)*sizeof(double),
+                                 cudaMemcpyHostToDevice);
   assert(cudaSuccess == cu_err);
 }
 

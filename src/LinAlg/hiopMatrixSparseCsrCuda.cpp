@@ -78,9 +78,6 @@
 
 namespace hiop
 {
-
-//using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
-  
 hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols, size_type nnz)
   : hiopMatrixSparseCSR(rows, cols, nnz),
     irowptr_(nullptr),
