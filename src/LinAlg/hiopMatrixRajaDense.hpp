@@ -46,13 +46,14 @@
 // product endorsement purposes.
 
 /**
- * @file hiopMatrixRajaDense.hpp
+ * @file hiopMatrixDenseRaja.hpp
  *
  * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 #pragma once
@@ -61,6 +62,8 @@
 #include <string>
 
 #include "hiopMatrixDense.hpp"
+
+#include "ExecSpace.hpp"
 
 namespace hiop
 {
@@ -80,6 +83,8 @@ namespace hiop
  * copyBlockFromMatrix
  * copyFromMatrixBlock
  */
+  
+template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopMatrixRajaDense : public hiopMatrixDense
 {
 public:
@@ -263,6 +268,18 @@ public:
   void copyFromDev();
 
 private:
+
+  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+
+  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
+  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
+  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
+  //combinations work).
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+
+  
   std::string mem_space_;
   double* data_host_; ///< pointer to host mirror of matrix data
   double* data_dev_;  ///< pointer to memory space of matrix data
@@ -277,7 +294,7 @@ private:
 
   //this is very private do not touch :)
   size_type max_rows_;
-
+  
 private:
   hiopMatrixRajaDense() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
