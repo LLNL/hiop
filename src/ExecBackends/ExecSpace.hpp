@@ -59,6 +59,8 @@
 #include <string>
 #include <cassert>
 
+#include "hiopCppStdUtils.hpp"
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // This header defines the generic execution space class and its various generic types.
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -74,12 +76,17 @@ struct ExecSpaceInfo
 {
   ExecSpaceInfo(const std::string mem_space_in)
   {
-    mem_space_ = mem_space_in;
+    mem_space_ = toupper(mem_space_in);
     if(mem_space_ == "DEFAULT") {
       mem_backend_ = "STDCPP";
       mem_backend_host_ = "STDCPP";
       exec_backend_ = "HOST";
+    } else if(mem_space_ == "CUDA") {
+      mem_backend_ = "CUDA";
+      mem_backend_host_ = "STDCPP";
+      exec_backend_ = "CUDA";
     } else {
+      assert(mem_space_ == "DEVICE" || mem_space_ == "UM");
       mem_backend_ = "UMPIRE";
       mem_backend_host_ = "UMPIRE";
       exec_backend_ = "RAJA";

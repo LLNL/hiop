@@ -144,9 +144,19 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
            "built with RAJA support");
     return new hiopVectorPar(glob_n, col_part, comm);
 #endif
-    } else {
+    } else { //else for if(hi.exec_backend_ == "RAJA")
+      if(mem_space_upper == "CUDA") {
+#ifdef HIOP_USE_CUDA
+        return new hiop::hiopVectorCuda(glob_n, col_part, comm);
+#else //ifdef HIOP_USE_CUDA
+        assert(false && "requested memory space not available because Hiop was not"
+               "built with CUDA support");
+        return new hiop::hiopVectorPar(glob_n, col_part, comm);
+#endif //ifdef HIOP_USE_CUDA
+      } else {
         assert(false && "to be implemented");
-        return nullptr;      
+        return nullptr;
+      }
     }
   }
 }
