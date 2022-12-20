@@ -58,12 +58,13 @@ set(hiopLinAlg_SRC
 
 set(hiopLinAlg_RAJA_SRC
   hiopVectorIntRaja.cpp
-  hiopMatrixRajaDense.cpp
+# hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
 )
 
 if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaCuda.cpp)
 elseif(HIOP_USE_HIP)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
 else()

@@ -85,17 +85,17 @@ namespace hiop
  */
   
 template<class MEMBACKEND, class EXECPOLICYRAJA>
-class hiopMatrixRajaDense : public hiopMatrixDense
+class hiopMatrixDenseRaja : public hiopMatrixDense
 {
 public:
 
-  hiopMatrixRajaDense(const size_type& m, 
+  hiopMatrixDenseRaja(const size_type& m, 
                       const size_type& glob_n,
                       std::string mem_space, 
                       index_type* col_part = NULL, 
                       MPI_Comm comm = MPI_COMM_SELF, 
                       const size_type& m_max_alloc = -1);
-  virtual ~hiopMatrixRajaDense();
+  virtual ~hiopMatrixDenseRaja();
 
   virtual void setToZero();
   virtual void setToConstant(double c);
@@ -296,9 +296,9 @@ private:
   size_type max_rows_;
   
 private:
-  hiopMatrixRajaDense() {};
+  hiopMatrixDenseRaja() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */
-  hiopMatrixRajaDense(const hiopMatrixRajaDense&);
+  hiopMatrixDenseRaja(const hiopMatrixDenseRaja&);
 
   double* new_mxnlocal_host_buff() const;
 };
