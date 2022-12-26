@@ -12,7 +12,7 @@ namespace hiop
   using hiopMatrixRajaDense = hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaCuda>;
 #else
   using hiopMatrixRajaDense = hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaOmp>;
-#end
+#endif
 
 
 } // namespace hiop
