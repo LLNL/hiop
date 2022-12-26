@@ -73,7 +73,7 @@ public:
   /**
    * @brief Static method to create vector
    */
-  static hiopVector* create_vector(const ExecSpaceInfo& hi, //const std::string& mem_space,
+  static hiopVector* create_vector(const ExecSpaceInfo& hi,
                                    const size_type& glob_n,
                                    index_type* col_part = nullptr,
                                    MPI_Comm comm = MPI_COMM_SELF);
@@ -87,7 +87,7 @@ public:
    * @brief Static method to create a dense matrix.
    * 
    */
-  static hiopMatrixDense* create_matrix_dense(const std::string& mem_space,                                              
+  static hiopMatrixDense* create_matrix_dense(const ExecSpaceInfo& hi,
                                               const size_type& m,
                                               const size_type& glob_n,
                                               index_type* col_part = NULL,

@@ -199,26 +199,125 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
  * Creates legacy HiOp dense matrix by default, RAJA vector when memory space
  * is specified.
  */
-hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const std::string& mem_space,
+hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& hi, //const std::string& mem_space,
                                                            const size_type& m,
                                                            const size_type& glob_n,
                                                            index_type* col_part,
                                                            MPI_Comm comm,
                                                            const size_type& m_max_alloc)
 {
-  const std::string mem_space_upper = toupper(mem_space);
+  const std::string mem_space_upper = toupper(hi.mem_space_);
   if(mem_space_upper == "DEFAULT") {
     return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
   } else {
+    if(hi.exec_backend_ == "RAJA") {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaDense(m, glob_n, mem_space_upper, col_part, comm, m_max_alloc);
+      if(hi.mem_backend_ == "UMPIRE") {
+#if defined(HIOP_USE_CUDA)
+        return new hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(m,
+                                                                                               glob_n,
+                                                                                               mem_space_upper,
+                                                                                               col_part,
+                                                                                               comm,
+                                                                                               m_max_alloc);
+#elif defined(HIOP_USE_HIP)
+        return new hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>(m,
+                                                                                               glob_n,
+                                                                                               mem_space_upper,
+                                                                                               col_part,
+                                                                                               comm,
+                                                                                               m_max_alloc);
+#else // this is for #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+        return new hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>(m,
+                                                                                              glob_n,
+                                                                                              mem_space_upper,
+                                                                                              col_part,
+                                                                                              comm,
+                                                                                              m_max_alloc);
+#endif //HIOP_USE_CUDA
+
+
+        
+      } else { // if(hi.mem_backend_ == "UMPIRE")
+        // RAJA exec policy but memory backend not based on Umpire
+        assert(false && "work in progress");
+        if(hi.mem_backend_ == "CUDA") {
+#ifdef HIOP_USE_CUDA
+          assert(mem_space_upper == "DEVICE");
+          return new hiop::hiopMatrixDenseRaja<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(m,
+                                                                                               glob_n,
+                                                                                               mem_space_upper,
+                                                                                               col_part,
+                                                                                               comm,
+                                                                                               m_max_alloc);
 #else
-    assert(false && "requested memory space not available because Hiop was not"
-           "built with RAJA support");
-    return new hiopMatrixDenseRowMajor(m, glob_n, col_part, comm, m_max_alloc);
-#endif
-  }
-  
+          assert(false && "cuda memory backend not available because HiOp was not built with CUDA");
+          return nullptr;
+#endif //HIOP_USE_CUDA
+          
+        } else if(hi.mem_backend_ == "HIP") {
+#if defined(HIOP_USE_HIP)
+          assert(mem_space_upper == "DEVICE");
+          return new hiop::hiopMatrixDenseRaja<hiop::MemBackendHip, hiop::ExecPolicyRajaHip>(m,
+                                                                                             glob_n,
+                                                                                             mem_space_upper,
+                                                                                             col_part,
+                                                                                             comm,
+                                                                                             m_max_alloc);
+#else
+          assert(false && "cuda memory backend not available because HiOp was not built with HIP");
+          return nullptr;
+#endif //HIOP_USE_HIP
+          
+        } else {
+          //RAJA-OMP exec policy with non-Umpire memory backend
+          
+          assert(false && "work in progress");
+          assert(mem_space_upper == "host");
+
+#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+          return new hiop::hiopMatrixDenseRaja<hiop::MemBackendCpp, hiop::ExecPolicyRajaOmp>(m,
+                                                                                             glob_n,
+                                                                                             mem_space_upper,
+                                                                                             col_part,
+                                                                                             comm,
+                                                                                             m_max_alloc);
+#else
+          assert(false && "cuda memory backend not available because HiOp was not built with RAJA-OMP");
+          return nullptr;
+#endif //!defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+          
+        }
+      } // end of else if(hi.mem_backend_ == "UMPIRE") 
+#else // else of ifdef HIOP_USE_RAJA 
+      assert(false && "requested memory space not available because Hiop was not"
+             "built with RAJA support");
+      return nullptr;
+#endif //HIOP_USE_RAJA
+    } else {// for if(hi.exec_backend_ == "RAJA")
+
+      if(mem_space_upper == "CUDA") {
+#ifdef HIOP_USE_CUDA
+          assert(mem_space_upper == "DEVICE");
+          return new hiop::hiopMatrixDenseRaja<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(m,
+                                                                                               glob_n,
+                                                                                               mem_space_upper,
+                                                                                               col_part,
+                                                                                               comm,
+                                                                                               m_max_alloc);
+#else
+          assert(false && "requested memory space not available because Hiop was not built with CUDA");
+          return nullptr;
+#endif //HIOP_USE_CUDA
+      } else if(mem_space_upper == "HIP") {
+        assert(false && "to be implemented");
+        return nullptr;
+      } else {
+        assert(false && "to be implemented");
+        return nullptr;
+      }
+    } // end of else for if(hi.exec_backend_ == "RAJA")
+  } // end of else if(mem_space_upper == "DEFAULT") 
 }
 
 /**
