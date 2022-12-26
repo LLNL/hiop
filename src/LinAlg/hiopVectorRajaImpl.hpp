@@ -242,14 +242,14 @@ void hiopVectorRaja<MEM,POL>::setToConstant_w_patternSelect(double c, const hiop
 }
 
 /**
- * @brief Copy data from vec to this vector
+ * @brief Copy data from `vec` to this vector
  * 
  * @param[in] vec - Vector from which to copy into `this`
  * 
  * @pre `vec` and `this` must have same partitioning.
  * @post Elements of `this` are overwritten with elements of `vec`
  */
-  template<class MEM, class POL> 
+template<class MEM, class POL> 
 void hiopVectorRaja<MEM,POL>::copyFrom(const hiopVector& vec)
 {
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);

@@ -59,6 +59,8 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include "hiopVectorPar.hpp"
+
 #include <cmath>
 #include <limits>
 
@@ -190,6 +192,17 @@ void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector&
 {
   copyFrom(vv);
   componentMult(select);
+}
+
+
+void hiopVectorCuda::copy_from_vec_par(const hiopVectorPar& src)
+{
+  assert(n_local_ == src.get_size());
+  cudaError_t cu_err = cudaMemcpy(data_,
+                                 src.local_data_const(),
+                                 (n_local_)*sizeof(double),
+                                 cudaMemcpyHostToDevice);
+  assert(cudaSuccess == cu_err);
 }
 
 /// @brief Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this'

@@ -59,20 +59,13 @@
 
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
-
-#ifdef HIOP_USE_RAJA
-#include "hiopVectorRaja.hpp"
-using hiopVectorCuda = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
-#else
-//#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
-#endif // HIOP_USE_RAJA
+#include "hiopVectorCuda.hpp"
 #endif // HIOP_USE_CUDA
 
 #include "hiopMatrixSparseCSRSeq.hpp"
 
 namespace hiop
-{
-  
+{  
 hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp)
   : hiopKKTLinSysNormalEquation(nlp),
     nlpSp_{nullptr},
@@ -177,7 +170,7 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
   // NOTE:
   // hybrid compute mode -> linear algebra objects used internally by the class will be allocated on the device. Most of the inputs
   // to this class will be however on HOST under hybrid mode, so some objects are copied/replicated/transfered to device
-  // gpu copute mode -> not yet supported
+  // gpu compute mode -> not yet supported
   // cpu compute mode -> all objects on HOST, however, some objects will still be copied (e.g., Hd_) to ensure code homogeneity
   //
   // REMARK: The objects that are copied/replicated are temporary and will be removed later on as the remaining sparse KKT computations
@@ -221,35 +214,35 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
 
   //temporary code, see above note
   {
-    if(mem_space_internal == "DEVICE") {
+    if(mem_space_internal == "CUDA") {
 #ifdef HIOP_USE_CUDA
-      auto Hess_diag_raja = dynamic_cast<hiopVectorCuda*>(Hess_diag_copy_);
+      auto Hess_diag_cuda = dynamic_cast<hiopVectorCuda*>(Hess_diag_copy_);
       auto Hess_diag_par = dynamic_cast<hiopVectorPar*>(Hess_diag_);
-      auto Hx_raja = dynamic_cast<hiopVectorCuda*>(Hx_copy_);
+      auto Hx_cuda = dynamic_cast<hiopVectorCuda*>(Hx_copy_);
       auto Hx_par =  dynamic_cast<hiopVectorPar*>(Hx_);
-      auto Hd_raja = dynamic_cast<hiopVectorCuda*>(Hd_copy_);
+      auto Hd_cuda = dynamic_cast<hiopVectorCuda*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
-      assert(Hx_raja && "incorrect type for vector class");
+      assert(Hx_cuda && "incorrect type for vector class");
       assert(Hx_par && "incorrect type for vector class");      
-      Hess_diag_raja->copy_from_host_vec(*Hess_diag_par);
-      Hx_raja->copy_from_host_vec(*Hx_par);
-      Hd_raja->copy_from_host_vec(*Hd_par);
+      Hess_diag_cuda->copy_from_vec_par(*Hess_diag_par);
+      Hx_cuda->copy_from_vec_par(*Hx_par);
+      Hd_cuda->copy_from_vec_par(*Hd_par);
 
-      auto deltawx_raja = dynamic_cast<hiopVectorCuda*>(deltawx_);
-      auto deltawd_raja = dynamic_cast<hiopVectorCuda*>(deltawd_);
-      auto deltacc_raja = dynamic_cast<hiopVectorCuda*>(deltacc_);
-      auto deltacd_raja = dynamic_cast<hiopVectorCuda*>(deltacd_);
+      auto deltawx_cuda = dynamic_cast<hiopVectorCuda*>(deltawx_);
+      auto deltawd_cuda = dynamic_cast<hiopVectorCuda*>(deltawd_);
+      auto deltacc_cuda = dynamic_cast<hiopVectorCuda*>(deltacc_);
+      auto deltacd_cuda = dynamic_cast<hiopVectorCuda*>(deltacd_);
       const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(*delta_wx_);
       const hiopVectorPar& deltawd_host = dynamic_cast<const hiopVectorPar&>(*delta_wd_);
       const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(*delta_cc_);
       const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(*delta_cd_);
 
-      deltawx_raja->copy_from_host_vec(deltawx_host);
-      deltawd_raja->copy_from_host_vec(deltawd_host);
-      deltacc_raja->copy_from_host_vec(deltacc_host);
-      deltacd_raja->copy_from_host_vec(deltacd_host);
+      deltawx_cuda->copy_from_vec_par(deltawx_host);
+      deltawd_cuda->copy_from_vec_par(deltawd_host);
+      deltacc_cuda->copy_from_vec_par(deltacc_host);
+      deltacd_cuda->copy_from_vec_par(deltacd_host);
 #else
-      assert(false && "compute mode not available under current build. Enable CUDA and RAJA.");
+      assert(false && "compute mode not available under current build: enable CUDA.");
 #endif 
     } else {
       assert(dynamic_cast<hiopVectorPar*>(Hd_) && "incorrect type for vector class");
@@ -416,13 +409,11 @@ hiopLinSolverSymSparse* hiopKKTLinSysSparseNormalEqn::determine_and_create_linsy
 
     assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
 
-#ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_NormalEqn linsys: alloc cuSOLVER-chol matrix size %d\n", n);
     assert(M_normaleqn_);
     linSys_ = new hiopLinSolverCholCuSparse(M_normaleqn_, nlp_);
-#endif
 #endif
 
     //Return NULL (and assert) if a GPU sparse linear solver is not present
