@@ -13,7 +13,6 @@ namespace hiop
 #elif defined(HIOP_USE_HIP)
   using hiopMatrixRajaDense = hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaHip>;
 #else
-  
   using hiopMatrixRajaDense = hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaOmp>;
 #endif
 
