@@ -20,7 +20,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixDense.hpp
   hiopMatrixDenseRowMajor.hpp
   hiopMatrixMDS.hpp
-  hiopMatrixRajaDense.hpp
+  hiopMatrixDenseRaja.hpp
   hiopMatrixRajaSparseTriplet.hpp
   hiopMatrixSparse.hpp
   hiopMatrixSparseTriplet.hpp
@@ -58,7 +58,6 @@ set(hiopLinAlg_SRC
 
 set(hiopLinAlg_RAJA_SRC
   hiopVectorIntRaja.cpp
-# hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
 )
 
