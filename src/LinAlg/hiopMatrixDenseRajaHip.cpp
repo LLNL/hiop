@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopMatrixDenseRajaCuda.cpp
+ * @file hiopMatrixDenseRajaHip.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
@@ -55,16 +55,16 @@
 
 #include "hiopMatrixDenseRaja.hpp"
 
-#include "MemBackendCudaImpl.hpp"
+#include "MemBackendHipImpl.hpp"
 #include "MemBackendUmpireImpl.hpp"
 #include "MemBackendCppImpl.hpp"
-#include "ExecPoliciesRajaCudaImpl.hpp"
+#include "ExecPoliciesRajaHipImpl.hpp"
 
 namespace hiop
 {
-using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_exec;
-using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_reduce;
-using matrix_exec = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::matrix_exec;
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_reduce;
+using matrix_exec = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::matrix_exec;
 }
 
 #include "hiopMatrixDenseRajaImpl.hpp"
@@ -75,6 +75,6 @@ namespace hiop
 //
 //Explicit instantiations: force compilation 
 //
-template class hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaCuda>;
-template class hiopMatrixDenseRaja<MemBackendCuda, ExecPolicyRajaCuda>;
+template class hiopMatrixDenseRaja<MemBackendUmpire, ExecPolicyRajaHip>;
+template class hiopMatrixDenseRaja<MemBackendHip, ExecPolicyRajaHip>;
 }
