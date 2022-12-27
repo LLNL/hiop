@@ -66,7 +66,7 @@
 #include <umpire/ResourceManager.hpp>
 #include <hiopVectorIntRaja.hpp>
 #include <hiopVectorRaja.hpp>
-#include <hiopMatrixRajaDense.hpp>
+#include <hiopMatrixDenseRaja.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #endif // HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA

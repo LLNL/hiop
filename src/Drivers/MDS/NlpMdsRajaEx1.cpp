@@ -63,7 +63,7 @@
 #include <umpire/ResourceManager.hpp>
 #include <RAJA/RAJA.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
-#include <hiopMatrixRajaDense.hpp>
+#include <hiopMatrixDenseRaja.hpp>
 
 //TODO: A good idea to not use the internal HiOp Raja policies here and, instead, give self-containing
 // definitions of the policies here so that the user gets a better grasp of the concept and does not
@@ -77,15 +77,18 @@
 #include "ExecPoliciesRajaCudaImpl.hpp"
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_reduce;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using ex1_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_exec;
 using ex1_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_reduce;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
 using namespace hiop;
@@ -135,8 +138,8 @@ MdsEx1::MdsEx1(int ns_in, int nd_in, std::string mem_space, bool empty_sp_row)
   }
   else
   {
-    Q_  = new hiop::hiopMatrixRajaDense(nd_, nd_, mem_space_);
-    Md_ = new hiop::hiopMatrixRajaDense(ns_, nd_, mem_space_);
+    Q_  = new hiopMatrixRajaDense(nd_, nd_, mem_space_);
+    Md_ = new hiopMatrixRajaDense(ns_, nd_, mem_space_);
     buf_y_ = static_cast<double*>(allocator.allocate(nd_ * sizeof(double)));
   }
 
