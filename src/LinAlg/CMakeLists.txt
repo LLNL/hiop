@@ -66,7 +66,7 @@ if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaCuda.cpp)
 elseif(HIOP_USE_HIP)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
-  #list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaHip.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaHip.cpp)
 else()
   #raja - omp
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
