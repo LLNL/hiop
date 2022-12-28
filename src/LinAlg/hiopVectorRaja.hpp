@@ -295,7 +295,11 @@ public:
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
   virtual bool is_equal(const hiopVector& vec) const;
-  
+
+  const ExecSpace<MEMBACKEND, EXECPOLICYRAJA>& exec_space() const
+  {
+    return exec_space_;
+  }
 private:
   ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
   using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;

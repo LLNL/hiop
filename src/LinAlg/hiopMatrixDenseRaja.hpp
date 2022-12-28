@@ -269,7 +269,7 @@ public:
 
 private:
 
-  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
+  mutable ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
   using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
 
   //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
@@ -277,7 +277,7 @@ private:
   //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
   //combinations work).
   using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+  mutable ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
 
   
   std::string mem_space_;

@@ -47,29 +47,21 @@
 // product endorsement purposes.
 
 /**
- * @file hiopMatrixDenseRaja.cpp
+ * @file hiopMatrixDenseRajaImpl.hpp
  *
  * @author Jake Ryan <jake.ryan@pnnl.gov>, PNNL
  * @author Robert Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 #include "hiopMatrixDenseRaja.hpp"
 
 #include <cstdio>
-#include <cstring> //for memcpy
-#include <cmath>
-#include <algorithm>
 #include <cassert>
 
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
-#include <RAJA/RAJA.hpp>
-
-#include "hiopVectorPar.hpp"
 #include "hiopVectorRaja.hpp"
-
 #include "hiop_blasdefs.hpp"
 
 namespace hiop
@@ -83,8 +75,8 @@ hiopMatrixDenseRaja(const size_type& m,
                     MPI_Comm comm /* = MPI_COMM_SELF */, 
                     const size_type& m_max_alloc /* = -1 */) 
   : hiopMatrixDense(m, glob_n, comm),
-    //exec_space_(ExecSpace<MEMBACKEND,RAJACUDAPOL>(MEMBACKEND(mem_space))),
-    //exec_space_host_(ExecSpace<MEMBACKENDHOST,EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
+    exec_space_(ExecSpace<MEMBACKEND, RAJAEXECPOL>(MEMBACKEND(mem_space))),
+    exec_space_host_(ExecSpace<MEMBACKENDHOST,EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
     mem_space_(mem_space),
     buff_mxnlocal_host_(nullptr)
 {
@@ -92,16 +84,13 @@ hiopMatrixDenseRaja(const size_type& m,
   n_global_ = glob_n;
   comm_     = comm;
   int P     = 0;
-  if(col_part)
-  {
+  if(col_part) {
 #ifdef HIOP_USE_MPI
     int ierr = MPI_Comm_rank(comm_, &P); assert(ierr == MPI_SUCCESS);
 #endif
     glob_jl_ = col_part[P];
     glob_ju_ = col_part[P+1];
-  }
-  else
-  {
+  } else {
     glob_jl_ = 0;
     glob_ju_ = n_global_;
   }
@@ -115,56 +104,44 @@ hiopMatrixDenseRaja(const size_type& m,
   assert(max_rows_>=m_local_ && "the requested extra allocation is smaller than the allocation needed by the matrix");
 
 #ifndef HIOP_USE_GPU
-  mem_space_ = "HOST"; // If no GPU support, fall back to host!
+  assert(mem_space_ == "HOST"); 
 #endif
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  if(mem_space_ == "DEVICE")
-  {
+  data_dev_ = exec_space_.template alloc_array<double>(n_local_*max_rows_);
+
+  if(exec_space_.mem_backend().is_device()) {
     // If memory space is on device, create a host mirror
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
-    ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
-  }
-  else
-  {
+    data_host_ = exec_space_host_.template alloc_array<double>(n_local_*max_rows_);
+    yglob_host_ = exec_space_host_.template alloc_array<double>(m_local_);
+    ya_host_ = exec_space_host_.template alloc_array<double>(m_local_);
+  } else {
     data_host_ = data_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
-    yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
-    ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
+    yglob_host_ = exec_space_.template alloc_array<double>(m_local_);
+    ya_host_ = exec_space_.template alloc_array<double>(m_local_);
   }
 }
 
 template<class MEMBACKEND, class RAJAEXECPOL>
 hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::~hiopMatrixDenseRaja()
 {
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc  = resmgr.getAllocator(mem_space_);
-  umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-  if(data_dev_ != data_host_)
-  {
-    hostalloc.deallocate(data_host_);
-    hostalloc.deallocate(yglob_host_);
-    hostalloc.deallocate(ya_host_);
+  if(data_dev_ != data_host_) {
+    exec_space_host_.dealloc_array(data_host_);
+    exec_space_host_.dealloc_array(yglob_host_);
+    exec_space_host_.dealloc_array(ya_host_);
+  } else {
+    exec_space_.dealloc_array(yglob_host_);
+    exec_space_.dealloc_array(ya_host_);
   }
-  else
-  {
-    devalloc.deallocate(yglob_host_);
-    devalloc.deallocate(ya_host_);
-  }
-  devalloc.deallocate(data_dev_);
+  exec_space_.dealloc_array(data_dev_);
 
   data_host_  = nullptr;
   data_dev_   = nullptr;
   yglob_host_ = nullptr;
   ya_host_    = nullptr;
 
-  if(buff_mxnlocal_host_ != nullptr)
-  {
-    hostalloc.deallocate(buff_mxnlocal_host_);
+  if(buff_mxnlocal_host_ != nullptr) {
+    exec_space_host_.dealloc_array(buff_mxnlocal_host_);
     buff_mxnlocal_host_ = nullptr;
   }
 }
@@ -186,32 +163,24 @@ hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::hiopMatrixDenseRaja(const hiopMatr
   max_rows_ = dm.max_rows_;
   mem_space_ = dm.mem_space_;
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  data_dev_ = static_cast<double*>(devalloc.allocate(n_local_*max_rows_*sizeof(double)));
-  if(mem_space_ == "DEVICE")
-  {
+  data_dev_ = exec_space_.template alloc_array<double>(n_local_*max_rows_);
+  if(exec_space_.mem_backend().is_device()) {
     // If memory space is on device, create a host mirror
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    data_host_  = static_cast<double*>(hostalloc.allocate(n_local_*max_rows_*sizeof(double)));
-    yglob_host_ = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
-    ya_host_    = static_cast<double*>(hostalloc.allocate(m_local_ * sizeof(double)));
+    data_host_ = exec_space_host_.template alloc_array<double>(n_local_*max_rows_);
+    yglob_host_ = exec_space_host_.template alloc_array<double>(m_local_);
+    ya_host_ = exec_space_host_.template alloc_array<double>(m_local_);
     buff_mxnlocal_host_ = nullptr;
-    if(dm.buff_mxnlocal_host_ != nullptr)
-    {
-      buff_mxnlocal_host_ = static_cast<double*>(hostalloc.allocate(sizeof(double)*max_rows_*n_local_));
+    if(dm.buff_mxnlocal_host_ != nullptr) {
+      buff_mxnlocal_host_ = exec_space_host_.template alloc_array<double>(max_rows_*n_local_);
     }
-  }
-  else
-  {
+  } else {
     data_host_ = data_dev_;
     // If memory space is not on device, these buffers are allocated in memory space
-    yglob_host_ = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
-    ya_host_    = static_cast<double*>(devalloc.allocate(m_local_ * sizeof(double)));
+    yglob_host_ = exec_space_.template alloc_array<double>(m_local_);
+    ya_host_ = exec_space_.template alloc_array<double>(m_local_);
     buff_mxnlocal_host_ = nullptr;
-    if(dm.buff_mxnlocal_host_ != nullptr)
-    {
-      buff_mxnlocal_host_ = static_cast<double*>(devalloc.allocate(sizeof(double)*max_rows_*n_local_));
+    if(dm.buff_mxnlocal_host_ != nullptr) {
+      buff_mxnlocal_host_ = exec_space_.template alloc_array<double>(max_rows_*n_local_);
     }
   }
 }
@@ -230,9 +199,8 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::appendRow(const hiopVector& r
   assert(row.get_local_size() == n_local_);
   assert(m_local_ < max_rows_ && "no more space to append rows ... should have preallocated more rows.");
 #endif
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  rm.copy(&Mview(m_local_, 0), const_cast<double*>(row.local_data_const()), n_local_ * sizeof(double));
+  exec_space_.copy(&Mview(m_local_, 0), row.local_data_const(), n_local_, row.exec_space());
   m_local_++;
 }
 
@@ -257,23 +225,20 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copyFrom(const hiopMatrixDens
   assert(glob_jl_  == dm.glob_jl_ );
   assert(glob_ju_  == dm.glob_ju_ );
 
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(data_dev_, dm.data_dev_);
+  exec_space_.copy(data_dev_, dm.data_dev_, n_local_*max_rows_, dm.exec_space_);
 }
 
 /**
  * @brief Copies the elements of `this` matrix to output buffer.
  * 
  * @pre The input buffer is big enough to hold the entire matrix.
- * @pre The memory pointed at by the input is allocated by Umpire.
+ * @pre The memory pointed at by the input is in the same execution space as `this`.
  */
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copy_to(double* dest)
 {
-  if(nullptr != dest)
-  {
-    auto& rm = umpire::ResourceManager::getInstance();
-    rm.copy(dest, data_dev_, m_local_*n_local_*sizeof(double));
+  if(nullptr != dest) {
+    exec_space_.copy(dest, data_dev_, n_local_*max_rows_);
   }
 }
 
@@ -284,16 +249,13 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copy_to(double* dest)
  * 
  * @pre The input matrix is a pointer to the beginning of a row-major 2D
  * data block with the same dimensions as this matrix.
- * @pre The memory pointed at by the input is allocated by Umpire.
+ * @pre The memory pointed at by the input is in the same execution space as `this`.
  */
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copyFrom(const double* src)
 {
-  if(nullptr != src)
-  {
-    auto& rm = umpire::ResourceManager::getInstance();
-    double* source = const_cast<double*>(src);
-    rm.copy(data_dev_, source, m_local_*n_local_*sizeof(double));
+  if(nullptr != src) {
+    exec_space_.copy(data_dev_, src, m_local_*n_local_);
   }
 }
 
@@ -326,10 +288,8 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copyRowsFrom(const hiopMatrix
   assert(num_rows <= src.m_local_);
 #endif
   // copies num_rows rows of length n_local_ from beginning of src
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  double* sd = const_cast<double*>(src.data_dev_); // sd isn't modified
-  rm.copy(&Mview(row_dest, 0), sd, n_local_ * num_rows * sizeof(double));
+  exec_space_.copy(&Mview(row_dest, 0), src.data_dev_, n_local_ * num_rows, src.exec_space_);
 }
 
 /**
@@ -397,12 +357,10 @@ copyBlockFromMatrix(const index_type i_start, const index_type j_start, const hi
   assert(j_start<n_local_ || !n_local_);
   assert(i_start>=0); assert(j_start>=0);
 #endif
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   RAJA::View<double, RAJA::Layout<2>> Sview(src.data_dev_, src.m_local_, src.n_local_);
-  const size_t buffsize = src.n_local_ * sizeof(double);
   for(index_type ii=0; ii<src.m_local_; ii++)
-    rm.copy(&Mview(ii + i_start, j_start), &Sview(ii, 0), buffsize);
+    exec_space_.copy(&Mview(ii + i_start, j_start), &Sview(ii, 0), src.n_local_, src.exec_space_);
 }
 
 /**
@@ -425,18 +383,16 @@ copyFromMatrixBlock(const hiopMatrixDense& srcmat, const int i_block, const int 
   assert(m_local_+i_block<=src.m_local_ && "the source does not enough rows to fill 'this'");
   assert(n_local_+j_block<=src.n_local_ && "the source does not enough cols to fill 'this'");
   
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   RAJA::View<double, RAJA::Layout<2>> Sview(src.data_dev_, src.m_local_, src.n_local_);
   
-  if(n_local_ == src.n_local_) //and j_block=0
-  {
-    rm.copy(&Mview(0, 0), &Sview(i_block, 0), n_local_ * m_local_ * sizeof(double));
-  }
-  else
-  {
-    for(int i=0; i < m_local_; i++)
-      rm.copy(&Mview(i, 0), &Sview(i + i_block, j_block), n_local_ * sizeof(double));
+  if(n_local_ == src.n_local_) {
+    // j_block=0
+    exec_space_.copy(&Mview(0, 0), &Sview(i_block, 0), n_local_ * m_local_, src.exec_space_);
+  } else {
+    for(int i=0; i < m_local_; i++) {
+      exec_space_.copy(&Mview(i, 0), &Sview(i + i_block, j_block), n_local_, src.exec_space_);
+    }
   }
 }
 
@@ -475,17 +431,15 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::shiftRows(size_type shift)
   }
 #endif
 
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
-  if(shift<0)
-  {
-    for(int row = 0; row < m_local_ + shift; row++)
-      rm.copy(&Mview(row, 0), &Mview(row - shift, 0), n_local_ * sizeof(double));
-  }
-  else
-  {
-    for(int row = m_local_-1; row >= shift; row--)
-      rm.copy(&Mview(row, 0), &Mview(row - shift, 0), n_local_ * sizeof(double));
+  if(shift<0) {
+    for(int row = 0; row < m_local_ + shift; row++) {
+      exec_space_.copy(&Mview(row, 0), &Mview(row - shift, 0), n_local_);
+    }
+  } else {
+    for(int row = m_local_-1; row >= shift; row--) {
+      exec_space_.copy(&Mview(row, 0), &Mview(row - shift, 0), n_local_);
+    }
   }
  
 #if defined(HIOP_DEEPCHECKS) && !defined(NDEBUG)
@@ -503,27 +457,25 @@ template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::replaceRow(index_type row, const hiopVector& vec)
 {
   const auto& rvec = dynamic_cast<const hiopVectorRaja<MEMBACKEND, RAJAEXECPOL>&>(vec);
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   assert(row >= 0);
   assert(row < m_local_);
   size_type vec_size = rvec.get_local_size();
-  rm.copy(&Mview(row, 0),
-          const_cast<double*>(rvec.local_data_const()),
-          (vec_size >= n_local_ ? n_local_ : vec_size)*sizeof(double));
+  exec_space_.copy(&Mview(row, 0),
+                   rvec.local_data_const(),
+                   (vec_size >= n_local_ ? n_local_ : vec_size));
 }
 
 /// Overwrites the values in row_vec with those from a specified row in this matrix
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::getRow(index_type irow, hiopVector& row_vec)
 {
-  auto& rm = umpire::ResourceManager::getInstance();
   RAJA::View<double, RAJA::Layout<2>> Mview(this->data_dev_, m_local_, n_local_);
   assert(irow>=0);
   assert(irow<m_local_);
   auto& vec = dynamic_cast<hiopVectorRaja<MEMBACKEND, RAJAEXECPOL>&>(row_vec);
   assert(n_local_ == vec.get_local_size());
-  rm.copy(vec.local_data(), &Mview(irow, 0), n_local_ * sizeof(double));
+  exec_space_.copy(vec.local_data(), &Mview(irow, 0), n_local_, vec.exec_space());
 }
 
 template<class MEMBACKEND, class RAJAEXECPOL>
@@ -587,8 +539,7 @@ hiopMatrixDense* hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::new_copy() const
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::setToZero()
 {
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.memset(data_dev_, 0);
+  this->setToConstant(0.0);
 }
 
 /**
@@ -719,8 +670,8 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::timesVec(double beta,
  * @brief Multiplies this matrix by a vector and
  * stores the result in another vector.
  *  
- * @pre The input and output vectors are pointers to device
- * memory managed by Umpire.
+ * @pre The input and output vectors are pointers to memory allocated in the same
+ * execution/memory space.
  * @todo GPU BLAS (<D>GEMV, <D>SCAL) for this
  * 
  * see timesVec for more detail 
@@ -752,11 +703,10 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::timesVec(double beta,
 
 #ifdef HIOP_USE_MPI
   //here m_local_ is > 0
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.copy(ya_host_, ya, m_local_ * sizeof(double));
-
-  int ierr = MPI_Allreduce(ya_host_, yglob_host_, m_local_, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
-  rm.copy(ya, yglob_host_, m_local_ * sizeof(double));
+  exec_space_host_.copy(ya_host_, ya, m_local_, exec_space_);
+  int ierr = MPI_Allreduce(ya_host_, yglob_host_, m_local_, MPI_DOUBLE, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
+  exec_space_.copy(ya, yglob_host_, m_local_, exec_space_host_);
 #endif
 }
 
@@ -792,8 +742,8 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::transTimesVec(double beta,
  * @brief Multiplies the transpose of this matrix by a vector and
  * stores the result in another vector.
  *  
- * @pre The input and output vectors are pointers to device
- * memory managed by Umpire.
+ * @pre The input and output vectors are pointers to the same
+ * execution/memory space.
  * @todo GPU BLAS (DGEMV, DSCAL) for this
  * 
  * see timesVec for more detail 
@@ -1545,29 +1495,27 @@ bool hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::symmetrize()
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copyToDev()
 {
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  resmgr.copy(data_dev_, data_host_);
+  if(data_dev_!=data_host_) {
+    exec_space_.copy(data_dev_, data_host_, n_local_*max_rows_, exec_space_host_);
+  }
 }
 
 /// Copy local data from the memory space to host mirror
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::copyFromDev()
 {
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  resmgr.copy(data_host_, data_dev_);
+  if(data_dev_!=data_host_) {
+    exec_space_host_.copy(data_host_, data_dev_, n_local_*max_rows_, exec_space_);
+  }
 }
 
 template<class MEMBACKEND, class RAJAEXECPOL>
 double* hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::new_mxnlocal_host_buff() const
 {
-  if(buff_mxnlocal_host_ == nullptr)
-  {
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    buff_mxnlocal_host_ = static_cast<double*>(hostalloc.allocate(sizeof(double)*max_rows_*n_local_));
+  if(buff_mxnlocal_host_ == nullptr) {
+    buff_mxnlocal_host_ = exec_space_host_.template alloc_array<double>(max_rows_*n_local_);
   }
   return buff_mxnlocal_host_;
 }
-
 
 } // namespace hiop
