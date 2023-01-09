@@ -293,8 +293,7 @@ private:
   mutable double* buff_mxnlocal_host_; ///< host data buffer
 
   //this is very private do not touch :)
-  size_type max_rows_;
-  
+  size_type max_rows_; 
 private:
   hiopMatrixDenseRaja() {};
   /** copy constructor, for internal/private use only (it doesn't copy the values) */

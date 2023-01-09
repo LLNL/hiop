@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file hiopLinSolverSymDenseMagma.hpp
+ * @file hiopLinSolverSymDenseMagma.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
