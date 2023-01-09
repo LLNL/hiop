@@ -65,7 +65,7 @@
 
 #ifdef HIOP_USE_RAJA
 #include <hiopVectorRaja.hpp>
-#include <hiopMatrixRajaDense.hpp>
+#include <hiopMatrixDenseRaja.hpp>
 #include "LinAlg/matrixTestsRajaDense.hpp"
 #endif
 

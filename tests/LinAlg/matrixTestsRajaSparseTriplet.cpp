@@ -57,7 +57,7 @@
  */
 
 #include <cstring>
-#include <hiopMatrixRajaDense.hpp>
+#include <hiopMatrixDenseRaja.hpp>
 #include <hiopVectorRaja.hpp>
 #include <hiopMatrixRajaSparseTriplet.hpp>
 #include "matrixTestsRajaSparseTriplet.hpp"
@@ -70,13 +70,16 @@
 #if defined(HIOP_USE_CUDA)
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
 
@@ -106,11 +109,11 @@ real_type MatrixTestsRajaSparseTriplet::getLocalElement(
     local_ordinal_type row,
     local_ordinal_type col)
 {
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaDense*>(A);
+  const auto* mat = dynamic_cast<const hiopMatrixRajaDense*>(A);
   
   if (mat != nullptr)
   {
-    auto* amat = const_cast<hiop::hiopMatrixRajaDense*>(mat);
+    auto* amat = const_cast<hiopMatrixRajaDense*>(mat);
     amat->copyFromDev();
     //double** M = amat->get_M_host();
     //return M[row][col];
@@ -228,7 +231,7 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(
     hiop::hiopMatrixDense* Amat,
     std::function<real_type(local_ordinal_type, local_ordinal_type)> expect)
 {
-  auto* A = dynamic_cast<hiop::hiopMatrixRajaDense*>(Amat);
+  auto* A = dynamic_cast<hiopMatrixRajaDense*>(Amat);
   assert(A->get_local_size_n() == A->n() && "Matrix should not be distributed");
   const local_ordinal_type M = A->get_local_size_m();
   const local_ordinal_type N = A->get_local_size_n();
