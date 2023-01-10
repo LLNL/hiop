@@ -46,38 +46,73 @@
 // product endorsement purposes.
 
 /**
- * @file MathHipKernels.cpp
+ * @file MathKernelsCuda.cu
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#include "MathKernelsHip.hpp"
+#include "MathKernelsCuda.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <hip/hip_runtime.h>
-#include <hiprand_kernel.h>
+#include <cuda.h>
+#include <curand_kernel.h>
+#include <curand.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 #include "hiopCppStdUtils.hpp"
+#include <thrust/functional.h>
+#include <functional>
 
 __global__
-void array_random_uniform_hip(int n, double* d_array, unsigned long seed, double minv, double maxv)
+void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
 {
     const int num_threads = blockDim.x * gridDim.x;
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
     const double delta = maxv - minv;
-    hiprandState state;
-    hiprand_init(seed, tid, 0, &state);
+    curandState state;
+    curand_init(seed, tid, 0, &state);
     for (int i = tid; i < n; i += num_threads) {
-      const double ranv = hiprand_uniform_double( &state ); // from 0 to 1
+      const double ranv = curand_uniform_double( &state ); // from 0 to 1
       d_array[i] = ranv * delta + minv;	
     }
 }
 
+__global__ void set_to_constant_cu(int n, double *vec, double val)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    vec[i] = val;	
+  }
+}
+
+__global__ void copy_to_mapped_dest_cu(int n, const double* src, double* dest, const int* mapping)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    dest[mapping[i]] = src[i];	
+  }
+}
+
+__global__ void copy_from_mapped_src_cu(int n, const double* src, double* dest, const int* mapping)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    dest[i] = src[mapping[i]];	
+  }
+}
+
 namespace hiop
 {
-namespace hip
+namespace cuda
 {
 
 int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
@@ -86,28 +121,48 @@ int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv
   int grid_size = (n+block_size-1)/block_size;
   
   unsigned long seed = generate_seed();
-  array_random_uniform_hip<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
-  hipDeviceSynchronize();
+  array_random_uniform_cuda<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
+  cudaDeviceSynchronize();
 
   return 1;
 }
 
 int array_random_uniform_kernel(int n, double* d_array)
-{  
+{
   unsigned long seed = generate_seed();
 
-  hiprandGenerator_t generator;
-  hiprandCreateGenerator(&generator, HIPRAND_RNG_PSEUDO_DEFAULT);
-  hiprandSetPseudoRandomGeneratorSeed(generator, seed);
-  
+  curandGenerator_t generator;
+  curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
+  curandSetPseudoRandomGeneratorSeed(generator, seed);
+
   // generate random val from 0 to 1
-  hiprandGenerateUniformDouble(generator, d_array, n);
+  curandGenerateUniformDouble(generator, d_array, n);
 
-  hiprandDestroyGenerator(generator);
-
+  curandDestroyGenerator(generator);
   return 1;
 }
 
-} //end of namespace device
+void set_to_val_kernel(int n, double* values, double val)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  set_to_constant_cu<<<num_blocks,block_size>>>(n, values, val);
+}
+
+void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  copy_to_mapped_dest_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
+}
+
+void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  copy_from_mapped_src_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
+}
+
+} //end of namespace cuda
 } //end of namespace hiop
 

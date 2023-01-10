@@ -42,7 +42,7 @@ if(HIOP_USE_CUDA)
   set_source_files_properties(${hiopUtils_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
 
   # CUDA kernels
-  set(hiopUtils_CUDA_SRC MathCudaKernels.cu)
+  set(hiopUtils_CUDA_SRC MathKernelsCuda.cu)
   set_source_files_properties(${hiopUtils_CUDA_SRC} PROPERTIES LANGUAGE CUDA)
   list(APPEND hiopUtils_SRC ${hiopUtils_CUDA_SRC})
 endif()
@@ -58,7 +58,7 @@ if(HIOP_USE_HIP)
   set_source_files_properties(${hiopUtils_RAJA_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
 
   # HIP kernels
-  set(hiopUtils_HIP_SRC MathHipKernels.cpp)
+  set(hiopUtils_HIP_SRC MathKernelsHip.cpp)
   set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES LANGUAGE CXX)
   set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
   list(APPEND hiopUtils_SRC ${hiopUtils_HIP_SRC})
