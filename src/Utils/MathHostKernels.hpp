@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file MathHostKernels.hpp
+ * @file MathKernelsHost.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL

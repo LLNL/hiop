@@ -11,6 +11,7 @@ using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaOmp>::hiop_raja_r
 }
 
 #include "hiopVectorRajaImpl.hpp"
+#include "MathKernelsHost.hpp"
 
 namespace hiop
 {
