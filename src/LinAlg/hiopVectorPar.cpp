@@ -48,7 +48,6 @@
 #include "hiopVectorPar.hpp"
 #include "hiopVectorIntSeq.hpp"
 #include "hiopCppStdUtils.hpp"
-#include "MathHostKernels.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -57,13 +56,13 @@
 #include <iostream>
 
 #include "hiop_blasdefs.hpp"
+#include "MathKernelsHost.hpp"
 
 #include <limits>
 #include <cstddef>
 
 namespace hiop
 {
-
 
 hiopVectorPar::hiopVectorPar(const size_type& glob_n, index_type* col_part/*=NULL*/, MPI_Comm comm/*=MPI_COMM_NULL*/)
   : comm_(comm)

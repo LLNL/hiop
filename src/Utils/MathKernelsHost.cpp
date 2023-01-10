@@ -53,13 +53,13 @@
  *
  */
 
+#include "MathKernelsHost.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <random>
 
 #include "hiopCppStdUtils.hpp"
-#include "MathHostKernels.hpp"
 
 namespace hiop
 {

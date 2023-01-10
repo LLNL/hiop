@@ -1,7 +1,7 @@
 set(hiopUtils_SRC
   hiopLogger.cpp
   hiopOptions.cpp
-  MathHostKernels.cpp
+  MathKernelsHost.cpp
 )
 
 set(hiopUtils_RAJA_SRC
@@ -21,7 +21,7 @@ set(hiopUtils_INTERFACE_HEADERS
   hiopOptions.hpp
   hiopRunStats.hpp
   hiopTimer.hpp
-  MathHostKernels.hpp
+  MathKernelsHost.hpp
 )
 
 if(HIOP_USE_CUDA)
