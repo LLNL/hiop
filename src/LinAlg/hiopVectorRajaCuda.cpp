@@ -75,12 +75,12 @@ namespace hiop
 
 template<> void hiopVectorRaja<MemBackendUmpire,ExecPolicyRajaCuda>::set_to_random_uniform(double minv, double maxv)
 {
-  hiop::device::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
+  hiop::cuda::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
 }
 
 template<> void hiopVectorRaja<MemBackendCuda,ExecPolicyRajaCuda>::set_to_random_uniform(double minv, double maxv)
 {
-  hiop::device::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
+  hiop::cuda::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
 }
 
 //
