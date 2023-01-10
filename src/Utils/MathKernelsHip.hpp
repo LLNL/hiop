@@ -46,19 +46,19 @@
 // product endorsement purposes.
 
 /**
- * @file MathDeviceKernels.hpp
+ * @file MathKernelsHip.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifndef MATH_KERNEL_DEVICE
-#define MATH_KERNEL_DEVICE
+#ifndef MATH_KERNEL_HIP
+#define MATH_KERNEL_HIP
 
 namespace hiop
 {
-namespace device
+namespace hip
 {
   // Generates uniformly distributed double-precision floating-point values, from minv to maxv
   int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);

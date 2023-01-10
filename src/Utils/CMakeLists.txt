@@ -24,8 +24,12 @@ set(hiopUtils_INTERFACE_HEADERS
   MathHostKernels.hpp
 )
 
-if(HIOP_USE_GPU)
-  list(APPEND hiopUtils_INTERFACE_HEADERS MathDeviceKernels.hpp)
+if(HIOP_USE_CUDA)
+  list(APPEND hiopUtils_INTERFACE_HEADERS MathKernelsCuda.hpp)
+endif()
+
+if(HIOP_USE_HIP)
+  list(APPEND hiopUtils_INTERFACE_HEADERS MathKernelsHip.hpp)
 endif()
 
 if(HIOP_USE_RAJA)

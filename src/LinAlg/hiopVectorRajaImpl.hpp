@@ -63,13 +63,6 @@
 
 #include "hiopVectorIntRaja.hpp"
 
-#ifdef HIOP_USE_GPU
-#include "MathDeviceKernels.hpp"
-#include "MathHostKernels.hpp"
-#else
-#include "MathHostKernels.hpp"
-#endif
-
 #include <cmath>
 #include <cstring> //for memcpy
 #include <sstream>

@@ -53,6 +53,7 @@
  *
  */
 
+#include "MathKernelsCuda.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,7 +63,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "hiopCppStdUtils.hpp"
-#include "MathDeviceKernels.hpp"
 #include <thrust/functional.h>
 #include <functional>
 
@@ -112,7 +112,7 @@ __global__ void copy_from_mapped_src_cu(int n, const double* src, double* dest, 
 
 namespace hiop
 {
-namespace device
+namespace cuda
 {
 
 int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
@@ -163,6 +163,6 @@ void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, cons
   copy_from_mapped_src_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
 }
 
-} //end of namespace device
+} //end of namespace cuda
 } //end of namespace hiop
 

@@ -53,11 +53,8 @@
  */
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
-#include "MathDeviceKernels.hpp"
 #include <cuda_runtime.h>
 #include <cassert>
-
-//void hiop::cuda::set_to_linspace_kernel(int sz, int* buf, int i0, int di);
 
 namespace hiop
 {

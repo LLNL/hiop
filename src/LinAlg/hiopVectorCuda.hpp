@@ -63,9 +63,7 @@
 
 #include "hiopVector.hpp"
 
-#include "MathDeviceKernels.hpp"
 #include "hiop_cusolver_defs.hpp"
-
 
 namespace hiop
 {
