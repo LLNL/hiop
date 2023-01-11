@@ -290,7 +290,7 @@ template<class MEM, class POL>
 void hiopVectorRaja<MEM, POL>::copy_from(const hiopVector& vec, const hiopVectorInt& index_in_src)
 {
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
-  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(index_in_src);
   size_type nv = v.get_local_size();
 
   assert(indexes.size() == n_local_);
@@ -333,7 +333,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_w_pattern(const hiopVector& vec, const 
 template<class MEM, class POL> 
 void hiopVectorRaja<MEM, POL>::copy_from(const double* vec, const hiopVectorInt& index_in_src)
 {
-  const auto& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(index_in_src);
   assert(indexes.size() == n_local_);
   
   assert(vec);
@@ -352,7 +352,7 @@ void hiopVectorRaja<MEM, POL>::copy_from(const double* vec, const hiopVectorInt&
 template<class MEM, class POL> 
 void hiopVectorRaja<MEM, POL>::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
 {
-  const auto& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL> &>(index_in_src);
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL> &>(vv);
 
   assert(indexes.size() == n_local_);
@@ -379,7 +379,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const double* vv, const hiopVec
     return;
   }
 
-  const hiopVectorIntRaja& indexes = dynamic_cast<const hiopVectorIntRaja&>(index_in_src);
+  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL> &>(index_in_src);
   assert(indexes.size() == n_local_);
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
@@ -629,10 +629,10 @@ void hiopVectorRaja<MEM, POL>::copy_from_two_vec_w_pattern(const hiopVector& c,
                                                            const hiopVector& d,
                                                            const hiopVectorInt& d_map)
 {
-  const hiopVectorRaja& v1 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(c);
-  const hiopVectorRaja& v2 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(d);
-  const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
-  const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
+  const auto& v1 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(c);
+  const auto& v2 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(d);
+  const auto& ix1 = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(c_map);
+  const auto& ix2 = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(d_map);
   
   size_type n1_local = v1.n_local_;
   size_type n2_local = v2.n_local_;
@@ -681,10 +681,10 @@ void hiopVectorRaja<MEM, POL>::copy_to_two_vec_w_pattern(hiopVector& c,
                                                          hiopVector& d,
                                                          const hiopVectorInt& d_map) const
 {
-  const hiopVectorRaja& v1 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(c);
-  const hiopVectorRaja& v2 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(d);
-  const hiopVectorIntRaja& ix1 = dynamic_cast<const hiopVectorIntRaja&>(c_map);
-  const hiopVectorIntRaja& ix2 = dynamic_cast<const hiopVectorIntRaja&>(d_map);
+  const auto& v1 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(c);
+  const auto& v2 = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(d);
+  const auto& ix1 = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(c_map);
+  const auto& ix2 = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(d_map);
   
   size_type n1_local = v1.n_local_;
   size_type n2_local = v2.n_local_;
@@ -1237,8 +1237,8 @@ void hiopVectorRaja<MEM, POL>::axpy(double alpha, const hiopVector& xvec)
 template<class MEM, class POL>
 void hiopVectorRaja<MEM, POL>::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
 {
-  const hiopVectorRaja& x = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(xvec);
-  const hiopVectorIntRaja& idxs = dynamic_cast<const hiopVectorIntRaja&>(i);
+  const auto& x = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(xvec);
+  const auto& idxs = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(i);
 
   assert(x.get_size()==i.size());
   assert(x.get_local_size()==i.size());

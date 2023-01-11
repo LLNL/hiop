@@ -184,7 +184,7 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const std::string& mem_sp
     #endif
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopVectorIntRaja(size, mem_space_upper);
+    return new hiopVectorIntRaja<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(size, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
