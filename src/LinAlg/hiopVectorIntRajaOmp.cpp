@@ -65,7 +65,7 @@ using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaOmp>::hiop_raja_exe
 using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaOmp>::hiop_raja_reduce;
 }
 
-#include "hiopVectorRajaImpl.hpp"
+#include "hiopVectorIntRajaImpl.hpp"
 
 namespace hiop
 {
