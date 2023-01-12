@@ -57,14 +57,13 @@
 
 #include "hiopVectorInt.hpp"
 
+#include "ExecSpace.hpp"
+
 namespace hiop
 {
 
 class hiopVectorIntSeq : public hiopVectorInt
 {
-private:
-  index_type *buf_;
-
 public:
   hiopVectorIntSeq(size_type sz);
 
@@ -100,6 +99,14 @@ public:
    *
    */ 
   virtual void linspace(const index_type& i0, const index_type& di);
+
+  const ExecSpace<MemBackendCpp, ExecPolicySeq>& exec_space() const
+  {
+    return exec_space_;
+  }  
+private:
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_;
+  index_type *buf_;
 };
 
 } // namespace hiop
