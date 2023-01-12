@@ -46,13 +46,23 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopVectorPar.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ *
+ */
+
 #pragma once
+
+#include "hiopVector.hpp"
+
+#include "hiopVectorInt.hpp"
+#include "ExecSpace.hpp"
 
 #include <string>
 #include <hiopMPI.hpp>
-#include "hiopVector.hpp"
-#include "hiopVectorInt.hpp"
-
 #include <cstdio>
 
 namespace hiop
@@ -281,7 +291,13 @@ public:
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
   virtual bool is_equal(const hiopVector& vec) const;
+
+  const ExecSpace<MemBackendCpp, ExecPolicySeq>& exec_space() const
+  {
+    return exec_space_;
+  }
 protected:
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_;
   MPI_Comm comm_;
   double* data_;
   size_type glob_il_, glob_iu_;
