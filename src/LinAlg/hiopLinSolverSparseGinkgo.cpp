@@ -232,8 +232,20 @@ std::shared_ptr<gko::Executor> create_exec(std::string executor_string)
 }
 
 
+gko::solver::trisolve_algorithm create_alg(std::string algorithm_string)
+{
+    std::map<std::string, gko::solver::trisolve_algorithm>
+        alg_map{
+            {"syncfree", gko::solver::trisolve_algorithm::syncfree},
+            {"sparselib", gko::solver::trisolve_algorithm::sparselib}};
+
+    return alg_map.at(algorithm_string);
+}
+
+
 std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gko::Executor> exec,
-                                                        std::shared_ptr<gko::matrix::Csr<double, int>> mtx)
+                                                        std::shared_ptr<gko::matrix::Csr<double, int>> mtx,
+                                                        gko::solver::trisolve_algorithm alg)
 {
     auto preprocessing_fact = gko::share(gko::reorder::Mc64<double, int>::build().on(exec));
     auto preprocessing = gko::share(preprocessing_fact->generate(mtx));
@@ -241,22 +253,11 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
                               .on(exec, mtx.get(), preprocessing.get()));
     auto inner_solver_fact = gko::share(gko::experimental::solver::Direct<double, int>::build()
                                         .with_factorization(lu_fact)
+                                        .with_algorithm(alg)
                                         .on(exec));
-    auto solver_fact = gko::share(gko::solver::Gmres<>::build()
-                                  .with_criteria(
-                                    gko::stop::Iteration::build()
-                                      .with_max_iters(200u)
-                                      .on(exec),
-                                    gko::stop::ResidualNorm<>::build()
-                                      .with_baseline(gko::stop::mode::absolute)
-                                      .with_reduction_factor(1e-8)
-                                      .on(exec))
-                                  .with_krylov_dim(10u)
-                                  .with_preconditioner(inner_solver_fact)
-                                  .on(exec));
 
     auto reusable_factory = gko::share(gko::solver::ScaledReordered<>::build()
-                                       .with_solver(solver_fact)
+                                       .with_solver(inner_solver_fact)
                                        .with_reordering(preprocessing)
                                        .on(exec));
     return reusable_factory;
@@ -289,12 +290,13 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     assert(n_>0);
 
     exec_ = create_exec(nlp_->options->GetString("ginkgo_exec"));
+    auto alg = create_alg(nlp_->options->GetString("ginkgo_trisolve"));
 
     host_mtx_ = transferTripletToCSR(exec_->get_master(), n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     mtx_ = exec_ == (exec_->get_master()) ? host_mtx_ : gko::clone(exec_, host_mtx_);
     nnz_ = mtx_->get_num_stored_elements();
 
-    reusable_factory_ = setup_solver_factory(exec_, mtx_);
+    reusable_factory_ = setup_solver_factory(exec_, mtx_, alg);
   }
 
   int hiopLinSolverSymSparseGinkgo::matrixChanged()
@@ -313,8 +315,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
     
     // Temporary solution for the ginkgo GLU integration.
-    auto sol = gko::as<gko::solver::Gmres<>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
-    auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(sol->get_preconditioner());
+    auto precond = gko::as<gko::experimental::solver::Direct<double, int>>(gko::as<gko::solver::ScaledReordered<>>(gko_solver_)->get_solver());
     auto status = precond->get_factorization_status();
     
     return status == gko::experimental::factorization::status::success ? 0 : -1;
