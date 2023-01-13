@@ -891,6 +891,20 @@ void hiopOptionsNLP::register_options()
                         "Selects the hardware architecture to run the Ginkgo linear solver on.");
   }
 
+ 
+  // choose triangular solver implementation in Ginkgo.
+  // - Default is 'sparselib' which uses vendor triangular solvers
+  // - 'syncfree' uses the busy waiting loop based Ginkgo implementation
+  {
+    vector<string> range {"syncfree", "sparselib"};
+
+    register_str_option("ginkgo_trisolve",
+                        "sparselib",
+                        range,
+                        "Selects the triangular solver for Ginkgo.");
+  }
+
+
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
