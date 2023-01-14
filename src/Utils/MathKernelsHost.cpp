@@ -46,123 +46,54 @@
 // product endorsement purposes.
 
 /**
- * @file MathCudaKernels.cu
+ * @file MathKernelsHost.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
+#include "MathKernelsHost.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuda.h>
-#include <curand_kernel.h>
-#include <curand.h>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include <random>
+
 #include "hiopCppStdUtils.hpp"
-#include "MathDeviceKernels.hpp"
-#include <thrust/functional.h>
-#include <functional>
-
-__global__
-void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
-{
-    const int num_threads = blockDim.x * gridDim.x;
-    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-    const double delta = maxv - minv;
-    curandState state;
-    curand_init(seed, tid, 0, &state);
-    for (int i = tid; i < n; i += num_threads) {
-      const double ranv = curand_uniform_double( &state ); // from 0 to 1
-      d_array[i] = ranv * delta + minv;	
-    }
-}
-
-__global__ void set_to_constant_cu(int n, double *vec, double val)
-{
-
-  const int num_threads = blockDim.x * gridDim.x;
-  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-  for (int i = tid; i < n; i += num_threads) {
-    vec[i] = val;	
-  }
-}
-
-__global__ void copy_to_mapped_dest_cu(int n, const double* src, double* dest, const int* mapping)
-{
-
-  const int num_threads = blockDim.x * gridDim.x;
-  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-  for (int i = tid; i < n; i += num_threads) {
-    dest[mapping[i]] = src[i];	
-  }
-}
-
-__global__ void copy_from_mapped_src_cu(int n, const double* src, double* dest, const int* mapping)
-{
-
-  const int num_threads = blockDim.x * gridDim.x;
-  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-  for (int i = tid; i < n; i += num_threads) {
-    dest[i] = src[mapping[i]];	
-  }
-}
 
 namespace hiop
 {
-namespace device
+namespace host
 {
 
 int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
 {
-  int block_size=256;
-  int grid_size = (n+block_size-1)/block_size;
-  
-  unsigned long seed = generate_seed();
-  array_random_uniform_cuda<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
-  cudaDeviceSynchronize();
+  std::uniform_real_distribution<double> unif(minv,maxv);
+  std::default_random_engine re;
+
+  re.seed(generate_seed());
+
+  for(auto i=0; i<n; ++i) {
+    d_array[i] = unif(re);
+  }
 
   return 1;
 }
 
 int array_random_uniform_kernel(int n, double* d_array)
 {
-  unsigned long seed = generate_seed();
+  std::uniform_real_distribution<double> unif(0.0, 1.0);
+  std::default_random_engine re;
 
-  curandGenerator_t generator;
-  curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
-  curandSetPseudoRandomGeneratorSeed(generator, seed);
+  re.seed(generate_seed());
 
-  // generate random val from 0 to 1
-  curandGenerateUniformDouble(generator, d_array, n);
+  for(auto i=0; i<n; ++i) {
+    d_array[i] = unif(re);
+  }
 
-  curandDestroyGenerator(generator);
   return 1;
 }
 
-void set_to_val_kernel(int n, double* values, double val)
-{
-  int block_size=256;
-  int num_blocks = (n+block_size-1)/block_size;
-  set_to_constant_cu<<<num_blocks,block_size>>>(n, values, val);
-}
-
-void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping)
-{
-  int block_size=256;
-  int num_blocks = (n+block_size-1)/block_size;
-  copy_to_mapped_dest_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
-}
-
-void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping)
-{
-  int block_size=256;
-  int num_blocks = (n+block_size-1)/block_size;
-  copy_from_mapped_src_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
-}
-
-} //end of namespace device
-} //end of namespace hiop
+}  //end of namespace
+} //end of namespace
 

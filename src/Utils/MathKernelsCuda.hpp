@@ -46,54 +46,36 @@
 // product endorsement purposes.
 
 /**
- * @file MathHostKernels.cpp
+ * @file MathKernelsCuda.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <random>
-
-#include "hiopCppStdUtils.hpp"
-#include "MathHostKernels.hpp"
+#ifndef MATH_KERNEL_CUDA
+#define MATH_KERNEL_CUDA
 
 namespace hiop
 {
-namespace host
+namespace cuda
 {
+  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
+  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
-{
-  std::uniform_real_distribution<double> unif(minv,maxv);
-  std::default_random_engine re;
+  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
+  int array_random_uniform_kernel(int n, double* d_array);
 
-  re.seed(generate_seed());
+  // set all elements to `val'
+  void set_to_val_kernel(int n, double* values, double val); 
 
-  for(auto i=0; i<n; ++i) {
-    d_array[i] = unif(re);
-  }
+  /// set dest[mapping[i]] = src[i];
+  void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping);
 
-  return 1;
-}
+  /// set dest[i] = src[mapping[i]];
+  void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping);
 
-int array_random_uniform_kernel(int n, double* d_array)
-{
-  std::uniform_real_distribution<double> unif(0.0, 1.0);
-  std::default_random_engine re;
+} //end of namespace device
+} //end of namespace hiop
 
-  re.seed(generate_seed());
-
-  for(auto i=0; i<n; ++i) {
-    d_array[i] = unif(re);
-  }
-
-  return 1;
-}
-
-}  //end of namespace
-} //end of namespace
-
+#endif

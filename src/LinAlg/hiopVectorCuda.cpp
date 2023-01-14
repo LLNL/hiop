@@ -55,7 +55,7 @@
 #include "hiopVectorCuda.hpp"
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
-#include "MathDeviceKernels.hpp"
+#include "MathKernelsCuda.hpp"
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
@@ -160,7 +160,7 @@ void hiopVectorCuda::setToConstant(double c)
 void hiopVectorCuda::set_to_random_uniform(double minv, double maxv)
 {
   double* data = data_;
-  hiop::device::array_random_uniform_kernel(n_local_, data, minv, maxv);
+  hiop::cuda::array_random_uniform_kernel(n_local_, data, minv, maxv);
 } // namespace hiop
 
 /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
@@ -368,8 +368,8 @@ void hiopVectorCuda::copy_from_two_vec_w_pattern(const hiopVector& c,
   assert( d_size == d_map.size() );
   assert( c_size + d_size == n_local_);
 
-  hiop::device::copy_src_to_mapped_dest_kernel(c_size, c.local_data_const(), local_data(), c_map.local_data_const());
-  hiop::device::copy_src_to_mapped_dest_kernel(d_size, d.local_data_const(), local_data(), d_map.local_data_const());
+  hiop::cuda::copy_src_to_mapped_dest_kernel(c_size, c.local_data_const(), local_data(), c_map.local_data_const());
+  hiop::cuda::copy_src_to_mapped_dest_kernel(d_size, d.local_data_const(), local_data(), d_map.local_data_const());
 }
 
 /// @brief Copy the entries in `this` to `c` and `d`, according to the mapping `c_map` and `d_map`
@@ -385,8 +385,8 @@ void hiopVectorCuda::copy_to_two_vec_w_pattern(hiopVector& c,
   assert( d_size == d_map.size() );
   assert( c_size + d_size == n_local_);
 
-  hiop::device::copy_mapped_src_to_dest_kernel(c_size, local_data_const(), c.local_data(), c_map.local_data_const());
-  hiop::device::copy_mapped_src_to_dest_kernel(d_size, local_data_const(), d.local_data(), d_map.local_data_const());
+  hiop::cuda::copy_mapped_src_to_dest_kernel(c_size, local_data_const(), c.local_data(), c_map.local_data_const());
+  hiop::cuda::copy_mapped_src_to_dest_kernel(d_size, local_data_const(), d.local_data(), d_map.local_data_const());
 }
 
 /// @brief Copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 

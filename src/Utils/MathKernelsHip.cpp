@@ -46,36 +46,68 @@
 // product endorsement purposes.
 
 /**
- * @file MathDeviceKernels.hpp
+ * @file MathKernelsHip.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifndef MATH_KERNEL_DEVICE
-#define MATH_KERNEL_DEVICE
+#include "MathKernelsHip.hpp"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <hip/hip_runtime.h>
+#include <hiprand_kernel.h>
+#include "hiopCppStdUtils.hpp"
+
+__global__
+void array_random_uniform_hip(int n, double* d_array, unsigned long seed, double minv, double maxv)
+{
+    const int num_threads = blockDim.x * gridDim.x;
+    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+    const double delta = maxv - minv;
+    hiprandState state;
+    hiprand_init(seed, tid, 0, &state);
+    for (int i = tid; i < n; i += num_threads) {
+      const double ranv = hiprand_uniform_double( &state ); // from 0 to 1
+      d_array[i] = ranv * delta + minv;	
+    }
+}
 
 namespace hiop
 {
-namespace device
+namespace hip
 {
-  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
-  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
-  int array_random_uniform_kernel(int n, double* d_array);
+int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
+{
+  int block_size=256;
+  int grid_size = (n+block_size-1)/block_size;
+  
+  unsigned long seed = generate_seed();
+  array_random_uniform_hip<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
+  hipDeviceSynchronize();
 
-  // set all elements to `val'
-  void set_to_val_kernel(int n, double* values, double val); 
+  return 1;
+}
 
-  /// set dest[mapping[i]] = src[i];
-  void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping);
+int array_random_uniform_kernel(int n, double* d_array)
+{  
+  unsigned long seed = generate_seed();
 
-  /// set dest[i] = src[mapping[i]];
-  void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping);
+  hiprandGenerator_t generator;
+  hiprandCreateGenerator(&generator, HIPRAND_RNG_PSEUDO_DEFAULT);
+  hiprandSetPseudoRandomGeneratorSeed(generator, seed);
+  
+  // generate random val from 0 to 1
+  hiprandGenerateUniformDouble(generator, d_array, n);
+
+  hiprandDestroyGenerator(generator);
+
+  return 1;
+}
 
 } //end of namespace device
 } //end of namespace hiop
 
-#endif

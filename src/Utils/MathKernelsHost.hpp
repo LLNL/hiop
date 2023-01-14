@@ -46,46 +46,27 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorRajaCuda.cpp
+ * @file MathKernelsHost.hpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#include "hiopVectorRaja.hpp"
-
-#include "MemBackendCudaImpl.hpp"
-#include "MemBackendUmpireImpl.hpp"
-#include "MemBackendCppImpl.hpp"
-#include "ExecPoliciesRajaCudaImpl.hpp"
-
+#ifndef MATH_KERNEL_HOST
+#define MATH_KERNEL_HOST
 
 namespace hiop
 {
-using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_exec;
-using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaCuda>::hiop_raja_reduce;
-}
-
-#include "hiopVectorRajaImpl.hpp"
-#include "MathKernelsCuda.hpp"
-
-namespace hiop
+namespace host
 {
+  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
+  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-template<> void hiopVectorRaja<MemBackendUmpire,ExecPolicyRajaCuda>::set_to_random_uniform(double minv, double maxv)
-{
-  hiop::cuda::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
-}
+  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
+  int array_random_uniform_kernel(int n, double* d_array);
 
-template<> void hiopVectorRaja<MemBackendCuda,ExecPolicyRajaCuda>::set_to_random_uniform(double minv, double maxv)
-{
-  hiop::cuda::array_random_uniform_kernel(n_local_, data_dev_, minv, maxv);
-}
+} //end of namespace host
+} //end of namespace hiop
 
-//
-//Explicit instantiations: force compilation 
-//
-template class hiopVectorRaja<MemBackendUmpire, ExecPolicyRajaCuda>;
-template class hiopVectorRaja<MemBackendCuda, ExecPolicyRajaCuda>;
-}
+#endif
