@@ -904,6 +904,30 @@ void hiopOptionsNLP::register_options()
   }
 
 
+  // Ginkgo iterative refinement options
+  {
+    register_int_option("ir_inner_ginkgo_restart",
+                        20,
+                        1,
+                        100,
+                        "GMRES restart value (default is 20). ");
+
+    register_num_option("ir_inner_ginkgo_tol",
+                        1e-12,
+                        1e-16,
+                        1e-1,
+                        "GMRES tolerance (default is 1e-12). ");
+
+    // 0 iterations means no iterative refinement, making the restart and tolerance options irrelevant.
+    register_int_option("ir_inner_ginkgo_maxit",
+                        0,
+                        0,
+                        1000,
+                        "GMRES maximum number of iterations (default is 0). ");
+    
+  }
+
+
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
