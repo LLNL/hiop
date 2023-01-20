@@ -70,15 +70,18 @@
 #if defined(HIOP_USE_CUDA)
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
@@ -400,7 +403,7 @@ void MatrixTestsRajaSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse* mat)
 
 int MatrixTestsRajaSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+  if(auto* x = dynamic_cast<hiopVectorIntRajaT*>(xvec)) {
     x->copy_from_dev();
     return x->local_data_host_const()[idx];
   } else {
@@ -411,7 +414,7 @@ int MatrixTestsRajaSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int
 
 void MatrixTestsRajaSparseTriplet::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+  if(auto* x = dynamic_cast<hiopVectorIntRajaT*>(xvec)) {
     x->copy_from_dev();
     x->local_data_host()[idx] = value;
     x->copy_to_dev();

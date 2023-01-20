@@ -57,11 +57,26 @@
 #include "vectorTestsIntRaja.hpp"
 #include <cassert>
 
+//TODO: this is a quick hack. Will need to modify this class to be aware of the instantiated
+// vector template. Likely a better approach would be to revise the `runTests` in testVector.cpp
+// to test multiple configurations of the memory backend and execution policies for RAJA vector.
+#if defined(HIOP_USE_CUDA)
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+#elif defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaHipImpl.hpp>
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+#else
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+#endif
+
 namespace hiop { namespace tests {
 
 int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+  if(auto* x = dynamic_cast<hiopVectorIntRajaT*>(xvec)) {
     x->copy_from_dev();
     return x->local_data_host_const()[idx];
   } else {
@@ -72,7 +87,7 @@ int VectorTestsIntRaja::getLocalElement(hiop::hiopVectorInt* xvec, int idx) cons
 
 void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+  if(auto* x = dynamic_cast<hiopVectorIntRajaT*>(xvec)) {
     x->copy_from_dev();
     x->local_data_host()[idx] = value;
     x->copy_to_dev();
@@ -83,7 +98,7 @@ void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int idx, int
 
 void VectorTestsIntRaja::setLocalElement(hiop::hiopVectorInt* xvec, int value) const
 {
-  if(auto* x = dynamic_cast<hiop::hiopVectorIntRaja*>(xvec)) {
+  if(auto* x = dynamic_cast<hiopVectorIntRajaT*>(xvec)) {
     x->set_to_constant(value);
     x->copy_from_dev();
   } else {

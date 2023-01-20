@@ -302,11 +302,12 @@ int main(int argc, char** argv)
     fail += test.matrix_copy_subdiagonal_from(*m3xn3_dense, *m3xn3_sparse, *vec_m);
     fail += test.matrix_set_subdiagonal_to(*m3xn3_dense, *m3xn3_sparse);
   
-    hiop::hiopVectorIntRaja select(M_local, mem_space);
+    hiop::hiopVectorInt* select = hiop::LinearAlgebraFactory::create_vector_int(mem_space, M_local);
     hiop::hiopMatrixSparse* mxn_sparse_2 = 
       hiop::LinearAlgebraFactory::create_matrix_sparse(mem_space, M_local, N_local, nnz);
-    fail += test.matrix_copy_rows_from(*mxn_sparse_2, *m2xn_sparse, select);
-
+    fail += test.matrix_copy_rows_from(*mxn_sparse_2, *m2xn_sparse, *select);
+    delete select;
+    
     // copy the 1st row of mxn_sparse to the last row in m2xn_sparse
     // replace the nonzero index from "nnz-entries_per_row"
     fail += test.copy_rows_block_from(*mxn_sparse, *m2xn_sparse,0, 1, M_global-1, mxn_sparse->numberOfNonzeros()-entries_per_row);

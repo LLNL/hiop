@@ -80,7 +80,7 @@ public:
   /**
    * @brief Static method to create local int vector.
    */
-  static hiopVectorInt* create_vector_int(const std::string& mem_space,
+  static hiopVectorInt* create_vector_int(const ExecSpaceInfo& hi,
                                           size_type size);
 
   /**

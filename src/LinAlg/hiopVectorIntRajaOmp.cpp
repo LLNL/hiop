@@ -46,93 +46,33 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#pragma once
-
 /**
- * @file hiopVectorIntRaja.hpp
+ * @file hiopVectorIntRajaOmp.cpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 
-#include "hiopVectorInt.hpp"
+#include "hiopVectorIntRaja.hpp"
 
-#include "ExecSpace.hpp"
-#include <string>
+#include "MemBackendUmpireImpl.hpp"
+#include "ExecPoliciesRajaOmpImpl.hpp"
+
+
+namespace hiop
+{
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaOmp>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaOmp>::hiop_raja_reduce;
+}
+
+#include "hiopVectorIntRajaImpl.hpp"
 
 namespace hiop
 {
 
-template<class MEMBACKEND, class EXECPOLICYRAJA>
-class hiopVectorIntRaja : public hiopVectorInt
-{
-public:
-  hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
-  hiopVectorIntRaja(const hiopVectorIntRaja&) = delete;
-  ~hiopVectorIntRaja();
-
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
-
-  virtual inline index_type* local_data_host() { return buf_host_; }
-
-  virtual inline const index_type* local_data_host_const() const { return buf_host_; }
-
-  virtual inline index_type* local_data() { return buf_; }
-
-  virtual inline const index_type* local_data_const() const { return buf_; }
-  
-  virtual void copy_from(const index_type* v_local);
-
-  /// @brief Set all elements to zero.
-  virtual void set_to_zero();
-
-  /// @brief Set all elements  to  c
-  virtual void set_to_constant(const index_type c);
-
-  /**
-   * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
-   * incremented integers up to i0+(n-1)di, when n is the length of this vector
-   *
-   * @pre The elements of the linear space should not overflow the index_type type
-   *  
-   * @param i0 the starting element in the linear space (entry 0 in vector)
-   * @param di the increment for subsequent entries in the vector
-   *
-   */ 
-  virtual void linspace(const index_type& i0, const index_type& di);
-
-  /// Return a const reference to the internal execution space object
-  const ExecSpace<MEMBACKEND, EXECPOLICYRAJA>& exec_space() const
-  {
-    return exec_space_;
-  }
-
-private:
-  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
-  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
-
-  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
-  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
-  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
-  //combinations work).
-  using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
-
-  index_type *buf_host_;
-  index_type *buf_;
-  std::string mem_space_;
-};
-
-} // namespace hiop
+//
+//Explicit instantiations: force compilation 
+//
+template class hiopVectorIntRaja<MemBackendUmpire,ExecPolicyRajaOmp>;
+template class hiopVectorIntRaja<MemBackendCpp,ExecPolicyRajaOmp>;
+}

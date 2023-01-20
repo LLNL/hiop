@@ -47,131 +47,36 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorIntRaja.cpp
+ * @file hiopVectorIntRajaHip.cpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 
 #include "hiopVectorIntRaja.hpp"
-#include <umpire/Allocator.hpp>
-#include <umpire/ResourceManager.hpp>
 
-#include <RAJA/RAJA.hpp>
+#include "MemBackendHipImpl.hpp"
+#include "MemBackendUmpireImpl.hpp"
+#include "MemBackendCppImpl.hpp"
+#include "ExecPoliciesRajaHipImpl.hpp"
 
-//TODO: introduce hip and cuda .cpp
-#ifdef HIOP_USE_CUDA
-#include <ExecPoliciesRajaCudaImpl.hpp>
-using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
-#endif
 
-#ifdef HIOP_USE_HIP
-#include <ExecPoliciesRajaHipImpl.hpp>
-using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
-#endif
+namespace hiop
+{
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_reduce;
+}
 
-#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
-#include <ExecPoliciesRajaOmpImpl.hpp>
-using ExecPolicyRajaType = hiop::ExecPolicyRajaOmp;
-#endif
+#include "hiopVectorIntRajaImpl.hpp"
 
 namespace hiop
 {
 
-using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_exec;
-  
-hiopVectorIntRaja::hiopVectorIntRaja(size_type sz, std::string mem_space)
-  : hiopVectorInt(sz),
-    mem_space_(mem_space)
-{
-#ifndef HIOP_USE_GPU
-  mem_space_ = "HOST";
-#endif
+//CUDA-specific method implementation goes here
 
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  buf_ = static_cast<index_type*>(devalloc.allocate(sz_*sizeof(index_type)));
-  if(mem_space_ == "DEVICE") {
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    buf_host_ = static_cast<index_type*>(hostalloc.allocate(sz_*sizeof(index_type)));
-  } else {
-    buf_host_ = buf_;
-  }
+//
+//Explicit instantiations: force compilation 
+//
+template class hiopVectorIntRaja<MemBackendUmpire, ExecPolicyRajaHip>;
+template class hiopVectorIntRaja<MemBackendHip, ExecPolicyRajaHip>;
 }
-
-hiopVectorIntRaja::~hiopVectorIntRaja()
-{
-  auto& resmgr = umpire::ResourceManager::getInstance();
-  umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
-  devalloc.deallocate(buf_);
-  if (mem_space_ == "DEVICE") {
-    umpire::Allocator hostalloc = resmgr.getAllocator("HOST");
-    hostalloc.deallocate(buf_host_);
-  }
-  buf_host_ = nullptr;
-  buf_ = nullptr;
-}
-
-void hiopVectorIntRaja::copy_from_dev()
-{
-  if (buf_ != buf_host_) {
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_host_, buf_);
-  }
-}
-
-void hiopVectorIntRaja::copy_to_dev()
-{
-  if (buf_ != buf_host_) {
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    resmgr.copy(buf_, buf_host_);
-  }
-}
-
-void hiopVectorIntRaja::copy_from(const index_type* v_local)
-{
-  if(v_local) {
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    index_type* data = const_cast<index_type*>(v_local);
-    resmgr.copy(buf_, data, sz_*sizeof(index_type));
-  }
-}
-
-void hiopVectorIntRaja::set_to_zero()
-{
-  auto& rm = umpire::ResourceManager::getInstance();
-  rm.memset(buf_, 0);
-}
-
-/// Set all vector elements to constant c
-void hiopVectorIntRaja::set_to_constant(const index_type c)
-{
-  index_type* data = buf_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, sz_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      data[i] = c;
-    });
-}
-
-/**
- * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
- * incremented integers up to i0+(n-1)di, when n is the length of this vector
- *
- * @pre The elements of the linear space should not overflow the index_type type
- *  
- * @param i0 the starting element in the linear space (entry 0 in vector)
- * @param di the increment for subsequent entries in the vector
- *
- */ 
-void hiopVectorIntRaja::linspace(const index_type& i0, const index_type& di)
-{
-  index_type* data = buf_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, sz_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      data[i] = i0+i*di;
-    });
-}
-  
-} // namespace hiop

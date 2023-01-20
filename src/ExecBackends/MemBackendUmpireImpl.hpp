@@ -107,7 +107,7 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC,
     auto& rm = umpire::ResourceManager::getInstance();
 
     if(n>0) {
-      double* src = const_cast<double*>(p_src);
+      T* src = const_cast<T*>(p_src);
       rm.copy(p_dest, src, n*sizeof(T));
     }
     return true;
