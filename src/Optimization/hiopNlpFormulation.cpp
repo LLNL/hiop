@@ -242,11 +242,11 @@ bool hiopNlpFormulation::finalizeInitialization()
 
   vars_type_ = new hiopInterfaceBase::NonlinearityType[nlocal];
 
-  // get variable info and transfer to host for preprocessing
+  // get variable bounds info from user
   bret = interface_base.get_vars_info(n_vars_, xl_->local_data(), xu_->local_data(), vars_type_); 
   assert(bret);
-  xl_->copyFromDev(); 
-  xu_->copyFromDev();
+  //!xl_->copyFromDev(); 
+  //!xu_->copyFromDev();
 
   //allocate and build ixl(ow) and ix(upp) vectors
   delete ixl_;
@@ -256,15 +256,15 @@ bool hiopNlpFormulation::finalizeInitialization()
   ixu_ = xu_->alloc_clone();
 
   //
-  //preprocess variables bounds
+  //preprocess variables bounds - this is curently done on the CPU
   //
   size_type nfixed_vars_local;
   process_bounds(n_bnds_low_local_,n_bnds_upp_local_, n_bnds_lu_, nfixed_vars_local);
 
   // Copy data from host mirror to the memory space of vectors xl, xu
-  xl_->copyToDev();  xu_->copyToDev();
+  //!xl_->copyToDev();  xu_->copyToDev();
   // Same for ixl, ixu
-  ixl_->copyToDev(); ixu_->copyToDev();
+  //!ixl_->copyToDev(); ixu_->copyToDev();
 
   ///////////////////////////////////////////////////////////////////////////
   //  Handling of fixed variables
@@ -461,11 +461,24 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
   n_bnds_lu = 0;
   nfixed_vars = 0;
 
-  double *ixl_vec = ixl_->local_data_host();
-  double *ixu_vec = ixu_->local_data_host();
+#if !defined(HIOP_USE_MPI)
+  int* vec_distrib_ = nullptr;
+#endif  
+  hiopVectorPar xl_tmp(n_vars_, vec_distrib_, comm_);
+  hiopVectorPar xu_tmp(n_vars_, vec_distrib_, comm_);
+  hiopVectorPar ixl_tmp(n_vars_, vec_distrib_, comm_);
+  hiopVectorPar ixu_tmp(n_vars_, vec_distrib_, comm_);
 
-  double* xl_vec = xl_->local_data_host();
-  double* xu_vec = xu_->local_data_host();
+  this->xl_->copy_to_vectorpar(xl_tmp);
+  this->xu_->copy_to_vectorpar(xu_tmp);
+  this->ixl_->copy_to_vectorpar(ixl_tmp);
+  this->ixu_->copy_to_vectorpar(ixu_tmp);
+  
+  double *ixl_vec = ixl_tmp.local_data_host();
+  double *ixu_vec = ixu_tmp.local_data_host();
+
+  double* xl_vec = xl_tmp.local_data_host();
+  double* xu_vec = xu_tmp.local_data_host();
 #ifdef HIOP_DEEPCHECKS
   const int maxBndsCloseMsgs=3; int nBndsClose=0;
 #endif
@@ -518,6 +531,11 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
 #endif
     }
   }
+
+  this->xl_->copy_from_vectorpar(xl_tmp);
+  this->xu_->copy_from_vectorpar(xu_tmp);
+  this->ixl_->copy_from_vectorpar(ixl_tmp);
+  this->ixu_->copy_from_vectorpar(ixu_tmp);
 
   return true;
 } 

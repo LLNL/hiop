@@ -195,7 +195,7 @@ void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector&
 }
 
 
-void hiopVectorCuda::copy_from_vec_par(const hiopVectorPar& src)
+void hiopVectorCuda::copy_from_vectorpar(const hiopVectorPar& src)
 {
   assert(n_local_ == src.get_size());
   cudaError_t cu_err = cudaMemcpy(data_,

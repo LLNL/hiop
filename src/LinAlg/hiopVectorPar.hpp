@@ -308,10 +308,15 @@ public:
 
   virtual bool is_equal(const hiopVector& vec) const;
 
+  ExecSpace<MemBackendCpp, ExecPolicySeq>& exec_space()
+  {
+    return exec_space_;
+  }
   const ExecSpace<MemBackendCpp, ExecPolicySeq>& exec_space() const
   {
     return exec_space_;
   }
+
 protected:
   ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_;
   MPI_Comm comm_;
