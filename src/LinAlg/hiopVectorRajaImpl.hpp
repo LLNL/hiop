@@ -265,7 +265,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_vectorpar(const hiopVectorPar& v)
 template<class MEM, class POL> 
 void hiopVectorRaja<MEM, POL>::copy_to_vectorpar(hiopVectorPar& v) const
 {
-  assert(n_local_ == v.get_local_size());
+  assert(n_local_ == v.get_local_size());  
   v.exec_space().copy(v.local_data(), data_dev_, n_local_, exec_space_);
 }
   
