@@ -87,6 +87,13 @@ public:
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local_  
   virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
 
+  /** Copy to `this` the array content of the hiopVectorPar vector passed as argument.
+   *
+   * @pre `this` and source vector should have the same size.
+   * @pre `this` and source vector should have the same MPI distributions (and, 
+   * hence, same number of local elements) when applicable.
+   */
+  virtual void copy_from_vectorpar(const hiopVectorPar& vsrc);
   /**
    * @brief Copy from src the elements specified by the indices in index_in_src. 
    *
@@ -128,6 +135,15 @@ public:
   virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src);
 
   virtual void copyTo(double* dest) const;
+
+  /** Copy the array content `this` in the hiopVectorPar passed as argument
+   *
+   * @pre `this` and destination vector should have the same size.
+   * @pre `this` and destination vector should have the same MPI distributions (and, 
+   * hence, same number of local elements) when applicable.
+   */
+  virtual void copy_to_vectorpar(hiopVectorPar& vdest) const;
+  
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
   /// @brief Copy 'this' to v starting at start_index in 'v'.
   virtual void copyToStarting(hiopVector& v, int start_index_in_dest) const;
