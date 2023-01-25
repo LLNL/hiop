@@ -123,7 +123,7 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T,
   inline static bool do_it(T* p_dest,
                            ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
-                           const ExecSpace<MemBackendUmpire, MemBackendUmpire>& hwb_src,
+                           const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
                            const I& n)
   {
     if(hwb_src.mem_backend().is_host()) {
