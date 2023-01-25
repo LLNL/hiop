@@ -56,6 +56,9 @@
 namespace hiop
 {
 
+//"forward" defs
+class hiopVectorPar;
+  
 class hiopVector
 {
 public:
@@ -86,6 +89,17 @@ public:
   /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n) = 0;
 
+  /** Copy to `this` the array content of the hiopVectorPar vector passed as argument.
+   *
+   * Host-device memory transfer will occur for device implementations.
+   * 
+   * @pre `this` and source vector should have the same size.
+   * @pre `this` and source vector should have the same MPI distributions (and, 
+   * hence, same number of local elements) when applicable.
+   */
+  virtual void copy_from_vectorpar(const hiopVectorPar& vsrc) = 0;
+
+  
   /**
    * @brief Copy from src the elements specified by the indices in index_in_src. 
    *
@@ -122,6 +136,17 @@ public:
 
   /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const = 0;
+
+  /** Copy the array content `this` in the hiopVectorPar passed as argument
+   *
+   * Host-device memory transfer will occur for device implementations.
+   * 
+   * @pre `this` and destination vector should have the same size.
+   * @pre `this` and destination vector should have the same MPI distributions (and, 
+   * hence, same number of local elements) when applicable.
+   */
+  virtual void copy_to_vectorpar(hiopVectorPar& vdest) const = 0;
+  
   /// @brief Copy 'this' to v starting at start_index in 'this'.
   virtual void copyToStarting(int start_index_in_src, hiopVector& v) const = 0;
   /// @brief Copy 'this' to v starting at start_index in 'v'.
