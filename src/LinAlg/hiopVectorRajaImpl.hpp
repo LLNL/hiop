@@ -76,6 +76,8 @@
 
 #include <RAJA/RAJA.hpp>
 
+#include "hiopVectorPar.hpp"
+
 namespace hiop
 {
 // Define type aliases
@@ -253,6 +255,20 @@ void hiopVectorRaja<MEM, POL>::copyFrom(const hiopVector& vec)
   exec_space_.copy(data_dev_, v.data_dev_, n_local_, v.exec_space_);
 }
 
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM, POL>::copy_from_vectorpar(const hiopVectorPar& v)
+{
+  assert(n_local_ == v.get_local_size());
+  exec_space_.copy(data_dev_, v.local_data_const(), n_local_, v.exec_space());
+}
+
+template<class MEM, class POL> 
+void hiopVectorRaja<MEM, POL>::copy_to_vectorpar(hiopVectorPar& v) const
+{
+  assert(n_local_ == v.get_local_size());
+  v.exec_space().copy(v.local_data(), data_dev_, n_local_, exec_space_);
+}
+  
 /**
  * @brief Copy data from local_array to this vector
  * 
@@ -382,7 +398,6 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const double* vv, const hiopVec
     {
       dd[i] = vv[id[i]];
     });
-
 }
 
 
