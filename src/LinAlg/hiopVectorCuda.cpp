@@ -51,14 +51,15 @@
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-#include "LinAlgFactory.hpp"
 #include "hiopVectorCuda.hpp"
+#include "MemBackendCudaImpl.hpp"
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
 #include "MathKernelsCuda.hpp"
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include "LinAlgFactory.hpp"
 #include "hiopVectorPar.hpp"
 
 #include <cmath>
@@ -172,19 +173,34 @@ void hiopVectorCuda::setToConstant_w_patternSelect(double c, const hiopVector& s
 }
 
 /// @brief Copy the elements of v
-void hiopVectorCuda::copyFrom(const hiopVector& v_)
+void hiopVectorCuda::copyFrom(const hiopVector& v_in)
 {
-  cudaError_t cuerr = cudaMemcpy(data_, v_.local_data_const(), (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(v_in);
+  assert(v.n_local_ == n_local_);
+
+  auto b = exec_space_.copy(data_, v.data_, n_local_, v.exec_space());
+  assert(b);
 }
 
 /// @brief Copy the elements of v
 void hiopVectorCuda::copyFrom(const double* v_local_data)
 {
   if(v_local_data) {
-    cudaError_t cuerr = cudaMemcpy(data_, v_local_data, (n_local_)*sizeof(double), cudaMemcpyDeviceToDevice);
-    assert(cuerr == cudaSuccess);
+    auto b = exec_space_.copy(data_, v_local_data, n_local_);
+    assert(b);
   }
+}
+
+void hiopVectorCuda::copy_from_vectorpar(const hiopVectorPar& vsrc)
+{
+  assert(n_local_ == vsrc.get_local_size());
+  exec_space_.copy(data_, vsrc.local_data_const(), n_local_, vsrc.exec_space());
+}
+
+void hiopVectorCuda::copy_to_vectorpar(hiopVectorPar& vdest) const
+{
+  assert(n_local_ == vdest.get_local_size());
+  vdest.exec_space().copy(vdest.local_data(), data_, n_local_, exec_space_);
 }
 
 /// @brief Copy from vec the elements specified by the indices in select
@@ -192,17 +208,6 @@ void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector&
 {
   copyFrom(vv);
   componentMult(select);
-}
-
-
-void hiopVectorCuda::copy_from_vectorpar(const hiopVectorPar& src)
-{
-  assert(n_local_ == src.get_size());
-  cudaError_t cu_err = cudaMemcpy(data_,
-                                 src.local_data_const(),
-                                 (n_local_)*sizeof(double),
-                                 cudaMemcpyHostToDevice);
-  assert(cudaSuccess == cu_err);
 }
 
 /// @brief Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this'
@@ -216,12 +221,15 @@ void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const double* v, 
 /// @brief Copy v_src into 'this' starting at start_index_in_dest in 'this'. */
 void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const hiopVector& v_src)
 {
-#ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
-#endif
   assert(start_index_in_dest+v_src.get_local_size() <= n_local_);
-  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v_src.local_data_const(), (v_src.get_local_size())*sizeof(double), cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+
+  const hiopVectorCuda& v = dynamic_cast<const hiopVectorCuda&>(v_src);
+  auto b = exec_space_.copy(data_+start_index_in_dest,
+                            v.data_,
+                            v.n_local_,
+                            v.exec_space());
+  assert(b);
 }
 
 /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
@@ -272,11 +280,8 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 
   assert(howManyToCopyDest <= howManyToCopySrc);
 
-  cudaError_t cuerr = cudaMemcpy(data_ + start_idx_dest,
-                                 vec_src.local_data_const() + start_idx_src,
-                                 (howManyToCopyDest)*sizeof(double),
-                                 cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto& v_src = dynamic_cast<const hiopVectorCuda&>(vec_src);
+  exec_space_.copy(data_+start_idx_dest, v_src.data_+start_idx_src, howManyToCopyDest, v_src.exec_space());
 }
 
 /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
@@ -298,32 +303,26 @@ void hiopVectorCuda::copyToStarting(int start_index, hiopVector& dst) const
 #endif
   assert(start_index + v_size <= n_local_);
 
-  // If nowhere to copy, return.
+  // If nothing to copy, return.
   if(v_size == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(dst.local_data(),
-                                 data_ + start_index,
-                                 (v_size)*sizeof(double),
-                                 cudaMemcpyDeviceToDevice);
-  assert(cuerr = cudaSuccess);
+  auto& dst_cu = dynamic_cast<hiopVectorCuda&>(dst);
+  dst_cu.exec_space().copy(dst_cu.data_, data_+start_index, v_size, exec_space_);
 }
 
-/// @brief Copy 'this' to dst starting at start_index in 'dst'.
-void hiopVectorCuda::copyToStarting(hiopVector& vec, int start_index_in_dest) const
+/// @brief Copy `this` to `dst` starting at `start_index` in `dst`.
+void hiopVectorCuda::copyToStarting(hiopVector& dst, int start_index) const
 {
-  int v_size = vec.get_local_size();
-  assert(start_index_in_dest+n_local_ <= v_size);
+  int v_size = dst.get_local_size();
+  assert(start_index+n_local_ <= v_size);
 
   // If there is nothing to copy, return.
   if(n_local_ == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(vec.local_data() + start_index_in_dest,
-                                 data_,
-                                 (n_local_)*sizeof(double),
-                                 cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto& dst_cu = dynamic_cast<hiopVectorCuda&>(dst);
+  dst_cu.exec_space().copy(dst_cu.data_+start_index, data_, n_local_, exec_space_);
 }
 
 /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
@@ -420,10 +419,8 @@ void hiopVectorCuda::startingAtCopyToStartingAt(int start_idx_in_src,
   if(num_elems == 0)
     return;
 
-  cudaError_t cuerr = cudaMemcpy(dest.local_data() + start_idx_dest,
-                                 data_ + start_idx_in_src,
-                                 (num_elems)*sizeof(double), cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto& dest_cu = dynamic_cast<hiopVectorCuda&>(dest);
+  dest_cu.exec_space().copy(dest_cu.data_+start_idx_dest, data_+start_idx_in_src, num_elems, exec_space_);
 }
 
 /**

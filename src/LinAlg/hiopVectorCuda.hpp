@@ -59,6 +59,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "ExecSpace.hpp"
+
 #include <hiopMPI.hpp>
 
 #include "hiopVector.hpp"
@@ -144,7 +146,11 @@ public:
    * either source ('this') or destination ('dest') is reached
    * The values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
   */ 
-  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src,
+                                                    hiopVector& dest,
+                                                    int start_idx_dest,
+                                                    const hiopVector& selec_dest,
+                                                    int num_elems=-1) const;
 
   /** @brief Return the two norm */
   virtual double twonorm() const;
@@ -332,7 +338,17 @@ public:
   /* functions for this class */
   inline MPI_Comm get_mpi_comm() const { return comm_; }
 
+  ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space()
+  {
+    return exec_space_;
+  }
+  const ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space() const
+  {
+    return exec_space_;
+  }
+  
 private:
+  ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_;
   MPI_Comm comm_;
   double* data_host_mirror_;
   double* data_;
