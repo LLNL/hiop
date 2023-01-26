@@ -104,9 +104,8 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC,
                            const ExecSpace<MemBackendUmpire, EXECPOLSRC>& hwb_src,
                            const I& n)
   {
-    auto& rm = umpire::ResourceManager::getInstance();
-
     if(n>0) {
+      auto& rm = umpire::ResourceManager::getInstance();
       T* src = const_cast<T*>(p_src);
       rm.copy(p_dest, src, n*sizeof(T));
     }
@@ -129,8 +128,28 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T,
     if(hwb_src.mem_backend().is_host()) {
       std::memcpy(p_dest, p_src, n*sizeof(T));
     } else {
-      assert(false && "Transfer BACKENDS(TO:Cpp-host,FROM:umpire) only supported with Umpire mem space host"); 
-      return false;
+      if(n>0) {
+        auto& rm = umpire::ResourceManager::getInstance();
+        T* src = const_cast<T*>(p_src);
+        assert(src);
+
+        // This is a hack to go around the fact that Umpire cannot copy to a pointer (on host
+        // in this case) that he does not manage.
+        //
+        // The solution is to have Umpire allocate and transfer to a pointer on host, followed
+        // by a std::memcpy from the new pointer to the desired (also host) destination.
+        //
+        // This is temporary and should be removed when hiopNlpFormulation::process_bounds
+        // will be ported to use vectors other than hiopVectorPar. TODO
+        umpire::Allocator host_alloc  = rm.getAllocator("HOST");
+        T* src_host = static_cast<T*>(host_alloc.allocate(n*sizeof(T)));
+        rm.copy(src_host, src, n*sizeof(T));
+
+        std::memcpy(p_dest, src_host, n*sizeof(T));
+        
+        host_alloc.deallocate(src_host);
+        
+      }
     }
     return true;
   }
@@ -148,8 +167,17 @@ struct TransferImpl<MemBackendUmpire, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T,
     if(hwb_dest.mem_backend().is_host()) {
       std::memcpy(p_dest, p_src, n*sizeof(T));
     } else {
-      assert(false && "Transfer BACKENDS(TO:Umpire,FROM:Cpp-host) only supported with Umpire mem space host"); 
-      return false;
+      if(n>0) {
+        // TODO: Note: see note above in the sister TransferImpl
+        auto& rm = umpire::ResourceManager::getInstance();
+        umpire::Allocator host_alloc  = rm.getAllocator("HOST");
+        T* dest_host = static_cast<T*>(host_alloc.allocate(n*sizeof(T)));
+        
+        std::memcpy(dest_host, p_src, n*sizeof(T));
+        
+        rm.copy(p_dest, dest_host, n*sizeof(T));
+        host_alloc.deallocate(dest_host);
+      }
     }
     return true;
   }
