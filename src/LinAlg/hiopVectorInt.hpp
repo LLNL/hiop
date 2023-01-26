@@ -59,6 +59,9 @@
 namespace hiop
 {
 
+// "forward" definitions
+class hiopVectorIntSeq;
+  
 class hiopVectorInt
 {
 protected:
@@ -82,6 +85,9 @@ public:
   virtual void copy_from_dev() = 0;
   
   virtual void copy_from(const index_type* v_local) = 0;
+
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src) = 0;
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& src) const = 0;
   
   /// @brief Set all elements to zero.
   virtual void set_to_zero() = 0;

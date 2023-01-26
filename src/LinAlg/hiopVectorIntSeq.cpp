@@ -79,6 +79,18 @@ void hiopVectorIntSeq::copy_from(const index_type* v_local)
   }
 }
 
+void hiopVectorIntSeq::copy_from_vectorseq(const hiopVectorIntSeq& src)
+{
+  assert(src.sz_ == sz_);
+  exec_space_.copy(buf_, src.buf_, sz_, src.exec_space_);
+}
+  
+void hiopVectorIntSeq::copy_to_vectorseq(hiopVectorIntSeq& src) const
+{
+  assert(src.sz_ == sz_);
+  src.exec_space_.copy(src.buf_, buf_, sz_, exec_space_);
+}
+  
 void hiopVectorIntSeq::set_to_zero()
 {
   for(index_type i=0; i<sz_; ++i) {
