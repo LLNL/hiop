@@ -463,6 +463,7 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
 
 #if !defined(HIOP_USE_MPI)
   int* vec_distrib_ = nullptr;
+  MPI_Comm comm_ = MPI_COMM_SELF;
 #endif  
   hiopVectorPar xl_tmp(n_vars_, vec_distrib_, comm_);
   hiopVectorPar xu_tmp(n_vars_, vec_distrib_, comm_);

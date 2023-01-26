@@ -995,6 +995,7 @@ bool hiopVectorCuda::isfinite_local() const
 void hiopVectorCuda::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
   // TODO. no fprintf. use printf to print everything on screen?
+  // Alternative: create a hiopVectorPar copy and use hiopVectorPar::print
   assert(false && "Not implemented in CUDA device");
 }
 
