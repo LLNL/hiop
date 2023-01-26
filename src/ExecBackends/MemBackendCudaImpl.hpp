@@ -104,7 +104,9 @@ struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, 
                            const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
                            const I& n)
   {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
+    cudaError_t err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
+    assert(err == cudaSuccess);
+    return cudaSuccess == err;
   }
 };
 
@@ -117,7 +119,9 @@ struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const I& n)
   {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
+    auto err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
+    assert(cudaSuccess == err);
+    return cudaSuccess == err;
   }
 };
 
@@ -130,7 +134,9 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I
                            const ExecSpace<MemBackendCuda, EXECPOLSRC>& hwb_src,
                            const I& n)
   {
-    return cudaSuccess == cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
+    auto err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
+    assert(cudaSuccess == err);
+    return cudaSuccess == err;
   }
 };
 
