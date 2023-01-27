@@ -331,9 +331,6 @@ public:
   virtual const double* local_data_const() const = 0;
   virtual double* local_data_host() = 0;
   virtual const double* local_data_host_const() const = 0;
-
-  virtual void copyToDev() = 0;
-  virtual void copyFromDev() = 0;
   
   /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const = 0;

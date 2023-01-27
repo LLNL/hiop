@@ -72,6 +72,15 @@
 
 namespace hiop
 {
+
+//forward declarations of the test classes that are friends to this class
+namespace tests
+{
+class VectorTestsRajaPar;
+class MatrixTestsRajaDense;
+class MatrixTestsRajaSparseTriplet;
+class MatrixTestsRajaSymSparseTriplet;
+}
   
 template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopVectorRaja : public hiopVector
@@ -282,10 +291,14 @@ public:
   inline double* local_data() { return data_dev_; }
   inline const double* local_data_const() const { return data_dev_; }
   inline MPI_Comm get_mpi_comm() const { return comm_; }
-
+private:
   void copyToDev();
   void copyFromDev();
-  
+  friend class tests::VectorTestsRajaPar;
+  friend class tests::MatrixTestsRajaDense;
+  friend class tests::MatrixTestsRajaSparseTriplet;
+  friend class tests::MatrixTestsRajaSymSparseTriplet;
+public:
   virtual size_type numOfElemsLessThan(const double &val) const;
   virtual size_type numOfElemsAbsLessThan(const double &val) const;      
 

@@ -69,14 +69,19 @@
 
 namespace hiop
 {
-
+//Forward declarations
 class hiopVectorPar;
+//Forward declarations of tester classes that needs to be friends with this vector
+namespace tests
+{
+class VectorTestsCuda;
+}
   
 /// Implementation of abstract class hiopVector using CUDA API
 class hiopVectorCuda : public hiopVector
 {
 public:
-  hiopVectorCuda(const size_type& glob_n, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorCuda(const size_type& glob_n, index_type* col_part=nullptr, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorCuda();
 
   /// @brief Set all elements to zero.
@@ -306,12 +311,13 @@ public:
   inline const double* local_data_const() const { return data_; }
   inline double* local_data_host() { return data_host_mirror_; }
   inline const double* local_data_host_const() const { return data_host_mirror_; }
-
+private:
   virtual void copyToDev();
   virtual void copyFromDev();
   virtual void copyToDev() const;
   virtual void copyFromDev() const;
-
+  friend class tests::VectorTestsCuda;
+public:
   /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const;
   /// @brief get number of values whose absolute value are less than the given value 'val'. TODO: add unit test
