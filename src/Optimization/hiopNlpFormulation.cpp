@@ -60,7 +60,7 @@
 #include "hiopLogger.hpp"
 #include "hiopDualsUpdater.hpp"
 
-#include "hiopVectorInt.hpp"
+#include "hiopVectorIntSeq.hpp"
 
 #include <stdlib.h>     /* exit, EXIT_FAILURE */
 #include <cassert>
@@ -245,8 +245,6 @@ bool hiopNlpFormulation::finalizeInitialization()
   // get variable bounds info from user
   bret = interface_base.get_vars_info(n_vars_, xl_->local_data(), xu_->local_data(), vars_type_); 
   assert(bret);
-  //!xl_->copyFromDev(); 
-  //!xu_->copyFromDev();
 
   //allocate and build ixl(ow) and ix(upp) vectors
   delete ixl_;
@@ -260,11 +258,6 @@ bool hiopNlpFormulation::finalizeInitialization()
   //
   size_type nfixed_vars_local;
   process_bounds(n_bnds_low_local_,n_bnds_upp_local_, n_bnds_lu_, nfixed_vars_local);
-
-  // Copy data from host mirror to the memory space of vectors xl, xu
-  //!xl_->copyToDev();  xu_->copyToDev();
-  // Same for ixl, ixu
-  //!ixl_->copyToDev(); ixu_->copyToDev();
 
   ///////////////////////////////////////////////////////////////////////////
   //  Handling of fixed variables
@@ -417,15 +410,6 @@ bool hiopNlpFormulation::finalizeInitialization()
     nlp_transformations_.append(relax_bounds_);
   }
 
-  // Copy data from host mirror to the device memory space
-  cons_eq_mapping_->copy_to_dev();
-  cons_ineq_mapping_->copy_to_dev();
-  dl_->copyToDev();
-  du_->copyToDev();
-  idl_->copyToDev();
-  idu_->copyToDev();
-  c_rhs_->copyToDev();
-
   //reset/release info and data related to one-call constraints evaluation
   cons_eval_type_ = -1;
   
@@ -553,13 +537,18 @@ bool hiopNlpFormulation::process_constraints()
   //get constraints information and transfer to host for pre-processing
   bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type); 
   assert(bret);
-  gl->copyFromDev(); gu->copyFromDev();
 
   assert(gl->get_local_size()==n_cons_);
   assert(gl->get_local_size()==n_cons_);
 
-  double* gl_vec = gl->local_data_host();
-  double* gu_vec = gu->local_data_host();
+  // transfer to host copies
+  hiopVectorPar gl_host(n_cons_);
+  hiopVectorPar gu_host(n_cons_);
+  gl->copy_to_vectorpar(gl_host);
+  gu->copy_to_vectorpar(gu_host);
+
+  double* gl_vec = gl_host.local_data();
+  double* gu_vec = gu_host.local_data();
   n_cons_eq_ = 0;
   n_cons_ineq_ = 0; 
   for(int i=0;i<n_cons_; i++) {
@@ -578,22 +567,22 @@ bool hiopNlpFormulation::process_constraints()
   delete cons_eq_mapping_;
   delete cons_ineq_mapping_;
   
-  /* allocate c_rhs, dl, and du (all serial in this formulation) */
-  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
+  /* Allocate host  c_rhs, dl, and du (all serial in this formulation) for on host processing. */
+  hiopVectorPar c_rhs_host(n_cons_eq_);
   cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
-  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
-  du_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  hiopVectorPar dl_host(n_cons_ineq_);
+  hiopVectorPar du_host(n_cons_ineq_);
   cons_ineq_type_ = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq_];
-  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
-  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+  hiopVectorIntSeq cons_eq_mapping_host(n_cons_eq_);
+  hiopVectorIntSeq cons_ineq_mapping_host(n_cons_ineq_);
 
   /* copy lower and upper bounds - constraints */
-  double* dl_vec = dl_->local_data_host();
-  double* du_vec = du_->local_data_host();
+  double* dl_vec = dl_host.local_data();
+  double* du_vec = du_host.local_data();
 
-  double *c_rhsvec=c_rhs_->local_data_host();
-  index_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
-  index_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
+  double *c_rhsvec=c_rhs_host.local_data();
+  index_type *cons_eq_mapping = cons_eq_mapping_host.local_data();
+  index_type *cons_ineq_mapping = cons_ineq_mapping_host.local_data_host();
 
   /* splitting (preprocessing) step done on the CPU */
   int it_eq=0, it_ineq=0;
@@ -630,8 +619,11 @@ bool hiopNlpFormulation::process_constraints()
   n_ineq_upp_ = 0; 
   n_ineq_lu_ = 0;
 
-  double* idl_vec= idl_->local_data_host(); 
-  double* idu_vec= idu_->local_data_host();
+  hiopVectorPar idl_host(n_cons_ineq_);
+  hiopVectorPar idu_host(n_cons_ineq_);
+  
+  double* idl_vec= idl_host.local_data(); 
+  double* idu_vec= idu_host.local_data();
   for(int i=0; i<n_cons_ineq_; i++) {
     if(dl_vec[i]>-1e20) { 
       idl_vec[i]=1.;
@@ -649,6 +641,29 @@ bool hiopNlpFormulation::process_constraints()
       idu_vec[i]=0.;
     }
   }
+
+  //
+  // copy from temporary host vectors
+  //
+  
+  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
+  c_rhs_->copy_from_vectorpar(c_rhs_host);
+  
+  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  dl_->copy_from_vectorpar(dl_host);
+  du_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  du_->copy_from_vectorpar(du_host);
+  
+  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
+  cons_eq_mapping_->copy_from_vectorseq(cons_eq_mapping_host);
+  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+  cons_ineq_mapping_->copy_from_vectorseq(cons_ineq_mapping_host);
+  
+  idl_ = dl_->alloc_clone();
+  idl_->copy_from_vectorpar(dl_host);
+  idu_ = du_->alloc_clone();
+  idu_->copy_from_vectorpar(du_host);
+  
   return true;
 }
 
@@ -1103,20 +1118,36 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
   //! variables internally
   if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
     
-    hiopVector& xc = const_cast<hiopVector&>(x);
-    xc.copyFromDev();
-    z_L.copyFromDev();
-    z_U.copyFromDev();
-    cons_body_->copyFromDev();
-    cons_lambdas_->copyFromDev();
+#if !defined(HIOP_USE_MPI)
+    int* vec_distrib_ = nullptr;
+    MPI_Comm comm_ = MPI_COMM_SELF;
+#endif  
+    hiopVectorPar x_host(n_vars_, vec_distrib_, comm_);
+    hiopVectorPar zl_host(n_vars_, vec_distrib_, comm_);
+    hiopVectorPar zu_host(n_vars_, vec_distrib_, comm_);
+    hiopVectorPar cons_body_host(n_cons_, vec_distrib_, comm_);
+    hiopVectorPar cons_lambdas_host(n_cons_);
+
+    x.copy_to_vectorpar(x_host);
+    z_L.copy_to_vectorpar(zl_host);
+    z_U.copy_to_vectorpar(zu_host);
+    cons_body_->copy_to_vectorpar(cons_body_host);
+    cons_lambdas_->copy_to_vectorpar(cons_lambdas_host);
+
+    //xc.copyFromDev();
+    //z_L.copyFromDev();
+    //z_U.copyFromDev();
+    //cons_body_->copyFromDev();
+    //cons_lambdas_->copyFromDev();
+    
     interface_base.solution_callback(status,
                                     (int)n_vars_,
-                                    x.local_data_host_const(),
-                                    z_L.local_data_host_const(),
-                                    z_U.local_data_host_const(),
+                                    x_host.local_data_const(),
+                                    zl_host.local_data_const(),
+                                    zu_host.local_data_const(),
                                     (int)n_cons_,
-                                    cons_body_->local_data_host_const(),
-                                    cons_lambdas_->local_data_host_const(),
+                                    cons_body_host.local_data_const(),
+                                    cons_lambdas_host.local_data_const(),
                                     obj_value/obj_scale_ext_to_hiop); 
   } else {
     interface_base.solution_callback(status,
@@ -1176,15 +1207,15 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
 
   if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
     hiopVector& xc = const_cast<hiopVector&>(x);
-    xc.copyFromDev();
+    //xc.copyFromDev();
     hiopVector& sc = const_cast<hiopVector&>(s);
-    sc.copyFromDev();
+    //sc.copyFromDev();
     hiopVector& z_Lc = const_cast<hiopVector&>(z_L);
-    z_Lc.copyFromDev();
+    //z_Lc.copyFromDev();
     hiopVector& z_Uc = const_cast<hiopVector&>(z_U);
-    z_Uc.copyFromDev();
-    cons_body_->copyFromDev();
-    cons_lambdas_->copyFromDev();
+    //z_Uc.copyFromDev();
+    //cons_body_->copyFromDev();
+    //cons_lambdas_->copyFromDev();
     bret = interface_base.iterate_callback(iter,
                                            obj_value/this->get_obj_scale(),
                                            logbar_obj_value,
@@ -2036,7 +2067,6 @@ bool hiopNlpSparseIneq::process_constraints()
   //get constraints information and transfer to host for pre-processing
   bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type); 
   assert(bret);
-  gl->copyFromDev(); gu->copyFromDev();
 
   assert(gl->get_local_size()==n_cons_);
   assert(gl->get_local_size()==n_cons_);
