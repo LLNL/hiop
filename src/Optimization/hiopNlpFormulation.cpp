@@ -161,7 +161,7 @@ hiopNlpFormulation::~hiopNlpFormulation()
   delete[] cons_ineq_type_;
   delete[] cons_eq_type_;
 
-   delete cons_eq_mapping_;
+  delete cons_eq_mapping_;
   delete cons_ineq_mapping_;
 #ifdef HIOP_USE_MPI
   delete[] vec_distrib_;
@@ -453,7 +453,7 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
   hiopVectorPar xu_tmp(n_vars_, vec_distrib_, comm_);
   hiopVectorPar ixl_tmp(n_vars_, vec_distrib_, comm_);
   hiopVectorPar ixu_tmp(n_vars_, vec_distrib_, comm_);
-
+  
   this->xl_->copy_to_vectorpar(xl_tmp);
   this->xu_->copy_to_vectorpar(xu_tmp);
   this->ixl_->copy_to_vectorpar(ixl_tmp);
@@ -516,7 +516,7 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
 #endif
     }
   }
-
+  
   this->xl_->copy_from_vectorpar(xl_tmp);
   this->xu_->copy_from_vectorpar(xu_tmp);
   this->ixl_->copy_from_vectorpar(ixl_tmp);
@@ -528,6 +528,18 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
 bool hiopNlpFormulation::process_constraints()
 {
   bool bret;
+
+  // deallocate if previously allocated
+  delete c_rhs_; 
+  delete[] cons_eq_type_;
+  delete dl_;
+  delete du_;
+  delete idl_; 
+  delete idu_;
+  delete[] cons_ineq_type_;
+  delete cons_eq_mapping_;
+  delete cons_ineq_mapping_;
+
   string mem_space = options->GetString("mem_space");
 
   hiopVector* gl = LinearAlgebraFactory::create_vector(mem_space, n_cons_); 
@@ -535,13 +547,16 @@ bool hiopNlpFormulation::process_constraints()
   hiopInterfaceBase::NonlinearityType* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons_];
 
   //get constraints information and transfer to host for pre-processing
-  bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type); 
-  assert(bret);
+  bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type);
+  if(!bret) {
+    assert(bret);
+    return false;
+  }
 
   assert(gl->get_local_size()==n_cons_);
-  assert(gl->get_local_size()==n_cons_);
+  assert(gu->get_local_size()==n_cons_);
 
-  // transfer to host copies
+  // transfer to host 
   hiopVectorPar gl_host(n_cons_);
   hiopVectorPar gu_host(n_cons_);
   gl->copy_to_vectorpar(gl_host);
@@ -558,14 +573,6 @@ bool hiopNlpFormulation::process_constraints()
       n_cons_ineq_++;
     }
   }
-
-  delete c_rhs_; 
-  delete[] cons_eq_type_;
-  delete dl_;
-  delete du_;
-  delete[] cons_ineq_type_;
-  delete cons_eq_mapping_;
-  delete cons_ineq_mapping_;
   
   /* Allocate host  c_rhs, dl, and du (all serial in this formulation) for on host processing. */
   hiopVectorPar c_rhs_host(n_cons_eq_);
@@ -580,9 +587,9 @@ bool hiopNlpFormulation::process_constraints()
   double* dl_vec = dl_host.local_data();
   double* du_vec = du_host.local_data();
 
-  double *c_rhsvec=c_rhs_host.local_data();
+  double *c_rhsvec = c_rhs_host.local_data();
   index_type *cons_eq_mapping = cons_eq_mapping_host.local_data();
-  index_type *cons_ineq_mapping = cons_ineq_mapping_host.local_data_host();
+  index_type *cons_ineq_mapping = cons_ineq_mapping_host.local_data();
 
   /* splitting (preprocessing) step done on the CPU */
   int it_eq=0, it_ineq=0;
@@ -594,7 +601,7 @@ bool hiopNlpFormulation::process_constraints()
       it_eq++;
     } else {
 #ifdef HIOP_DEEPCHECKS
-    assert(gl_vec[i] <= gu_vec[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
+      assert(gl_vec[i] <= gu_vec[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
 #endif
       cons_ineq_type_[it_ineq] = cons_type[i];
       dl_vec[it_ineq] = gl_vec[i]; 
@@ -603,18 +610,15 @@ bool hiopNlpFormulation::process_constraints()
       it_ineq++;
     }
   }
-  assert(it_eq==n_cons_eq_); assert(it_ineq==n_cons_ineq_);
-
+  assert(it_eq==n_cons_eq_);
+  assert(it_ineq==n_cons_ineq_);
+  
   /* delete the temporary buffers */
   delete gl; 
   delete gu; 
   delete[] cons_type;
 
-  delete idl_; 
-  delete idu_;
   /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
-  idl_ = dl_->alloc_clone(); 
-  idu_ = du_->alloc_clone();
   n_ineq_low_ = 0;
   n_ineq_upp_ = 0; 
   n_ineq_lu_ = 0;
@@ -622,8 +626,8 @@ bool hiopNlpFormulation::process_constraints()
   hiopVectorPar idl_host(n_cons_ineq_);
   hiopVectorPar idu_host(n_cons_ineq_);
   
-  double* idl_vec= idl_host.local_data(); 
-  double* idu_vec= idu_host.local_data();
+  double* idl_vec = idl_host.local_data(); 
+  double* idu_vec = idu_host.local_data();
   for(int i=0; i<n_cons_ineq_; i++) {
     if(dl_vec[i]>-1e20) { 
       idl_vec[i]=1.;
@@ -632,7 +636,9 @@ bool hiopNlpFormulation::process_constraints()
         n_ineq_lu_++;
       }
     }
-    else idl_vec[i]=0.;
+    else {
+      idl_vec[i]=0.;
+    }
 
     if(du_vec[i]< 1e20) { 
       idu_vec[i]=1.;
@@ -645,13 +651,12 @@ bool hiopNlpFormulation::process_constraints()
   //
   // copy from temporary host vectors
   //
-  
   c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
   c_rhs_->copy_from_vectorpar(c_rhs_host);
   
   dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
   dl_->copy_from_vectorpar(dl_host);
-  du_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  du_ = dl_->alloc_clone();
   du_->copy_from_vectorpar(du_host);
   
   cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
@@ -660,9 +665,9 @@ bool hiopNlpFormulation::process_constraints()
   cons_ineq_mapping_->copy_from_vectorseq(cons_ineq_mapping_host);
   
   idl_ = dl_->alloc_clone();
-  idl_->copy_from_vectorpar(dl_host);
+  idl_->copy_from_vectorpar(idl_host);
   idu_ = du_->alloc_clone();
-  idu_->copy_from_vectorpar(du_host);
+  idu_->copy_from_vectorpar(idu_host);
   
   return true;
 }
@@ -2058,48 +2063,58 @@ bool hiopNlpSparseIneq::finalizeInitialization()
 bool hiopNlpSparseIneq::process_constraints()
 {
   bool bret;
-  string mem_space = options->GetString("mem_space");
 
+  // deallocate if previously allocated
+  delete c_rhs_; 
+  delete[] cons_eq_type_;
+  delete dl_;
+  delete du_;
+  delete idl_;
+  delete idu_;
+  delete[] cons_ineq_type_;
+  delete cons_eq_mapping_;
+  delete cons_ineq_mapping_;
+
+  string mem_space = options->GetString("mem_space");
+  
   hiopVector* gl = LinearAlgebraFactory::create_vector(mem_space, n_cons_); 
   hiopVector* gu = LinearAlgebraFactory::create_vector(mem_space, n_cons_);
   auto* cons_type = new hiopInterfaceBase::NonlinearityType[n_cons_];
 
   //get constraints information and transfer to host for pre-processing
   bret = interface_base.get_cons_info(n_cons_, gl->local_data(), gu->local_data(), cons_type); 
-  assert(bret);
+  if(!bret) {
+    assert(bret);
+    return false;
+  }
 
   assert(gl->get_local_size()==n_cons_);
   assert(gl->get_local_size()==n_cons_);
 
-  double* gl_vec = gl->local_data_host();
-  double* gu_vec = gu->local_data_host();
+  // transfer to host for processing
+  hiopVectorPar gl_host(n_cons_);
+  hiopVectorPar gu_host(n_cons_);
+  gl->copy_to_vectorpar(gl_host);
+  gu->copy_to_vectorpar(gu_host);
+
+  double* gl_vec = gl_host.local_data();
+  double* gu_vec = gu_host.local_data();
   n_cons_eq_ = 0;
   n_cons_ineq_ = n_cons_; 
 
-  delete c_rhs_; 
-  delete[] cons_eq_type_;
-  delete dl_;
-  delete du_;
-  delete[] cons_ineq_type_;
-  delete cons_eq_mapping_;
-  delete cons_ineq_mapping_;
-  
-  /* allocate c_rhs, dl, and du (all serial in this formulation) */
-  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
-  cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
-  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
-  du_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  /* Allocate host temporary vectors/arrays for on host processing. */
+  hiopVectorPar dl_host(n_cons_ineq_);
+  hiopVectorPar du_host(n_cons_ineq_);
   cons_ineq_type_ = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq_];
-  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
-  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+
+  //will only use ineq mapping since all the constraints will become inequalities 
+  hiopVectorIntSeq cons_ineq_mapping_host(n_cons_ineq_);
 
   /* copy lower and upper bounds - constraints */
-  double* dl_vec = dl_->local_data_host();
-  double* du_vec = du_->local_data_host();
+  double* dl_vec = dl_host.local_data();
+  double* du_vec = du_host.local_data();
 
-  //double *c_rhsvec=c_rhs_->local_data_host();
-  //index_type *cons_eq_mapping = cons_eq_mapping_->local_data_host();
-  index_type *cons_ineq_mapping = cons_ineq_mapping_->local_data_host();
+  index_type *cons_ineq_mapping = cons_ineq_mapping_host.local_data();
 
   //
   // two-sided relaxed bounds for equalities
@@ -2107,7 +2122,7 @@ bool hiopNlpSparseIneq::process_constraints()
   eq_relax_value_ = options->GetNumeric("eq_relax_factor");
 
   n_cons_eq_origNLP_ = 0;
-  for(int i=0;i<n_cons_; i++) {
+  for(int i=0; i<n_cons_; i++) {
     cons_ineq_type_[i] = cons_type[i]; 
     cons_ineq_mapping[i] = i;
     
@@ -2132,17 +2147,16 @@ bool hiopNlpSparseIneq::process_constraints()
   delete gu; 
   delete[] cons_type;
 
-  delete idl_; 
-  delete idu_;
   /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
-  idl_ = dl_->alloc_clone(); 
-  idu_ = du_->alloc_clone();
   n_ineq_low_ = 0;
   n_ineq_upp_ = 0; 
   n_ineq_lu_ = 0;
 
-  double* idl_vec= idl_->local_data_host(); 
-  double* idu_vec= idu_->local_data_host();
+  hiopVectorPar idl_host(n_cons_ineq_);
+  hiopVectorPar idu_host(n_cons_ineq_);
+
+  double* idl_vec = idl_host.local_data(); 
+  double* idu_vec = idu_host.local_data();
   for(int i=0; i<n_cons_ineq_; i++) {
     if(dl_vec[i]>-1e20) { 
       idl_vec[i]=1.;
@@ -2175,6 +2189,30 @@ bool hiopNlpSparseIneq::process_constraints()
                 "Equality right-hand sides were relaxed by a factor of %.5e.\n",
                 eq_relax_value_);
   }
+
+
+  // pass the constraints info from host back to (possibly) device vectors
+
+  assert(n_cons_eq_==0); //address line below
+  //since n_cons_eq_==0, no copies will be done for anything equality-related.
+  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
+  cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
+  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
+  
+  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  dl_->copy_from_vectorpar(dl_host);
+  du_ = dl_->alloc_clone();
+  du_->copy_from_vectorpar(du_host);
+  
+  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+  cons_ineq_mapping_->copy_from_vectorseq(cons_ineq_mapping_host);
+
+  idl_ = dl_->alloc_clone();
+  idl_->copy_from_vectorpar(idl_host);
+  idu_ = du_->alloc_clone();
+  idu_->copy_from_vectorpar(idu_host);
+
+
   return true;
 }
 };
