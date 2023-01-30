@@ -86,8 +86,19 @@ public:
   
   virtual void copy_from(const index_type* v_local) = 0;
 
+  /** Copy array content of `hiopVectorIntSeq` into `this`. Host-device 
+   * communication occurs when `this` is a device vector.
+   *
+   * @pre Sizes must match.
+   */
   virtual void copy_from_vectorseq(const hiopVectorIntSeq& src) = 0;
-  virtual void copy_to_vectorseq(hiopVectorIntSeq& src) const = 0;
+
+  /** Copy array content of `this` into `hiopVectorIntSeq`. Host-device 
+   * communication occurs when `this` is a device vector.
+   *
+   * @pre Sizes must match.
+   */
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const = 0;
   
   /// @brief Set all elements to zero.
   virtual void set_to_zero() = 0;
