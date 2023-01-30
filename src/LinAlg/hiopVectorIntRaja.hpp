@@ -95,12 +95,9 @@ public:
   
   virtual void copy_from(const index_type* v_local);
 
-  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src)
-  {
-  }
-  virtual void copy_to_vectorseq(hiopVectorIntSeq& src) const
-  {
-  }
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
+
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
 
   
   /// @brief Set all elements to zero.
