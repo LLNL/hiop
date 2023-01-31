@@ -62,7 +62,13 @@
 
 namespace hiop
 {
-
+//forward declarations of the "friend" testing classes
+namespace tests
+{
+class VectorTestsIntRaja;
+class MatrixTestsRajaSparseTriplet;
+}
+  
 template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopVectorIntRaja : public hiopVectorInt
 {
@@ -70,20 +76,6 @@ public:
   hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
   hiopVectorIntRaja(const hiopVectorIntRaja&) = delete;
   ~hiopVectorIntRaja();
-
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
 
   virtual inline index_type* local_data_host() { return buf_host_; }
 
@@ -122,6 +114,22 @@ public:
   {
     return exec_space_;
   }
+private:
+  friend class tests::VectorTestsIntRaja;
+  friend class tests::MatrixTestsRajaSparseTriplet;
+  /**
+   * @brief Copy array data from the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_from_dev();
+
+  /**
+   * @brief Copy array data to the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_to_dev();
 
 private:
   ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;

@@ -87,22 +87,6 @@ hiopVectorIntCuda::~hiopVectorIntCuda()
   cudaFree(buf_);
 }
 
-void hiopVectorIntCuda::copy_from_dev()
-{
-  if (buf_ != buf_host_) {
-    cudaError_t cuerr = cudaMemcpy(buf_host_, buf_, (sz_)*sizeof(index_type), cudaMemcpyDeviceToHost);
-    assert(cuerr == cudaSuccess);
-  }
-}
-
-void hiopVectorIntCuda::copy_to_dev()
-{
-  if (buf_ != buf_host_) {
-    cudaError_t cuerr = cudaMemcpy(buf_, buf_host_, (sz_)*sizeof(index_type), cudaMemcpyHostToDevice);
-    assert(cuerr == cudaSuccess);
-  }
-}
-
 void hiopVectorIntCuda::copy_from(const index_type* v_local)
 {
   if(v_local) {

@@ -80,10 +80,7 @@ public:
   virtual const index_type* local_data_const() const = 0;
   virtual index_type* local_data_host() = 0;
   virtual const index_type* local_data_host_const() const = 0;
-
-  virtual void copy_to_dev() = 0;
-  virtual void copy_from_dev() = 0;
-  
+ 
   virtual void copy_from(const index_type* v_local) = 0;
 
   /** Copy array content of `hiopVectorIntSeq` into `this`. Host-device 
