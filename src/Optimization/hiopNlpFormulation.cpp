@@ -1139,12 +1139,6 @@ void hiopNlpFormulation::user_callback_solution(hiopSolveStatus status,
     cons_body_->copy_to_vectorpar(cons_body_host);
     cons_lambdas_->copy_to_vectorpar(cons_lambdas_host);
 
-    //xc.copyFromDev();
-    //z_L.copyFromDev();
-    //z_U.copyFromDev();
-    //cons_body_->copyFromDev();
-    //cons_lambdas_->copyFromDev();
-    
     interface_base.solution_callback(status,
                                     (int)n_vars_,
                                     x_host.local_data_const(),
@@ -1211,28 +1205,41 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   bool bret{false};
 
   if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
-    hiopVector& xc = const_cast<hiopVector&>(x);
-    //xc.copyFromDev();
-    hiopVector& sc = const_cast<hiopVector&>(s);
-    //sc.copyFromDev();
-    hiopVector& z_Lc = const_cast<hiopVector&>(z_L);
-    //z_Lc.copyFromDev();
-    hiopVector& z_Uc = const_cast<hiopVector&>(z_U);
-    //z_Uc.copyFromDev();
-    //cons_body_->copyFromDev();
-    //cons_lambdas_->copyFromDev();
+
+#if !defined(HIOP_USE_MPI)
+    int* vec_distrib_ = nullptr;
+    MPI_Comm comm_ = MPI_COMM_SELF;
+#endif  
+    hiopVectorPar x_host(n_vars_, vec_distrib_, comm_);
+    x.copy_to_vectorpar(x_host);
+
+    hiopVectorPar s_host(n_vars_, vec_distrib_, comm_);
+    s.copy_to_vectorpar(s_host);
+    
+    hiopVectorPar zl_host(n_vars_, vec_distrib_, comm_);
+    z_L.copy_to_vectorpar(zl_host);
+    
+    hiopVectorPar zu_host(n_vars_, vec_distrib_, comm_);
+    z_U.copy_to_vectorpar(zu_host);
+    
+    hiopVectorPar cons_body_host(n_cons_, vec_distrib_, comm_);
+    cons_body_->copy_to_vectorpar(cons_body_host);
+    
+    hiopVectorPar cons_lambdas_host(n_cons_);
+    cons_lambdas_->copy_to_vectorpar(cons_lambdas_host);
+
     bret = interface_base.iterate_callback(iter,
                                            obj_value/this->get_obj_scale(),
                                            logbar_obj_value,
                                            (int)n_vars_,
-                                           x.local_data_host_const(),
-                                           z_L.local_data_host_const(),
-                                           z_U.local_data_host_const(),
+                                           x_host.local_data_const(),
+                                           zl_host.local_data_const(),
+                                           zu_host.local_data_const(),
                                            (int)n_cons_ineq_,
-                                           s.local_data_host_const(),
+                                           s_host.local_data_const(),
                                            (int)n_cons_,
-                                           cons_body_->local_data_host_const(),
-                                           cons_lambdas_->local_data_host_const(),
+                                           cons_body_host.local_data_const(),
+                                           cons_lambdas_host.local_data_const(),
                                            inf_pr,
                                            inf_du,
                                            onenorm_pr,
