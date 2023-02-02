@@ -55,7 +55,7 @@
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
  *
- */
+*/
 #include "hiopMatrixRajaSparseTriplet.hpp"
 #include "hiopVectorRaja.hpp"
 
@@ -93,20 +93,24 @@ using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecP
 #include <sstream>
 
 #include <cassert>
-// #include <numeric> //std::inclusive_scan is only available after C++17
 
 namespace hiop
 {
 
+template class hiopMatrixRajaSparseTriplet<MemBackendUmpire, ExecPolicyRajaCuda>;
+template class hiopMatrixRajaSymSparseTriplet<MemBackendUmpire, ExecPolicyRajaCuda>;
+  
 using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_exec;
 using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_reduce;
 using hiop_raja_atomic = ExecRajaPoliciesBackend<ExecPolicyRajaType>::hiop_raja_atomic;
   
 /// @brief Constructs a hiopMatrixRajaSparseTriplet with the given dimensions and memory space
-hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
-                                                         int cols,
-                                                         int _nnz,
-                                                         std::string memspace)
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+hiopMatrixRajaSparseTriplet(int rows,
+                            int cols,
+                            int _nnz,
+                            std::string memspace)
   : hiopMatrixSparse(rows, cols, _nnz),
     row_starts_(nullptr), 
     mem_space_(memspace)
@@ -147,7 +151,8 @@ hiopMatrixRajaSparseTriplet::hiopMatrixRajaSparseTriplet(int rows,
 }
 
 /// @brief Destructor for hiopMatrixRajaSparseTriplet
-hiopMatrixRajaSparseTriplet::~hiopMatrixRajaSparseTriplet()
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::~hiopMatrixRajaSparseTriplet()
 {
   delete row_starts_;
   auto& resmgr = umpire::ResourceManager::getInstance();
@@ -170,7 +175,8 @@ hiopMatrixRajaSparseTriplet::~hiopMatrixRajaSparseTriplet()
 /**
  * @brief Sets all the values of this matrix to zero.
  */
-void hiopMatrixRajaSparseTriplet::setToZero()
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::setToZero()
 {
   setToConstant(0.0);
 }
@@ -180,7 +186,8 @@ void hiopMatrixRajaSparseTriplet::setToZero()
  * 
  * @param c A real number.
  */
-void hiopMatrixRajaSparseTriplet::setToConstant(double c)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::setToConstant(double c)
 {
   double* dd = this->values_;
   auto nz = nnz_;
@@ -206,10 +213,12 @@ void hiopMatrixRajaSparseTriplet::setToConstant(double c)
  * The full operation performed is:
  * _y_ = _beta_ * _y_ + _alpha_ * this * _x_
  */
-void hiopMatrixRajaSparseTriplet::timesVec(double beta,
-                                           hiopVector& y,
-                                           double alpha,
-                                           const hiopVector& x) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+timesVec(double beta,
+         hiopVector& y,
+         double alpha,
+         const hiopVector& x) const
 {
   assert(x.get_size() == ncols_);
   assert(y.get_size() == nrows_);
@@ -229,10 +238,12 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
  * @see above timesVec function for more detail. This overload takes raw data
  * pointers rather than hiop constructs.
  */
-void hiopMatrixRajaSparseTriplet::timesVec(double beta,
-                                           double* y,
-                                           double alpha,
-                                           const double* x) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+timesVec(double beta,
+         double* y,
+         double alpha,
+         const double* x) const
 {
   // y = beta * y
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nrows_),
@@ -272,10 +283,12 @@ void hiopMatrixRajaSparseTriplet::timesVec(double beta,
  * The full operation performed is:
  * y = beta * y + alpha * this^T * x
  */
-void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
-                                                hiopVector& y,
-                                                double alpha,
-                                                const hiopVector& x) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+transTimesVec(double beta,
+              hiopVector& y,
+              double alpha,
+              const hiopVector& x) const
 {
   assert(x.get_size() == nrows_);
   assert(y.get_size() == ncols_);
@@ -299,10 +312,12 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
  * The full operation performed is:
  * y = beta * y + alpha * this^T * x
  */
-void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
-                                                double* y,
-                                                double alpha,
-                                                const double* x ) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+transTimesVec(double beta,
+              double* y,
+              double alpha,
+              const double* x ) const
 {
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, ncols_),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -331,18 +346,22 @@ void hiopMatrixRajaSparseTriplet::transTimesVec(double beta,
     });
 }
 
-void hiopMatrixRajaSparseTriplet::timesMat(double beta,
-                                           hiopMatrix& W, 
-                                           double alpha,
-                                           const hiopMatrix& X) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+timesMat(double beta,
+         hiopMatrix& W, 
+         double alpha,
+         const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
 
-void hiopMatrixRajaSparseTriplet::transTimesMat(double beta,
-                                                hiopMatrix& W, 
-                                                double alpha,
-                                                const hiopMatrix& X) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+transTimesMat(double beta,
+              hiopMatrix& W, 
+              double alpha,
+              const hiopMatrix& X) const
 {
   assert(false && "not needed");
 }
@@ -351,7 +370,8 @@ void hiopMatrixRajaSparseTriplet::transTimesMat(double beta,
  * @brief W = beta*W + alpha*this*X^T
  * Sizes: M1(this) is (m1 x nx) and M2 is (m2, nx).
  */
-void hiopMatrixRajaSparseTriplet::
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
 timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2mat) const
 {
   auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
@@ -425,26 +445,36 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& M2m
     });
 }
 
-void hiopMatrixRajaSparseTriplet::addDiagonal(const double& alpha, const hiopVector& d_)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+addDiagonal(const double& alpha, const hiopVector& d_)
 {
   assert(false && "not needed");
 }
-void hiopMatrixRajaSparseTriplet::addDiagonal(const double& value)
+
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+addDiagonal(const double& value)
 {
   assert(false && "not needed");
 }
-void hiopMatrixRajaSparseTriplet::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
+
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
   assert(false && "not needed");
 }
 
 /// @brief: set a subdiagonal block, whose diagonal values come from the input vector `vec_d`
 /// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on_dest_diag,
-                                                      const size_type& num_elems,
-                                                      const hiopVector& vec_d,
-                                                      const index_type& start_on_nnz_idx,
-                                                      double scal)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copySubDiagonalFrom(const index_type& start_on_dest_diag,
+                    const size_type& num_elems,
+                    const hiopVector& vec_d,
+                    const index_type& start_on_nnz_idx,
+                    double scal)
 {
   const hiopVectorRajaT& vd = dynamic_cast<const hiopVectorRajaT&>(vec_d);
   assert(num_elems<=vd.get_size());
@@ -470,10 +500,12 @@ void hiopMatrixRajaSparseTriplet::copySubDiagonalFrom(const index_type& start_on
 
 /// @brief: set a subdiagonal block, whose diagonal values are set to `c`
 /// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!!
-void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_dest_diag,
-                                                   const size_type& num_elems,
-                                                   const double& c,
-                                                   const index_type& start_on_nnz_idx)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+setSubDiagonalTo(const index_type& start_on_dest_diag,
+                 const size_type& num_elems,
+                 const double& c,
+                 const index_type& start_on_nnz_idx)
 {
   assert(start_on_dest_diag>=0 && start_on_dest_diag+num_elems<=this->nrows_);
 
@@ -495,7 +527,9 @@ void hiopMatrixRajaSparseTriplet::setSubDiagonalTo(const index_type& start_on_de
   );
 }
 
-void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+addMatrix(double alpha, const hiopMatrix& X)
 {
   assert(false && "not needed");
 }
@@ -509,10 +543,12 @@ void hiopMatrixRajaSparseTriplet::addMatrix(double alpha, const hiopMatrix& X)
  * block of W += alpha*transpose(this) 
  * Note W; contains only the upper triangular entries
  */
-void hiopMatrixRajaSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start,
-                                                                        int col_start, 
-                                                                        double alpha,
-                                                                        hiopMatrixDense& W) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+transAddToSymDenseMatrixUpperTriangle(int row_start,
+                                      int col_start, 
+                                      double alpha,
+                                      hiopMatrixDense& W) const
 {
   assert(row_start>=0 && row_start+ncols_<=W.m());
   assert(col_start>=0 && col_start+nrows_<=W.n());
@@ -541,7 +577,8 @@ void hiopMatrixRajaSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_
 /**
  * @brief Finds the maximum absolute value of the values in this matrix.
  */
-double hiopMatrixRajaSparseTriplet::max_abs_value()
+template<class MEMBACKEND, class RAJAEXECPOL>
+double hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::max_abs_value()
 {
   double* values = values_;
   RAJA::ReduceMax<hiop_raja_reduce, double> norm(0.0);
@@ -561,7 +598,8 @@ double hiopMatrixRajaSparseTriplet::max_abs_value()
  * @pre row indices must be sorted
  * @pre col indices must be sorted
  */
-void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::row_max_abs_value(hiopVector& ret_vec)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(this->checkIndexesAreOrdered());
@@ -596,7 +634,9 @@ void hiopMatrixRajaSparseTriplet::row_max_abs_value(hiopVector& ret_vec)
   );  
 }
 
-void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv_scale)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
   assert(vec_scal.get_size() == nrows_);
   
@@ -624,7 +664,8 @@ void hiopMatrixRajaSparseTriplet::scale_row(hiopVector &vec_scal, const bool inv
 /**
  * @brief Returns whether all the values of this matrix are finite or not.
  */
-bool hiopMatrixRajaSparseTriplet::isfinite() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+bool hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::isfinite() const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(this->checkIndexesAreOrdered());
@@ -645,7 +686,8 @@ bool hiopMatrixRajaSparseTriplet::isfinite() const
  * @brief Allocates a new hiopMatrixRajaSparseTriplet with the same dimensions
  * and size as this one.
  */
-hiopMatrixSparse* hiopMatrixRajaSparseTriplet::alloc_clone() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixSparse* hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::alloc_clone() const
 {
   return new hiopMatrixRajaSparseTriplet(nrows_, ncols_, nnz_, mem_space_);
 }
@@ -653,7 +695,8 @@ hiopMatrixSparse* hiopMatrixRajaSparseTriplet::alloc_clone() const
 /**
  * @brief Creates a deep copy of this matrix.
  */
-hiopMatrixSparse* hiopMatrixRajaSparseTriplet::new_copy() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixSparse* hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::new_copy() const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(this->checkIndexesAreOrdered());
@@ -672,14 +715,18 @@ hiopMatrixSparse* hiopMatrixRajaSparseTriplet::new_copy() const
   return copy;
 }
 
-void hiopMatrixRajaSparseTriplet::copyFrom(const hiopMatrixSparse& dm)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copyFrom(const hiopMatrixSparse& dm)
 {
   assert(false && "this is to be implemented - method def too vague for now");
 }
 
 /// @brief copy to 3 arrays.
 /// @pre these 3 arrays are not nullptr
-void hiopMatrixRajaSparseTriplet::copy_to(int* irow, int* jcol, double* val)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copy_to(int* irow, int* jcol, double* val)
 {
   assert(irow && jcol && val);
   auto& resmgr = umpire::ResourceManager::getInstance();
@@ -688,7 +735,9 @@ void hiopMatrixRajaSparseTriplet::copy_to(int* irow, int* jcol, double* val)
   resmgr.copy(val, values_);
 }
 
-void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copy_to(hiopMatrixDense& W)
 {
   assert(W.m() == nrows_);
   assert(W.n() == ncols_);
@@ -719,7 +768,8 @@ void hiopMatrixRajaSparseTriplet::copy_to(hiopMatrixDense& W)
 
 #ifdef HIOP_DEEPCHECKS
 /// @brief Ensures the rows and column triplet entries are ordered.
-bool hiopMatrixRajaSparseTriplet::checkIndexesAreOrdered() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+bool hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::checkIndexesAreOrdered() const
 {
   copyFromDev();
   if(nnz_==0)
@@ -759,7 +809,8 @@ bool hiopMatrixRajaSparseTriplet::checkIndexesAreOrdered() const
  * The full operation performed is:
  * diag block of _W_ += _alpha_ * this * _D_^{-1} * transpose(this)
  */
-void hiopMatrixRajaSparseTriplet::
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
 addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
   const double& alpha, 
   const hiopVector& D, hiopMatrixDense& W) const
@@ -852,7 +903,8 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
  * block of _W_ += _alpha_ * this * _D_^{-1} * transpose(_M2mat_)
  * Sizes: M1 is (m1 x nx);  D is vector of len nx, M2 is  (m2, nx).
  */
-void hiopMatrixRajaSparseTriplet::
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
 addMDinvNtransToSymDeMatUTri(int row_dest_start,
                              int col_dest_start,
                              const double& alpha, 
@@ -944,8 +996,9 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
  * 
  * Assumes triplets are ordered.
  */
-hiopMatrixRajaSparseTriplet::RowStartsInfo* 
-hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo* 
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::allocAndBuildRowStarts() const
 {
   assert(nrows_ >= 0);
 
@@ -997,9 +1050,11 @@ hiopMatrixRajaSparseTriplet::allocAndBuildRowStarts() const
  * @pre number of rows in 'src' must be at least the number of rows in 'this'
  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
-void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
-                                               const index_type* rows_idxs,
-                                               size_type n_rows)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copyRowsFrom(const hiopMatrix& src_gen,
+             const index_type* rows_idxs,
+             size_type n_rows)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->m() == n_rows);
@@ -1087,11 +1142,13 @@ void hiopMatrixRajaSparseTriplet::copyRowsFrom(const hiopMatrix& src_gen,
  * @pre 'this' must have exactly, or more cols than 'src'
  * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
  */
-void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
-                                                    const index_type& rows_src_idx_st,
-                                                    const size_type& n_rows,
-                                                    const index_type& rows_dst_idx_st,
-                                                    const size_type& dest_nnz_st)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copyRowsBlockFrom(const hiopMatrix& src_gen,
+                  const index_type& rows_src_idx_st,
+                  const size_type& n_rows,
+                  const index_type& rows_dst_idx_st,
+                  const size_type& dest_nnz_st)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
@@ -1183,11 +1240,12 @@ void hiopMatrixRajaSparseTriplet::copyRowsBlockFrom(const hiopMatrix& src_gen,
 }
 
 /// @brief Prints the contents of this function to a file.
-void hiopMatrixRajaSparseTriplet::print(FILE* file,
-                                        const char* msg/*=NULL*/, 
-                                        int maxRows/*=-1*/,
-                                        int maxCols/*=-1*/, 
-                                        int rank/*=-1*/) const 
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::print(FILE* file,
+                                                                 const char* msg/*=NULL*/, 
+                                                                 int maxRows/*=-1*/,
+                                                                 int maxCols/*=-1*/, 
+                                                                 int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; //this is a local object => always print
   copyFromDev();
@@ -1229,9 +1287,10 @@ void hiopMatrixRajaSparseTriplet::print(FILE* file,
 }
 
 /// @brief Copies the data stored in the host mirror to the device.
-void hiopMatrixRajaSparseTriplet::copyToDev()
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::copyToDev()
 {
-  if (mem_space_ == "DEVICE")
+  if(mem_space_ == "DEVICE")
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
     resmgr.copy(iRow_, iRow_host_);
@@ -1241,9 +1300,10 @@ void hiopMatrixRajaSparseTriplet::copyToDev()
 }
 
 /// @brief Copies the data stored on the device to the host mirror.
-void hiopMatrixRajaSparseTriplet::copyFromDev() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::copyFromDev() const
 {
-  if (mem_space_ == "DEVICE")
+  if(mem_space_ == "DEVICE")
   {
     auto& resmgr = umpire::ResourceManager::getInstance();
     resmgr.copy(iRow_host_, iRow_);
@@ -1252,8 +1312,11 @@ void hiopMatrixRajaSparseTriplet::copyFromDev() const
   }
 }
 
-hiopMatrixRajaSparseTriplet::RowStartsInfo::RowStartsInfo(size_type n_rows, std::string memspace)
-  : num_rows_(n_rows), mem_space_(memspace)
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::
+RowStartsInfo(size_type n_rows, std::string memspace)
+  : num_rows_(n_rows),
+    mem_space_(memspace)
 {
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator alloc = resmgr.getAllocator(mem_space_);
@@ -1266,7 +1329,8 @@ hiopMatrixRajaSparseTriplet::RowStartsInfo::RowStartsInfo(size_type n_rows, std:
   }
 }
 
-hiopMatrixRajaSparseTriplet::RowStartsInfo::~RowStartsInfo()
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::~RowStartsInfo()
 {
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator devalloc = resmgr.getAllocator(mem_space_);
@@ -1279,7 +1343,8 @@ hiopMatrixRajaSparseTriplet::RowStartsInfo::~RowStartsInfo()
   idx_start_ = nullptr;
 }
 
-void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_from_dev()
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::copy_from_dev()
 {
   if (idx_start_ != idx_start_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
@@ -1287,7 +1352,8 @@ void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_from_dev()
   }
 }
 
-void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_to_dev()
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::copy_to_dev()
 {
   if (idx_start_ != idx_start_host_) {
     auto& resmgr = umpire::ResourceManager::getInstance();
@@ -1298,11 +1364,13 @@ void hiopMatrixRajaSparseTriplet::RowStartsInfo::copy_to_dev()
 /*
 *  extend original Jac to [Jac -I I]
 */
-void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
-                                             const hiopMatrixSparse& Jac_d,
-                                             int* iJacS,
-                                             int* jJacS,
-                                             double* MJacS)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+set_Jac_FR(const hiopMatrixSparse& Jac_c,
+           const hiopMatrixSparse& Jac_d,
+           int* iJacS,
+           int* jJacS,
+           double* MJacS)
 {
   const auto& J_c = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(Jac_c);
   const auto& J_d = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(Jac_d);
@@ -1460,11 +1528,13 @@ void hiopMatrixRajaSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
 /// @brief copy a submatrix from another matrix. 
 /// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
-                                                    const index_type& dest_row_st,
-                                                    const index_type& dest_col_st,
-                                                    const size_type& dest_nnz_st,
-                                                    const bool offdiag_only)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copySubmatrixFrom(const hiopMatrix& src_gen,
+                  const index_type& dest_row_st,
+                  const index_type& dest_col_st,
+                  const size_type& dest_nnz_st,
+                  const bool offdiag_only)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   auto m_rows = src.m();
@@ -1501,11 +1571,13 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
 
 /// @brief copy a submatrix from a transpose of another matrix. 
 /// @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
-void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
-                                                         const index_type& dest_row_st,
-                                                         const index_type& dest_col_st,
-                                                         const size_type& dest_nnz_st,
-                                                         const bool offdiag_only)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copySubmatrixFromTrans(const hiopMatrix& src_gen,
+                       const index_type& dest_row_st,
+                       const index_type& dest_col_st,
+                       const size_type& dest_nnz_st,
+                       const bool offdiag_only)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   auto m_rows = src.m();
@@ -1548,12 +1620,14 @@ void hiopMatrixRajaSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_g
 * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
 * @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
-void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
-                                                                          const index_type& dest_row_st,
-                                                                          const index_type& dest_col_st,
-                                                                          const size_type& dest_nnz_st,
-                                                                          const size_type& nnz_to_copy,
-                                                                          const hiopVector& ix)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
+                                        const size_type& nnz_to_copy,
+                                        const hiopVector& ix)
 {
   assert(ix.get_local_size() + dest_col_st <= this->n());
   assert(nnz_to_copy + dest_row_st <= this->m() );
@@ -1634,12 +1708,14 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_colpattern(const 
 * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
 * @pre this function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
-void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
-                                                                          const index_type& dest_row_st,
-                                                                          const index_type& dest_col_st,
-                                                                          const size_type& dest_nnz_st,
-                                                                          const size_type& nnz_to_copy,
-                                                                          const hiopVector& ix)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
+                                        const index_type& dest_row_st,
+                                        const index_type& dest_col_st,
+                                        const size_type& dest_nnz_st,
+                                        const size_type& nnz_to_copy,
+                                        const hiopVector& ix)
 {
   assert(ix.get_local_size() + dest_row_st <= this->m());
   assert(nnz_to_copy + dest_col_st <= this->n() );
@@ -1720,11 +1796,13 @@ void hiopMatrixRajaSparseTriplet::setSubmatrixToConstantDiag_w_rowpattern(const 
 * @pre The diagonal entries in the destination need to be contiguous in the sparse triplet arrays of the destinations.
 * @pre This function does NOT preserve the sorted row/col indices. USE WITH CAUTION!
 */
-void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val,
-                                                           const index_type& dest_row_st,
-                                                           const index_type& col_dest_st,
-                                                           const size_type& dest_nnz_st,
-                                                           const size_type &nnz_to_copy)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copyDiagMatrixToSubblock(const double& src_val,
+                         const index_type& dest_row_st,
+                         const index_type& col_dest_st,
+                         const size_type& dest_nnz_st,
+                         const size_type &nnz_to_copy)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
@@ -1756,12 +1834,14 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock(const double& src_val
 * @pre 'pattern' has same size as `dx`
 * @pre 'pattern` has exactly `nnz_to_copy` nonzeros
 */
-void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
-                                                                     const index_type& dest_row_st,
-                                                                     const index_type& dest_col_st,
-                                                                     const size_type& dest_nnz_st,
-                                                                     const size_type& nnz_to_copy,
-                                                                     const hiopVector& pattern)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
+                                   const index_type& dest_row_st,
+                                   const index_type& dest_col_st,
+                                   const size_type& dest_nnz_st,
+                                   const size_type& nnz_to_copy,
+                                   const hiopVector& pattern)
 {
   assert(this->numberOfNonzeros() >= nnz_to_copy+dest_nnz_st);
   assert(this->n() >= nnz_to_copy);
@@ -1838,7 +1918,8 @@ void hiopMatrixRajaSparseTriplet::copyDiagMatrixToSubblock_w_pattern(const hiopV
   devalloc.deallocate(row_start_dev);
 }
 
-bool hiopMatrixRajaSparseTriplet::is_diagonal() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+bool hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::is_diagonal() const
 {
   bool bret{false};
   
@@ -1869,14 +1950,16 @@ bool hiopMatrixRajaSparseTriplet::is_diagonal() const
 /**********************************************************************************
   * Sparse symmetric matrix in triplet format. Only the UPPER triangle is stored
   **********************************************************************************/
-void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,
-                                              hiopVector& y,
-                                              double alpha,
-                                              const hiopVector& x ) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+timesVec(double beta,
+         hiopVector& y,
+         double alpha,
+         const hiopVector& x ) const
 {
-  assert(ncols_ == nrows_);
-  assert(x.get_size() == ncols_);
-  assert(y.get_size() == nrows_);
+  assert(this->ncols_ == this->nrows_);
+  assert(x.get_size() == this->ncols_);
+  assert(y.get_size() == this->nrows_);
 
   auto& yy = dynamic_cast<hiopVectorRajaT&>(y);
   const auto& xx = dynamic_cast<const hiopVectorRajaT&>(x);
@@ -1888,12 +1971,13 @@ void hiopMatrixRajaSymSparseTriplet::timesVec(double beta,
 }
  
 /** y = beta * y + alpha * this * x */
-void hiopMatrixRajaSymSparseTriplet::
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
 timesVec(double beta, double* y, double alpha, const double* x) const
 {
-  assert(ncols_ == nrows_);
+  assert(this->ncols_ == this->nrows_);
   
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nrows_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nrows_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       y[i] *= beta;
@@ -1910,7 +1994,7 @@ timesVec(double beta, double* y, double alpha, const double* x) const
   auto ncols = this->ncols_;
 #endif
 
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nnz_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       assert(iRow[i] < nrows);
@@ -1925,23 +2009,25 @@ timesVec(double beta, double* y, double alpha, const double* x) const
     });
 }
 
-hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet::alloc_clone() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::alloc_clone() const
 {
-  assert(nrows_ == ncols_);
-  return new hiopMatrixRajaSymSparseTriplet(nrows_, nnz_, mem_space_);
+  assert(this->nrows_ == this->ncols_);
+  return new hiopMatrixRajaSymSparseTriplet(this->nrows_, this->nnz_, this->mem_space_);
 }
 
-hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet::new_copy() const
+template<class MEMBACKEND, class RAJAEXECPOL>
+hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::new_copy() const
 {
-  assert(nrows_ == ncols_);
-  auto* copy = new hiopMatrixRajaSymSparseTriplet(nrows_, nnz_, mem_space_);
+  assert(this->nrows_ == this->ncols_);
+  auto* copy = new hiopMatrixRajaSymSparseTriplet(this->nrows_, this->nnz_, this->mem_space_);
   auto& resmgr = umpire::ResourceManager::getInstance();
-  resmgr.copy(copy->iRow_, iRow_);
-  resmgr.copy(copy->jCol_, jCol_);
-  resmgr.copy(copy->values_, values_);
-  resmgr.copy(copy->iRow_host_, iRow_host_);
-  resmgr.copy(copy->jCol_host_, jCol_host_);
-  resmgr.copy(copy->values_host_, values_host_);
+  resmgr.copy(copy->iRow_, this->iRow_);
+  resmgr.copy(copy->jCol_, this->jCol_);
+  resmgr.copy(copy->values_, this->values_);
+  resmgr.copy(copy->iRow_host_, this->iRow_host_);
+  resmgr.copy(copy->jCol_host_, this->jCol_host_);
+  resmgr.copy(copy->values_host_, this->values_host_);
   return copy;
 }
 
@@ -1949,13 +2035,14 @@ hiopMatrixSparse* hiopMatrixRajaSymSparseTriplet::new_copy() const
  * @brief block of W += alpha*this 
  * @note W contains only the upper triangular entries
  */ 
-void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriangle(
-  int diag_start, 
-	double alpha,
-  hiopMatrixDense& W) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
+                                              double alpha,
+                                              hiopMatrixDense& W) const
 {
-  assert(diag_start>=0 && diag_start+nrows_<=W.m());
-  assert(diag_start+ncols_<=W.n());
+  assert(diag_start>=0 && diag_start + this->nrows_ <= W.m());
+  assert(diag_start + this->ncols_ <= W.n());
   assert(W.n()==W.m());
 
   // double** WM = W.get_M();
@@ -1967,7 +2054,7 @@ void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriang
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nnz_),
     RAJA_LAMBDA(RAJA::Index_type it)
     {
       assert(iRow[it]<=jCol[it] && "sparse symmetric matrices should contain only upper triangular entries");
@@ -1986,8 +2073,12 @@ void hiopMatrixRajaSymSparseTriplet::addUpperTriangleToSymDenseMatrixUpperTriang
  * @warning This method should not be called directly.
  * Use addUpperTriangleToSymDenseMatrixUpperTriangle instead.
  */
-void hiopMatrixRajaSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int row_start, int col_start, 
-  double alpha, hiopMatrixDense& W) const
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+transAddToSymDenseMatrixUpperTriangle(int row_start,
+                                      int col_start, 
+                                      double alpha,
+                                      hiopMatrixDense& W) const
 {
   assert(0 && "This method should not be called for symmetric matrices.");
 }
@@ -1996,7 +2087,8 @@ void hiopMatrixRajaSymSparseTriplet::transAddToSymDenseMatrixUpperTriangle(int r
  * index 'vec_start'. If num_elems>=0, 'num_elems' are copied; otherwise copies as many as
  * are available in 'vec_dest' starting at 'vec_start'
  */
-void hiopMatrixRajaSymSparseTriplet::
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
 startingAtAddSubDiagonalToStartingAt(int diag_src_start,
                                      const double& alpha, 
                                      hiopVector& vec_dest,
@@ -2015,7 +2107,7 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
-  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, nnz_),
+  RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, this->nnz_),
     RAJA_LAMBDA(RAJA::Index_type itnz)
     {
       const int row = iRow[itnz];
@@ -2030,15 +2122,17 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
     });
 }
 
-size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const 
+template<class MEMBACKEND, class RAJAEXECPOL>
+size_type hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+numberOfOffDiagNonzeros() const 
 {
   if(-1==nnz_offdiag_) {
-    nnz_offdiag_= nnz_;
-    int *irow = iRow_;
-    int *jcol = jCol_;
+    this->nnz_offdiag_= this->nnz_;
+    int *irow = this->iRow_;
+    int *jcol = this->jCol_;
     RAJA::ReduceSum<hiop_raja_reduce, int> sum(0);
     RAJA::forall<hiop_raja_exec>(
-      RAJA::RangeSegment(0, nnz_),
+      RAJA::RangeSegment(0, this->nnz_),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         if (irow[i]==jcol[i]) {
@@ -2046,27 +2140,29 @@ size_type hiopMatrixRajaSymSparseTriplet::numberOfOffDiagNonzeros() const
         }
       }
     );
-    nnz_offdiag_ -= static_cast<int>(sum.get());
+    this->nnz_offdiag_ -= static_cast<int>(sum.get());
   }
 
-  return nnz_offdiag_;
+  return this->nnz_offdiag_;
 }
 
 /*
 *  extend original Hess to [Hess+diag_term]
 */
-void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
-                                                 int* iHSS,
-                                                 int* jHSS,
-                                                 double* MHSS,
-                                                 const hiopVector& add_diag)
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>::
+set_Hess_FR(const hiopMatrixSparse& Hess,
+            int* iHSS,
+            int* jHSS,
+            double* MHSS,
+            const hiopVector& add_diag)
 {
-  if (nnz_ == 0) {
+  if(this->nnz_ == 0) {
     return;
   }
   
-  hiopMatrixRajaSymSparseTriplet& M1 = *this;
-  const hiopMatrixRajaSymSparseTriplet& M2 = dynamic_cast<const hiopMatrixRajaSymSparseTriplet&>(Hess);
+  hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>& M1 = *this;
+  const auto& M2 = dynamic_cast<const hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>&>(Hess);
 
   // assuming original Hess is sorted, and in upper-triangle format
   const int m1 = M1.m();
@@ -2086,10 +2182,11 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   int nnz1 = m_row + M2.numberOfOffDiagNonzeros();
   int nnz2 = M2.numberOfNonzeros();
 
-  assert(nnz_ == nnz1);
+  assert(this->nnz_ == nnz1);
 
-  if(M2.row_starts_==NULL)
+  if(M2.row_starts_==NULL) {
     M2.row_starts_ = M2.allocAndBuildRowStarts();
+  }
   assert(M2.row_starts_);
   const int* M2iRow_host = M2.i_row_host();
   const int* M2jCol_host = M2.j_col_host();
@@ -2108,8 +2205,8 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
     
     if(m2 > 0) {
       if(M1.row_starts_==nullptr) {
-        M1.row_starts_ = new RowStartsInfo(m1, mem_space_);
-
+        M1.row_starts_ = nullptr;
+        M1.row_starts_ = hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::allocRowStarts(m1, this->mem_space_);
         M1_row_start = M1.row_starts_->idx_start_;       
 
         //
@@ -2241,7 +2338,7 @@ void hiopMatrixRajaSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
       );
     }
   }
-  copyFromDev();
+  this->copyFromDev();
 }
 
 } //end of namespace
