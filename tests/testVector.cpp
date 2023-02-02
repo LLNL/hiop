@@ -77,6 +77,11 @@
 #include <hiopVectorCuda.hpp>
 #endif
 
+#ifdef HIOP_USE_HIP
+#include "LinAlg/vectorTestsHip.hpp"
+#include <hiopVectorHip.hpp>
+#endif
+
 template <typename T>
 static int runTests(const char* mem_space, MPI_Comm comm);
 
