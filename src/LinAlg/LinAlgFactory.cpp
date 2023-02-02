@@ -263,11 +263,11 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& 
                                                                                                m_max_alloc);
 #elif defined(HIOP_USE_HIP)
         return new hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>(m,
-                                                                                               glob_n,
-                                                                                               mem_space_upper,
-                                                                                               col_part,
-                                                                                               comm,
-                                                                                               m_max_alloc);
+                                                                                              glob_n,
+                                                                                              mem_space_upper,
+                                                                                              col_part,
+                                                                                              comm,
+                                                                                              m_max_alloc);
 #else // this is for #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
         return new hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>(m,
                                                                                               glob_n,
@@ -375,7 +375,7 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const std::string& 
     return new hiopMatrixSparseTriplet(rows, cols, nnz);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaSparseTriplet(rows, cols, nnz, mem_space_upper);
+    return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(rows, cols, nnz, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -432,7 +432,7 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const std::stri
     return new hiopMatrixSymSparseTriplet(size, nnz);
   } else {
 #ifdef HIOP_USE_RAJA
-    return new hiopMatrixRajaSymSparseTriplet(size, nnz, mem_space_upper);
+    return new hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(size, nnz, mem_space_upper);
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
@@ -450,7 +450,6 @@ double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, siz
   if(mem_space_upper == "DEFAULT") {
     return new double[n];
   } else {
-
 
 #ifdef HIOP_USE_RAJA
     auto& resmgr = umpire::ResourceManager::getInstance();

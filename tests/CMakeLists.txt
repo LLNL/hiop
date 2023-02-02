@@ -24,10 +24,16 @@ if(HIOP_USE_RAJA)
   set(testMatrixSymSparse_SRC ${testMatrixSymSparse_SRC} LinAlg/matrixTestsRajaSymSparseTriplet.cpp)
 endif()
 
-if(HIOP_USE_GPU AND HIOP_USE_CUDA)
-  set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsCuda.cpp )
-  set(cuda_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC})
+if(HIOP_USE_CUDA)
+  set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsCuda.cpp)
+  set(cuda_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC} ${testPCG_SRC} ${testBiCGStab_SRC})
   set_source_files_properties(${cuda_sources} PROPERTIES LANGUAGE CUDA)
+elseif(HIOP_USE_HIP)
+  #set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsHip.cpp)
+  set(hip_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC} ${testPCG_SRC} ${testBiCGStab_SRC})
+  set_source_files_properties(${hip_sources} PROPERTIES LANGUAGE HIP)
+else()
+  # raja-omp or non-raja builds do nothing
 endif()
 
 # Build vector test

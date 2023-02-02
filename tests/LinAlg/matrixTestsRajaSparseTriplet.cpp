@@ -72,17 +72,23 @@
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+using hiopMatrixSparseTripletRajaT = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+using hiopMatrixSparseTripletRajaT = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 using hiopVectorIntRajaT = hiop::hiopVectorIntRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+using hiopMatrixSparseTripletRajaT = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
 
@@ -143,22 +149,22 @@ real_type MatrixTestsRajaSparseTriplet::getLocalElement(
 
 real_type* MatrixTestsRajaSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSparseTripletRajaT*>(A);
   mat->copyFromDev();
   return mat->M_host();
 }
 
 const local_ordinal_type* MatrixTestsRajaSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
 {
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaSparseTriplet*>(A);
-  const_cast<hiop::hiopMatrixRajaSparseTriplet*>(mat)->copyFromDev(); // UB?
+  const auto* mat = dynamic_cast<const hiopMatrixSparseTripletRajaT*>(A);
+  const_cast<hiopMatrixSparseTripletRajaT*>(mat)->copyFromDev(); // UB?
   return mat->i_row_host();
 }
 
 const local_ordinal_type* MatrixTestsRajaSparseTriplet::getColumnIndices(const hiop::hiopMatrixSparse* A)
 {
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaSparseTriplet*>(A);
-  const_cast<hiop::hiopMatrixRajaSparseTriplet*>(mat)->copyFromDev(); // UB?
+  const auto* mat = dynamic_cast<const hiopMatrixSparseTripletRajaT*>(A);
+  const_cast<hiopMatrixSparseTripletRajaT*>(mat)->copyFromDev(); // UB?
   return mat->j_col_host();
 }
 
@@ -182,7 +188,7 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrixSparse* A, const 
 {
   if(A == nullptr)
     return 1;
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSparseTripletRajaT*>(A);
   mat->copyFromDev();
   const local_ordinal_type nnz = mat->numberOfNonzeros();
   const real_type* values = mat->M_host();
@@ -207,7 +213,7 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordina
   if(A == nullptr) {
     return 1;
   }
-  auto mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  auto mat = dynamic_cast<hiopMatrixSparseTripletRajaT*>(A);
   mat->copyFromDev();
   const local_ordinal_type nnz = mat->numberOfNonzeros();
   if(nnz_to-nnz_from > nnz) {
@@ -305,7 +311,7 @@ int MatrixTestsRajaSparseTriplet::verifyAnswer(
 
 local_ordinal_type* MatrixTestsRajaSparseTriplet::numNonzerosPerRow(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSparseTripletRajaT*>(A);
   mat->copyFromDev();
   auto nnz = mat->numberOfNonzeros();
   auto iRow = mat->i_row_host();
@@ -321,7 +327,7 @@ local_ordinal_type* MatrixTestsRajaSparseTriplet::numNonzerosPerRow(hiop::hiopMa
 
 local_ordinal_type* MatrixTestsRajaSparseTriplet::numNonzerosPerCol(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSparseTripletRajaT*>(A);
   mat->copyFromDev();
   auto nnz = mat->numberOfNonzeros();
   auto jCol = mat->j_col_host();
@@ -339,7 +345,7 @@ void MatrixTestsRajaSparseTriplet::initializeMatrix(
     hiop::hiopMatrixSparse* mat,
     local_ordinal_type entries_per_row)
 {
-  auto* A = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(mat);
+  auto* A = dynamic_cast<hiopMatrixSparseTripletRajaT*>(mat);
   local_ordinal_type * iRow = A->i_row_host();
   local_ordinal_type * jCol = A->j_col_host();
   double * val = A->M_host();
@@ -371,11 +377,11 @@ void MatrixTestsRajaSparseTriplet::initializeMatrix(
  */
 void MatrixTestsRajaSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse* mat)
 {
-  if (auto* A = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(mat))
+  if (auto* A = dynamic_cast<hiopMatrixSparseTripletRajaT*>(mat))
   {
     A->copyToDev();
   }
-  else if (auto* A = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(mat))
+  else if (auto* A = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(mat))
   {
     A->copyToDev();
   }
@@ -389,11 +395,11 @@ void MatrixTestsRajaSparseTriplet::maybeCopyToDev(hiop::hiopMatrixSparse* mat)
  */
 void MatrixTestsRajaSparseTriplet::maybeCopyFromDev(hiop::hiopMatrixSparse* mat)
 {
-  if (auto* A = dynamic_cast<hiop::hiopMatrixRajaSparseTriplet*>(mat))
+  if (auto* A = dynamic_cast<hiopMatrixSparseTripletRajaT*>(mat))
   {
     A->copyFromDev();
   }
-  else if (auto* A = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(mat))
+  else if (auto* A = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(mat))
   {
     A->copyFromDev();
   }

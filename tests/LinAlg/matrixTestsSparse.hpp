@@ -980,15 +980,11 @@ public:
 
   }
 
-  /// @todo add implementation of `startingAtAddSubDiagonalToStartingAt`
-  /// for abstract sparse matrix interface and all sparse matrix classes, 
-  /// then remove this dynamic cast to make the test implementation-agnostic.
   bool symStartingAtAddSubDiagonalToStartingAt(
     hiop::hiopVector& W,
-    hiop::hiopMatrixSparse& Amat,
+    hiop::hiopMatrixSparse& A,
     const int rank = 0)
   {
-    auto& A = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet&>(Amat);
     assert(W.get_size() == A.m()); // A is square
     
     const auto start_src_idx = 0;
