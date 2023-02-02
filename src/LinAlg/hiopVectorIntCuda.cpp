@@ -108,7 +108,7 @@ void hiopVectorIntCuda::copy_to_vectorseq(hiopVectorIntSeq& dest) const
   auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
   assert(b);
 }
-  
+
 void hiopVectorIntCuda::set_to_zero()
 {
   cudaError_t cuerr = cudaMemset(buf_, 0, sz_);

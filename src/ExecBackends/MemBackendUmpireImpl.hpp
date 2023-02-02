@@ -134,7 +134,7 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendUmpire, EXECPOLSRC, T,
         assert(src);
 
         // This is a hack to go around the fact that Umpire cannot copy to a pointer (on host
-        // in this case) that he does not manage.
+        // in this case) that it does not manage.
         //
         // The solution is to have Umpire allocate and transfer to a pointer on host, followed
         // by a std::memcpy from the new pointer to the desired (also host) destination.
