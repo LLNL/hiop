@@ -148,12 +148,22 @@ void hiopVectorPar::setToConstant_w_patternSelect(double c, const hiopVector& se
     }
   }
 }
-void hiopVectorPar::copyFrom(const hiopVector& v_ )
+void hiopVectorPar::copyFrom(const hiopVector& v_in )
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
+  copy_from_vectorpar(v);
+}
+
+void hiopVectorPar::copy_from_vectorpar(const hiopVectorPar& v)
+{
   assert(n_local_==v.n_local_);
   assert(glob_il_==v.glob_il_); assert(glob_iu_==v.glob_iu_);
   exec_space_.copy(this->data_, v.data_, n_local_, v.exec_space_);
+}
+
+void hiopVectorPar::copy_to_vectorpar(hiopVectorPar& vdest) const
+{
+  vdest.copy_from_vectorpar(*this);
 }
 
 void hiopVectorPar::copyFrom(const double* v_local_data )

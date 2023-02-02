@@ -55,36 +55,21 @@
  */
 
 #include "hiopVectorInt.hpp"
+#include "ExecSpace.hpp"
 #include <string>
 
 namespace hiop
 {
 
+// "forward" declarations
+class hiopVectorIntSeq;
+  
 class hiopVectorIntCuda : public hiopVectorInt
 {
-private:
-  index_type *buf_host_;
-  index_type *buf_;
-  std::string mem_space_;
-
 public:
   hiopVectorIntCuda(size_type sz, std::string mem_space="HOST");
 
   ~hiopVectorIntCuda();
-
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
 
   virtual inline index_type* local_data_host() { return buf_host_; }
 
@@ -95,6 +80,9 @@ public:
   virtual inline const index_type* local_data_const() const { return buf_; }
   
   virtual void copy_from(const index_type* v_local);
+
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
 
   /// @brief Set all elements to zero.
   virtual void set_to_zero();
@@ -113,6 +101,21 @@ public:
    *
    */ 
   virtual void linspace(const index_type& i0, const index_type& di);
+
+  ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space()
+  {
+    return exec_space_;
+  }
+  const ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space() const
+  {
+    return exec_space_;
+  }
+  
+private:
+  ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_;
+  index_type *buf_host_;
+  index_type *buf_;
+  std::string mem_space_;
 };
 
 } // namespace hiop

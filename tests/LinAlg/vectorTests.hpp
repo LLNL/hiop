@@ -512,18 +512,12 @@ public:
 
     const real_type c_val = one;
     const real_type d_val = two;
- 
+
     c.setToConstant(c_val);
     d.setToConstant(d_val);
 
-    for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map.local_data_host()[i] = i;
-    }
-    for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map.local_data_host()[i] = i + c_size;
-    }
-    c_map.copy_to_dev();
-    d_map.copy_to_dev();
+    c_map.linspace(0, 1);
+    d_map.linspace(c_size, 1);
 
     cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
 
@@ -561,18 +555,9 @@ public:
     assert(c_size + d_size == cd_size && "size doesn't match");
 
     const real_type cd_val = two;
- 
-    c.setToZero();
-    d.setToZero();
 
-    for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map.local_data_host()[i] = i;
-    }
-    for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map.local_data_host()[i] = i + c_size;
-    }
-    c_map.copy_to_dev();
-    d_map.copy_to_dev();
+    c_map.linspace(0, 1);
+    d_map.linspace(c_size, 1);
 
     cd.setToConstant(cd_val);
     cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);

@@ -72,6 +72,15 @@
 
 namespace hiop
 {
+
+//forward declarations of the test classes that are friends to this class
+namespace tests
+{
+class VectorTestsRajaPar;
+class MatrixTestsRajaDense;
+class MatrixTestsRajaSparseTriplet;
+class MatrixTestsRajaSymSparseTriplet;
+}
   
 template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopVectorRaja : public hiopVector
@@ -89,6 +98,11 @@ public:
   virtual void copyFrom(const double* v_local_data); //v should be of length at least n_local
   virtual void copy_from(const hiopVector& src, const hiopVectorInt& index_in_src); 
   virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
+
+  /// @brief Copy entries from a hiopVectorPar, see method documentation in the parent class.
+  void copy_from_vectorpar(const hiopVectorPar& vsrc);
+  /// @brief Copy entries to a hiopVectorPar, see method documentation in the parent class.
+  void copy_to_vectorpar(hiopVectorPar& vdest) const;
   
   /**
    * @brief Copy from src the elements specified by the indices in index_in_src. 
@@ -277,10 +291,14 @@ public:
   inline double* local_data() { return data_dev_; }
   inline const double* local_data_const() const { return data_dev_; }
   inline MPI_Comm get_mpi_comm() const { return comm_; }
-
+private:
   void copyToDev();
   void copyFromDev();
-  
+  friend class tests::VectorTestsRajaPar;
+  friend class tests::MatrixTestsRajaDense;
+  friend class tests::MatrixTestsRajaSparseTriplet;
+  friend class tests::MatrixTestsRajaSymSparseTriplet;
+public:
   virtual size_type numOfElemsLessThan(const double &val) const;
   virtual size_type numOfElemsAbsLessThan(const double &val) const;      
 

@@ -65,6 +65,9 @@
 #include <hiopMatrixDense.hpp>
 #include "testBase.hpp"
 
+//for processing indexes/ints arrays on host
+#include "hiopVectorIntSeq.hpp"
+
 namespace hiop { namespace tests {
 
 /**
@@ -831,13 +834,14 @@ public:
     dst.setToConstant(dst_val);
     src.setToConstant(src_val);
 
-    index_type* rows_idxs_arr = rows_idxs.local_data_host();
+    hiopVectorIntSeq rows_idxs_host(rows_idxs.size());
+    index_type* rows_idxs_arr = rows_idxs_host.local_data();
     for (index_type i = 0; i < num_rows_to_copy; ++i) {
       rows_idxs_arr[i] = i;
     }
     rows_idxs_arr[0] = num_rows_to_copy - 1;
     rows_idxs_arr[num_rows_to_copy - 1] = 0;
-    rows_idxs.copy_to_dev();
+    rows_idxs.copy_from_vectorseq(rows_idxs_host);
 
     setLocalRow(&src, num_rows_to_copy - 1, zero);
 

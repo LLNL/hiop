@@ -91,13 +91,14 @@ public:
     int fail = 0;
     const int idx = x.size()/2;
     const int x_val = 1;
-    for(int i=0; i<x.size(); i++)
+    for(int i=0; i<x.size(); i++) {
       setLocalElement(&x, i, 0);
+    }
+    setLocalElement(&x, idx, x_val);
 
-    x.local_data_host()[idx] = x_val;
-    x.copy_to_dev();
-    if (getLocalElement(&x, idx) != x_val)
+    if(getLocalElement(&x, idx) != x_val) {
       fail++;
+    }
 
     printMessage(fail, __func__);
     return fail;

@@ -52,14 +52,17 @@
  *
  */
 #include "hiopVectorIntCuda.hpp"
+
+#include "MemBackendCudaImpl.hpp"
 #include "VectorCudaKernels.hpp"
+
 #include <cuda_runtime.h>
+
+#include "hiopVectorIntSeq.hpp"
 #include <cassert>
 
 namespace hiop
 {
-
-
 
 hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   : hiopVectorInt(sz),
@@ -84,28 +87,26 @@ hiopVectorIntCuda::~hiopVectorIntCuda()
   cudaFree(buf_);
 }
 
-void hiopVectorIntCuda::copy_from_dev()
-{
-  if (buf_ != buf_host_) {
-    cudaError_t cuerr = cudaMemcpy(buf_host_, buf_, (sz_)*sizeof(index_type), cudaMemcpyDeviceToHost);
-    assert(cuerr == cudaSuccess);
-  }
-}
-
-void hiopVectorIntCuda::copy_to_dev()
-{
-  if (buf_ != buf_host_) {
-    cudaError_t cuerr = cudaMemcpy(buf_, buf_host_, (sz_)*sizeof(index_type), cudaMemcpyHostToDevice);
-    assert(cuerr == cudaSuccess);
-  }
-}
-
 void hiopVectorIntCuda::copy_from(const index_type* v_local)
 {
   if(v_local) {
     cudaError_t cuerr = cudaMemcpy(buf_, v_local, (sz_)*sizeof(index_type), cudaMemcpyDeviceToDevice);
     assert(cuerr == cudaSuccess);
   }
+}
+
+void hiopVectorIntCuda::copy_from_vectorseq(const hiopVectorIntSeq& src)
+{
+  assert(src.size() == sz_);
+  auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+  assert(b);
+}
+
+void hiopVectorIntCuda::copy_to_vectorseq(hiopVectorIntSeq& dest) const
+{
+  assert(dest.size() == sz_);
+  auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+  assert(b);
 }
 
 void hiopVectorIntCuda::set_to_zero()
