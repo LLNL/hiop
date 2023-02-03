@@ -96,15 +96,13 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
   }
   n_local_ = glob_iu_ - glob_il_;
 
-  // Size in bytes
-  size_t bytes = n_local_ * sizeof(double);
-  
-  // Allocate memory on host
-  data_host_mirror_ = new double[n_local_];
- 
-  // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc((void**)&data_, bytes);
-  assert(cudaSuccess == cuerr);
+  data_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device()) {
+    // Create host mirror if the memory space is on device
+    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+  } else {
+    data_host_mirror_ = data_;
+  }
 
   // handles
   cublasCreate(&handle_cublas_);
@@ -120,15 +118,13 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
 
-  // Size in bytes
-  size_t bytes = n_local_ * sizeof(double);
-  
-  // Allocate memory on host
-  data_host_mirror_ = new double[bytes];
- 
-  // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc((void**)&data_, bytes);
-  assert(cudaSuccess == cuerr);
+  data_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device()) {
+    // Create host mirror if the memory space is on device
+    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+  } else {
+    data_host_mirror_ = data_;
+  }
 
   // handles
   cublasCreate(&handle_cublas_);
@@ -136,12 +132,16 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
 
 hiopVectorCuda::~hiopVectorCuda()
 {
-  delete [] data_host_mirror_;
-  // Delete workspaces and handles
-  cudaFree(data_);
-  cublasDestroy(handle_cublas_);
+  if(data_ != data_host_mirror_) {
+    exec_space_host_.dealloc_array(data_host_mirror_);
+  }
+  exec_space_.dealloc_array(data_);
   data_  = nullptr;
   data_host_mirror_ = nullptr;
+
+  // Delete workspaces and handles
+  cublasDestroy(handle_cublas_);
+
   delete idx_cumsum_;
 }
 
@@ -214,8 +214,8 @@ void hiopVectorCuda::copy_from_w_pattern(const hiopVector& vv, const hiopVector&
 void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const double* v, int nv)
 {
   assert(start_index_in_dest+nv <= n_local_);
-  cudaError_t cuerr = cudaMemcpy(data_+start_index_in_dest, v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto b = exec_space_.copy(data_+start_index_in_dest, v, nv);
+  assert(b);
 }
 
 /// @brief Copy v_src into `this` starting at start_index_in_dest in `this`. */
@@ -235,8 +235,8 @@ void hiopVectorCuda::copyFromStarting(int start_index_in_dest, const hiopVector&
 /// @brief Copy the `n` elements of v starting at `start_index_in_v` into `this`
 void hiopVectorCuda::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
-  cudaError_t cuerr = cudaMemcpy(data_, v+start_index_in_v, (nv)*sizeof(double), cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto b = exec_space_.copy(data_, v+start_index_in_v, nv);
+  assert(b);
 }
 
 /// @brief Copy from src the elements specified by the indices in index_in_src. 
@@ -287,11 +287,8 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 /// @brief Copy `this` to double array, which is assumed to be at least of `n_local_` size.
 void hiopVectorCuda::copyTo(double* dest) const
 {
-  cudaError_t cuerr = cudaMemcpy(dest,
-                                 data_,
-                                 (n_local_)*sizeof(double),
-                                 cudaMemcpyDeviceToDevice);
-  assert(cuerr == cudaSuccess);
+  auto b = exec_space_.copy(dest, data_, n_local_);
+  assert(b);
 }
 
 /// @brief Copy `this` to dst starting at `start_index` in `this`.
@@ -1017,31 +1014,41 @@ hiopVector* hiopVectorCuda::new_copy () const
 /// @brief copy data from host mirror to device
 void hiopVectorCuda::copyToDev()
 {
-  cudaError_t cuerr = cudaMemcpy(data_, data_host_mirror_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
-  assert(cuerr == cudaSuccess);
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
+  exec_space_.copy(data_, data_host_mirror_, n_local_, exec_space_host_);
 }
 
 /// @brief copy data from device to host mirror
 void hiopVectorCuda::copyFromDev()
 {
-  cudaError_t cuerr = cudaMemcpy(data_host_mirror_, data_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
-  assert(cuerr == cudaSuccess);
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  exec_space_host_.copy(data_host_mirror_, data_, n_local_, exec_space_);
 }
 
 /// @brief copy data from host mirror to device
 void hiopVectorCuda::copyToDev() const
 {
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
   double* data_dev = const_cast<double*>(data_);
-  cudaError_t cuerr = cudaMemcpy(data_dev, data_host_mirror_, (n_local_)*sizeof(double), cudaMemcpyHostToDevice);
-  assert(cuerr == cudaSuccess);
+  exec_space_.copy(data_dev, data_host_mirror_, n_local_, exec_space_host_);
 }
 
 /// @brief copy data from device to host mirror
 void hiopVectorCuda::copyFromDev() const
 {
+  if(data_ == data_host_mirror_) {
+    return;
+  }
   double* data_host = const_cast<double*>(data_host_mirror_);
-  cudaError_t cuerr = cudaMemcpy(data_host, data_, (n_local_)*sizeof(double), cudaMemcpyDeviceToHost);
-  assert(cuerr == cudaSuccess);
+  exec_space_host_.copy(data_host, data_, n_local_, exec_space_);
 }
 
 /// @brief get number of values that are less than the given value `val`. TODO: add unit test

@@ -65,33 +65,31 @@ namespace hiop
 {
 
 hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
-  : hiopVectorInt(sz),
-    mem_space_(mem_space)
+  : hiopVectorInt(sz)
 {
-  // Size in bytes
-  size_t bytes = sz * sizeof(index_type);
-
-  // Allocate memory on GPU
-  cudaError_t cuerr = cudaMalloc(&buf_, bytes);
-  assert(cudaSuccess == cuerr);
-  
-  // Allocate memory on host
-  buf_host_ = new index_type[bytes];
+  buf_ = exec_space_.template alloc_array<index_type>(sz);
+  if(exec_space_.mem_backend().is_device()) {
+    // Create host mirror if the memory space is on device
+    buf_host_ = exec_space_host_.template alloc_array<index_type>(sz);
+  } else {
+    buf_host_ = buf_;
+  }
 }
 
-hiopVectorIntCuda::~hiopVectorIntCuda()
+hiopVectorIntHip::~hiopVectorIntHip()
 {
-  delete buf_host_;
-
-  // Delete workspaces and handles
-  cudaFree(buf_);
+  if(buf_ != buf_host_) {
+    exec_space_host_.dealloc_array(buf_host_);
+  }
+  exec_space_.dealloc_array(buf_);
+  buf_  = nullptr;
+  buf_host_ = nullptr;
 }
 
 void hiopVectorIntCuda::copy_from(const index_type* v_local)
 {
   if(v_local) {
-    cudaError_t cuerr = cudaMemcpy(buf_, v_local, (sz_)*sizeof(index_type), cudaMemcpyDeviceToDevice);
-    assert(cuerr == cudaSuccess);
+    exec_space_.copy(buf_, v_local, sz_);
   }
 }
 

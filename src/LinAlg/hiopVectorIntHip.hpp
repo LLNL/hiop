@@ -68,20 +68,6 @@ public:
 
   ~hiopVectorIntHip();
 
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
-
   virtual inline index_type* local_data_host() { return buf_host_; }
 
   virtual inline const index_type* local_data_host_const() const { return buf_host_; }
@@ -121,12 +107,24 @@ public:
   {
     return exec_space_;
   }
-  
+
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST>& exec_space_host()
+  {
+    return exec_space_host_;
+  }
+  const ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST>& exec_space_host() const
+  {
+    return exec_space_host_;
+  }
+
 private:
   ExecSpace<MemBackendHip, ExecPolicyHip> exec_space_;
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+  
   index_type *buf_host_;
   index_type *buf_;
-  std::string mem_space_;
 };
 
 } // namespace hiop

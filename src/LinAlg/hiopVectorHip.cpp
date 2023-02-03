@@ -96,15 +96,13 @@ hiopVectorHip::hiopVectorHip(const size_type& glob_n, index_type* col_part, MPI_
   }
   n_local_ = glob_iu_ - glob_il_;
 
-  // Size in bytes
-  size_t bytes = n_local_ * sizeof(double);
-  
-  // Allocate memory on host
-  data_host_mirror_ = new double[n_local_];
- 
-  // Allocate memory on GPU
-  hipError_t cuerr = hipMalloc((void**)&data_, bytes);
-  assert(hipSuccess == cuerr);
+  data_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device()) {
+    // Create host mirror if the memory space is on device
+    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+  } else {
+    data_host_mirror_ = data_;
+  }
 
   // handles
   hipblasCreate(&handle_hipblas_);
@@ -120,15 +118,13 @@ hiopVectorHip::hiopVectorHip(const hiopVectorHip& v)
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
 
-  // Size in bytes
-  size_t bytes = n_local_ * sizeof(double);
-  
-  // Allocate memory on host
-  data_host_mirror_ = new double[bytes];
- 
-  // Allocate memory on GPU
-  hipError_t cuerr = hipMalloc((void**)&data_, bytes);
-  assert(hipSuccess == cuerr);
+  data_ = exec_space_.template alloc_array<double>(n_local_);
+  if(exec_space_.mem_backend().is_device()) {
+    // Create host mirror if the memory space is on device
+    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+  } else {
+    data_host_mirror_ = data_;
+  }
 
   // handles
   hipblasCreate(&handle_hipblas_);
@@ -136,12 +132,16 @@ hiopVectorHip::hiopVectorHip(const hiopVectorHip& v)
 
 hiopVectorHip::~hiopVectorHip()
 {
-  delete [] data_host_mirror_;
-  // Delete workspaces and handles
-  hipFree(data_);
-  hipblasDestroy(handle_hipblas_);
+  if(data_ != data_host_mirror_) {
+    exec_space_host_.dealloc_array(data_host_mirror_);
+  }
+  exec_space_.dealloc_array(data_);
   data_  = nullptr;
   data_host_mirror_ = nullptr;
+
+  // Delete workspaces and handles
+  hipblasDestroy(handle_hipblas_);
+
   delete idx_cumsum_;
 }
 
@@ -214,8 +214,8 @@ void hiopVectorHip::copy_from_w_pattern(const hiopVector& vv, const hiopVector& 
 void hiopVectorHip::copyFromStarting(int start_index_in_dest, const double* v, int nv)
 {
   assert(start_index_in_dest+nv <= n_local_);
-  hipError_t cuerr = hipMemcpy(data_+start_index_in_dest, v, (nv)*sizeof(double), hipMemcpyDeviceToDevice);
-  assert(cuerr == hipSuccess);
+  auto b = exec_space_.copy(data_+start_index_in_dest, v, nv);
+  assert(b);
 }
 
 /// @brief Copy v_src into 'this' starting at start_index_in_dest in 'this'. */
@@ -234,8 +234,8 @@ void hiopVectorHip::copyFromStarting(int start_index_in_dest, const hiopVector& 
 /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
 void hiopVectorHip::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
-  hipError_t cuerr = hipMemcpy(data_, v+start_index_in_v, (nv)*sizeof(double), hipMemcpyDeviceToDevice);
-  assert(cuerr == hipSuccess);
+  auto b = exec_space_.copy(data_, v+start_index_in_v, nv);
+  assert(b);
 }
 
 /// @brief Copy from src the elements specified by the indices in index_in_src. 
@@ -286,11 +286,8 @@ void hiopVectorHip::startingAtCopyFromStartingAt(int start_idx_dest,
 /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
 void hiopVectorHip::copyTo(double* dest) const
 {
-  hipError_t cuerr = hipMemcpy(dest,
-                                 data_,
-                                 (n_local_)*sizeof(double),
-                                 hipMemcpyDeviceToDevice);
-  assert(cuerr == hipSuccess);
+  auto b = exec_space_.copy(dest, data_, n_local_);
+  assert(b);
 }
 
 /// @brief Copy 'this' to dst starting at start_index in 'this'.
@@ -1017,31 +1014,41 @@ hiopVector* hiopVectorHip::new_copy () const
 /// @brief copy data from host mirror to device
 void hiopVectorHip::copyToDev()
 {
-  hipError_t cuerr = hipMemcpy(data_, data_host_mirror_, (n_local_)*sizeof(double), hipMemcpyHostToDevice);
-  assert(cuerr == hipSuccess);
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
+  exec_space_.copy(data_, data_host_mirror_, n_local_, exec_space_host_);
 }
 
 /// @brief copy data from device to host mirror
 void hiopVectorHip::copyFromDev()
 {
-  hipError_t cuerr = hipMemcpy(data_host_mirror_, data_, (n_local_)*sizeof(double), hipMemcpyDeviceToHost);
-  assert(cuerr == hipSuccess);
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  exec_space_host_.copy(data_host_mirror_, data_, n_local_, exec_space_);
 }
 
 /// @brief copy data from host mirror to device
 void hiopVectorHip::copyToDev() const
 {
+  if(data_ == data_host_mirror_) {
+    return;
+  }
+  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
   double* data_dev = const_cast<double*>(data_);
-  hipError_t cuerr = hipMemcpy(data_dev, data_host_mirror_, (n_local_)*sizeof(double), hipMemcpyHostToDevice);
-  assert(cuerr == hipSuccess);
+  exec_space_.copy(data_dev, data_host_mirror_, n_local_, exec_space_host_);
 }
 
 /// @brief copy data from device to host mirror
 void hiopVectorHip::copyFromDev() const
 {
+  if(data_ == data_host_mirror_) {
+    return;
+  }
   double* data_host = const_cast<double*>(data_host_mirror_);
-  hipError_t cuerr = hipMemcpy(data_host, data_, (n_local_)*sizeof(double), hipMemcpyDeviceToHost);
-  assert(cuerr == hipSuccess);
+  exec_space_host_.copy(data_host, data_, n_local_, exec_space_);
 }
 
 /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
