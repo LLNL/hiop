@@ -183,7 +183,7 @@ if(HIOP_USE_HIP)
   set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES LANGUAGE CXX)
   set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
 
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDAVECTORKERNELS_SRC})
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_HIPVECTORKERNELS_SRC})
 endif(HIOP_USE_HIP)
 
 # Add RAJA/Umpire sources when enabled

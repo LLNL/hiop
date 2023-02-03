@@ -55,6 +55,7 @@
  */
 
 #include "hiopVectorInt.hpp"
+#include "ExecSpace.hpp"
 #include <string>
 
 namespace hiop
@@ -62,11 +63,6 @@ namespace hiop
 
 class hiopVectorIntHip : public hiopVectorInt
 {
-private:
-  index_type *buf_host_;
-  index_type *buf_;
-  std::string mem_space_;
-
 public:
   hiopVectorIntHip(size_type sz, std::string mem_space="HOST");
 
@@ -96,6 +92,9 @@ public:
   
   virtual void copy_from(const index_type* v_local);
 
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
+
   /// @brief Set all elements to zero.
   virtual void set_to_zero();
 
@@ -113,6 +112,21 @@ public:
    *
    */ 
   virtual void linspace(const index_type& i0, const index_type& di);
+
+  ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space()
+  {
+    return exec_space_;
+  }
+  const ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space() const
+  {
+    return exec_space_;
+  }
+  
+private:
+  ExecSpace<MemBackendHip, ExecPolicyHip> exec_space_;
+  index_type *buf_host_;
+  index_type *buf_;
+  std::string mem_space_;
 };
 
 } // namespace hiop

@@ -132,6 +132,14 @@ int main(int argc, char** argv)
   }
   fail += runTests<VectorTestsCuda>("cuda", comm);
 #endif
+#ifdef HIOP_USE_HIP
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp HIP vector\n";
+    std::cout << "  ... using HIP memory space:\n";
+  }
+  fail += runTests<VectorTestsHip>("hip", comm);
+#endif
 #ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_GPU
   if (rank == 0)

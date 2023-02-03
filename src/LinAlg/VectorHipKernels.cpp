@@ -46,7 +46,7 @@
 // product endorsement purposes.
 
 /**
- * @file VectorHipKernels.cu
+ * @file VectorHipKernels.cpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
@@ -55,18 +55,18 @@
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
 
-#include <hipthrust/device_ptr.h>
-#include <hipthrust/device_vector.h>
-#include <hipthrust/transform.h>
-#include <hipthrust/functional.h>
-#include <hipthrust/fill.h>
-#include <hipthrust/replace.h>
-#include <hipthrust/transform_reduce.h>
-#include <hipthrust/extrema.h>
-#include <hipthrust/logical.h>
-#include <hipthrust/execution_policy.h>
-#include <hipthrust/device_malloc.h>
-#include <hipthrust/device_free.h>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+#include <thrust/functional.h>
+#include <thrust/fill.h>
+#include <thrust/replace.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/extrema.h>
+#include <thrust/logical.h>
+#include <thrust/execution_policy.h>
+#include <thrust/device_malloc.h>
+#include <thrust/device_free.h>
 
 
 //#include <cmath>

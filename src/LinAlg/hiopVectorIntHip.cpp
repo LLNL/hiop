@@ -52,7 +52,11 @@
  *
  */
 #include "hiopVectorIntHip.hpp"
+#include "hiopVectorIntSeq.hpp"
+
+#include "MemBackendHipImpl.hpp"
 #include "VectorHipKernels.hpp"
+
 #include <hip/hip_runtime.h>
 #include <cassert>
 
@@ -106,6 +110,20 @@ void hiopVectorIntHip::copy_from(const index_type* v_local)
     hipError_t cuerr = hipMemcpy(buf_, v_local, (sz_)*sizeof(index_type), hipMemcpyDeviceToDevice);
     assert(cuerr == hipSuccess);
   }
+}
+
+void hiopVectorIntHip::copy_from_vectorseq(const hiopVectorIntSeq& src)
+{
+  assert(src.size() == sz_);
+  auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+  assert(b);
+}
+
+void hiopVectorIntHip::copy_to_vectorseq(hiopVectorIntSeq& dest) const
+{
+  assert(dest.size() == sz_);
+  auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+  assert(b);
 }
 
 void hiopVectorIntHip::set_to_zero()
