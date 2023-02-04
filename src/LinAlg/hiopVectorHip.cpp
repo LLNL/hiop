@@ -120,12 +120,8 @@ hiopVectorHip::hiopVectorHip(const hiopVectorHip& v)
   comm_ = v.comm_;
 
   data_ = exec_space_.alloc_array<double>(n_local_);
-  if(exec_space_.mem_backend().is_device()) {
-    // Create host mirror if the memory space is on device
-    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
-  } else {
-    data_host_mirror_ = data_;
-  }
+  // Create host mirror if the memory space is on device
+  data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
 
   // handles
   hipblasCreate(&handle_hipblas_);
@@ -133,9 +129,7 @@ hiopVectorHip::hiopVectorHip(const hiopVectorHip& v)
 
 hiopVectorHip::~hiopVectorHip()
 {
-  if(data_ != data_host_mirror_) {
-    exec_space_host_.dealloc_array(data_host_mirror_);
-  }
+  exec_space_host_.dealloc_array(data_host_mirror_);
   exec_space_.dealloc_array(data_);
   data_  = nullptr;
   data_host_mirror_ = nullptr;
@@ -1015,9 +1009,6 @@ hiopVector* hiopVectorHip::new_copy () const
 /// @brief copy data from host mirror to device
 void hiopVectorHip::copyToDev()
 {
-  if(data_ == data_host_mirror_) {
-    return;
-  }
   assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
   exec_space_.copy(data_, data_host_mirror_, n_local_, exec_space_host_);
 }
@@ -1025,18 +1016,12 @@ void hiopVectorHip::copyToDev()
 /// @brief copy data from device to host mirror
 void hiopVectorHip::copyFromDev()
 {
-  if(data_ == data_host_mirror_) {
-    return;
-  }
   exec_space_host_.copy(data_host_mirror_, data_, n_local_, exec_space_);
 }
 
 /// @brief copy data from host mirror to device
 void hiopVectorHip::copyToDev() const
 {
-  if(data_ == data_host_mirror_) {
-    return;
-  }
   assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
   double* data_dev = const_cast<double*>(data_);
   exec_space_.copy(data_dev, data_host_mirror_, n_local_, exec_space_host_);
@@ -1045,9 +1030,6 @@ void hiopVectorHip::copyToDev() const
 /// @brief copy data from device to host mirror
 void hiopVectorHip::copyFromDev() const
 {
-  if(data_ == data_host_mirror_) {
-    return;
-  }
   double* data_host = const_cast<double*>(data_host_mirror_);
   exec_space_host_.copy(data_host, data_, n_local_, exec_space_);
 }

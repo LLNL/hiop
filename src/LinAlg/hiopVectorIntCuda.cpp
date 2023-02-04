@@ -69,19 +69,13 @@ hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   : hiopVectorInt(sz)
 {
   buf_ = exec_space_.alloc_array<index_type>(sz);
-  if(exec_space_.mem_backend().is_device()) {
-    // Create host mirror if the memory space is on device
-    buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
-  } else {
-    buf_host_ = buf_;
-  }
+  // Create host mirror if the memory space is on device
+  buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
 }
 
-hiopVectorIntHip::~hiopVectorIntHip()
+hiopVectorIntCuda::~hiopVectorIntCuda()
 {
-  if(buf_ != buf_host_) {
-    exec_space_host_.dealloc_array(buf_host_);
-  }
+  exec_space_host_.dealloc_array(buf_host_);
   exec_space_.dealloc_array(buf_);
   buf_  = nullptr;
   buf_host_ = nullptr;
