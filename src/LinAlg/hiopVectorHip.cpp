@@ -53,6 +53,7 @@
  */
 #include "LinAlgFactory.hpp"
 #include "MemBackendHipImpl.hpp"
+#include "MemBackendCppImpl.hpp"
 #include "hiopVectorHip.hpp"
 #include "hiopVectorInt.hpp"
 #include "VectorHipKernels.hpp"
@@ -96,10 +97,10 @@ hiopVectorHip::hiopVectorHip(const size_type& glob_n, index_type* col_part, MPI_
   }
   n_local_ = glob_iu_ - glob_il_;
 
-  data_ = exec_space_.template alloc_array<double>(n_local_);
+  data_ = exec_space_.alloc_array<double>(n_local_);
   if(exec_space_.mem_backend().is_device()) {
     // Create host mirror if the memory space is on device
-    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+    data_host_mirror_ = exec_space_host_.alloc_array<double>(n_local_);
   } else {
     data_host_mirror_ = data_;
   }
@@ -118,7 +119,7 @@ hiopVectorHip::hiopVectorHip(const hiopVectorHip& v)
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
 
-  data_ = exec_space_.template alloc_array<double>(n_local_);
+  data_ = exec_space_.alloc_array<double>(n_local_);
   if(exec_space_.mem_backend().is_device()) {
     // Create host mirror if the memory space is on device
     data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);

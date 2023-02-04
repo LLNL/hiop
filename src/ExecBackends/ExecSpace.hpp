@@ -404,6 +404,33 @@ public:
     return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMBACKEND, EXECPOLICIES, T, I>::do_it(p_dest, *this, p_src, *this, n);
   }
 
+  /**
+   * Copy `n` elements of the array `p_src` to the `p_dest` array.
+   * 
+   * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
+   * `n` elements.
+   * @pre `p_dest` should be managed by the memory backend of `this`.
+   * @pre `p_src` should be managed by the memory backend of `ms`.
+   */
+  template<class MEMSRC, class EXEPOLSRC, typename T, typename I>
+  inline bool copy(T* p_dest, const T* p_src, const I& n, const ExecSpace<MEMSRC,EXEPOLSRC>& ms) const
+  {
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMSRC, EXEPOLSRC, T, I>::do_it(p_dest, *this, p_src, ms, n);
+  }
+
+  /**
+   * Copy `n` elements of the array `p_src` to the `p_dest` array.
+   * 
+   * @pre `p_src` and `p_dest` should be allocated so that they can hold at least 
+   * `n` elements.
+   * @pre Both `p_dest` and `p_src` should be managed by the memory backend of `this`.
+   */  
+  template<typename T, typename I>
+  inline bool copy(T* p_dest, const T* p_src, const I& n) const
+  {
+    return TransferImpl<MEMBACKEND, EXECPOLICIES, MEMBACKEND, EXECPOLICIES, T, I>::do_it(p_dest, *this, p_src, *this, n);
+  }
+
 private:
   MEMBACKEND mb_;
   EXECPOLICIES ep_;
@@ -447,7 +474,7 @@ template<class MEMDEST, class EXEPOLDEST, class MEMSRC, class EXEPOLSRC, typenam
 struct TransferImpl
 {
   inline static bool do_it(T* p_dest,
-                           ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
+                           const ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MEMSRC, EXEPOLSRC>& hwb_src,
                            const I& n)

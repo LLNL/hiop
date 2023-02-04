@@ -353,20 +353,10 @@ public:
     return exec_space_;
   }
 
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST>& exec_space_host()
-  {
-    return exec_space_host_;
-  }
-  const ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST>& exec_space_host() const
-  {
-    return exec_space_host_;
-  }
-
 private:
   ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_;
-  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
-  using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_host_;
+
   MPI_Comm comm_;
   double* data_host_mirror_;
   double* data_;

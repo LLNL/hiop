@@ -53,6 +53,7 @@
  */
 #include "hiopVectorCuda.hpp"
 #include "MemBackendCudaImpl.hpp"
+#include "MemBackendCppImpl.hpp"
 #include "hiopVectorIntCuda.hpp"
 #include "VectorCudaKernels.hpp"
 #include "MathKernelsCuda.hpp"
@@ -96,10 +97,10 @@ hiopVectorCuda::hiopVectorCuda(const size_type& glob_n, index_type* col_part, MP
   }
   n_local_ = glob_iu_ - glob_il_;
 
-  data_ = exec_space_.template alloc_array<double>(n_local_);
+  data_ = exec_space_.alloc_array<double>(n_local_);
   if(exec_space_.mem_backend().is_device()) {
     // Create host mirror if the memory space is on device
-    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+    data_host_mirror_ = exec_space_host_.alloc_array<double>(n_local_);
   } else {
     data_host_mirror_ = data_;
   }
@@ -118,10 +119,10 @@ hiopVectorCuda::hiopVectorCuda(const hiopVectorCuda& v)
   glob_iu_ = v.glob_iu_;
   comm_ = v.comm_;
 
-  data_ = exec_space_.template alloc_array<double>(n_local_);
+  data_ = exec_space_.alloc_array<double>(n_local_);
   if(exec_space_.mem_backend().is_device()) {
     // Create host mirror if the memory space is on device
-    data_host_mirror_ = exec_space_host_.template alloc_array<double>(n_local_);
+    data_host_mirror_ = exec_space_host_.alloc_array<double>(n_local_);
   } else {
     data_host_mirror_ = data_;
   }

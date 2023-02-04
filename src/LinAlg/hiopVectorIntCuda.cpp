@@ -54,6 +54,7 @@
 #include "hiopVectorIntCuda.hpp"
 
 #include "MemBackendCudaImpl.hpp"
+#include "MemBackendCppImpl.hpp"
 #include "VectorCudaKernels.hpp"
 
 #include <cuda_runtime.h>
@@ -67,10 +68,10 @@ namespace hiop
 hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   : hiopVectorInt(sz)
 {
-  buf_ = exec_space_.template alloc_array<index_type>(sz);
+  buf_ = exec_space_.alloc_array<index_type>(sz);
   if(exec_space_.mem_backend().is_device()) {
     // Create host mirror if the memory space is on device
-    buf_host_ = exec_space_host_.template alloc_array<index_type>(sz);
+    buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
   } else {
     buf_host_ = buf_;
   }
