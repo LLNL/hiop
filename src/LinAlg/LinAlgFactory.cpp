@@ -165,7 +165,7 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
           assert(false && "requested memory space not available because HiOp was not"
                 "built with HIP support");
           return new hiop::hiopVectorPar(glob_n, col_part, comm);
-#endif //ifdef HIOP_USE_CUDA
+#endif //ifdef HIOP_USE_HIP
         } else {
           assert(false && "to be implemented");
           return nullptr;

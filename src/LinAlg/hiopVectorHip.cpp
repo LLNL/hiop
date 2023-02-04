@@ -1011,7 +1011,6 @@ hiopVector* hiopVectorHip::new_copy () const
 /// @brief copy data from host mirror to device
 void hiopVectorHip::copyToDev()
 {
-  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
   exec_space_.copy(data_, data_host_mirror_, n_local_, exec_space_host_);
 }
 
