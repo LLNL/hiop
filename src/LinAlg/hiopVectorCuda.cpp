@@ -278,7 +278,9 @@ void hiopVectorCuda::startingAtCopyFromStartingAt(int start_idx_dest,
 /// @brief Copy `this` to double array, which is assumed to be at least of `n_local_` size.
 void hiopVectorCuda::copyTo(double* dest) const
 {
-  auto b = exec_space_.copy(dest, data_, n_local_);
+  auto* this_nonconst = const_cast<hiopVectorCuda*>(this);
+  assert(nullptr != this_nonconst);
+  auto b = this_nonconst->exec_space_.copy(dest, data_, n_local_);
   assert(b);
 }
 
@@ -1018,16 +1020,19 @@ void hiopVectorCuda::copyFromDev()
 /// @brief copy data from host mirror to device
 void hiopVectorCuda::copyToDev() const
 {
-  assert(exec_space_.mem_backend().is_device() && "should have data_dev_==data_host_");
-  double* data_dev = const_cast<double*>(data_);
-  exec_space_.copy(data_dev, data_host_mirror_, n_local_, exec_space_host_);
+  auto* this_nonconst = const_cast<hiopVectorCuda*>(this);
+  assert(nullptr != this_nonconst);
+  
+  this_nonconst->copyToDev();
 }
 
 /// @brief copy data from device to host mirror
 void hiopVectorCuda::copyFromDev() const
 {
-  double* data_host = const_cast<double*>(data_host_mirror_);
-  exec_space_host_.copy(data_host, data_, n_local_, exec_space_);
+  auto* this_nonconst = const_cast<hiopVectorCuda*>(this);
+  assert(nullptr != this_nonconst);
+  
+  this_nonconst->copyFromDev();
 }
 
 /// @brief get number of values that are less than the given value `val`. TODO: add unit test

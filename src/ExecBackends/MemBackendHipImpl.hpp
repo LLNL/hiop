@@ -98,7 +98,7 @@ template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
 struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
-                           const ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
+                           ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
                            const I& n)
@@ -111,7 +111,7 @@ struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
   struct TransferImpl<MemBackendHip, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
-                           const ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
+                           ExecSpace<MemBackendHip, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendCpp, EXECPOLSRC>& hwb_src,
                            const I& n)
@@ -124,7 +124,7 @@ template<class EXECPOLDEST, class EXECPOLSRC, typename T, typename I>
 struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendHip, EXECPOLSRC, T, I>
 {
   inline static bool do_it(T* p_dest,
-                           const ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
+                           ExecSpace<MemBackendCpp, EXECPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MemBackendHip, EXECPOLSRC>& hwb_src,
                            const I& n)

@@ -474,7 +474,7 @@ template<class MEMDEST, class EXEPOLDEST, class MEMSRC, class EXEPOLSRC, typenam
 struct TransferImpl
 {
   inline static bool do_it(T* p_dest,
-                           const ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
+                           ExecSpace<MEMDEST, EXEPOLDEST>& hwb_dest,
                            const T* p_src,
                            const ExecSpace<MEMSRC, EXEPOLSRC>& hwb_src,
                            const I& n)
