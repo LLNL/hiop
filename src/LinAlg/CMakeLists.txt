@@ -31,9 +31,11 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVector.hpp
   hiopVectorInt.hpp
   hiopVectorIntCuda.hpp
+  hiopVectorIntHip.hpp
   hiopVectorIntRaja.hpp
   hiopVectorIntSeq.hpp
   hiopVectorCuda.hpp
+  hiopVectorHip.hpp
   hiopVectorPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
@@ -118,6 +120,14 @@ set(hiopLinAlg_CUDAVECTORKERNELS_SRC
   VectorCudaKernels.cu
 )
 
+set(hiopLinAlg_HIPVECTOR_SRC
+  hiopVectorHip.cpp
+  hiopVectorIntHip.cpp
+)
+set(hiopLinAlg_HIPVECTORKERNELS_SRC
+  VectorHipKernels.cpp
+)
+
 set(hiopLinAlg_KRON_REDUCTION_SRC
   hiopLinSolverUMFPACKZ.cpp
 )
@@ -160,6 +170,21 @@ if(HIOP_USE_CUDA)
   set_source_files_properties(${hiopLinAlg_CUDAVECTORKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC} ${hiopLinAlg_CUDAVECTORKERNELS_SRC})
 endif(HIOP_USE_CUDA)
+
+# Add Hip vector code (even when HIOP_SPARSE is not defined since it can be used in MDS)
+if(HIOP_USE_HIP)
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_HIPVECTOR_SRC})
+
+  # Mark appropriate source files as HIP. I guess in the future just a
+  # LANGUAGE HIP property will suffice. For now do it via compile flags
+  # Reference: https://www.olcf.ornl.gov/wp-content/uploads/2021/01/2021UM-Day-3-Joo-Developing-for-Frontier-using-HIP-on-Spock.pdf
+#  set_source_files_properties(${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES LANGUAGE HIP)
+
+  set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES LANGUAGE CXX)
+  set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
+
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_HIPVECTORKERNELS_SRC})
+endif(HIOP_USE_HIP)
 
 # Add RAJA/Umpire sources when enabled
 if(HIOP_USE_RAJA)

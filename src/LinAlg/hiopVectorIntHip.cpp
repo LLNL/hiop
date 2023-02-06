@@ -46,26 +46,25 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorIntCuda.cpp
+ * @file hiopVectorIntHip.cpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
-#include "hiopVectorIntCuda.hpp"
-
-#include "MemBackendCudaImpl.hpp"
-#include "MemBackendCppImpl.hpp"
-#include "VectorCudaKernels.hpp"
-
-#include <cuda_runtime.h>
-
+#include "hiopVectorIntHip.hpp"
 #include "hiopVectorIntSeq.hpp"
+
+#include "MemBackendHipImpl.hpp"
+#include "MemBackendCppImpl.hpp"
+#include "VectorHipKernels.hpp"
+
+#include <hip/hip_runtime.h>
 #include <cassert>
 
 namespace hiop
 {
 
-hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
+hiopVectorIntHip::hiopVectorIntHip(size_type sz, std::string mem_space)
   : hiopVectorInt(sz)
 {
   buf_ = exec_space_.alloc_array<index_type>(sz);
@@ -73,7 +72,7 @@ hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
   buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
 }
 
-hiopVectorIntCuda::~hiopVectorIntCuda()
+hiopVectorIntHip::~hiopVectorIntHip()
 {
   exec_space_host_.dealloc_array(buf_host_);
   exec_space_.dealloc_array(buf_);
@@ -81,38 +80,38 @@ hiopVectorIntCuda::~hiopVectorIntCuda()
   buf_host_ = nullptr;
 }
 
-void hiopVectorIntCuda::copy_from(const index_type* v_local)
+void hiopVectorIntHip::copy_from(const index_type* v_local)
 {
   if(v_local) {
     exec_space_.copy(buf_, v_local, sz_);
   }
 }
 
-void hiopVectorIntCuda::copy_from_vectorseq(const hiopVectorIntSeq& src)
+void hiopVectorIntHip::copy_from_vectorseq(const hiopVectorIntSeq& src)
 {
   assert(src.size() == sz_);
   auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
   assert(b);
 }
 
-void hiopVectorIntCuda::copy_to_vectorseq(hiopVectorIntSeq& dest) const
+void hiopVectorIntHip::copy_to_vectorseq(hiopVectorIntSeq& dest) const
 {
   assert(dest.size() == sz_);
   auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
   assert(b);
 }
 
-void hiopVectorIntCuda::set_to_zero()
+void hiopVectorIntHip::set_to_zero()
 {
-  cudaError_t cuerr = cudaMemset(buf_, 0, sz_);
-  assert(cuerr == cudaSuccess);
+  hipError_t cuerr = hipMemset(buf_, 0, sz_);
+  assert(cuerr == hipSuccess);
 }
 
 /// Set all vector elements to constant c
-void hiopVectorIntCuda::set_to_constant(const index_type c)
+void hiopVectorIntHip::set_to_constant(const index_type c)
 {
-  cudaError_t cuerr = cudaMemset(buf_, c, sz_);
-  assert(cuerr == cudaSuccess);
+  hipError_t cuerr = hipMemset(buf_, c, sz_);
+  assert(cuerr == hipSuccess);
 }
 
 /**
@@ -125,9 +124,9 @@ void hiopVectorIntCuda::set_to_constant(const index_type c)
  * @param di the increment for subsequent entries in the vector
  *
  */ 
-void hiopVectorIntCuda::linspace(const index_type& i0, const index_type& di)
+void hiopVectorIntHip::linspace(const index_type& i0, const index_type& di)
 {
-  hiop::cuda::set_to_linspace_kernel(sz_, buf_, i0, di);
+  hiop::hip::set_to_linspace_kernel(sz_, buf_, i0, di);
 }
   
 } // namespace hiop

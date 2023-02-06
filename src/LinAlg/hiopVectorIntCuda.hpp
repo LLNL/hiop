@@ -110,12 +110,13 @@ public:
   {
     return exec_space_;
   }
-  
+
 private:
   ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_host_;
+
   index_type *buf_host_;
   index_type *buf_;
-  std::string mem_space_;
 };
 
 } // namespace hiop

@@ -85,6 +85,10 @@ struct ExecSpaceInfo
       mem_backend_ = "CUDA";
       mem_backend_host_ = "STDCPP";
       exec_backend_ = "CUDA";
+    } else if(mem_space_ == "HIP") {
+      mem_backend_ = "HIP";
+      mem_backend_host_ = "STDCPP";
+      exec_backend_ = "HIP";
     } else {
       assert(mem_space_ == "DEVICE" || mem_space_ == "UM" || mem_space_ == "HOST");
       mem_backend_ = "UMPIRE";

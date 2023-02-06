@@ -77,6 +77,11 @@
 #include <hiopVectorCuda.hpp>
 #endif
 
+#ifdef HIOP_USE_HIP
+#include "LinAlg/vectorTestsHip.hpp"
+#include <hiopVectorHip.hpp>
+#endif
+
 template <typename T>
 static int runTests(const char* mem_space, MPI_Comm comm);
 
@@ -126,6 +131,14 @@ int main(int argc, char** argv)
     std::cout << "  ... using CUDA memory space:\n";
   }
   fail += runTests<VectorTestsCuda>("cuda", comm);
+#endif
+#ifdef HIOP_USE_HIP
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp HIP vector\n";
+    std::cout << "  ... using HIP memory space:\n";
+  }
+  fail += runTests<VectorTestsHip>("hip", comm);
 #endif
 #ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_GPU

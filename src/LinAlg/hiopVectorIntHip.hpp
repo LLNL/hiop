@@ -1,10 +1,11 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read "Additional BSD Notice" below.
+// Please also read “Additional BSD Notice” below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -45,92 +46,74 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+#pragma once
+
 /**
- * @file hiopVectorIntCuda.cpp
+ * @file hiopVectorIntHip.hpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
- *
  */
-#include "hiopVectorIntCuda.hpp"
 
-#include "MemBackendCudaImpl.hpp"
-#include "MemBackendCppImpl.hpp"
-#include "VectorCudaKernels.hpp"
-
-#include <cuda_runtime.h>
-
-#include "hiopVectorIntSeq.hpp"
-#include <cassert>
+#include "hiopVectorInt.hpp"
+#include "ExecSpace.hpp"
+#include <string>
 
 namespace hiop
 {
 
-hiopVectorIntCuda::hiopVectorIntCuda(size_type sz, std::string mem_space)
-  : hiopVectorInt(sz)
+class hiopVectorIntHip : public hiopVectorInt
 {
-  buf_ = exec_space_.alloc_array<index_type>(sz);
-  // Create host mirror if the memory space is on device
-  buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
-}
+public:
+  hiopVectorIntHip(size_type sz, std::string mem_space="HOST");
 
-hiopVectorIntCuda::~hiopVectorIntCuda()
-{
-  exec_space_host_.dealloc_array(buf_host_);
-  exec_space_.dealloc_array(buf_);
-  buf_  = nullptr;
-  buf_host_ = nullptr;
-}
+  ~hiopVectorIntHip();
 
-void hiopVectorIntCuda::copy_from(const index_type* v_local)
-{
-  if(v_local) {
-    exec_space_.copy(buf_, v_local, sz_);
-  }
-}
+  virtual inline index_type* local_data_host() { return buf_host_; }
 
-void hiopVectorIntCuda::copy_from_vectorseq(const hiopVectorIntSeq& src)
-{
-  assert(src.size() == sz_);
-  auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
-  assert(b);
-}
+  virtual inline const index_type* local_data_host_const() const { return buf_host_; }
 
-void hiopVectorIntCuda::copy_to_vectorseq(hiopVectorIntSeq& dest) const
-{
-  assert(dest.size() == sz_);
-  auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
-  assert(b);
-}
+  virtual inline index_type* local_data() { return buf_; }
 
-void hiopVectorIntCuda::set_to_zero()
-{
-  cudaError_t cuerr = cudaMemset(buf_, 0, sz_);
-  assert(cuerr == cudaSuccess);
-}
-
-/// Set all vector elements to constant c
-void hiopVectorIntCuda::set_to_constant(const index_type c)
-{
-  cudaError_t cuerr = cudaMemset(buf_, c, sz_);
-  assert(cuerr == cudaSuccess);
-}
-
-/**
- * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
- * incremented integers up to i0+(n-1)di, when n is the length of this vector
- *
- * @pre The elements of the linear space should not overflow the index_type type
- *  
- * @param i0 the starting element in the linear space (entry 0 in vector)
- * @param di the increment for subsequent entries in the vector
- *
- */ 
-void hiopVectorIntCuda::linspace(const index_type& i0, const index_type& di)
-{
-  hiop::cuda::set_to_linspace_kernel(sz_, buf_, i0, di);
-}
+  virtual inline const index_type* local_data_const() const { return buf_; }
   
+  virtual void copy_from(const index_type* v_local);
+
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
+
+  /// @brief Set all elements to zero.
+  virtual void set_to_zero();
+
+  /// @brief Set all elements  to  c
+  virtual void set_to_constant(const index_type c);
+
+  /**
+   * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
+   * incremented integers up to i0+(n-1)di, when n is the length of this vector
+   *
+   * @pre The elements of the linear space should not overflow the index_type type
+   *  
+   * @param i0 the starting element in the linear space (entry 0 in vector)
+   * @param di the increment for subsequent entries in the vector
+   *
+   */ 
+  virtual void linspace(const index_type& i0, const index_type& di);
+
+  ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space()
+  {
+    return exec_space_;
+  }
+  const ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space() const
+  {
+    return exec_space_;
+  }
+
+private:
+  ExecSpace<MemBackendHip, ExecPolicyHip> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_host_;
+
+  index_type *buf_host_;
+  index_type *buf_;
+};
+
 } // namespace hiop
-
-
-

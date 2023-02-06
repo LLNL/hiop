@@ -73,6 +73,10 @@
 #include <hiopVectorCuda.hpp>
 #include <hiopVectorIntCuda.hpp>
 #endif
+#ifdef HIOP_USE_HIP
+#include <hiopVectorHip.hpp>
+#include <hiopVectorIntHip.hpp>
+#endif
 
 #include <hiopMatrixSparseCsrCuda.hpp>
 
@@ -154,13 +158,22 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
         return new hiop::hiopVectorPar(glob_n, col_part, comm);
 #endif //ifdef HIOP_USE_CUDA
       } else {
-        assert(false && "to be implemented");
-        return nullptr;
+        if(mem_space_upper == "HIP") {
+#ifdef HIOP_USE_HIP
+          return new hiop::hiopVectorHip(glob_n, col_part, comm);
+#else //ifdef HIOP_USE_HIP
+          assert(false && "requested memory space not available because HiOp was not"
+                "built with HIP support");
+          return new hiop::hiopVectorPar(glob_n, col_part, comm);
+#endif //ifdef HIOP_USE_HIP
+        } else {
+          assert(false && "to be implemented");
+          return nullptr;
+        }
       }
     }
   }
 }
-
 
 /**
  * @brief Method to create local int vector.
@@ -227,8 +240,18 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const ExecSpaceInfo& hi,
         return new hiop::hiopVectorIntSeq(n);
 #endif //ifdef HIOP_USE_CUDA
       } else {
-        assert(false && "to be implemented");
-        return nullptr;
+        if(ms == "HIP") {
+#ifdef HIOP_USE_HIP
+          return new hiop::hiopVectorIntHip(n, ms);
+#else //ifdef HIOP_USE_HIP
+          assert(false && "requested memory space not available because HiOp was not"
+                "built with HIP support");
+          return new hiop::hiopVectorIntSeq(n);
+#endif //ifdef HIOP_USE_CUDA
+        } else {
+          assert(false && "to be implemented");
+          return nullptr;
+        }
       }
     }
   }
