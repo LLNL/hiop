@@ -238,6 +238,23 @@ $(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initi
 \noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
 \medskip
 
+\warningcp{When KKTLinsys is `full' (unsymmetric)}: only cusolver-lu, strumpack, and pardiso are available (and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse').
+
+\warningcp{For KKTLinsys `xycyd' and `xdycyd'  (symmetric indefinite)}: 
+\begin{itemize}
+  \item `cpu' compute mode: ma57, pardiso, strumpack, and ginko are available and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
+  \item `hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
+  \item `gpu' compute mode: not supported with the above values for `KKTLinsys'.
+  \item For KKTLinsys `condensed' and `normal' (symmetric positive definite system): under `cpu' compute mode only ma57 is supported (not efficient, use only for debugging); `hybrid' compute mode, cusolve-chol is supported and will be selected under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'; `gpu' compute mode: work in progress.
+\end{itemize}
+
+\warningcp{For KKTLinsys `condensed' and `normal' (symmetric positive definite system)}: 
+\begin{itemize}
+  \item `cpu' compute mode: only ma57 is supported (not efficient, use only for debugging).
+  \item `hybrid' compute mode: cusolve-chol is supported and will be selected under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
+  \item `gpu' compute mode: work in progress.
+\end{itemize}
+
 \noindent \textbf{ir\_inner\_cusolver\_maxit}: FGMRES maximum number of iterations. Integer values in $[0, 1000]$. Default value: $50$.
 \medskip
 
@@ -284,8 +301,8 @@ $(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initi
 \item ``symamd-eigen'' (default): based on EIGEN implementation of approx. min. degree (AMD) orderings in its symmetric form
 \item ``symamd-cuda '': based on CUDA implementation of AMD orderings in its symmetric form
 \item ``symrcm '': based on CUDA implementation of reverse Cuthill-McKee orderings in its symmetric form
-\item ``amd-ssparse '': based on AMD from Suite Sparse library
-\item ``colamd-ssparse '': based on column AMD from Suite Sparse library
+\item ``amd-ssparse '': symmetric approximate minimum degree (AMD) from Suite Sparse library
+\item ``colamd-ssparse '': column approximate minimum degree (COLAMD) from Suite Sparse library
 \end{itemize}
 \medskip
 

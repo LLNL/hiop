@@ -849,12 +849,11 @@ void hiopOptionsNLP::register_options()
   //     - 'hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this
   //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
   //     - 'gpu' compute mode: not supported with the above values for 'KKTLinsys'
-  // - For KKTLinsys 'condensed' (symmetric positive definite system), under
+  // - For KKTLinsys 'condensed' and `normal` (symmetric positive definite system), under
   //     - 'cpu' compute mode only ma57 is supported (not efficient, use only for debugging)
   //     - 'hybrid' compute mode, cusolve-chol is supported and will be selected under 'auto' or
   //     incompatible/unsupported value for 'linear_solver_sparse'.
   //     - 'gpu' compute mode: work in progress
-  // - TODO: normal equations
 
   {
     vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo", "cusolver-chol"};
@@ -899,6 +898,8 @@ void hiopOptionsNLP::register_options()
   // (Host execution)
   // - symamd-eigen: use sym. approx. min. degree algorithm from EIGEN package (default, Host execution)
   // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
+  // - amd-ssparse: symmetric approximate minimum degree (AMD) from Suite Sparse library.
+  // - colamd-ssparse: column approximate minimum degree (COLAMD) from Suite Sparse library.
   {
     vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm", "amd-ssparse", "colamd-ssparse"};
     auto default_value = range[1];
