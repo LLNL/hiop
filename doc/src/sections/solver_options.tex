@@ -146,9 +146,6 @@ Double values in $[10^{-14},0.1]$. Default value: $10^{-6}$.
 \noindent \textbf{recalc\_lsq\_duals\_tol}: threshold for inf-norm under which the LSQ computation of duals is used. If the inf-norm of the duals of the equality constraints is larger than the value of this options, these duals are set to zero. This options requires \texttt{duals\_update\_type} to be ``lsq'' (the option is ignored otherwise). Double values in $[0,10^{10}]$. Default value: $10^{-6}$.
 \medskip
 
-\noindent \textbf{duals\_update\_type}: string option specifying the type of update of the multipliers of the eq. constraints after each iteration. Possible values are ``lsq'' (update based on a LSQ solve) and ``linear'' (Newton update based on the dual steplength. When \texttt{Hessian} is ``quasinewton\_approx'' the default value for this options is ``lsq''. When \texttt{Hessian} is ``analytical\_exact'' the default value is ``linear''.
-\medskip
-
 
 
 \subsubsection{Feasibility restoration}
@@ -215,12 +212,6 @@ $(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initi
 \medskip
 
 \noindent \textbf{kappa\_w\_plus\_bar}: factor to increase perturbation when it did not provide correct inertia correction (first iteration when scale not known). Double values in $[1, 10^{40}]$. Default value: $100$.
-\medskip
-
-\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
-\medskip
-
-\noindent \textbf{delta\_w\_min\_bar}: smallest perturbation of the Hessian block for inertia correction. Double values in $[0,1000]$. Default value: $10^{-20}$. 
 \medskip
 
 \noindent \textbf{regularization\_method}: whether randomized method is used to compute regularizations.
@@ -349,10 +340,6 @@ The last five options are available only with option \texttt{Hessian} setting to
 \item ``um'': returns the solutions pointers allocated by Umpire's unified memory, known as ``UM''. Only available when \textbf{mem\_space} is set to `um'.
 \end{itemize}
 \medskip
-
-
-
-
 
 
 
