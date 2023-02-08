@@ -236,6 +236,7 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "ginkgo");
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    nlp.options->SetIntegerValue("ir_outer_maxit", 0);
     if (use_ginkgo_cuda) {
         nlp.options->SetStringValue("ginkgo_exec", "cuda");
     } else if (use_ginkgo_hip) {
