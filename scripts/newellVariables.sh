@@ -39,8 +39,8 @@ module load cub-1.16.0-gcc-8.5.0-p3cnthb
 module load diffutils-3.8-gcc-8.5.0-ppyuisg
 # gdbm@1.19%gcc@8.5.0 arch=linux-centos8-power9le
 module load gdbm-1.19-gcc-8.5.0-unfo3x4
-# ginkgo@glu_experimental%gcc@8.5.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=70 arch=linux-centos8-power9le
-module load ginkgo-glu_experimental-gcc-8.5.0-tq3ravg
+# ginkgo@1.5.0.glu_experimental%gcc@8.5.0+cuda~develtools~full_optimizations~hwloc~ipo~mpi~oneapi+openmp~rocm+shared build_system=cmake build_type=Debug cuda_arch=70 arch=linux-centos8-power9le
+module load ginkgo-1.5.0.glu_experimental-gcc-8.5.0-p3aodax
 # gmp@6.2.1%gcc@8.5.0 libs=shared,static arch=linux-centos8-power9le
 module load gmp-6.2.1-gcc-8.5.0-xlcuuht
 # gnuconfig@2021-08-14%gcc@8.5.0 arch=linux-centos8-power9le
