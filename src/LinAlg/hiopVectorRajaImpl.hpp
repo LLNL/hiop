@@ -714,26 +714,26 @@ void hiopVectorRaja<MEM, POL>::startingAtCopyToStartingAt(index_type start_idx_i
   assert(n_local_==n_ && "only for local/non-distributed vectors");
 #endif  
 
-  hiopVectorRaja& dest = dynamic_cast<hiopVectorRaja<MEM, POL>&>(destination);
+  hiopVectorRaja& dest_raja = dynamic_cast<hiopVectorRaja<MEM, POL>&>(dest);
 
   assert(start_idx_in_src >= 0 && start_idx_in_src <= this->n_local_);
-  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest.n_local_);
+  assert(start_idx_dest   >= 0 && start_idx_dest   <= dest_raja.n_local_);
 
 #ifndef NDEBUG  
-  if(start_idx_dest==dest.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
+  if(start_idx_dest==dest_raja.n_local_ || start_idx_in_src==this->n_local_) assert((num_elems==-1 || num_elems==0));
 #endif
 
   if(num_elems<0)
   {
-    num_elems = std::min(this->n_local_ - start_idx_in_src, dest.n_local_ - start_idx_dest);
+    num_elems = std::min(this->n_local_ - start_idx_in_src, dest_raja.n_local_ - start_idx_dest);
   } 
   else
   {
     assert(num_elems+start_idx_in_src <= this->n_local_);
-    assert(num_elems+start_idx_dest   <= dest.n_local_);
+    assert(num_elems+start_idx_dest   <= dest_raja.n_local_);
     //make sure everything stays within bounds (in release)
     num_elems = std::min(num_elems, (int)this->n_local_-start_idx_in_src);
-    num_elems = std::min(num_elems, (int)dest.n_local_-start_idx_dest);
+    num_elems = std::min(num_elems, (int)dest_raja.n_local_-start_idx_dest);
   }
 
   if(num_elems == 0)
@@ -741,7 +741,7 @@ void hiopVectorRaja<MEM, POL>::startingAtCopyToStartingAt(index_type start_idx_i
 
   //rm.copy(dest.data_dev_ + start_idx_dest, this->data_dev_ + start_idx_in_src, num_elems*sizeof(double));
   //TODO: fix pointer arithmetic on host
-  dest.exec_space_.copy(dest.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, exec_space_);
+  dest_raja.exec_space_.copy(dest_raja.data_dev_+start_idx_dest, data_dev_+start_idx_in_src, num_elems, exec_space_);
 }
 
 template<class MEM, class POL>
