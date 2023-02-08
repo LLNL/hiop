@@ -86,7 +86,7 @@ EOD
   esac
 done
 
-set -xv
+# set -xv
 
 # If MY_CLUSTER is not set by user, try to discover it from environment
 if [[ ! -v MY_CLUSTER ]]
