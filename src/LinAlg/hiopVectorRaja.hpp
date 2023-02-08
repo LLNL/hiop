@@ -148,7 +148,7 @@ public:
   /* Copy 'this' to v starting at start_index in 'v'. */
   virtual void copyToStarting(hiopVector& vec, int start_index_in_dest) const;
   virtual void copyToStartingAt_w_pattern(hiopVector& vec,
-                                          int start_index_in_dest,
+                                          index_type start_index_in_dest,
                                           const hiopVector& ix) const;
 
   /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`

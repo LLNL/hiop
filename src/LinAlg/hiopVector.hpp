@@ -295,7 +295,7 @@ public:
    */
   /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
   virtual void copyToStartingAt_w_pattern(hiopVector& vec,
-                                          int start_index_in_dest,
+                                          index_type start_index_in_dest,
                                           const hiopVector& ix) const = 0;
 
   /**

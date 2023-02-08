@@ -103,7 +103,7 @@ public:
   virtual void copyToStarting(int start_index, hiopVector& dst) const;
   virtual void copyToStarting(hiopVector& vec, int start_index_in_dest) const;
   virtual void copyToStartingAt_w_pattern(hiopVector& vec,
-                                          int start_index_in_dest,
+                                          index_type start_index_in_dest,
                                           const hiopVector& ix) const;
 
   virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
@@ -132,7 +132,7 @@ public:
   virtual double infnorm() const;
   virtual double infnorm_local() const;
   virtual double onenorm() const;
-  virtual double onenorm_local() const; 
+  virtual double onenorm_local() const;
   virtual void componentMult( const hiopVector& v );
   virtual void componentDiv ( const hiopVector& v );
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
@@ -145,37 +145,19 @@ public:
   virtual void component_sqrt();
 
   virtual void scale( double alpha );
-  /// @brief this += alpha * x
   virtual void axpy  ( double alpha, const hiopVector& x );
-  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
   virtual void axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select);
-
-  /**
-   * @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
-   * 
-   * @param alpha scaling factor 
-   * @param x vector of doubles to be axpy-ed to this (size equal to size of i and less than or equal to size of this)
-   * @param i vector of indexes in this to which the axpy operation is performed (size equal to size of x and less than 
-   * or equal to size of this)
-   *
-   * @pre The entries of i must be valid (zero-based) indexes in this
-   *
-   */
   virtual void axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i);
-  
-  /// @brief this += alpha * x * z
   virtual void axzpy (double alpha, const hiopVector& xvec, const hiopVector& zvec);
-  /// @brief this += alpha * x / z
   virtual void axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec);
   virtual void axdzpy_w_pattern(double alpha,
                                 const hiopVector& xvec,
                                 const hiopVector& zvec,
-                                const hiopVector& select); 
-  /// @brief Add c to the elements of this
+                                const hiopVector& select);
   virtual void addConstant(double c);
   virtual void addConstant_w_patternSelect(double c, const hiopVector& select);
   virtual double min() const;
-  virtual double min_w_pattern(const hiopVector& select) const;  
+  virtual double min_w_pattern(const hiopVector& select) const;
   virtual void min(double& minval, int& index) const;
   virtual void negate();
   virtual void invert();
@@ -232,7 +214,7 @@ public:
   virtual inline const double* local_data_host_const() const { return local_data_const(); }
  
   virtual size_type numOfElemsLessThan(const double &val) const;
-  virtual size_type numOfElemsAbsLessThan(const double &val) const;    
+  virtual size_type numOfElemsAbsLessThan(const double &val) const;
 
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
