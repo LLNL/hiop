@@ -383,9 +383,9 @@ void hiopVectorHip::copy_to_two_vec_w_pattern(hiopVector& c,
 
 /// @brief Copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
 void hiopVectorHip::startingAtCopyToStartingAt(index_type start_idx_in_src,
-                                                hiopVector& dest, 
-                                                index_type start_idx_dest,
-                                                size_type num_elems  /* = -1 */) const
+                                               hiopVector& dest, 
+                                               index_type start_idx_dest,
+                                               size_type num_elems  /* = -1 */) const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
