@@ -296,28 +296,6 @@ void hiopVectorRaja<MEM, POL>::copyFrom(const double* local_array)
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src.
 template<class MEM, class POL> 
-void hiopVectorRaja<MEM, POL>::copy_from(const hiopVector& vec, const hiopVectorInt& index_in_src)
-{
-  const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
-  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(index_in_src);
-  size_type nv = v.get_local_size();
-
-  assert(indexes.size() == n_local_);
-  
-  double* dd = data_dev_;
-  double* vd = v.data_dev_;
-  index_type* id = const_cast<index_type*>(indexes.local_data_const());
-
-  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      assert(id[i]<nv);
-      dd[i] = vd[id[i]];
-    });
-}
-
-/// @brief Copy from vec the elements specified by the indices in index_in_src.
-template<class MEM, class POL> 
 void hiopVectorRaja<MEM, POL>::copy_from_w_pattern(const hiopVector& vec, const hiopVector& select)
 {
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
@@ -335,25 +313,6 @@ void hiopVectorRaja<MEM, POL>::copy_from_w_pattern(const hiopVector& vec, const 
        if(id[i] == one) {
          dd[i] = vd[i];
        }      
-    });
-}
-
-/// @brief Copy from vec the elements specified by the indices in index_in_src
-template<class MEM, class POL> 
-void hiopVectorRaja<MEM, POL>::copy_from(const double* vec, const hiopVectorInt& index_in_src)
-{
-  const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(index_in_src);
-  assert(indexes.size() == n_local_);
-  
-  assert(vec);
-  double* dd = data_dev_;
-  double* vd = const_cast<double*>(vec);
-  index_type* id = const_cast<index_type*>(indexes.local_data_const());
-
-  RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      dd[i] = vd[id[i]];
     });
 }
 
@@ -413,7 +372,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const double* vv, const hiopVec
  * @pre `this` is not distributed
  * @pre `v` should be allocated in the memory space/backend of `this`
  *
- * @warning Method casts away const from the `local_array`.
+ * @warning Method casts away const from the `v`.
  */
 template<class MEM, class POL>
 void hiopVectorRaja<MEM, POL>::copyFromStarting(int start_index_in_this, const double* v, int nv)
@@ -467,7 +426,7 @@ void hiopVectorRaja<MEM, POL>::copyFromStarting(int start_index, const hiopVecto
  * @pre `this` is not distributed
  * @pre `v` should be allocated in the memory space/backend of `this`
  *
- * @warning Method casts away const from the `local_array`.
+ * @warning Method casts away const from the `v`.
  */
 template<class MEM, class POL>
 void hiopVectorRaja<MEM, POL>::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
@@ -547,7 +506,7 @@ void hiopVectorRaja<MEM, POL>::copyToStarting(int start_index, hiopVector& dst) 
 }
 
 /**
- * @brief Copy elements of `this` vector to `vec` starting at `start_index`.
+ * @brief Copy elements of `this` vector to `vec` starting at `start_index_in_dest`.
  * 
  * @param[out] vec - a vector where to copy elements of `this`
  * @param[in] start_index_in_dest - position in `vec` where to copy
@@ -727,26 +686,28 @@ void hiopVectorRaja<MEM, POL>::copy_to_two_vec_w_pattern(hiopVector& c,
 }
 
 /**
- * @brief Copy elements of `this` vector to `destination` with offsets.
+ * @brief Copy elements of `this` vector to `dest` with offsets.
  * 
- * Copy `this` (source) starting at `start_idx_in_src` to `destination` 
+ * Copy `this` (source) starting at `start_idx_in_src` to `dest` 
  * starting at index 'int start_idx_dest'. If num_elems>=0, 'num_elems' will be copied; 
  * 
- * @param[out] vec - a vector where to copy elements of `this`
- * @param[in] start_idx_in_src - position in `vec` where to copy
+ * @param[in] start_idx_in_src - position in `this` from where to copy
+ * @param[out] dest - destination vector to where to copy vector data
+ * @param[in] start_idx_dest - position in `dest` to where to copy
+ * @param[in] num_elems - number of elements to copy
  * 
  * @pre start_idx_in_src <= n_local_
- * @pre start_idx_dest   <= destination.n_local_
- * @pre `this` and `destination` are not distributed
+ * @pre start_idx_dest   <= dest.n_local_
+ * @pre `this` and `dest` are not distributed
  * @post If num_elems >= 0, `num_elems` will be copied
  * @post If num_elems < 0, elements will be copied till the end of
- * either source (`this`) or `destination` is reached
+ * either source (`this`) or `dest` is reached
  */
 template<class MEM, class POL>
-void hiopVectorRaja<MEM, POL>::startingAtCopyToStartingAt(int start_idx_in_src, 
-                                                          hiopVector& destination, 
-                                                          int start_idx_dest, 
-                                                          int num_elems /* = -1 */) const
+void hiopVectorRaja<MEM, POL>::startingAtCopyToStartingAt(index_type start_idx_in_src,
+                                                          hiopVector& dest,
+                                                          index_type start_idx_dest,
+                                                          size_type num_elems /* = -1 */) const
 {
 
 #ifdef HIOP_DEEPCHECKS
@@ -885,7 +846,7 @@ double hiopVectorRaja<MEM, POL>::twonorm() const
  * @todo Consider implementing with BLAS call (<D>DOT).
  */
 template<class MEM, class POL>
-double hiopVectorRaja<MEM, POL>::dotProductWith( const hiopVector& vec) const
+double hiopVectorRaja<MEM, POL>::dotProductWith(const hiopVector& vec) const
 {
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
   assert(n_local_ == v.n_local_);
@@ -1166,7 +1127,7 @@ void hiopVectorRaja<MEM, POL>::component_abs ()
 }
 
 /**
- * @brief Set each component to its absolute value
+ * @brief Apply sign function to each component
  */
 template<class MEM, class POL>
 void hiopVectorRaja<MEM, POL>::component_sgn ()
@@ -1560,7 +1521,7 @@ double hiopVectorRaja<MEM, POL>::sum_local() const
 }
 
 /**
- * @brief Sum all selected log(this[i])
+ * @brief adds the gradient of the log barrier, namely this[i]=this[i]+alpha*1/select(x[i]) 
  * 
  * @pre `this`, `xvec` and `select` have same partitioning.
  * @pre xvec[i] != 0 forall i
@@ -1904,9 +1865,9 @@ bool hiopVectorRaja<MEM, POL>::matchesPattern(const hiopVector& pattern)
  * @post `select` is not modified
  */
 template<class MEM, class POL>
-int hiopVectorRaja<MEM, POL>::allPositive_w_patternSelect(const hiopVector& wvec)
+int hiopVectorRaja<MEM, POL>::allPositive_w_patternSelect(const hiopVector& select)
 {
-  const hiopVectorRaja& w = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(wvec);
+  const hiopVectorRaja& w = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(select);
 
 #ifdef HIOP_DEEPCHECKS
   assert(w.n_local_ == n_local_);
