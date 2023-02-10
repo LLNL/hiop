@@ -25,8 +25,8 @@ variables:
 
 .incline:
   variables:
-    SLURM_Q: incline
-    MY_CLUSTER: incline
+    SLURM_Q: "incline"
+    MY_CLUSTER: "incline"
     SLURM_ARGS: --exclusive
 
 .pnnl_build: 
@@ -79,13 +79,11 @@ build_on_marianas:
   extends:
     - .pnnl_build
     - .marianas
-  variables:
 
 build_on_newell:
   extends:
     - .pnnl_build
     - .newell
-  variables:
 
 build_on_incline:
   extends:
