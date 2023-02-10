@@ -898,7 +898,7 @@ void hiopOptionsNLP::register_options()
     vector<string> range {"syncfree", "sparselib"};
 
     register_str_option("ginkgo_trisolve",
-                        "sparselib",
+                        "syncfree",
                         range,
                         "Selects the triangular solver for Ginkgo.");
   }
