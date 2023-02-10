@@ -1,11 +1,42 @@
 stages:
   - build
-  - test
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-.pnnl_script_template: &pnnl_script_definition
+.pnnl_tags: 
+  tags:
+    - k8s
+    - ikp
+    - exasgd
+    - marianas
+
+.newell:
+  variables:
+    SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
+    SLURM_ARGS: --gres=gpu:1 --exclusive
+
+.marianas:
+  variables:
+    SLURM_Q: "dl"
+    MY_CLUSTER: "marianas"
+    SLURM_ARGS: --gres=gpu:1 --exclusive
+
+.incline:
+  variables:
+    SLURM_Q: incline
+    MY_CLUSTER: incline
+    SLURM_ARGS: --exclusive
+
+.pnnl_build: 
+  extends:
+    - .pnnl_tags
+  variables:
+    CTEST_CMD: 'ctest --output-on-failure'
+    TIMELIMIT: '1:00:00'
+  stage: build
+  needs: []
   script:
     - |
       #
@@ -43,55 +74,29 @@ variables:
       echo "finished batch job: $res"
       exit $res
 
-.pnnl_tags_template: &pnnl_tags_definition
-  tags:
-    - k8s
-    - ikp
-    - exasgd
-    - marianas
-
 # For PNNL CI
 build_on_marianas:
-  stage: default_build
+  extends:
+    - .pnnl_build
+    - .marianas
   variables:
-    SLURM_Q: "dl"
-    MY_CLUSTER: "marianas"
-    TIMELIMIT: '1:30:00'
-    SLURM_ARGS: --gres=gpu:1 --exclusive
-    CTEST_CMD: 'ctest -VV'
-  <<: *pnnl_tags_definition
-  <<: *pnnl_script_definition
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_newell:
-  allow_failure: false 
-  stage: default_build
+  extends:
+    - .pnnl_build
+    - .newell
   variables:
-    SLURM_Q: "newell_shared"
-    MY_CLUSTER: "newell"
-    TIMELIMIT: '1:00:00'
-    SLURM_ARGS: --gres=gpu:1 --exclusive
-  <<: *pnnl_tags_definition
-  <<: *pnnl_script_definition
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 build_on_incline:
+  extends:
+    - .pnnl_build
+    - .incline
   allow_failure: true
-  stage: default_build
-  variables:
-    SLURM_Q: incline
-    MY_CLUSTER: incline
-    TIMELIMIT: '1:00:00'
-    SLURM_ARGS: --exclusive
-    BUILD_SCRIPT_ARGS: --build-only
-  <<: *pnnl_tags_definition
-  <<: *pnnl_script_definition
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'
 
 pnnl_cleanup:
+  needs: []
+  extends:
+    - .pnnl_tags
   stage: .pre
   variables:
     GIT_STRATEGY: none
@@ -102,6 +107,3 @@ pnnl_cleanup:
     export WORKDIR="$HOME/gitlab/"
     find $WORKDIR -type d -mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
     ls -hal $WORKDIR
-  <<: *pnnl_tags_definition
-  rules:
-    - if: '$CI_PROJECT_ROOT_NAMESPACE == "exasgd"'

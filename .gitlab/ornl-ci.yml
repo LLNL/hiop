@@ -6,12 +6,16 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 # Environment variables shared between scripts for all ORNL CI stages
-.ornl_environment_template: &ornl_environment_variables
+.ornl_environment: 
   variables:
     SCHEDULER_PARAMETERS: "-P CSC359 -nnodes 1 -W 30"
     WORKDIR: /gpfs/wolf/proj-shared/csc359/ci/${CI_PIPELINE_ID}
     
-.ornl_test_script_template: &ornl_test_script_definition
+.ornl_test: 
+  stage: test
+  variables:
+    GIT_STRATEGY: none
+  extends: .ornl_environment
   script:
     - |
       set -xv
@@ -24,7 +28,9 @@ variables:
       cd "$WORKDIR/.."
       rm -rf "$WORKDIR"
 
-.ornl_script_template: &ornl_script_definition
+.ornl_build: 
+  stage: build
+  extends: .ornl_environment
   script:
     - |
       # Don't clean up this working directory - we need some of these files for
@@ -35,26 +41,13 @@ variables:
       cd "$WORKDIR"
       MY_CLUSTER="ascent" ./BUILD.sh --build-only || exit 1
 
-# For Ascent CI
 build_on_login_node:
-  stage: build
+  extends: .ornl_build
   tags:
     - nobatch
-  rules:
-    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
-  <<: *ornl_script_definition
-  <<: *ornl_environment_variables
 
 test_on_compute_node:
-  stage: test
-  variables:
-    GIT_STRATEGY: none
-  dependencies:
-    - build_on_login_node
+  extends: .ornl_test
+  needs: ['build_on_login_node']
   tags:
     - batch
-  rules:
-    - if: '$CI_PROJECT_PATH == "ecpcitest/exasgd/hiop"'
-  <<: *ornl_test_script_definition
-  <<: *ornl_environment_variables
-# ---
