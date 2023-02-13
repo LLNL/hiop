@@ -23,8 +23,6 @@ variables:
 
 .llnl_script_template: 
   stage: build
-  variables:
-    GIT_STRATEGY: none
   script:
     - |
       # Don't clean up this working directory - we need some of these files for
@@ -60,6 +58,8 @@ variables:
 
 .llnl_test_jsrun_script: 
   stage: test
+  variables:
+    GIT_STRATEGY: none
   script:
     - |
       echo "CI_PIPELINE_ID = ${CI_PIPELINE_ID}"
