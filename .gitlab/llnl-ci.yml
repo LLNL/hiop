@@ -5,10 +5,6 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-# I think this rule is unecessary, as only LLNL pipelines will use this file anyway...
-rules:
-  - if: '$LC_ZONE == "CZ"'
-
 .quartz: 
   tags:
     - shell
