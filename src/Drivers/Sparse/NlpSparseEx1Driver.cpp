@@ -239,7 +239,6 @@ int main(int argc, char **argv)
     nlp.options->SetIntegerValue("ir_outer_maxit", 0);
     if (use_ginkgo_cuda) {
         nlp.options->SetStringValue("ginkgo_exec", "cuda");
-        nlp.options->SetIntegerValue("verbosity_level", 7);
     } else if (use_ginkgo_hip) {
         nlp.options->SetStringValue("ginkgo_exec", "hip");
     } else {
