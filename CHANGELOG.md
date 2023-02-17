@@ -2,11 +2,11 @@
 All notable changes to HiOp are documented in this file.
 
 ## Version 0.7.2: Execution spaces abstractions and misc fixes
-This release hosts a series of comprehensive internal developments and software re-engineering to improve the portability and performance on accelerators/GPU platforms.
+This release hosts a series of comprehensive internal developments and software re-engineering to improve the portability and performance on accelerators/GPU platforms. No changes to the user interface permeated under this release.
 
 ### Notable new features
 
-A new "execution space" abstraction is introduced to allow multiple "backends" to run concurrently, e.g., Cuda/Hip linear algebra and Raja linear algebra. The proposed design differentiates between memory backend and execution policies to allow using Raja with Umpire-managed memory, Raja with Cuda- or Hip-managed memory, Raja with std memory. 
+A new execution space abstraction is introduced to allow multiple hardware backends to run concurrently. The proposed design differentiates between "memory backend" and "execution policies" to allow using RAJA with Umpire-managed memory, RAJA with Cuda- or Hip-managed memory, RAJA with std memory, Cuda/Hip kernels with Cuda-/Hip- or Umpire-managed memory, etc.
 
 * Execution spaces: support for memory backends and execution policies by @cnpetra in https://github.com/LLNL/hiop/pull/543
 * Build: Cuda without raja  by @cnpetra in https://github.com/LLNL/hiop/pull/579
@@ -15,15 +15,15 @@ A new "execution space" abstraction is introduced to allow multiple "backends" t
 * RAJA Vector int with ExecSpace by @cnpetra in https://github.com/LLNL/hiop/pull/583
 * Instrumentation of host vectors with execution spaces by @cnpetra in https://github.com/LLNL/hiop/pull/584
 * Remove copy from/to device methods in vector classes by @cnpetra in https://github.com/LLNL/hiop/pull/587
+* Add support for Raja with OpenMP into LLNL CI by @nychiang in https://github.com/LLNL/hiop/pull/566
  
 New vector classes using vendor-provided API were introduced and documentation was updated/improved
 * Development of `hiopVectorCuda` by @nychiang in https://github.com/LLNL/hiop/pull/572
 * Implementation of `hiopVectorHip` by @nychiang in https://github.com/LLNL/hiop/pull/590
 * Update user manual by @nychiang in https://github.com/LLNL/hiop/pull/591
 * Update the code comments in `hiopVector` classes by @nychiang in https://github.com/LLNL/hiop/pull/592
-* 
+
 ### Bug fixes
-* Add support of Raja with OpenMP into Quartz CI by @nychiang in https://github.com/LLNL/hiop/pull/566
 * Refine the computation in normal equation system by @nychiang in https://github.com/LLNL/hiop/pull/530
 * Fix static culibos issue #567 by @nychiang in https://github.com/LLNL/hiop/pull/568
 * Fix segfault, remove nonsymmetric ginkgo solver by @fritzgoebel in https://github.com/LLNL/hiop/pull/548
