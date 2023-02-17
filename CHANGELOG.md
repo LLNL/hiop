@@ -1,6 +1,41 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 0.7.2: Execution spaces abstractions and misc fixes
+This release hosts a series of comprehensive internal developments and software re-engineering to improve the portability and performance on accelerators/GPU platforms.
+
+### Notable new features
+
+A new "execution space" abstraction is introduced to allow multiple "backends" to run concurrently, e.g., Cuda/Hip linear algebra and Raja linear algebra. The proposed design differentiates between memory backend and execution policies to allow using Raja with Umpire-managed memory, Raja with Cuda- or Hip-managed memory, Raja with std memory. 
+
+* Execution spaces: support for memory backends and execution policies by @cnpetra in https://github.com/LLNL/hiop/pull/543
+* Build: Cuda without raja  by @cnpetra in https://github.com/LLNL/hiop/pull/579
+* Update of RAJA-based dense matrix to support runtime execution spaces by @cnpetra in https://github.com/LLNL/hiop/pull/580
+* Reorganization of device namespace  by @cnpetra in https://github.com/LLNL/hiop/pull/582
+* RAJA Vector int with ExecSpace by @cnpetra in https://github.com/LLNL/hiop/pull/583
+* Instrumentation of host vectors with execution spaces by @cnpetra in https://github.com/LLNL/hiop/pull/584
+* Remove copy from/to device methods in vector classes by @cnpetra in https://github.com/LLNL/hiop/pull/587
+ 
+New vector classes using vendor-provided API were introduced and documentation was updated/improved
+* Development of `hiopVectorCuda` by @nychiang in https://github.com/LLNL/hiop/pull/572
+* Implementation of `hiopVectorHip` by @nychiang in https://github.com/LLNL/hiop/pull/590
+* Update user manual by @nychiang in https://github.com/LLNL/hiop/pull/591
+* Update the code comments in `hiopVector` classes by @nychiang in https://github.com/LLNL/hiop/pull/592
+* 
+### Bug fixes
+* Add support of Raja with OpenMP into Quartz CI by @nychiang in https://github.com/LLNL/hiop/pull/566
+* Refine the computation in normal equation system by @nychiang in https://github.com/LLNL/hiop/pull/530
+* Fix static culibos issue #567 by @nychiang in https://github.com/LLNL/hiop/pull/568
+* Fix segfault, remove nonsymmetric ginkgo solver by @fritzgoebel in https://github.com/LLNL/hiop/pull/548
+* Calculate the inverse objective scale correctly. by @tepperly in https://github.com/LLNL/hiop/pull/570
+* Fix `hiopVectorRajaPar::copyToStartingAt_w_pattern` by @nychiang in https://github.com/LLNL/hiop/pull/569
+* Gitlab pipeline refactor by @CameronRutherford in https://github.com/LLNL/hiop/pull/597
+
+### New Contributors
+* @tepperly made their first contribution in https://github.com/LLNL/hiop/pull/570
+
+**Full Changelog**: https://github.com/LLNL/hiop/compare/v0.7.1...v0.7.2
+
 ## Version 0.7.1: Miscellaneous fixes to build system
 This minor release fixes a couple of issues found in the build system after the major release 0.7 of HiOp. 
 
