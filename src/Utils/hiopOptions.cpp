@@ -904,30 +904,6 @@ void hiopOptionsNLP::register_options()
   }
 
 
-  // Ginkgo iterative refinement options
-  {
-    register_int_option("ir_inner_ginkgo_restart",
-                        20,
-                        1,
-                        100,
-                        "GMRES restart value (default is 20). ");
-
-    register_num_option("ir_inner_ginkgo_tol",
-                        1e-12,
-                        1e-16,
-                        1e-1,
-                        "GMRES tolerance (default is 1e-12). ");
-
-    // 0 iterations means no iterative refinement, making the restart and tolerance options irrelevant.
-    register_int_option("ir_inner_ginkgo_maxit",
-                        0,
-                        0,
-                        1000,
-                        "GMRES maximum number of iterations (default is 0). ");
-    
-  }
-
-
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
@@ -974,24 +950,24 @@ void hiopOptionsNLP::register_options()
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
 
-
-    register_int_option("ir_inner_cusolver_restart",
+    register_int_option("ir_inner_restart",
                         20,
                         1,
                         100,
-                        "FGMRES restart value (default is 20). ");
+                        "(F)GMRES restart value (default is 20). ");
 
-    register_num_option("ir_inner_cusolver_tol",
+    register_num_option("ir_inner_tol",
                         1e-12,
                         1e-16,
                         1e-1,
-                        "FGMRES tolerance (default is 1e-12). ");
+                        "(F)GMRES tolerance (default is 1e-12). ");
 
-    register_int_option("ir_inner_cusolver_maxit",
+    register_int_option("ir_inner_maxit",
                         50,
                         0,
                         1000,
-                        "FGMRES maximum number of iterations (default is 50). ");
+                        "(F)GMRES maximum number of iterations (default is 50). ");
+
 {
     vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
