@@ -23,6 +23,8 @@ New vector classes using vendor-provided API were introduced and documentation w
 * Update user manual by @nychiang in https://github.com/LLNL/hiop/pull/591
 * Update the code comments in `hiopVector` classes by @nychiang in https://github.com/LLNL/hiop/pull/592
 
+Refinement of triangular solver implementation for Ginkgo by @fritzgoebel in https://github.com/LLNL/hiop/pull/585
+
 ### Bug fixes
 * Refine the computation in normal equation system by @nychiang in https://github.com/LLNL/hiop/pull/530
 * Fix static culibos issue #567 by @nychiang in https://github.com/LLNL/hiop/pull/568
