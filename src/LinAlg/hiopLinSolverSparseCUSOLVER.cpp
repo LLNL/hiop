@@ -121,7 +121,7 @@ namespace hiop
       refact_ = "glu";
     }
     // by default, dont use iterative refinement
-    int maxit_test  = nlp_->options->GetInteger("ir_inner_cusolver_maxit");
+    int maxit_test  = nlp_->options->GetInteger("ir_inner_maxit");
 
     if ((maxit_test < 0) || (maxit_test > 1000)){
       nlp_->log->printf(hovWarning, 
@@ -138,7 +138,7 @@ namespace hiop
     if(use_ir_ == "yes") {
       if(refact_ == "rf") {
 
-        ir_->restart_ =  nlp_->options->GetInteger("ir_inner_cusolver_restart");
+        ir_->restart_ =  nlp_->options->GetInteger("ir_inner_restart");
 
         if ((ir_->restart_ <0) || (ir_->restart_ >100)){
           nlp_->log->printf(hovWarning, 
@@ -148,7 +148,7 @@ namespace hiop
         }
 
 
-        ir_->tol_  = nlp_->options->GetNumeric("ir_inner_cusolver_tol");
+        ir_->tol_  = nlp_->options->GetNumeric("ir_inner_tol");
         if ((ir_->tol_ <0) || (ir_->tol_ >1)){
           nlp_->log->printf(hovWarning, 
                             "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",

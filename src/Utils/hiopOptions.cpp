@@ -890,6 +890,20 @@ void hiopOptionsNLP::register_options()
                         "Selects the hardware architecture to run the Ginkgo linear solver on.");
   }
 
+ 
+  // choose triangular solver implementation in Ginkgo.
+  // - Default is 'sparselib' which uses vendor triangular solvers
+  // - 'syncfree' uses the busy waiting loop based Ginkgo implementation
+  {
+    vector<string> range {"syncfree", "sparselib"};
+
+    register_str_option("ginkgo_trisolve",
+                        "syncfree",
+                        range,
+                        "Selects the triangular solver for Ginkgo.");
+  }
+
+
   // choose sparsity permutation (to reduce nz in the factors). This option is available only when using
   // Cholesky linear solvers
   // - metis: use CUDA function csrmetisnd, which is a wrapper of METIS_NodeND; requires linking with
@@ -936,24 +950,24 @@ void hiopOptionsNLP::register_options()
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
 
-
-    register_int_option("ir_inner_cusolver_restart",
+    register_int_option("ir_inner_restart",
                         20,
                         1,
                         100,
-                        "FGMRES restart value (default is 20). ");
+                        "(F)GMRES restart value (default is 20). ");
 
-    register_num_option("ir_inner_cusolver_tol",
+    register_num_option("ir_inner_tol",
                         1e-12,
                         1e-16,
                         1e-1,
-                        "FGMRES tolerance (default is 1e-12). ");
+                        "(F)GMRES tolerance (default is 1e-12). ");
 
-    register_int_option("ir_inner_cusolver_maxit",
+    register_int_option("ir_inner_maxit",
                         50,
                         0,
                         1000,
-                        "FGMRES maximum number of iterations (default is 50). ");
+                        "(F)GMRES maximum number of iterations (default is 50). ");
+
 {
     vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
