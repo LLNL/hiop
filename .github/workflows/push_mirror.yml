@@ -1,9 +1,9 @@
-name: Mirroring
+name: Push Mirror
 
 on: [push, delete]
 
 jobs:
-  to_gitlab:
+  PNNL_GitLab:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
