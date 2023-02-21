@@ -107,9 +107,12 @@ pnnl_cleanup:
     ls -hal $WORKDIR
 
 .report-status:
+  extends:
+    - .pnnl_tags
   variables:
     STATUS_PROJECT: LLNL/hiop
     STATUS_NAME: PNNL CI
+    GIT_STRATEGY: none
   script:
     # For complete details on the GitHub API please see:
     # https://developer.github.com/v3/repos/statuses
