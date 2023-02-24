@@ -170,7 +170,7 @@ public:
    *  Returns the sizes and number of nonzeros of the sparse and dense blocks within MDS
    *
    * @param[out] nx_sparse number of sparse variables
-   * @param[out] nx_ense number of dense variables
+   * @param[out] nx_dense number of dense variables
    * @param[out] nnz_sparse_Jace number of nonzeros in the Jacobian of the equalities w.r.t. 
    *                             sparse variables 
    * @param[out] nnz_sparse_Jaci number of nonzeros in the Jacobian of the inequalities w.r.t. 
@@ -233,7 +233,7 @@ public:
    * @param[in] x array with the optimization variables or point at which to evaluate
    *              (managed by Umpire)
    * @param[in] new_x indicates whether any of the other eval functions have been evaluated 
-   *             previously (false) or not (true) at x
+   *                  previously (false) or not (true) at x
    * @param[out] gradf array with the values of the gradient (managed by Umpire) 
    */
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
