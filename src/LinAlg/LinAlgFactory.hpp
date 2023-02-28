@@ -96,7 +96,7 @@ public:
   /**
    * @brief Static method to create the default, triplet sparse matrix
    */
-  static hiopMatrixSparse* create_matrix_sparse(const std::string& mem_space,
+  static hiopMatrixSparse* create_matrix_sparse(const ExecSpaceInfo& hi,
                                                 size_type rows,
                                                 size_type cols,
                                                 size_type nnz);
@@ -119,7 +119,7 @@ public:
   /**
    * @brief Static method to create a symmetric sparse matrix
    */
-  static hiopMatrixSparse* create_matrix_sym_sparse(const std::string& mem_space,
+  static hiopMatrixSparse* create_matrix_sym_sparse(const ExecSpaceInfo& hi,
                                                     size_type size,
                                                     size_type nnz);
   
