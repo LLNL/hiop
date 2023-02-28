@@ -52,13 +52,13 @@
  *
  */
 
-#include "SparseRajaEx2.hpp"
+#include "NlpSparseRajaEx2.hpp"
 
 #include <umpire/Allocator.hpp>
 #include <umpire/ResourceManager.hpp>
 #include <RAJA/RAJA.hpp>
 
-#include <hiopMatrixRajaSparseTriplet.hpp>
+//#include <hiopMatrixRajaSparseTriplet.hpp>
 
 #include <cmath>
 #include <cstring> //for memcpy
@@ -77,18 +77,18 @@
 #include "ExecPoliciesRajaCudaImpl.hpp"
 using ex2_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_exec;
 using ex2_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaCuda>::hiop_raja_reduce;
-using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+//using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using ex2_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_exec;
 using ex2_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaHip>::hiop_raja_reduce;
-using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+//using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using ex2_raja_exec = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_exec;
 using ex2_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::hiop_raja_reduce;
-using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+//using hiopMatrixRajaSparse = hiop::hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 #endif
 
 
@@ -154,7 +154,7 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
 {
   assert(n==n_vars_);
 
-  RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(0, 3),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 3),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(i==0) {
@@ -170,7 +170,7 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
     });
 
   if(n>3) {
-    RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(3, n),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(3, n),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         xlow[i] = 0.5;
@@ -178,7 +178,7 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
       });
   }
 
-  RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(0, n),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       type[i] = hiopNonlinear;
@@ -189,8 +189,9 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
 bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons_);
+  size_type n = n_vars_;
 
-  RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(0, 2),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 2),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       if(i==0) {
@@ -203,16 +204,16 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
     });
 
   if(n>3) {
-    RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(3, m),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, 2+n-3),
       RAJA_LAMBDA(RAJA::Index_type conidx)
       {
         clow[conidx] = 1.0;
-        cupp[conidx] = 2*n;
+        cupp[conidx] = 2*n_vars_;
       });
   }
 
   if(rankdefic_ineq_) {
-    RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(m, m+1),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3, 2+n-3+1),
       RAJA_LAMBDA(RAJA::Index_type conidx)
       {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
@@ -222,7 +223,7 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
   }
 
   if(rankdefic_eq_) {
-    RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(m+rankdefic_ineq_, m+rankdefic_ineq_+1),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3+rankdefic_ineq_, m),
       RAJA_LAMBDA(RAJA::Index_type conidx)
       {
         //  4*x_1 + 2*x_2 == 10
@@ -231,7 +232,7 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
       });
   }
 
-  RAJA::forall<ex1_raja_exec>(RAJA::RangeSegment(0, m),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, m),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       type[i] = hiopInterfaceBase::hiopNonlinear;
@@ -304,16 +305,15 @@ bool SparseRajaEx2::eval_cons(const size_type& n, const size_type& m, const doub
       }
     });
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, 2+n-3),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
       cons[i] = 2*x[0] + 0.5*x[i+1];
     });
 
-
   if(rankdefic_ineq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1, n),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3, 2+n-3+1),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
@@ -322,14 +322,13 @@ bool SparseRajaEx2::eval_cons(const size_type& n, const size_type& m, const doub
   }
 
   if(rankdefic_eq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1+rankdefic_ineq_, n+rankdefic_ineq_),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3+rankdefic_ineq_, m),
       RAJA_LAMBDA(RAJA::Index_type i)
       {
         //  4*x_1 + 2*x_2 == 10
         cons[i] = 4*x[0] + 2*x[1];
       });
   }
-  assert(conidx==m);
 
   return true;
 }
@@ -353,20 +352,24 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
     {
       if(itrow==0) {
         // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        iJacS[2*itrow] = itrow;
-        jJacS[2*itrow] = 0;
-        iJacS[2*itrow+1] = itrow;
-        jJacS[2*itrow+1] = 1;
+        if(iJacS !=nullptr && jJacS != nullptr) {
+          iJacS[2*itrow] = itrow;
+          jJacS[2*itrow] = 0;
+          iJacS[2*itrow+1] = itrow;
+          jJacS[2*itrow+1] = 1;
+        }
         if(MJacS != nullptr) {
           MJacS[2*itrow] = 4.0;
           MJacS[2*itrow+1] = 2.0;
         }
       } else if(itrow==1) {
         // --- constraint 2 body ---> 2*x_1 + x_3
-        iJacS[2*itrow] = itrow;
-        jJacS[2*itrow] = 0;
-        iJacS[2*itrow+1] = itrow;
-        jJacS[2*itrow+1] = 2;
+        if(iJacS !=nullptr && jJacS != nullptr) { 
+          iJacS[2*itrow] = itrow;
+          jJacS[2*itrow] = 0;
+          iJacS[2*itrow+1] = itrow;
+          jJacS[2*itrow+1] = 2;
+        }
         if(MJacS != nullptr) {
           MJacS[2*itrow] = 2.0;
           MJacS[2*itrow+1] = 1.0;
@@ -378,26 +381,29 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
     RAJA_LAMBDA(RAJA::Index_type itrow)
     {
       // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
-      iJacS[2*itrow] = itrow;
-      jJacS[2*itrow] = 0;
-      iJacS[2*itrow+1] = itrow;
-      jJacS[2*itrow+1] = itrow+1;
+      if(iJacS !=nullptr && jJacS != nullptr) {
+        iJacS[2*itrow] = itrow;
+        jJacS[2*itrow] = 0;
+        iJacS[2*itrow+1] = itrow;
+        jJacS[2*itrow+1] = itrow+1;
+      }
       if(MJacS != nullptr) {
         MJacS[2*itrow] = 2.0;
         MJacS[2*itrow+1] = 0.5;
       }
     });
 
-
   if(rankdefic_ineq_) {
     RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1, n),
       RAJA_LAMBDA(RAJA::Index_type itrow)
       {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
-        iJacS[2*itrow] = itrow;
-        jJacS[2*itrow] = 0;
-        iJacS[2*itrow+1] = itrow;
-        jJacS[2*itrow+1] = 2;
+        if(iJacS !=nullptr && jJacS != nullptr) {
+          iJacS[2*itrow] = itrow;
+          jJacS[2*itrow] = 0;
+          iJacS[2*itrow+1] = itrow;
+          jJacS[2*itrow+1] = 2;
+        }
         if(MJacS != nullptr) {
           MJacS[2*itrow] = 4.0;
           MJacS[2*itrow+1] = 2.0;
@@ -407,13 +413,15 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
 
   if(rankdefic_eq_) {
     RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1+rankdefic_ineq_, n+rankdefic_ineq_),
-      RAJA_LAMBDA(RAJA::Index_type i)
+      RAJA_LAMBDA(RAJA::Index_type itrow)
       {
         //  4*x_1 + 2*x_2 == 10
-        iJacS[2*itrow] = itrow;
-        jJacS[2*itrow] = 0;
-        iJacS[2*itrow+1] = itrow;
-        jJacS[2*itrow+1] = 1;
+        if(iJacS !=nullptr && jJacS != nullptr) {
+          iJacS[2*itrow] = itrow;
+          jJacS[2*itrow] = 0;
+          iJacS[2*itrow+1] = itrow;
+          jJacS[2*itrow+1] = 1;
+        }
         if(MJacS != nullptr) {
           MJacS[2*itrow] = 4.0;
           MJacS[2*itrow+1] = 2.0;
@@ -440,7 +448,7 @@ bool SparseRajaEx2::eval_Hess_Lagr(const size_type& n,
     //not contribute to the Hessian of the Lagrangian
     assert(nnzHSS == n);
 
-    if(iHSS!=NULL && jHSS!=NULL) {
+    if(iHSS!=nullptr && jHSS!=nullptr) {
       RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
         RAJA_LAMBDA(RAJA::Index_type i)
         {
@@ -451,7 +459,7 @@ bool SparseRajaEx2::eval_Hess_Lagr(const size_type& n,
 
     int convex_obj = (int) convex_obj_;
     double scal_neg_obj = scal_neg_obj_;
-    if(MHSS!=NULL) {
+    if(MHSS!=nullptr) {
       RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
         RAJA_LAMBDA(RAJA::Index_type i)
         {

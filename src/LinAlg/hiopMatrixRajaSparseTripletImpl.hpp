@@ -1123,8 +1123,6 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
   assert(n_rows + rows_src_idx_st <= src.m());
   assert(n_rows + rows_dst_idx_st <= this->m());
 
-  index_type* src_row_st = src.row_starts_->idx_start_;
-
   const index_type* iRow_src = src.i_row();
   const index_type* jCol_src = src.j_col();
   const double* values_src = src.M();
@@ -1143,6 +1141,8 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
   }
   assert(src.row_starts_);
 
+  index_type* src_row_st = src.row_starts_->idx_start_;
+  
   //
   // The latest CPU code can be found in 342eb99ec16d45f57a492be1bf1e39cce73995a5
   // It is replaced by RAJA::inclusive_scan after that commit
@@ -1165,10 +1165,12 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
   umpire::Allocator hostalloc = rm.getAllocator("HOST");
 
   int *next_row_nnz = static_cast<size_type*>(hostalloc.allocate(sizeof(size_type)));
+  index_type register_row_st = row_starts_->register_row_st_;
 
   rm.copy(next_row_nnz, dst_row_st_dev+1+rows_dst_idx_st, 1*sizeof(size_type));
 
   if(next_row_nnz[0] == 0) {
+    assert(rows_dst_idx_st >= register_row_st);
     // comput nnz in each row from source
     RAJA::forall<hiop_raja_exec>(
       RAJA::RangeSegment(0, n_rows),
@@ -1179,7 +1181,8 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
         dst_row_st_dev[row_dst+1] = src_row_st[row_src+1] - src_row_st[row_src];
       }
     );
-    RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(dst_row_st_dev, n_rows+1), RAJA::operators::plus<index_type>());
+    RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(dst_row_st_dev+register_row_st, n_rows+1+rows_dst_idx_st-register_row_st), RAJA::operators::plus<index_type>());
+    row_starts_->register_row_st_ = n_rows + rows_dst_idx_st;
   }
 
   index_type* dst_row_st = row_starts_->idx_start_;
@@ -1191,7 +1194,7 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
       const index_type row_src = rows_src_idx_st + row_add;
       const index_type row_dst = rows_dst_idx_st + row_add;
       index_type k_src = src_row_st[row_src];
-      index_type k_dst = dst_row_st[row_dst];
+      index_type k_dst = dst_row_st[row_dst] - dst_row_st[rows_dst_idx_st] + dest_nnz_st;
   
       // copy from src
       while(k_src < src_row_st[row_src+1]) {
@@ -1283,7 +1286,8 @@ template<class MEMBACKEND, class RAJAEXECPOL>
 hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::
 RowStartsInfo(size_type n_rows, std::string memspace)
   : num_rows_(n_rows),
-    mem_space_(memspace)
+    mem_space_(memspace), 
+    register_row_st_{0}
 {
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator alloc = resmgr.getAllocator(mem_space_);

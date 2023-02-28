@@ -63,6 +63,10 @@
 #ifdef HIOP_USE_GINKGO
 #include "hiopLinSolverSparseGinkgo.hpp"
 #endif
+
+#ifdef HIOP_USE_GPU
+#include "hiopMatrixRajaSparseTriplet.hpp"
+#endif
 #endif
 
 namespace hiop
@@ -184,7 +188,12 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#ifndef HIOP_USE_GPU
+      auto* MsysSp = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
+      csr_writer_.writeMatToFile(*MsysSp, write_linsys_counter_, nx, neq, nineq);
+#else
+    //TODO csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#endif
     }
 
     return true;
@@ -418,14 +427,13 @@ namespace hiop
     delta_wd_ = perturb_calc_->get_curr_delta_wd();
     delta_cc_ = perturb_calc_->get_curr_delta_cc();
     delta_cd_ = perturb_calc_->get_curr_delta_cd();
-    
-    HessSp_ = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
+
+    HessSp_ = dynamic_cast<hiopMatrixSparse*>(Hess_);
+    Jac_cSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_c_);
+    Jac_dSp_ = dynamic_cast<const hiopMatrixSparse*>(Jac_d_);
+ 
     if(!HessSp_) { assert(false); return false; }
-
-    Jac_cSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c_);
     if(!Jac_cSp_) { assert(false); return false; }
-
-    Jac_dSp_ = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
     if(!Jac_dSp_) { assert(false); return false; }
 
     size_type nx = HessSp_->n(), nd=Jac_dSp_->m(), neq=Jac_cSp_->m(), nineq=Jac_dSp_->m();
@@ -436,7 +444,7 @@ namespace hiop
     auto* linSys = dynamic_cast<hiopLinSolverSymSparse*> (linSys_);
     assert(linSys);
 
-    auto* Msys = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
+    auto* Msys = dynamic_cast<hiopMatrixSparse*>(linSys->sys_matrix());
     assert(Msys);
     if(perf_report_) {
       nlp_->log->printf(hovSummary,
@@ -510,7 +518,12 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#ifndef HIOP_USE_GPU
+      auto* MsysSp = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
+      csr_writer_.writeMatToFile(*MsysSp, write_linsys_counter_, nx, neq, nineq);
+#else
+    //TODO csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#endif
     }
 
     return true;
@@ -750,13 +763,13 @@ namespace hiop
         //
         // We don't allow CPU linear solvers.
         /////////////////////////////////////////////////////////////////////////////////////////////
-        assert(false && "KKT_SPARSE_XDYcYd linsys: GPU compute mode not yet supported.");
-        assert(false == safe_mode_);
+ //       assert(false && "KKT_SPARSE_XDYcYd linsys: GPU compute mode not yet supported.");
+ //       assert(false == safe_mode_);
         assert(nullptr == linSys_);
         
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER_LU)        
-          linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
                             n,
@@ -1046,7 +1059,12 @@ namespace hiop
       write_linsys_counter_++;
     }
     if(write_linsys_counter_>=0) {
-      csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#ifndef HIOP_USE_GPU
+      auto* MsysSp = dynamic_cast<hiopMatrixSparseTriplet*>(linSys->sys_matrix());
+      csr_writer_.writeMatToFile(*MsysSp, write_linsys_counter_, nx, neq, nineq);
+#else
+    //TODO csr_writer_.writeMatToFile(*Msys, write_linsys_counter_, nx, neq, nineq);
+#endif
     }
 
     return true;

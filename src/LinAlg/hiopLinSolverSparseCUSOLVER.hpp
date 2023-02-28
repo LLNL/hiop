@@ -88,12 +88,12 @@ public:
   /** Triggers a refactorization of the matrix, if necessary.
    * Overload from base class.
    * In this case, KLU (SuiteSparse) is used to refactor*/
-  int matrixChanged();
+  virtual int matrixChanged();
 
   /** solves a linear system.
    * param 'x' is on entry the right hand side(s) of the system to be solved.
    * On exit is contains the solution(s).  */
-  bool solve(hiopVector& x_);
+  virtual bool solve(hiopVector& x_);
 
   /** Multiple rhs not supported yet */
   virtual bool
@@ -103,7 +103,7 @@ public:
     return false;
   }
 
-private:
+protected:
   //
   int m_;   // number of rows of the whole matrix
   int n_;   // number of cols of the whole matrix
@@ -204,6 +204,26 @@ private:
   void IRsetup();
 };
 
+class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER
+{
+public:  
+  hiopLinSolverSymSparseCUSOLVERGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseCUSOLVERGPU();
+
+  virtual int matrixChanged();
+  virtual bool solve(hiopVector& x_);
+
+  /** Multiple rhs not supported yet */
+  virtual bool
+  solve(hiopMatrix& /* x */)
+  {
+    assert(false && "not yet supported");
+    return false;
+  }
+
+private:
+  hiopVector* rhs_host_;
+};
 
 // Forward declaration of LU class
 class hiopLinSolverSymSparseCUSOLVERLU;
