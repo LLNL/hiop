@@ -59,31 +59,7 @@
 #include "hiopMatrixRajaSparseTriplet.hpp"
 #include "hiopVectorRaja.hpp"
 
-//#include "LinAlgFactory.hpp"
-
 #include "hiop_blasdefs.hpp"
-
-
-// //TODO:
-// // - introduce hip and cuda .cpp
-// // - Use vector deduced from this class' template parameters
-// #ifdef HIOP_USE_CUDA
-// #include <ExecPoliciesRajaCudaImpl.hpp>
-// using ExecPolicyRajaType = hiop::ExecPolicyRajaCuda;
-// using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
-// #endif
-
-// #ifdef HIOP_USE_HIP
-// #include <ExecPoliciesRajaHipImpl.hpp>
-// using ExecPolicyRajaType = hiop::ExecPolicyRajaHip;
-// using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
-// #endif
-
-// #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
-// #include <ExecPoliciesRajaOmpImpl.hpp>
-// using ExecPolicyRajaType = hiop::ExecPolicyRajaOmp;
-// using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
-// #endif
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
