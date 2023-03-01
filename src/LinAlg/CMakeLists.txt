@@ -56,23 +56,22 @@ set(hiopLinAlg_SRC
   hiopKrylovSolver.cpp
 )
 
-set(hiopLinAlg_RAJA_SRC
-  hiopMatrixRajaSparseTriplet.cpp
-)
-
 if(HIOP_USE_CUDA)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaCuda.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaCuda.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixRajaSparseTripletCuda.cpp)
 elseif(HIOP_USE_HIP)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaHip.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaHip.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixRajaSparseTripletHip.cpp)
 else()
   #raja - omp
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaOmp.cpp)
   list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaOmp.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixRajaSparseTripletOmp.cpp)
 endif()
 
 
