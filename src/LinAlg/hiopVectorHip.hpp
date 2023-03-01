@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Lawrence Livermore National Security, LLC.
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
 // LLNL-CODE-742473. All rights reserved.
 //
@@ -46,110 +46,86 @@
 // product endorsement purposes.
 
 /**
- * @file hiopVectorRaja.hpp
+ * @file hiopVectorHip.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
- * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
- * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
- * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
- *
  */
-#ifndef HIOP_VECTOR_RAJA
-#define HIOP_VECTOR_RAJA
+
+#ifndef HIOP_VECTOR_HIP
+#define HIOP_VECTOR_HIP
 
 #include <cstdio>
 #include <string>
 #include <cassert>
 #include <cstring>
-#include <random>
-
-#include <hiopMPI.hpp>
-#include "hiopVector.hpp"
-#include "hiopVectorInt.hpp"
 
 #include "ExecSpace.hpp"
 
+#include <hiopMPI.hpp>
+
+#include "hiopVector.hpp"
+
+#include <hipblas.h>
+
 namespace hiop
 {
-
-//forward declarations of the test classes that are friends to this class
+//Forward declarations
+class hiopVectorPar;
+//Forward declarations of tester classes that needs to be friends with this vector
 namespace tests
 {
-class VectorTestsRajaPar;
-class MatrixTestsRajaDense;
-class MatrixTestsRajaSparseTriplet;
-class MatrixTestsRajaSymSparseTriplet;
+class VectorTestsHip;
 }
   
-template<class MEMBACKEND, class EXECPOLICYRAJA>
-class hiopVectorRaja : public hiopVector
+/// Implementation of abstract class hiopVector using HIP API
+class hiopVectorHip : public hiopVector
 {
 public:
-  hiopVectorRaja(const size_type& glob_n, std::string mem_space, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
-  hiopVectorRaja() = delete;
-  virtual ~hiopVectorRaja();
+  hiopVectorHip(const size_type& glob_n, index_type* col_part=nullptr, MPI_Comm comm=MPI_COMM_SELF);
+  virtual ~hiopVectorHip();
 
+  /// @brief Set all elements to zero.
   virtual void setToZero();
-  virtual void setToConstant( double c );
+  /// @brief Set all elements to c
+  virtual void setToConstant(double c);
+  /// @brief Set all elements to random values uniformly distributed between `minv` and `maxv`.
   virtual void set_to_random_uniform(double minv, double maxv);
+  /// @brief Set all elements that are not zero in ix to  c, and the rest to 0
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
+
+  /// @brief Copy the elements of v
   virtual void copyFrom(const hiopVector& vec);
-  virtual void copyFrom(const double* local_array); //v should be of length at least n_local
+  virtual void copyFrom(const double* local_array);
+  /// @brief Copy from vec the elements specified by the indices in select
   virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this'
+  virtual void copyFromStarting(int start_index_in_dest, const double* v, int n);
+  /// @brief Copy v_src into 'this' starting at start_index_in_dest in 'this'. */
+  virtual void copyFromStarting(int start_index_in_dest, const hiopVector& v_src);
+  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
+  virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
+
+  /// @brief Copy from src the elements specified by the indices in index_in_src. 
+  virtual void copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src);
+  /// @brief Copy from src the elements specified by the indices in index_in_src. 
+  virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src);
 
   /// @brief Copy entries from a hiopVectorPar, see method documentation in the parent class.
   void copy_from_vectorpar(const hiopVectorPar& vsrc);
   /// @brief Copy entries to a hiopVectorPar, see method documentation in the parent class.
   void copy_to_vectorpar(hiopVectorPar& vdest) const;
   
-  /**
-   * @brief Copy from src the elements specified by the indices in index_in_src. 
-   *
-   * @pre All vectors must reside in the same memory space. 
-   * @pre Size of src must be greater or equal than size of this
-   * @pre Size of index_in_src must be equal to size of this
-   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
-   *
-   */
-  virtual void copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src);
+  ///  @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
+  virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src);
 
-  /**
-   * @brief Copy from src the elements specified by the indices in index_in_src. 
-   *
-   * @pre All vectors must reside in the same memory space. 
-   * @pre Size of src must be greater or equal than size of this
-   * @pre Size of index_in_src must be equal to size of this
-   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
-   *
-   */
-
-  /**
-   * @brief Copy from src the elements specified by the indices in index_in_src. 
-   *
-   * @pre All vectors and arrays must reside in the same memory space. 
-   * @pre Size of src must be greater or equal than size of this
-   * @pre Size of index_in_src must be equal to size of this
-   * @pre Elements of index_in_src must be valid (zero-based) indexes in src
-   *
-   */
-  virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src);
-
-  /** Copy the 'n' elements of v starting at 'start_index_in_this' in 'this' */
-  virtual void copyFromStarting(int start_index_in_this, const double* v, int nv);
-  virtual void copyFromStarting(int start_index, const hiopVector& src);
-  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
-  virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
-  /* copy 'dest' starting at 'start_idx_dest' to 'this' starting at 'start_idx_src' */
-  virtual void startingAtCopyFromStartingAt(int start_idx_src, const hiopVector& v, int start_idx_dest);
-
+  /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
   virtual void copyTo(double* dest) const;
+  /// @brief Copy 'this' to dst starting at start_index in 'this'.
   virtual void copyToStarting(int start_index, hiopVector& dst) const;
-  /* Copy 'this' to v starting at start_index in 'v'. */
-  virtual void copyToStarting(hiopVector& vec, int start_index_in_dest) const;
-  virtual void copyToStartingAt_w_pattern(hiopVector& vec,
-                                          index_type start_index_in_dest,
-                                          const hiopVector& ix) const;
+  /// @brief Copy 'this' to dst starting at start_index in 'dst'.
+  virtual void copyToStarting(hiopVector& dst, int start_index_in_dest) const;
+  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
+  virtual void copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& ix) const;
 
   /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
   virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
@@ -163,39 +139,64 @@ public:
                                          hiopVector& d, 
                                          const hiopVectorInt& d_map) const;
 
-  /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
+  /**
+   * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
    * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
    * either source ('this') or destination ('dest') is reached
-   * if 'selec_dest' is given, the values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero */
-  virtual void startingAtCopyToStartingAt(index_type start_idx_in_src,
-                                          hiopVector& dest,
-                                          index_type start_idx_dest,
-                                          size_type num_elems=-1) const;
-  virtual void startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+  */
+  virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
+  /**
+   * @brief Copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest'
+   * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
+   * either source ('this') or destination ('dest') is reached
+   * The values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
+  */ 
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src,
                                                     hiopVector& dest,
-                                                    index_type start_idx_dest,
+                                                    int start_idx_dest,
                                                     const hiopVector& selec_dest,
-                                                    size_type num_elems=-1) const;
+                                                    int num_elems=-1) const;
 
+  /** @brief Return the two norm */
   virtual double twonorm() const;
-  virtual double dotProductWith(const hiopVector& vec) const;
+  /** @brief Return the infinity norm */
   virtual double infnorm() const;
+  /** @brief Linf norm on single rank */
   virtual double infnorm_local() const;
+  /** @brief Return the one norm */
   virtual double onenorm() const;
-  virtual double onenorm_local() const; 
+  /** @brief L1 norm on single rank */
+  virtual double onenorm_local() const;
+  /** @brief Multiply the components of this by the components of v. */
   virtual void componentMult( const hiopVector& v );
+  /** @brief Divide the components of this hiopVector by the components of v. */
   virtual void componentDiv ( const hiopVector& v );
+
+  /**
+   * @brief Elements of this that corespond to nonzeros in ix are divided by elements of v.
+   * The rest of elements of this are set to zero.
+   */
   virtual void componentDiv_w_selectPattern( const hiopVector& v, const hiopVector& ix);
+
+  /** @brief Set each component of this hiopVector to the minimum of itself and the given constant. */
   virtual void component_min(const double constant);
+  /** @brief Set each component of this hiopVector to the minimum of itself and the corresponding component of 'v'. */
   virtual void component_min(const hiopVector& vec);
+  /** @brief Set each component of this hiopVector to the maximum of itself and the given constant. */
   virtual void component_max(const double constant);
+  /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
   virtual void component_max(const hiopVector& v);
+  /** @brief Set each component to its absolute value */
   virtual void component_abs();
+  /** @brief Apply sign function to each component */
   virtual void component_sgn();
+  /** @brief compute sqrt of each component */
   virtual void component_sqrt();
-  virtual void scale( double alpha );
-  /** this += alpha * x */
-  virtual void axpy  ( double alpha, const hiopVector& x );
+
+  /// @brief Scale each element of this  by the constant alpha
+  virtual void scale(double alpha);
+  /// @brief this += alpha * x
+  virtual void axpy(double alpha, const hiopVector& xvec);
   /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
   virtual void axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select);
 
@@ -211,30 +212,41 @@ public:
    *
    */
   virtual void axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i);
-  
-  
-  /** this += alpha * x * z */
+
+  /// @brief this += alpha * x * z
   virtual void axzpy (double alpha, const hiopVector& xvec, const hiopVector& zvec);
-  /** this += alpha * x / z */
+  /// @brief this += alpha * x / z
   virtual void axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec);
+  /// @brief this += alpha * x / z on entries 'i' for which select[i]==1.
   virtual void axdzpy_w_pattern(double alpha,
                                 const hiopVector& xvec,
                                 const hiopVector& zvec,
-                                const hiopVector& select); 
-  /** Add c to the elements of this */
+                                const hiopVector& select);
+  /// @brief Add c to the elements of this
   virtual void addConstant(double c);
   virtual void addConstant_w_patternSelect(double c, const hiopVector& select);
-  virtual double min() const;
-  virtual void min(double& minval, int& index) const;
-  virtual double min_w_pattern(const hiopVector& select) const;  
+  /// @brief Return the dot product of this hiopVector with v
+  virtual double dotProductWith(const hiopVector& vec) const;
+  /// @brief Negate all the elements of this
   virtual void negate();
+  /// @brief Invert (1/x) the elements of this
   virtual void invert();
+  /// @brief compute log barrier term, that is sum{ln(x_i):i=1,..,n}
   virtual double logBarrier_local(const hiopVector& select) const;
-  virtual double sum_local() const;
+  /// @brief adds the gradient of the log barrier, namely this=this+alpha*1/select(x)
   virtual void addLogBarrierGrad(double alpha, const hiopVector& xvec, const hiopVector& select);
+  /// @brief compute sum{(x_i):i=1,..,n}
+  virtual double sum_local() const;
 
-  virtual double linearDampingTerm_local(const hiopVector& ixl_select, const hiopVector& ixu_select, 
-                                         const double& mu, const double& kappa_d) const;
+  /**
+   * @brief Computes the log barrier's linear damping term of the Filter-IPM method of 
+   * WaectherBiegler (see paper, section 3.7).
+   * Essentially compute  kappa_d*mu* \sum { this[i] | ixleft[i]==1 and ixright[i]==0 }
+   */
+  virtual double linearDampingTerm_local(const hiopVector& ixleft,
+                                         const hiopVector& ixright,
+			                                   const double& mu,
+                                         const double& kappa_d) const;
 
   /** 
    * Performs `this[i] = alpha*this[i] + sign*ct` where sign=1 when EXACTLY one of 
@@ -247,59 +259,80 @@ public:
    * to handle unbounded problems. The damping terms are used for variables that are 
    * bounded on one side only. 
    */
-
   virtual void addLinearDampingTerm(const hiopVector& ixleft,
                                     const hiopVector& ixright,
                                     const double& alpha,
                                     const double& ct);
 
+  /// @brief True if all elements of this are positive.
   virtual int allPositive();
+  /// @brief True if elements corresponding to nonzeros in w are all positive
   virtual int allPositive_w_patternSelect(const hiopVector& select);
-  virtual bool projectIntoBounds_local(const hiopVector& xlo, 
+  /// @brief Return the minimum value in this vector
+  virtual double min() const;
+  virtual double min_w_pattern(const hiopVector& select) const;
+  /// @brief Return the minimum value in this vector, and the index at which it occurs.
+  virtual void min(double& minval, int& index) const;
+  /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds
+  virtual bool projectIntoBounds_local(const hiopVector& xl,
                                        const hiopVector& ixl,
-                                       const hiopVector& xup,
+                                       const hiopVector& xu,
                                        const hiopVector& ixu,
                                        double kappa1,
                                        double kappa2);
+  /// @brief max{a\in(0,1]| x+ad >=(1-tau)x}
   virtual double fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const;
-  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dvec, const double& tau, const hiopVector& ix) const;
+  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
+                                                   const double& tau,
+                                                   const hiopVector& select) const;
+  /// @brief Entries corresponding to zeros in ix are set to zero
   virtual void selectPattern(const hiopVector& select);
+  /// @brief checks whether entries in this matches pattern in ix
   virtual bool matchesPattern(const hiopVector& select);
-
-  virtual hiopVector* alloc_clone() const;
-  virtual hiopVector* new_copy () const;
-
+  /// @brief dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian
   virtual void adjustDuals_plh(const hiopVector& xvec, 
                                const hiopVector& ixvec,
                                const double& mu,
                                const double& kappa);
 
+  /// @brief True if all elements of this are zero. TODO: add unit test
   virtual bool is_zero() const;
+  /// @brief check for nans in the local vector
   virtual bool isnan_local() const;
+  /// @brief check for infs in the local vector
   virtual bool isinf_local() const;
+  /// @brief check if all values are finite /well-defined floats. Returns false if nan or infs are present.
   virtual bool isfinite_local() const;
-  
-  virtual void print(FILE*, const char* withMessage=NULL, int max_elems=-1, int rank=-1) const;
-  virtual void print() const;
+
+  /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
+  virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
+  /// @brief allocates a vector that mirrors this, but doesn't copy the values
+  virtual hiopVector* alloc_clone() const;
+  /// @brief allocates a vector that mirrors this, and copies the values
+  virtual hiopVector* new_copy () const;
 
   /* more accessors */
   inline size_type get_local_size() const { return n_local_; }
-  inline double* local_data_host() { return data_host_; }
-  inline const double* local_data_host_const() const { return data_host_; }
-  inline double* local_data() { return data_dev_; }
-  inline const double* local_data_const() const { return data_dev_; }
-  inline MPI_Comm get_mpi_comm() const { return comm_; }
-private:
-  void copyToDev();
-  void copyFromDev();
-  friend class tests::VectorTestsRajaPar;
-  friend class tests::MatrixTestsRajaDense;
-  friend class tests::MatrixTestsRajaSparseTriplet;
-  friend class tests::MatrixTestsRajaSymSparseTriplet;
-public:
-  virtual size_type numOfElemsLessThan(const double &val) const;
-  virtual size_type numOfElemsAbsLessThan(const double &val) const;      
+  inline double* local_data() { return data_; }
+  inline const double* local_data_const() const { return data_; }
+  inline double* local_data_host() { return data_host_mirror_; }
+  inline const double* local_data_host_const() const { return data_host_mirror_; }
 
+private:
+  virtual void copyToDev();
+  virtual void copyFromDev();
+  virtual void copyToDev() const;
+  virtual void copyFromDev() const;
+  friend class tests::VectorTestsHip;
+
+public:
+  /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
+  virtual size_type numOfElemsLessThan(const double &val) const;
+  /// @brief get number of values whose absolute value are less than the given value 'val'. TODO: add unit test
+  virtual size_type numOfElemsAbsLessThan(const double &val) const;  
+
+  /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  /// TODO: add unit test
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
                                  const int end, 
@@ -310,35 +343,43 @@ public:
                                  const int end, 
                                  const hiopInterfaceBase::NonlinearityType arr_src) const;
 
+
+
+
+  /// @brief check if `this` vector is identical to `vec`
   virtual bool is_equal(const hiopVector& vec) const;
 
-  const ExecSpace<MEMBACKEND, EXECPOLICYRAJA>& exec_space() const
+  /* functions for this class */
+  inline MPI_Comm get_mpi_comm() const { return comm_; }
+
+  ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space()
   {
     return exec_space_;
   }
+  const ExecSpace<MemBackendHip, ExecPolicyHip>& exec_space() const
+  {
+    return exec_space_;
+  }
+
 private:
-  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
-  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+  ExecSpace<MemBackendHip, ExecPolicyHip> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_host_;
 
-  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
-  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
-  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
-  //combinations work).
-  using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
-
-  std::string mem_space_;
   MPI_Comm comm_;
-  double* data_host_;
-  double* data_dev_;
+  double* data_host_mirror_;
+  double* data_;
+
   size_type glob_il_, glob_iu_;
   size_type n_local_;
   mutable hiopVectorInt* idx_cumsum_;
-  /// Copy constructor, for internal/private use only (it doesn't copy the elements.) */
-  hiopVectorRaja(const hiopVectorRaja&);
+
+  /** needed for cuda **/
+  hipblasHandle_t handle_hipblas_;
+
+  /** copy constructor, for internal/private use only (it doesn't copy the elements.) */
+  hiopVectorHip(const hiopVectorHip&);
+
 };
 
 } // namespace hiop
-
-
-#endif // HIOP_VECTOR_RAJA
+#endif

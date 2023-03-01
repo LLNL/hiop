@@ -36,6 +36,20 @@ else()
   # raja-omp or non-raja builds do nothing
 endif()
 
+if(HIOP_USE_GPU AND HIOP_USE_HIP)
+  set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsHip.cpp )
+  set(hip_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC})
+
+  # Mark appropriate source files as HIP. I guess in the future just a
+  # LANGUAGE HIP property will suffice. For now do it via compile flags
+  # Reference: https://www.olcf.ornl.gov/wp-content/uploads/2021/01/2021UM-Day-3-Joo-Developing-for-Frontier-using-HIP-on-Spock.pdf
+#  set_source_files_properties(${hip_sources} PROPERTIES LANGUAGE HIP)
+
+  # HIP kernels
+  set_source_files_properties( ${hip_sources} PROPERTIES LANGUAGE CXX)
+  set_source_files_properties( ${hip_sources} PROPERTIES COMPILE_FLAGS "-x hip")
+endif()
+
 # Build vector test
 add_executable(testVector ${testVector_SRC})
 target_link_libraries(testVector PRIVATE HiOp::HiOp)

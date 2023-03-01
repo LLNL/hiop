@@ -1,5 +1,6 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
@@ -45,64 +46,38 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or
 // product endorsement purposes.
 
-#ifndef HIOP_LINSOLVER_GINKGO
-#define HIOP_LINSOLVER_GINKGO
-
-#include "hiopLinSolver.hpp"
-#include "hiopMatrixSparseTriplet.hpp"
-
-
-#include <ginkgo/ginkgo.hpp>
-
-
-#include <unordered_map>
-
-/** implements the linear solver class using Ginkgo
+/**
+ * @file vectorTestsHip.hpp
  *
- * @ingroup LinearSolvers
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * 
  */
-namespace hiop {
+#pragma once
 
-class hiopLinSolverSymSparseGinkgo: public hiopLinSolverSymSparse
+#include "vectorTests.hpp"
+
+namespace hiop { namespace tests {
+
+/**
+ * @brief Utilities for testing hiopVectorHip class
+ *
+ * @todo In addition to set and get element ass set and get buffer methods.
+ *
+ */
+class VectorTestsHip : public VectorTests
 {
 public:
-  hiopLinSolverSymSparseGinkgo(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSymSparseGinkgo();
-
-  /** Triggers a refactorization of the matrix, if necessary.
-   * Overload from base class. */
-  int matrixChanged();
-
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved. On
-   * exit is contains the solution(s).  */
-  bool solve ( hiopVector& x_ );
+  VectorTestsHip(){}
+  virtual ~VectorTestsHip(){}
 
 private:
-
-  int      m_;                         // number of rows of the whole matrix
-  int      n_;                         // number of cols of the whole matrix
-  int      nnz_;                       // number of nonzeros in the matrix
-
-  int* index_covert_CSR2Triplet_;
-  int* index_covert_extra_Diag2CSR_;
-
-  std::shared_ptr<gko::Executor> exec_;
-  std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
-  std::shared_ptr<gko::matrix::Csr<double, int>> host_mtx_;
-  std::shared_ptr<gko::LinOpFactory> reusable_factory_;
-  std::shared_ptr<gko::LinOp> gko_solver_;
-  bool iterative_refinement_;
-
-  static const std::map<std::string, gko::solver::trisolve_algorithm> alg_map_;
-
-public:
-
-  /** called the very first time a matrix is factored. Allocates space
-   * for the factorization and performs ordering */
-  virtual void firstCall();
-
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x);
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val);
+  virtual void deleteLocalBuffer(real_type* buffer);
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x);
+  MPI_Comm getMPIComm(hiop::hiopVector* x);
 };
 
-} // end namespace
-#endif
+}} // namespace hiop::tests

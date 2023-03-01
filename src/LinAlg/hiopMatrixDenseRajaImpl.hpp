@@ -62,6 +62,7 @@
 #include <cassert>
 
 #include "hiopVectorRaja.hpp"
+#include "hiopVectorPar.hpp"
 #include "hiop_blasdefs.hpp"
 
 namespace hiop
@@ -1396,11 +1397,18 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::row_max_abs_value(hiopVector 
   );
 
 #ifdef HIOP_USE_MPI
-  vec.copyFromDev();
-  double *maxvg = new double[m_local_]{0};
-  int ierr=MPI_Allreduce(vec.local_data_host(),maxvg,m_local_,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
-  memcpy(vec.local_data_host(), maxvg, m_local_ * sizeof(double));
-  vec.copyToDev();
+  hiopVectorPar maxvg(m_local_);
+  hiopVectorPar vec_host(m_local_);
+  vec.copy_to_vectorpar(vec_host);
+
+  int ierr = MPI_Allreduce(vec_host.local_data(),
+                           maxvg.local_data(),
+                           m_local_,
+                           MPI_DOUBLE,
+                           MPI_MAX,
+                           comm_);
+  assert(ierr==MPI_SUCCESS);
+  vec.copy_from_vectorpar(maxvg);
 #endif
 }
 

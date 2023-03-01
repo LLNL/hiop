@@ -1,11 +1,10 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
-// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause). 
-// Please also read “Additional BSD Notice” below.
+// Please also read "Additional BSD Notice" below.
 //
 // Redistribution and use in source and binary forms, with or without modification, 
 // are permitted provided that the following conditions are met:
@@ -46,105 +45,91 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
-#pragma once
-
 /**
- * @file hiopVectorIntRaja.hpp
+ * @file hiopVectorIntHip.cpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
+#include "hiopVectorIntHip.hpp"
+#include "hiopVectorIntSeq.hpp"
 
-#include "hiopVectorInt.hpp"
+#include "MemBackendHipImpl.hpp"
+#include "MemBackendCppImpl.hpp"
+#include "VectorHipKernels.hpp"
 
-#include "ExecSpace.hpp"
-#include <string>
+#include <hip/hip_runtime.h>
+#include <cassert>
 
 namespace hiop
 {
-//forward declarations of the "friend" testing classes
-namespace tests
+
+hiopVectorIntHip::hiopVectorIntHip(size_type sz, std::string mem_space)
+  : hiopVectorInt(sz)
 {
-class VectorTestsIntRaja;
-class MatrixTestsRajaSparseTriplet;
+  buf_ = exec_space_.alloc_array<index_type>(sz);
+  // Create host mirror if the memory space is on device
+  buf_host_ = exec_space_host_.alloc_array<index_type>(sz);
+}
+
+hiopVectorIntHip::~hiopVectorIntHip()
+{
+  exec_space_host_.dealloc_array(buf_host_);
+  exec_space_.dealloc_array(buf_);
+  buf_  = nullptr;
+  buf_host_ = nullptr;
+}
+
+void hiopVectorIntHip::copy_from(const index_type* v_local)
+{
+  if(v_local) {
+    exec_space_.copy(buf_, v_local, sz_);
+  }
+}
+
+void hiopVectorIntHip::copy_from_vectorseq(const hiopVectorIntSeq& src)
+{
+  assert(src.size() == sz_);
+  auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+  assert(b);
+}
+
+void hiopVectorIntHip::copy_to_vectorseq(hiopVectorIntSeq& dest) const
+{
+  assert(dest.size() == sz_);
+  auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+  assert(b);
+}
+
+void hiopVectorIntHip::set_to_zero()
+{
+  hipError_t cuerr = hipMemset(buf_, 0, sz_);
+  assert(cuerr == hipSuccess);
+}
+
+/// Set all vector elements to constant c
+void hiopVectorIntHip::set_to_constant(const index_type c)
+{
+  hipError_t cuerr = hipMemset(buf_, c, sz_);
+  assert(cuerr == hipSuccess);
+}
+
+/**
+ * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
+ * incremented integers up to i0+(n-1)di, when n is the length of this vector
+ *
+ * @pre The elements of the linear space should not overflow the index_type type
+ *  
+ * @param i0 the starting element in the linear space (entry 0 in vector)
+ * @param di the increment for subsequent entries in the vector
+ *
+ */ 
+void hiopVectorIntHip::linspace(const index_type& i0, const index_type& di)
+{
+  hiop::hip::set_to_linspace_kernel(sz_, buf_, i0, di);
 }
   
-template<class MEMBACKEND, class EXECPOLICYRAJA>
-class hiopVectorIntRaja : public hiopVectorInt
-{
-public:
-  hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
-  hiopVectorIntRaja(const hiopVectorIntRaja&) = delete;
-  ~hiopVectorIntRaja();
-
-  virtual inline index_type* local_data_host() { return buf_host_; }
-
-  virtual inline const index_type* local_data_host_const() const { return buf_host_; }
-
-  virtual inline index_type* local_data() { return buf_; }
-
-  virtual inline const index_type* local_data_const() const { return buf_; }
-  
-  virtual void copy_from(const index_type* v_local);
-
-  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
-  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
-
-  
-  /// @brief Set all elements to zero.
-  virtual void set_to_zero();
-
-  /// @brief Set all elements  to  c
-  virtual void set_to_constant(const index_type c);
-
-  /**
-   * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
-   * incremented integers up to i0+(n-1)di, when n is the length of this vector
-   *
-   * @pre The elements of the linear space should not overflow the index_type type
-   *  
-   * @param i0 the starting element in the linear space (entry 0 in vector)
-   * @param di the increment for subsequent entries in the vector
-   *
-   */ 
-  virtual void linspace(const index_type& i0, const index_type& di);
-
-  /// Return a const reference to the internal execution space object
-  const ExecSpace<MEMBACKEND, EXECPOLICYRAJA>& exec_space() const
-  {
-    return exec_space_;
-  }
-private:
-  friend class tests::VectorTestsIntRaja;
-  friend class tests::MatrixTestsRajaSparseTriplet;
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
-
-private:
-  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
-  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
-
-  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
-  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
-  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
-  //combinations work).
-  using EXECPOLICYHOST = hiop::ExecPolicySeq;
-  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
-
-  index_type *buf_host_;
-  index_type *buf_;
-  std::string mem_space_;
-};
-
 } // namespace hiop
+
+
+

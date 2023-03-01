@@ -73,6 +73,10 @@
 #include <hiopVectorCuda.hpp>
 #include <hiopVectorIntCuda.hpp>
 #endif
+#ifdef HIOP_USE_HIP
+#include <hiopVectorHip.hpp>
+#include <hiopVectorIntHip.hpp>
+#endif
 
 #include <hiopMatrixSparseCsrCuda.hpp>
 
@@ -142,8 +146,7 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
 #else  // non RAJA
     assert(false && "requested execution space not available because Hiop was not"
            "built with RAJA support");
-    return new hiopVectorPar(glob_n, col_part, comm);
-#endif
+#endif // #ifdef HIOP_USE_RAJA
     } else { //else for if(hi.exec_backend_ == "RAJA")
       if(mem_space_upper == "CUDA") {
 #ifdef HIOP_USE_CUDA
@@ -151,16 +154,24 @@ hiopVector* LinearAlgebraFactory::create_vector(const ExecSpaceInfo& hi, //const
 #else //ifdef HIOP_USE_CUDA
         assert(false && "requested memory space not available because Hiop was not"
                "built with CUDA support");
-        return new hiop::hiopVectorPar(glob_n, col_part, comm);
 #endif //ifdef HIOP_USE_CUDA
       } else {
-        assert(false && "to be implemented");
-        return nullptr;
+        if(mem_space_upper == "HIP") {
+#ifdef HIOP_USE_HIP
+          return new hiop::hiopVectorHip(glob_n, col_part, comm);
+#else //ifdef HIOP_USE_HIP
+          assert(false && "requested memory space not available because HiOp was not"
+                "built with HIP support");
+#endif //ifdef HIOP_USE_HIP
+        } else {
+          assert(false && "to be implemented");
+        }
       }
     }
   }
+  assert(false && "should not reach here");
+  return nullptr;
 }
-
 
 /**
  * @brief Method to create local int vector.
@@ -215,7 +226,6 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const ExecSpaceInfo& hi,
 #else  // non RAJA
     assert(false && "requested execution space not available because Hiop was not"
            "built with RAJA support");
-    return new hiopVectorIntSeq(n);
 #endif
     } else { //else for if(hi.exec_backend_ == "RAJA")
       if(ms == "CUDA") {
@@ -224,14 +234,23 @@ hiopVectorInt* LinearAlgebraFactory::create_vector_int(const ExecSpaceInfo& hi,
 #else //ifdef HIOP_USE_CUDA
         assert(false && "requested memory space not available because Hiop was not"
                "built with CUDA support");
-        return new hiop::hiopVectorIntSeq(n);
 #endif //ifdef HIOP_USE_CUDA
       } else {
-        assert(false && "to be implemented");
-        return nullptr;
+        if(ms == "HIP") {
+#ifdef HIOP_USE_HIP
+          return new hiop::hiopVectorIntHip(n, ms);
+#else //ifdef HIOP_USE_HIP
+          assert(false && "requested memory space not available because HiOp was not"
+                "built with HIP support");
+#endif //ifdef HIOP_USE_CUDA
+        } else {
+          assert(false && "to be implemented");
+        }
       }
     }
   }
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 /**
@@ -293,7 +312,6 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& 
                                                                                                m_max_alloc);
 #else
           assert(false && "cuda memory backend not available because HiOp was not built with CUDA");
-          return nullptr;
 #endif //HIOP_USE_CUDA
           
         } else if(hi.mem_backend_ == "HIP") {
@@ -325,7 +343,6 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& 
                                                                                              m_max_alloc);
 #else
           assert(false && "cuda memory backend not available because HiOp was not built with RAJA-OMP");
-          return nullptr;
 #endif //!defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
           
         }
@@ -348,17 +365,16 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& 
                                                                                                m_max_alloc);
 #else
           assert(false && "requested memory space not available because Hiop was not built with CUDA");
-          return nullptr;
 #endif //HIOP_USE_CUDA
       } else if(mem_space_upper == "HIP") {
         assert(false && "to be implemented");
-        return nullptr;
       } else {
         assert(false && "to be implemented");
-        return nullptr;
       }
     } // end of else for if(hi.exec_backend_ == "RAJA")
   } // end of else if(mem_space_upper == "DEFAULT") 
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 /**
@@ -440,6 +456,8 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const ExecSpaceInfo
       }
     } // end of else for if(hi.exec_backend_ == "RAJA")
   } // end of else if(mem_space_upper == "DEFAULT")       
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 hiopMatrixSparseCSR* LinearAlgebraFactory::create_matrix_sparse_csr(const std::string& mem_space)
@@ -452,9 +470,10 @@ hiopMatrixSparseCSR* LinearAlgebraFactory::create_matrix_sparse_csr(const std::s
     return new hiopMatrixSparseCSRCUDA();
 #else
     assert(false && "requested memory space not available because Hiop was not built with CUDA support");
-    return new hiopMatrixSparseCSRSeq();
 #endif
   }
+  assert(false && "should not reach here");
+  return nullptr;
 }
   
 hiopMatrixSparseCSR*  LinearAlgebraFactory::create_matrix_sparse_csr(const std::string& mem_space,
@@ -470,10 +489,10 @@ hiopMatrixSparseCSR*  LinearAlgebraFactory::create_matrix_sparse_csr(const std::
     return new hiopMatrixSparseCSRCUDA(rows, cols, nnz);
 #else
     assert(false && "requested memory space not available because Hiop was not built with CUDA support");
-    return new hiopMatrixSparseCSRSeq(rows, cols, nnz);
 #endif
   }
-
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 /**
@@ -554,6 +573,8 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const ExecSpace
       }
     } // end of else for if(hi.exec_backend_ == "RAJA")
   } // end of else if(mem_space_upper == "DEFAULT")       
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 // {
@@ -588,9 +609,10 @@ double* LinearAlgebraFactory::create_raw_array(const std::string& mem_space, siz
 #else
     assert(false && "requested memory space not available because Hiop was not"
            "built with RAJA support");
-    return new double[n];
 #endif
   }
+  assert(false && "should not reach here");
+  return nullptr;
 }
 
 /**

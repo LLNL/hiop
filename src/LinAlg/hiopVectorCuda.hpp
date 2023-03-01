@@ -59,6 +59,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "ExecSpace.hpp"
+
 #include <hiopMPI.hpp>
 
 #include "hiopVector.hpp"
@@ -67,14 +69,19 @@
 
 namespace hiop
 {
-
+//Forward declarations
 class hiopVectorPar;
+//Forward declarations of tester classes that needs to be friends with this vector
+namespace tests
+{
+class VectorTestsCuda;
+}
   
 /// Implementation of abstract class hiopVector using CUDA API
 class hiopVectorCuda : public hiopVector
 {
 public:
-  hiopVectorCuda(const size_type& glob_n, index_type* col_part=NULL, MPI_Comm comm=MPI_COMM_SELF);
+  hiopVectorCuda(const size_type& glob_n, index_type* col_part=nullptr, MPI_Comm comm=MPI_COMM_SELF);
   virtual ~hiopVectorCuda();
 
   /// @brief Set all elements to zero.
@@ -87,15 +94,15 @@ public:
   virtual void setToConstant_w_patternSelect(double c, const hiopVector& select);
 
   /// @brief Copy the elements of v
-  virtual void copyFrom(const hiopVector& v );
-  virtual void copyFrom(const double* v_local_data);
+  virtual void copyFrom(const hiopVector& vec);
+  virtual void copyFrom(const double* local_array);
   /// @brief Copy from vec the elements specified by the indices in select
   virtual void copy_from_w_pattern(const hiopVector& src, const hiopVector& select);
-  /// @brief Copy the 'n' elements of v starting at 'start_index_in_dest' in 'this'
+  /// @brief Copy the `n` elements of v starting at `start_index_in_dest` in `this`
   virtual void copyFromStarting(int start_index_in_dest, const double* v, int n);
-  /// @brief Copy v_src into 'this' starting at start_index_in_dest in 'this'. */
+  /// @brief Copy v_src into `this` starting at start_index_in_dest in `this`. */
   virtual void copyFromStarting(int start_index_in_dest, const hiopVector& v_src);
-  /// @brief Copy the 'n' elements of v starting at 'start_index_in_v' into 'this'
+  /// @brief Copy the `n` elements of v starting at `start_index_in_v` into `this`
   virtual void copy_from_starting_at(const double* v, int start_index_in_v, int n);
 
   /// @brief Copy from src the elements specified by the indices in index_in_src. 
@@ -103,20 +110,22 @@ public:
   /// @brief Copy from src the elements specified by the indices in index_in_src. 
   virtual void copy_from_indexes(const double* src, const hiopVectorInt& index_in_src);
 
-  /// Copy from a (host) hiopVectorPar of the same size.
-  void copy_from_vec_par(const hiopVectorPar& src);
+  /// @brief Copy entries from a hiopVectorPar, see method documentation in the parent class.
+  void copy_from_vectorpar(const hiopVectorPar& vsrc);
+  /// @brief Copy entries to a hiopVectorPar, see method documentation in the parent class.
+  void copy_to_vectorpar(hiopVectorPar& vdest) const;
   
-  ///  @brief Copy from 'v' starting at 'start_idx_src' to 'this' starting at 'start_idx_dest'
+  ///  @brief Copy from `v` starting at `start_idx_src` to `this` starting at `start_idx_dest`
   virtual void startingAtCopyFromStartingAt(int start_idx_dest, const hiopVector& v, int start_idx_src);
 
-  /// @brief Copy 'this' to double array, which is assumed to be at least of 'n_local_' size.
+  /// @brief Copy `this` to double array, which is assumed to be at least of `n_local_` size.
   virtual void copyTo(double* dest) const;
-  /// @brief Copy 'this' to dst starting at start_index in 'this'.
-  virtual void copyToStarting(int start_index_in_src, hiopVector& v) const;
-  /// @brief Copy 'this' to dst starting at start_index in 'dst'.
+  /// @brief Copy `this` to dst starting at start_index in `this`.
+  virtual void copyToStarting(int start_index, hiopVector& dst) const;
+  /// @brief Copy `this` to dst starting at start_index in `dst`.
   virtual void copyToStarting(hiopVector& dst, int start_index_in_dest) const;
-  /// @brief Copy the entries in 'this' where corresponding 'ix' is nonzero, to v starting at start_index in 'v'.
-  virtual void copyToStartingAt_w_pattern(hiopVector& v, int start_index_in_dest, const hiopVector& ix) const;
+  /// @brief Copy the entries in `this` where corresponding `ix` is nonzero, to v starting at start_index in `v`.
+  virtual void copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopVector& ix) const;
 
   /// @brief Copy the entries in `c` and `d` to `this`, according to the mapping in `c_map` and `d_map`
   virtual void copy_from_two_vec_w_pattern(const hiopVector& c, 
@@ -131,18 +140,22 @@ public:
                                          const hiopVectorInt& d_map) const;
 
   /**
-   * copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
-   * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
-   * either source ('this') or destination ('dest') is reached
+   * copy `this` (source) starting at `start_idx_in_src` to `dest` starting at index `int start_idx_dest` 
+   * If num_elems>=0, `num_elems` will be copied; if num_elems<0, elements will be copied till the end of
+   * either source (`this`) or destination (`dest`) is reached
   */
   virtual void startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest, int start_idx_dest, int num_elems=-1) const;
   /**
-   * @brief Copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest'
-   * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
-   * either source ('this') or destination ('dest') is reached
-   * The values are copy to 'dest' where the corresponding entry in 'selec_dest' is nonzero
+   * @brief Copy `this` (source) starting at `start_idx_in_src` to `dest` starting at index `int start_idx_dest`
+   * If num_elems>=0, `num_elems` will be copied; if num_elems<0, elements will be copied till the end of
+   * either source (`this`) or destination (`dest`) is reached
+   * The values are copy to `dest` where the corresponding entry in `selec_dest` is nonzero
   */ 
-  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src, hiopVector& dest, int start_idx_dest, const hiopVector& selec_dest, int num_elems=-1) const;
+  virtual void startingAtCopyToStartingAt_w_pattern(int start_idx_in_src,
+                                                    hiopVector& dest,
+                                                    int start_idx_dest,
+                                                    const hiopVector& selec_dest,
+                                                    int num_elems=-1) const;
 
   /** @brief Return the two norm */
   virtual double twonorm() const;
@@ -167,11 +180,11 @@ public:
 
   /** @brief Set each component of this hiopVector to the minimum of itself and the given constant. */
   virtual void component_min(const double constant);
-  /** @brief Set each component of this hiopVector to the minimum of itself and the corresponding component of 'v'. */
-  virtual void component_min(const hiopVector& v );
+  /** @brief Set each component of this hiopVector to the minimum of itself and the corresponding component of `v`. */
+  virtual void component_min(const hiopVector& vec);
   /** @brief Set each component of this hiopVector to the maximum of itself and the given constant. */
   virtual void component_max(const double constant);
-  /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of 'v'. */
+  /** @brief Set each component of this hiopVector to the maximum of itself and the corresponding component of `v`. */
   virtual void component_max(const hiopVector& v);
   /** @brief Set each component to its absolute value */
   virtual void component_abs();
@@ -183,8 +196,8 @@ public:
   /// @brief Scale each element of this  by the constant alpha
   virtual void scale(double alpha);
   /// @brief this += alpha * x
-  virtual void axpy(double alpha, const hiopVector& x);
-  /// @brief this += alpha * x, for the entries in 'this' where corresponding 'select' is nonzero.
+  virtual void axpy(double alpha, const hiopVector& xvec);
+  /// @brief this += alpha * x, for the entries in `this` where corresponding `select` is nonzero.
   virtual void axpy_w_pattern(double alpha, const hiopVector& xvec, const hiopVector& select);
 
   /**
@@ -198,19 +211,22 @@ public:
    * @pre The entries of i must be valid (zero-based) indexes in this
    *
    */
-  virtual void axpy(double alpha, const hiopVector& x, const hiopVectorInt& i);
+  virtual void axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i);
 
   /// @brief this += alpha * x * z
-  virtual void axzpy ( double alpha, const hiopVector& x, const hiopVector& z );
+  virtual void axzpy (double alpha, const hiopVector& xvec, const hiopVector& zvec);
   /// @brief this += alpha * x / z
-  virtual void axdzpy( double alpha, const hiopVector& x, const hiopVector& z );
-  /// @brief this += alpha * x / z on entries 'i' for which select[i]==1.
-  virtual void axdzpy_w_pattern( double alpha, const hiopVector& x, const hiopVector& z, const hiopVector& select );
+  virtual void axdzpy(double alpha, const hiopVector& xvec, const hiopVector& zvec);
+  /// @brief this += alpha * x / z on entries `i` for which select[i]==1.
+  virtual void axdzpy_w_pattern(double alpha,
+                                const hiopVector& xvec,
+                                const hiopVector& zvec,
+                                const hiopVector& select);
   /// @brief Add c to the elements of this
-  virtual void addConstant( double c );
-  virtual void addConstant_w_patternSelect(double c, const hiopVector& ix);
+  virtual void addConstant(double c);
+  virtual void addConstant_w_patternSelect(double c, const hiopVector& select);
   /// @brief Return the dot product of this hiopVector with v
-  virtual double dotProductWith( const hiopVector& v ) const;
+  virtual double dotProductWith(const hiopVector& vec) const;
   /// @brief Negate all the elements of this
   virtual void negate();
   /// @brief Invert (1/x) the elements of this
@@ -218,7 +234,7 @@ public:
   /// @brief compute log barrier term, that is sum{ln(x_i):i=1,..,n}
   virtual double logBarrier_local(const hiopVector& select) const;
   /// @brief adds the gradient of the log barrier, namely this=this+alpha*1/select(x)
-  virtual void addLogBarrierGrad(double alpha, const hiopVector& x, const hiopVector& select);
+  virtual void addLogBarrierGrad(double alpha, const hiopVector& xvec, const hiopVector& select);
   /// @brief compute sum{(x_i):i=1,..,n}
   virtual double sum_local() const;
 
@@ -251,12 +267,12 @@ public:
   /// @brief True if all elements of this are positive.
   virtual int allPositive();
   /// @brief True if elements corresponding to nonzeros in w are all positive
-  virtual int allPositive_w_patternSelect(const hiopVector& w);
+  virtual int allPositive_w_patternSelect(const hiopVector& select);
   /// @brief Return the minimum value in this vector
   virtual double min() const;
   virtual double min_w_pattern(const hiopVector& select) const;
   /// @brief Return the minimum value in this vector, and the index at which it occurs.
-  virtual void min( double& m, int& index ) const;
+  virtual void min(double& minval, int& index) const;
   /// @brief Project the vector into the bounds, used for shifting the ini pt in the bounds
   virtual bool projectIntoBounds_local(const hiopVector& xl,
                                        const hiopVector& ixl,
@@ -265,16 +281,19 @@ public:
                                        double kappa1,
                                        double kappa2);
   /// @brief max{a\in(0,1]| x+ad >=(1-tau)x}
-  virtual double fractionToTheBdry_local(const hiopVector& dx, const double& tau) const;
-  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dx,
+  virtual double fractionToTheBdry_local(const hiopVector& dvec, const double& tau) const;
+  virtual double fractionToTheBdry_w_pattern_local(const hiopVector& dvec,
                                                    const double& tau,
-                                                   const hiopVector& ix) const;
+                                                   const hiopVector& select) const;
   /// @brief Entries corresponding to zeros in ix are set to zero
-  virtual void selectPattern(const hiopVector& ix);
+  virtual void selectPattern(const hiopVector& select);
   /// @brief checks whether entries in this matches pattern in ix
-  virtual bool matchesPattern(const hiopVector& ix);
+  virtual bool matchesPattern(const hiopVector& select);
   /// @brief dual adjustment -> see hiopIterate::adjustDuals_primalLogHessian
-  virtual void adjustDuals_plh(const hiopVector& x, const hiopVector& ix, const double& mu, const double& kappa);
+  virtual void adjustDuals_plh(const hiopVector& xvec, 
+                               const hiopVector& ixvec,
+                               const double& mu,
+                               const double& kappa);
 
   /// @brief True if all elements of this are zero. TODO: add unit test
   virtual bool is_zero() const;
@@ -285,7 +304,7 @@ public:
   /// @brief check if all values are finite /well-defined floats. Returns false if nan or infs are present.
   virtual bool isfinite_local() const;
 
-  /// @brief prints up to max_elems (by default all), on rank 'rank' (by default on all)
+  /// @brief prints up to max_elems (by default all), on rank `rank` (by default on all)
   virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
   /// @brief allocates a vector that mirrors this, but doesn't copy the values
   virtual hiopVector* alloc_clone() const;
@@ -298,18 +317,19 @@ public:
   inline const double* local_data_const() const { return data_; }
   inline double* local_data_host() { return data_host_mirror_; }
   inline const double* local_data_host_const() const { return data_host_mirror_; }
-
+private:
   virtual void copyToDev();
   virtual void copyFromDev();
   virtual void copyToDev() const;
   virtual void copyFromDev() const;
-
-  /// @brief get number of values that are less than the given value 'val'. TODO: add unit test
+  friend class tests::VectorTestsCuda;
+public:
+  /// @brief get number of values that are less than the given value `val`. TODO: add unit test
   virtual size_type numOfElemsLessThan(const double &val) const;
-  /// @brief get number of values whose absolute value are less than the given value 'val'. TODO: add unit test
+  /// @brief get number of values whose absolute value are less than the given value `val`. TODO: add unit test
   virtual size_type numOfElemsAbsLessThan(const double &val) const;  
 
-  /// @brief set int array 'arr', starting at `start` and ending at `end`, to the values in `arr_src` from 'start_src`
+  /// @brief set int array `arr`, starting at `start` and ending at `end`, to the values in `arr_src` from `start_src`
   /// TODO: add unit test
   virtual void set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                  const int start, 
@@ -330,7 +350,19 @@ public:
   /* functions for this class */
   inline MPI_Comm get_mpi_comm() const { return comm_; }
 
+  ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space()
+  {
+    return exec_space_;
+  }
+  const ExecSpace<MemBackendCuda, ExecPolicyCuda>& exec_space() const
+  {
+    return exec_space_;
+  }
+
 private:
+  ExecSpace<MemBackendCuda, ExecPolicyCuda> exec_space_;
+  ExecSpace<MemBackendCpp, ExecPolicySeq> exec_space_host_;
+
   MPI_Comm comm_;
   double* data_host_mirror_;
   double* data_;

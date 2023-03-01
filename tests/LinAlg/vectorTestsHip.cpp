@@ -47,124 +47,132 @@
 // product endorsement purposes.
 
 /**
- * @file vectorTestsInt.hpp
+ * @file vectorTestsHip.cpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL  
  *
  */
-#pragma once
-
-#include <hiopVectorInt.hpp>
-#include "testBase.hpp"
+#include <hiopVectorHip.hpp>
+#include "vectorTestsHip.hpp"
 
 namespace hiop { namespace tests {
 
-/**
- * @brief Collection of tests for abstract hiopVectorInt implementations.
- *
- * This class contains implementation of all int vector unit tests and abstract
- * interface for testing utility functions, which are specific to vector
- * implementation.
- *
- */
-class VectorTestsInt : public TestBase
+/// Returns const pointer to local vector data
+const real_type* VectorTestsHip::getLocalDataConst(hiop::hiopVector* x_in)
 {
-public:
-  VectorTestsInt(){}
-  virtual ~VectorTestsInt(){}
-
-  virtual bool vectorSize(hiop::hiopVectorInt& x, const int size) const
+  if(auto* x = dynamic_cast<hiop::hiopVectorHip*>(x_in))
   {
-    int fail = 0;
-    if (x.size() != size)
-      fail++;
-    printMessage(fail, __func__);
-    return fail;
+    x->copyFromDev();
+    return x->local_data_host_const();
   }
-
-  /**
-   * Ensure that non-const operator[] correctly _assigns_ to the underlying
-   * data.
-   */
-  virtual bool vectorSetElement(hiop::hiopVectorInt& x) const
+  else
   {
-    int fail = 0;
-    const int idx = x.size()/2;
-    const int x_val = 1;
-    for(int i=0; i<x.size(); i++) {
-      setLocalElement(&x, i, 0);
-    }
-    setLocalElement(&x, idx, x_val);
-
-    if(getLocalElement(&x, idx) != x_val) {
-      fail++;
-    }
-
-    printMessage(fail, __func__);
-    return fail;
+    assert(false && "Wrong type of vector passed into `VectorTestsRajaPar::getLocalDataConst`!");
+    THROW_NULL_DEREF;
   }
+}
 
-  /**
-   * Ensure that const data access correctly _returns_ value at specified index.
-   */
-  virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
+/// Method to set vector _x_ element _i_ to _value_.
+void VectorTestsHip::setLocalElement(hiop::hiopVector* x_in, local_ordinal_type i, real_type val)
+{
+  if(auto* x = dynamic_cast<hiop::hiopVectorHip*>(x_in))
   {
-    int fail = 0;
-    const int idx = x.size()/2;
-    const int x_val = 1;
-    for(int i=0; i<x.size(); i++)
-      setLocalElement(&x, i, 0);
-    setLocalElement(&x, idx, x_val);
-
-    if (x.local_data_host_const()[idx] != x_val)
-      fail++;
-
-    printMessage(fail, __func__);
-    return fail;
+    x->copyFromDev();
+    real_type *xdat = x->local_data_host();
+    xdat[i] = val;
+    x->copyToDev();
   }
-
-  virtual bool vector_linspace(hiop::hiopVectorInt& x) const
+  else
   {
-    int fail = 0;
-
-    x.set_to_constant(1);
-    x.linspace(0, 2);
-
-    for(int i=0; i<x.size(); i++) {
-      if(getLocalElement(&x, i) != 2*i) {
-        ++fail;
-      }
-    }
-    printMessage(fail, __func__);
-    return fail;
+    assert(false && "Wrong type of vector passed into `vectorTestsHip::setLocalElement`!");
+    THROW_NULL_DEREF;
   }
-  
-  virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
+}
+
+/// Get communicator
+MPI_Comm VectorTestsHip::getMPIComm(hiop::hiopVector* x)
+{
+  if(auto* xvec = dynamic_cast<const hiop::hiopVectorHip*>(x))
   {
-    int fail = 0;
-    const int idx = x.size()/2;
-    const int x_val = 1;
-    const int y_val = 1;
-
-    setLocalElement(&x, x_val);
-    setLocalElement(&y, y_val);
-    
-    x.copy_from(y.local_data_const());
-
-    for(int i=0; i<x.size(); i++) {
-      if (x.local_data_host_const()[i] != y_val) {
-        fail++;
-      }
-    }
-
-    printMessage(fail, __func__);
-    return fail;
+    return xvec->get_mpi_comm();
   }
+  else
+  {
+    assert(false && "Wrong type of vector passed into `vectorTestsHip::getMPIComm`!");
+    THROW_NULL_DEREF;
+  }
+}
 
-private:
-  virtual int getLocalElement(hiop::hiopVectorInt*, int) const = 0;
-  virtual void setLocalElement(hiop::hiopVectorInt*, int, int) const = 0;
-  virtual void setLocalElement(hiop::hiopVectorInt*, int) const = 0;
-};
+/// Wrap new command
+real_type* VectorTestsHip::createLocalBuffer(local_ordinal_type N, real_type val)
+{
+  real_type* buffer = new real_type[N];
+  real_type* dev_buffer = nullptr;
+
+  // Set buffer elements to the initial value
+  for(local_ordinal_type i = 0; i < N; ++i)
+    buffer[i] = val;
+
+#ifdef HIOP_USE_GPU
+  // Allocate memory on GPU
+  hipError_t cuerr = hipMalloc((void**)&dev_buffer, N*sizeof(real_type));
+  assert(hipSuccess == cuerr);
+  cuerr = hipMemcpy(dev_buffer, buffer, N*sizeof(real_type), hipMemcpyHostToDevice);
+  assert(cuerr == hipSuccess);
+
+  delete [] buffer;
+  return dev_buffer;
+#endif
+
+  return buffer;
+}
+
+local_ordinal_type* VectorTestsHip::createIdxBuffer(local_ordinal_type N, local_ordinal_type val)
+{
+  local_ordinal_type* buffer = new local_ordinal_type[N];
+  // Set buffer elements to the initial value
+  for(local_ordinal_type i = 0; i < N; ++i)
+    buffer[i] = val;
+  buffer[N-1] = 0;
+
+#ifdef HIOP_USE_GPU
+  // Allocate memory on GPU
+  local_ordinal_type* dev_buffer = nullptr;
+  hipError_t cuerr = hipMalloc((void**)&dev_buffer, N*sizeof(local_ordinal_type));
+  assert(hipSuccess == cuerr);
+  cuerr = hipMemcpy(dev_buffer, buffer, N*sizeof(local_ordinal_type), hipMemcpyHostToDevice);
+  assert(cuerr == hipSuccess);
+
+  delete [] buffer;
+  return dev_buffer;
+#endif
+
+  return buffer;
+}
+
+/// Wrap delete command
+void VectorTestsHip::deleteLocalBuffer(real_type* buffer)
+{
+  #ifdef HIOP_USE_GPU
+  hipFree(buffer);
+  return ;
+  #endif
+  delete [] buffer;
+}
+
+/// If test fails on any rank set fail flag on all ranks
+bool VectorTestsHip::reduceReturn(int failures, hiop::hiopVector* x)
+{
+  int fail = 0;
+
+#ifdef HIOP_USE_MPI
+  MPI_Allreduce(&failures, &fail, 1, MPI_INT, MPI_SUM, getMPIComm(x));
+#else
+  fail = failures;
+#endif
+
+  return (fail != 0);
+}
+
 
 }} // namespace hiop::tests

@@ -148,12 +148,22 @@ void hiopVectorPar::setToConstant_w_patternSelect(double c, const hiopVector& se
     }
   }
 }
-void hiopVectorPar::copyFrom(const hiopVector& v_ )
+void hiopVectorPar::copyFrom(const hiopVector& v_in )
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
+  copy_from_vectorpar(v);
+}
+
+void hiopVectorPar::copy_from_vectorpar(const hiopVectorPar& v)
+{
   assert(n_local_==v.n_local_);
   assert(glob_il_==v.glob_il_); assert(glob_iu_==v.glob_iu_);
   exec_space_.copy(this->data_, v.data_, n_local_, v.exec_space_);
+}
+
+void hiopVectorPar::copy_to_vectorpar(hiopVectorPar& vdest) const
+{
+  vdest.copy_from_vectorpar(*this);
 }
 
 void hiopVectorPar::copyFrom(const double* v_local_data )
@@ -358,7 +368,10 @@ void hiopVectorPar::copy_to_two_vec_w_pattern(hiopVector& c,
  * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
  * either source ('this') or destination ('dest') is reached */
 void hiopVectorPar::
-startingAtCopyToStartingAt(int start_idx_in_src, hiopVector& dest_, int start_idx_dest, int num_elems/*=-1*/) const
+startingAtCopyToStartingAt(index_type start_idx_in_src,
+                           hiopVector& dest_,
+                           index_type start_idx_dest,
+                           size_type num_elems/*=-1*/) const
 {
 #ifdef HIOP_DEEPCHECKS
   assert(n_local_==n_ && "only for local/non-distributed vectors");
@@ -696,7 +709,7 @@ void hiopVectorPar::axzpy(double alpha, const hiopVector& x_, const hiopVector& 
   }
 }
 
-void hiopVectorPar::axdzpy( double alpha, const hiopVector& x_, const hiopVector& z_)
+void hiopVectorPar::axdzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
 {
   if(alpha==0.) return;
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
@@ -727,7 +740,7 @@ void hiopVectorPar::axdzpy( double alpha, const hiopVector& x_, const hiopVector
   }
 }
 
-void hiopVectorPar::axdzpy_w_pattern( double alpha, const hiopVector& x_, const hiopVector& z_, const hiopVector& select)
+void hiopVectorPar::axdzpy_w_pattern(double alpha, const hiopVector& x_, const hiopVector& z_, const hiopVector& select)
 {
   const hiopVectorPar& vx = dynamic_cast<const hiopVectorPar&>(x_);
   const hiopVectorPar& vz = dynamic_cast<const hiopVectorPar&>(z_);
@@ -753,7 +766,7 @@ void hiopVectorPar::axdzpy_w_pattern( double alpha, const hiopVector& x_, const 
 }
 
 
-void hiopVectorPar::addConstant( double c )
+void hiopVectorPar::addConstant(double c)
 {
   for(size_type i=0; i<n_local_; i++) data_[i]+=c;
 }

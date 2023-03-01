@@ -41,8 +41,8 @@ module load camp-0.2.3-gcc-10.2.0-36lcy72
 module load openblas-0.3.20-gcc-10.2.0-x6v3mwm
 # coinhsl@2019.05.21%gcc@10.2.0+blas arch=linux-centos7-zen2
 module load coinhsl-2019.05.21-gcc-10.2.0-gkzkws6
-# ginkgo@1.5.0.glu_experimental%gcc@10.2.0+cuda~develtools~full_optimizations~hwloc~ipo~oneapi+openmp~rocm+shared build_type=Release cuda_arch=60,70,75,80 arch=linux-centos7-zen2
-module load ginkgo-1.5.0.glu_experimental-gcc-10.2.0-x73b7k3
+# ginkgo@1.5.0.glu_experimental%gcc@10.2.0+cuda~develtools~full_optimizations~hwloc~ipo~mpi~oneapi+openmp~rocm+shared build_system=cmake build_type=Debug cuda_arch=60,70,75,80 arch=linux-centos7-zen2
+module load ginkgo-1.5.0.glu_experimental-gcc-10.2.0-3o5dw4r
 # magma@2.6.2%gcc@10.2.0+cuda+fortran~ipo~rocm+shared build_type=RelWithDebInfo cuda_arch=60,70,75,80 arch=linux-centos7-zen2
 module load magma-2.6.2-gcc-10.2.0-caockkq
 # metis@5.1.0%gcc@10.2.0~gdb~int64~real64+shared build_type=Release patches=4991da9,b1225da arch=linux-centos7-zen2

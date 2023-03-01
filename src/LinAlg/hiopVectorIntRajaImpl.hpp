@@ -55,6 +55,8 @@
 
 #include "hiopVectorIntRaja.hpp"
 
+#include "hiopVectorIntSeq.hpp"
+
 namespace hiop
 {
 
@@ -105,6 +107,21 @@ void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_to_dev()
   }
 }
 
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_from_vectorseq(const hiopVectorIntSeq& src)
+{
+  assert(sz_ == src.size());
+  exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+}
+
+template<class MEMBACKEND, class RAJAEXECPOL>
+void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_to_vectorseq(hiopVectorIntSeq& dest) const
+{
+  assert(sz_ == dest.size());
+  dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+}
+
+  
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_from(const index_type* v_local)
 {

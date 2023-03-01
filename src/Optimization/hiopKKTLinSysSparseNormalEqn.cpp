@@ -224,9 +224,9 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
       assert(Hx_cuda && "incorrect type for vector class");
       assert(Hx_par && "incorrect type for vector class");      
-      Hess_diag_cuda->copy_from_vec_par(*Hess_diag_par);
-      Hx_cuda->copy_from_vec_par(*Hx_par);
-      Hd_cuda->copy_from_vec_par(*Hd_par);
+      Hess_diag_cuda->copy_from_vectorpar(*Hess_diag_par);
+      Hx_cuda->copy_from_vectorpar(*Hx_par);
+      Hd_cuda->copy_from_vectorpar(*Hd_par);
 
       auto deltawx_cuda = dynamic_cast<hiopVectorCuda*>(deltawx_);
       auto deltawd_cuda = dynamic_cast<hiopVectorCuda*>(deltawd_);
@@ -237,10 +237,10 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
       const hiopVectorPar& deltacc_host = dynamic_cast<const hiopVectorPar&>(*delta_cc_);
       const hiopVectorPar& deltacd_host = dynamic_cast<const hiopVectorPar&>(*delta_cd_);
 
-      deltawx_cuda->copy_from_vec_par(deltawx_host);
-      deltawd_cuda->copy_from_vec_par(deltawd_host);
-      deltacc_cuda->copy_from_vec_par(deltacc_host);
-      deltacd_cuda->copy_from_vec_par(deltacd_host);
+      deltawx_cuda->copy_from_vectorpar(deltawx_host);
+      deltawd_cuda->copy_from_vectorpar(deltawd_host);
+      deltacc_cuda->copy_from_vectorpar(deltacc_host);
+      deltacd_cuda->copy_from_vectorpar(deltacd_host);
 #else
       assert(false && "compute mode not available under current build: enable CUDA.");
 #endif 
