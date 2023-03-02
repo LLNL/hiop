@@ -76,7 +76,7 @@ namespace hiop
 //Explicit instantiations: force compilation 
 //
 template class hiopMatrixRajaSparseTriplet<MemBackendUmpire, ExecPolicyRajaOmp>;
-template class hiopMatrixRajaSparseTriplet<MemBackendOmp, ExecPolicyRajaOmp>;
+template class hiopMatrixRajaSparseTriplet<MemBackendCpp, ExecPolicyRajaOmp>;
 template class hiopMatrixRajaSymSparseTriplet<MemBackendUmpire, ExecPolicyRajaOmp>;
-template class hiopMatrixRajaSymSparseTriplet<MemBackendOmp, ExecPolicyRajaOmp>;
+template class hiopMatrixRajaSymSparseTriplet<MemBackendCpp, ExecPolicyRajaOmp>;
 }
