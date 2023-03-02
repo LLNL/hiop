@@ -964,7 +964,7 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start,
  * Assumes triplets are ordered.
  */
 template<class MEMBACKEND, class RAJAEXECPOL>
-hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo* 
+typename hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo* 
 hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::allocAndBuildRowStarts() const
 {
   assert(nrows_ >= 0);
