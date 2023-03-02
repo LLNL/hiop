@@ -154,19 +154,18 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
 {
   assert(n==n_vars_);
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 3),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
-      if(i==0) {
-        xlow[i] = -1e20;
-        xupp[i] =  1e20;
-      } else if(i==1) {
-        xlow[i] = 0.0;
-        xupp[i] = 1e20;
-      } else { 
-        xlow[i] = 1.0;
-        xupp[i] = 10.0;
-      }
+      xlow[0] = -1e20;
+      xupp[0] =  1e20;
+      type[0] = hiopNonlinear;
+      xlow[1] = 0.0;
+      xupp[1] = 1e20;
+      type[1] = hiopNonlinear;
+      xlow[2] = 1.0;
+      xupp[2] = 10.0;
+      type[2] = hiopNonlinear;      
     });
 
   if(n>3) {
@@ -175,14 +174,10 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
       {
         xlow[i] = 0.5;
         xupp[i] = 1e20;
+        type[i] = hiopNonlinear;
       });
   }
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      type[i] = hiopNonlinear;
-    });
   return true;
 }
 
@@ -190,53 +185,43 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
 {
   assert(m==n_cons_);
   size_type n = n_vars_;
-
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 2),
+  assert(m-1 == n-1+rankdefic_ineq_);
+  
+  // serial part
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
     RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      if(i==0) {
-        clow[i] = 10.0;
-        cupp[i] = 10.0;
-      } else {
-        clow[i] = 5.0;
-        cupp[i] = 1e20;
+    {      
+      clow[0] = 10.0;
+      cupp[0] = 10.0;
+      type[0] = hiopInterfaceBase::hiopNonlinear;
+      clow[1] = 5.0;
+      cupp[1] = 1e20;
+      type[1] = hiopInterfaceBase::hiopNonlinear;
+
+      if(rankdefic_ineq_) {
+        // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
+        clow[n-1] = -1e+20;
+        cupp[n-1] = 19.;
+        type[n-1] = hiopInterfaceBase::hiopNonlinear;
+      }
+
+      if(rankdefic_eq_) {
+          //  4*x_1 + 2*x_2 == 10
+          clow[m-1] = 10;
+          cupp[m-1] = 10;
+          type[m-1] = hiopInterfaceBase::hiopNonlinear;
       }
     });
 
   if(n>3) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, 2+n-3),
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
       RAJA_LAMBDA(RAJA::Index_type conidx)
       {
         clow[conidx] = 1.0;
-        cupp[conidx] = 2*n_vars_;
+        cupp[conidx] = 2*n;
+        type[conidx] = hiopInterfaceBase::hiopNonlinear;
       });
   }
-
-  if(rankdefic_ineq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3, 2+n-3+1),
-      RAJA_LAMBDA(RAJA::Index_type conidx)
-      {
-        // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
-        clow[conidx] = -1e+20;
-        cupp[conidx] = 19.;
-      });
-  }
-
-  if(rankdefic_eq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3+rankdefic_ineq_, m),
-      RAJA_LAMBDA(RAJA::Index_type conidx)
-      {
-        //  4*x_1 + 2*x_2 == 10
-        clow[conidx] = 10;
-        cupp[conidx] = 10;
-      });
-  }
-
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, m),
-    RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      type[i] = hiopInterfaceBase::hiopNonlinear;
-    });
 
   return true;
 }
@@ -290,45 +275,36 @@ bool SparseRajaEx2::eval_grad_f(const size_type& n, const double* x, bool new_x,
 
 bool SparseRajaEx2::eval_cons(const size_type& n, const size_type& m, const double* x, bool new_x, double* cons)
 {
-  assert(n==n_vars_); assert(m==n_cons_);
+  assert(n==n_vars_);
+  assert(m==n_cons_);
   assert(n_cons_==2+n-3+rankdefic_eq_+rankdefic_ineq_);
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 2),
+  // serial part
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
     RAJA_LAMBDA(RAJA::Index_type i)
-    {
-      if(i==0) {
-        // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        cons[i] = 4*x[0] + 2*x[1];
-      } else if(i==1) {
-        // --- constraint 2 body ---> 2*x_1 + x_3
-        cons[i] = 2*x[0] + 1*x[2];
+    {      
+      // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
+      cons[0] = 4*x[0] + 2*x[1];
+      // --- constraint 2 body ---> 2*x_1 + x_3
+      cons[1] = 2*x[0] + 1*x[2];
+
+      if(rankdefic_ineq_) {
+        // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
+        cons[n-1] = 4*x[0] + 2*x[2];
+      }
+
+      if(rankdefic_eq_) {
+        //  4*x_1 + 2*x_2 == 10
+        cons[m-1] = 4*x[0] + 2*x[1];
       }
     });
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, 2+n-3),
+  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
       // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
       cons[i] = 2*x[0] + 0.5*x[i+1];
     });
-
-  if(rankdefic_ineq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3, 2+n-3+1),
-      RAJA_LAMBDA(RAJA::Index_type i)
-      {
-        // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
-        cons[i] = 4*x[0] + 2*x[2];
-      });
-  }
-
-  if(rankdefic_eq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2+n-3+rankdefic_ineq_, m),
-      RAJA_LAMBDA(RAJA::Index_type i)
-      {
-        //  4*x_1 + 2*x_2 == 10
-        cons[i] = 4*x[0] + 2*x[1];
-      });
-  }
 
   return true;
 }
@@ -346,87 +322,85 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
   assert(n>=3);
 
   assert(nnzJacS == 4 + 2*(n-3) + 2*rankdefic_eq_ + 2*rankdefic_ineq_);
-
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 2),
-    RAJA_LAMBDA(RAJA::Index_type itrow)
-    {
-      if(itrow==0) {
+ 
+  if(iJacS !=nullptr && jJacS != nullptr) {
+    // serial part
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
+      RAJA_LAMBDA(RAJA::Index_type itrow)
+      {
         // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
-        if(iJacS !=nullptr && jJacS != nullptr) {
-          iJacS[2*itrow] = itrow;
-          jJacS[2*itrow] = 0;
-          iJacS[2*itrow+1] = itrow;
-          jJacS[2*itrow+1] = 1;
-        }
-        if(MJacS != nullptr) {
-          MJacS[2*itrow] = 4.0;
-          MJacS[2*itrow+1] = 2.0;
-        }
-      } else if(itrow==1) {
+        iJacS[0] = 0;
+        jJacS[0] = 0;
+        iJacS[1] = 0;
+        jJacS[1] = 1;
         // --- constraint 2 body ---> 2*x_1 + x_3
-        if(iJacS !=nullptr && jJacS != nullptr) { 
-          iJacS[2*itrow] = itrow;
-          jJacS[2*itrow] = 0;
-          iJacS[2*itrow+1] = itrow;
-          jJacS[2*itrow+1] = 2;
-        }
-        if(MJacS != nullptr) {
-          MJacS[2*itrow] = 2.0;
-          MJacS[2*itrow+1] = 1.0;
-        }
-      }
-    });
+        iJacS[2] = 1;
+        jJacS[2] = 0;
+        iJacS[3] = 1;
+        jJacS[3] = 2;
 
-  RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
-    RAJA_LAMBDA(RAJA::Index_type itrow)
-    {
-      // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
-      if(iJacS !=nullptr && jJacS != nullptr) {
+        if(rankdefic_ineq_) {   
+          // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
+          iJacS[2*n-2] = n-1;
+          jJacS[2*n-2] = 0;
+          iJacS[2*n-1] = n-1;
+          jJacS[2*n-1] = 2;
+        }
+
+        if(rankdefic_eq_) {
+          //  4*x_1 + 2*x_2 == 10
+          iJacS[2*m-2] = m-1;
+          jJacS[2*m-2] = 0;
+          iJacS[2*m-1] = m-1;
+          jJacS[2*m-1] = 1;
+        }
+      });
+    
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
+      RAJA_LAMBDA(RAJA::Index_type itrow)
+      {
+        // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
         iJacS[2*itrow] = itrow;
         jJacS[2*itrow] = 0;
         iJacS[2*itrow+1] = itrow;
         jJacS[2*itrow+1] = itrow+1;
-      }
-      if(MJacS != nullptr) {
-        MJacS[2*itrow] = 2.0;
-        MJacS[2*itrow+1] = 0.5;
-      }
-    });
-
-  if(rankdefic_ineq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1, n),
-      RAJA_LAMBDA(RAJA::Index_type itrow)
-      {
-        // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
-        if(iJacS !=nullptr && jJacS != nullptr) {
-          iJacS[2*itrow] = itrow;
-          jJacS[2*itrow] = 0;
-          iJacS[2*itrow+1] = itrow;
-          jJacS[2*itrow+1] = 2;
-        }
-        if(MJacS != nullptr) {
-          MJacS[2*itrow] = 4.0;
-          MJacS[2*itrow+1] = 2.0;
-        }
       });
+
   }
 
-  if(rankdefic_eq_) {
-    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(n-1+rankdefic_ineq_, n+rankdefic_ineq_),
+  if(MJacS != nullptr) {
+    // serial part
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
       RAJA_LAMBDA(RAJA::Index_type itrow)
       {
-        //  4*x_1 + 2*x_2 == 10
-        if(iJacS !=nullptr && jJacS != nullptr) {
-          iJacS[2*itrow] = itrow;
-          jJacS[2*itrow] = 0;
-          iJacS[2*itrow+1] = itrow;
-          jJacS[2*itrow+1] = 1;
-        }
-        if(MJacS != nullptr) {
-          MJacS[2*itrow] = 4.0;
-          MJacS[2*itrow+1] = 2.0;
+        // --- constraint 1 body --->  4*x_1 + 2*x_2 == 10
+        MJacS[0] = 4.0;
+        MJacS[1] = 2.0;
+        // --- constraint 2 body ---> 2*x_1 + x_3
+        MJacS[2] = 2.0;
+        MJacS[3] = 1.0;
+
+        if(rankdefic_ineq_) {   
+          // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
+          MJacS[2*n-2] = 4.0;
+          MJacS[2*n-1] = 2.0;
+        }      
+
+        if(rankdefic_eq_) {
+          //  4*x_1 + 2*x_2 == 10
+          MJacS[2*m-2] = 4.0;
+          MJacS[2*m-1] = 2.0;
         }
       });
+
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(2, n-1),
+      RAJA_LAMBDA(RAJA::Index_type itrow)
+      {
+        // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
+        MJacS[2*itrow] = 2.0;
+        MJacS[2*itrow+1] = 0.5;
+      });
+
   }
 
   return true;
@@ -444,29 +418,29 @@ bool SparseRajaEx2::eval_Hess_Lagr(const size_type& n,
                                index_type* jHSS,
                                double* MHSS)
 {
-    //Note: lambda is not used since all the constraints are linear and, therefore, do
-    //not contribute to the Hessian of the Lagrangian
-    assert(nnzHSS == n);
+  //Note: lambda is not used since all the constraints are linear and, therefore, do
+  //not contribute to the Hessian of the Lagrangian
+  assert(nnzHSS == n);
 
-    if(iHSS!=nullptr && jHSS!=nullptr) {
-      RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
-        RAJA_LAMBDA(RAJA::Index_type i)
-        {
-          iHSS[i] = i;
-          jHSS[i] = i;
-        });
-    }
+  if(iHSS!=nullptr && jHSS!=nullptr) {
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        iHSS[i] = i;
+        jHSS[i] = i;
+      });
+  }
 
-    int convex_obj = (int) convex_obj_;
-    double scal_neg_obj = scal_neg_obj_;
-    if(MHSS!=nullptr) {
-      RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
-        RAJA_LAMBDA(RAJA::Index_type i)
-        {
-          MHSS[i] = obj_factor * ( (2*convex_obj-1) * scal_neg_obj * 3 * std::pow(x[i]-1., 2) + 1);
-        });
-    }
-    return true;
+  int convex_obj = (int) convex_obj_;
+  double scal_neg_obj = scal_neg_obj_;
+  if(MHSS!=nullptr) {
+    RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, n),
+      RAJA_LAMBDA(RAJA::Index_type i)
+      {
+        MHSS[i] = obj_factor * ( (2*convex_obj-1) * scal_neg_obj * 3 * std::pow(x[i]-1., 2) + 1);
+      });
+  }
+  return true;
 }
 
 

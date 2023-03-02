@@ -223,6 +223,7 @@ public:
 
 private:
   hiopVector* rhs_host_;
+  hiopMatrixSparse* M_host_;
 };
 
 // Forward declaration of LU class

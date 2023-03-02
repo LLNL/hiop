@@ -252,12 +252,12 @@ namespace hiop
     } else {
       // update matrix
       for(int k = 0; k < nnz_; k++) {
-        kVal_[k] = M_host_->M()[index_covert_CSR2Triplet_[k]];
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
       }
       for(int i = 0; i < n_; i++) {
         if(index_covert_extra_Diag2CSR_[i] != -1)
           kVal_[index_covert_extra_Diag2CSR_[i]]
-            += M_host_->M()[M_host_->numberOfNonzeros() - n_ + i];
+            += M_->M()[M_->numberOfNonzeros() - n_ + i];
       }
     } // else
 
@@ -469,10 +469,10 @@ namespace hiop
     //
     // off-diagonal part
     kRowPtr_[0] = 0;
-    for(int k = 0; k < M_host_->numberOfNonzeros() - n_; k++) {
-      if(M_host_->i_row()[k] != M_host_->j_col()[k]) {
-        kRowPtr_[M_host_->i_row()[k] + 1]++;
-        kRowPtr_[M_host_->j_col()[k] + 1]++;
+    for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
+      if(M_->i_row()[k] != M_->j_col()[k]) {
+        kRowPtr_[M_->i_row()[k] + 1]++;
+        kRowPtr_[M_->j_col()[k] + 1]++;
         nnz_ += 2;
       }
     }
@@ -502,16 +502,16 @@ namespace hiop
       index_covert_extra_Diag2CSR_[k] = -1;
     }
 
-    for(int k = 0; k < M_host_->numberOfNonzeros() - n_; k++) {
-      rowID_tmp = M_host_->i_row()[k];
-      colID_tmp = M_host_->j_col()[k];
+    for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
+      rowID_tmp = M_->i_row()[k];
+      colID_tmp = M_->j_col()[k];
       if(rowID_tmp == colID_tmp) {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
         jCol_[nnz_tmp] = colID_tmp;
-        kVal_[nnz_tmp] = M_host_->M()[k];
+        kVal_[nnz_tmp] = M_->M()[k];
         index_covert_CSR2Triplet_[nnz_tmp] = k;
 
-        kVal_[nnz_tmp] += M_host_->M()[M_host_->numberOfNonzeros() - n_ + rowID_tmp];
+        kVal_[nnz_tmp] += M_->M()[M_->numberOfNonzeros() - n_ + rowID_tmp];
         index_covert_extra_Diag2CSR_[rowID_tmp] = nnz_tmp;
 
         nnz_each_row_tmp[rowID_tmp]++;
@@ -519,12 +519,12 @@ namespace hiop
       } else {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + kRowPtr_[rowID_tmp];
         jCol_[nnz_tmp] = colID_tmp;
-        kVal_[nnz_tmp] = M_host_->M()[k];
+        kVal_[nnz_tmp] = M_->M()[k];
         index_covert_CSR2Triplet_[nnz_tmp] = k;
 
         nnz_tmp = nnz_each_row_tmp[colID_tmp] + kRowPtr_[colID_tmp];
         jCol_[nnz_tmp] = rowID_tmp;
-        kVal_[nnz_tmp] = M_host_->M()[k];
+        kVal_[nnz_tmp] = M_->M()[k];
         index_covert_CSR2Triplet_[nnz_tmp] = k;
 
         nnz_each_row_tmp[rowID_tmp]++;
@@ -538,8 +538,8 @@ namespace hiop
         assert(nnz_each_row_tmp[i] == kRowPtr_[i + 1] - kRowPtr_[i] - 1);
         nnz_tmp = nnz_each_row_tmp[i] + kRowPtr_[i];
         jCol_[nnz_tmp] = i;
-        kVal_[nnz_tmp] = M_host_->M()[M_host_->numberOfNonzeros() - n_ + i];
-        index_covert_CSR2Triplet_[nnz_tmp] = M_host_->numberOfNonzeros() - n_ + i;
+        kVal_[nnz_tmp] = M_->M()[M_->numberOfNonzeros() - n_ + i];
+        index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros() - n_ + i;
         total_nnz_tmp += 1;
 
         std::vector<int> ind_temp(kRowPtr_[i + 1] - kRowPtr_[i]);
@@ -1626,14 +1626,17 @@ namespace hiop
                                                                        const int& nnz, 
                                                                        hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp), 
-      rhs_host_{nullptr}
+      rhs_host_{nullptr},
+      M_host_{nullptr}
   {
     rhs_host_ = LinearAlgebraFactory::create_vector("default", n);
+    M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
   }
   
   hiopLinSolverSymSparseCUSOLVERGPU::~hiopLinSolverSymSparseCUSOLVERGPU()
   {
     delete rhs_host_;
+    delete M_host_;
   }
 
   int hiopLinSolverSymSparseCUSOLVERGPU::matrixChanged()
@@ -1657,8 +1660,18 @@ namespace hiop
       checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
       checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
     }
+    
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+    
+    int vret = hiopLinSolverSymSparseCUSOLVER::matrixChanged();
 
-    return hiopLinSolverSymSparseCUSOLVER::matrixChanged();
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+    
+    return vret;
   }
   
   bool hiopLinSolverSymSparseCUSOLVERGPU::solve(hiopVector& x)
@@ -1672,8 +1685,16 @@ namespace hiop
       checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyHostToHost));
     }
 
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
     bool bret = hiopLinSolverSymSparseCUSOLVER::solve(*rhs_host_);
-   
+
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
     if("device" == nlp_->options->GetString("mem_space")) {
       checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
     } else {

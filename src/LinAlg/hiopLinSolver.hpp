@@ -136,8 +136,7 @@ class hiopLinSolverSparseBase : public hiopLinSolver
 public:
   hiopLinSolverSparseBase()
     : M_(nullptr),
-      sys_mat_owned_(true),
-      M_host_(nullptr)
+      sys_mat_owned_(true)
   {
   }
   
@@ -145,7 +144,6 @@ public:
   {
     if(sys_mat_owned_) {
       delete M_;
-      delete M_host_;
     }
   }
   
@@ -159,14 +157,12 @@ public:
     if(sys_mat_owned_) {
       assert(false && "system matrix should not have been allocated internally when calling set_sys_matrix");
       delete M_;
-      delete M_host_;
     }
     sys_mat_owned_ = false;
     M_ = M;
   }
 protected:
   hiopMatrixSparse* M_;
-  hiopMatrixSparse* M_host_;  // TODO: for cusolver, delete this later! 
   bool sys_mat_owned_;
 };
 

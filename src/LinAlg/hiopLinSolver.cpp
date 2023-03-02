@@ -100,7 +100,6 @@ namespace hiop {
     //this constructor (will call the 1-parameter constructor below) so they avoid creating
     //the triplet matrix
     M_ = LinearAlgebraFactory::create_matrix_sparse(nlp->options->GetString("mem_space"), n, n, nnz);
-    M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
     //this class will own `M_`
     sys_mat_owned_ = true;
     nlp_ = nlp;
@@ -113,14 +112,12 @@ namespace hiop {
     sys_mat_owned_ = false;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
-    M_host_ = nullptr;
   }
 
   hiopLinSolverSymSparse::hiopLinSolverSymSparse(hiopMatrixSparse* M, hiopNlpFormulation* nlp)
   {
     M_ = M;
     sys_mat_owned_ = false;
-    M_host_ = nullptr;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
   }
@@ -128,7 +125,6 @@ namespace hiop {
   hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
   {
     M_ = LinearAlgebraFactory::create_matrix_sparse(nlp->options->GetString("mem_space"), n, n, nnz);
-    M_host_ = nullptr;
     sys_mat_owned_ = false;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));
