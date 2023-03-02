@@ -105,3 +105,38 @@ pnnl_cleanup:
     export WORKDIR="$HOME/gitlab/"
     find $WORKDIR -type d -mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
     ls -hal $WORKDIR
+
+.report-status:
+  extends:
+    - .pnnl_tags
+  variables:
+    STATUS_PROJECT: LLNL/hiop
+    STATUS_NAME: PNNL CI
+    GIT_STRATEGY: none
+  script:
+    # For complete details on the GitHub API please see:
+    # https://developer.github.com/v3/repos/statuses
+    # TODO:
+    #   - Create access token with `repo:status scope` in HiOp to be able to post to GitHub commit status
+    #   - Add PNNL GitLab CI/CD variable with environment scope (same environment name as below) containing GitHub authorization token
+    - curl -X POST -H @${GITHUB_CURL_HEADERS} https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA}?state=${CI_JOB_NAME}\&context=${STATUS_NAME}\&target_url=${CI_PIPELINE_URL}
+  environment:
+    name: reporting-github
+  dependencies: []
+
+pending:
+  stage: .pre
+  extends:
+    - .report-status
+
+success:
+  stage: .post
+  extends:
+    - .report-status
+
+failed:
+  stage: .post
+  extends:
+    - .report-status
+  rules:
+    - when: on_failure
