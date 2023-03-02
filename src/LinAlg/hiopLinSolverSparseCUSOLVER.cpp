@@ -1641,15 +1641,22 @@ namespace hiop
     size_type nnz = M_->numberOfNonzeros();
     double* mval_dev = M_->M();
     double* mval_host= M_host_->M();
-    checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyDeviceToHost));
 
     index_type* irow_dev = M_->i_row();
     index_type* irow_host= M_host_->i_row();
-    checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
-  
+
     index_type* jcol_dev = M_->j_col();
     index_type* jcol_host= M_host_->j_col();
-    checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
+
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));      
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+    }
 
     return hiopLinSolverSymSparseCUSOLVER::matrixChanged();
   }
@@ -1658,12 +1665,21 @@ namespace hiop
   {
     double* mval_dev = x.local_data();
     double* mval_host= rhs_host_->local_data();
-    
-    checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+   
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyHostToHost));
+    }
 
     bool bret = hiopLinSolverSymSparseCUSOLVER::solve(*rhs_host_);
-    
-    checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+   
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
+    }
+ 
     return bret;
   }
 
