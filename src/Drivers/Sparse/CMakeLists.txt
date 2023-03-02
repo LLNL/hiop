@@ -14,10 +14,11 @@ if(HIOP_USE_RAJA)
       NlpSparseRajaEx2Driver.cpp 
       PROPERTIES LANGUAGE CUDA
     )
+  
+    add_executable(NlpSparseRajaEx2.exe  NlpSparseRajaEx2Driver.cpp  NlpSparseRajaEx2.cpp)
+    target_link_libraries(NlpSparseRajaEx2.exe HiOp::HiOp)
+    install(TARGETS NlpSparseRajaEx2.exe DESTINATION bin)
   endif()
-  add_executable(NlpSparseRajaEx2.exe  NlpSparseRajaEx2Driver.cpp  NlpSparseRajaEx2.cpp)
-  target_link_libraries(NlpSparseRajaEx2.exe HiOp::HiOp)
-  install(TARGETS NlpSparseRajaEx2.exe DESTINATION bin)
 endif()
 
 if(HIOP_BUILD_SHARED)
@@ -66,7 +67,7 @@ if(HIOP_USE_GINKGO)
   endif(HIOP_USE_HIP)
 endif(HIOP_USE_GINKGO)
 
-if(HIOP_USE_RAJA)
+if(HIOP_USE_RAJA AND HIOP_USE_GPU AND HIOP_USE_CUDA)
   add_test(NAME NlpSparseRaja2_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:NlpSparseRajaEx2.exe> 500 -selfcheck ")
 endif()
 
