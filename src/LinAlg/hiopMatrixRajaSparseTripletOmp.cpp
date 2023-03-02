@@ -55,9 +55,8 @@
 
 #include "hiopMatrixRajaSparseTriplet.hpp"
 
-#include "MemBackendOmpImpl.hpp"
-#include "MemBackendUmpireImpl.hpp"
 #include "MemBackendCppImpl.hpp"
+#include "MemBackendUmpireImpl.hpp"
 #include "ExecPoliciesRajaOmpImpl.hpp"
 
 namespace hiop
