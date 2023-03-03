@@ -8,8 +8,9 @@ jobs:
     # Spack public build cache is only 18.04
     # https://oaciss.uoregon.edu/e4s/inventory.html
     # E4S cache supports other OS, mostly 20.04 for x86_64
+    # E4S cache supports a tagged version of spack, hence 0.19.1
     runs-on: ubuntu-20.04
-    container: spack/ubuntu-focal
+    container: spack/ubuntu-focal:v0.19.1
     strategy:
       matrix:
         spack_spec:
@@ -40,5 +41,6 @@ jobs:
           # Add E4S mirror for faster builds
           spack mirror add E4S https://cache.e4s.io
           spack buildcache keys --install --trust
+          spack develop -path $(pwd) --no-clone hiop@develop
           spack --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
 
