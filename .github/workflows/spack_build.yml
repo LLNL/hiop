@@ -29,9 +29,9 @@ jobs:
         run: |
           ls && pwd
           . /opt/spack/share/spack/setup-env.sh
-          spack -d debug report
-          spack -d mirror add binary_mirror https://binaries.spack.io/develop
-          spack -d buildcache keys --install --trust
-          spack -d spec $SPACK_SPEC target=x86_64
-          spack -d --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
+          spack debug report
+          spack mirror add binary_mirror https://binaries.spack.io/develop
+          spack buildcache keys --install --trust
+          spack spec $SPACK_SPEC target=x86_64
+          spack --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
 
