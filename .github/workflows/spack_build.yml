@@ -7,9 +7,9 @@ jobs:
     # https://spack.io/spack-binary-packages/
     # Spack public build cache is only 18.04
     # https://oaciss.uoregon.edu/e4s/inventory.html
-    # E4S cache supports other OS
-    runs-on: ubuntu-18.04
-    container: spack/ubuntu-bionic
+    # E4S cache supports other OS, mostly 20.04 for x86_64
+    runs-on: ubuntu-20.04
+    container: spack/ubuntu-focal
     strategy:
       matrix:
         spack_spec:
