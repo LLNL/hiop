@@ -4,9 +4,12 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    # Since we use the spack public build cache, lets use latest Ubuntu
-    runs-on: ubuntu-22.04
-    container: spack/ubuntu-jammy
+    # https://spack.io/spack-binary-packages/
+    # Spack public build cache is only 18.04
+    # https://oaciss.uoregon.edu/e4s/inventory.html
+    # E4S cache supports other OS
+    runs-on: ubuntu-18.04
+    container: spack/ubuntu-bionic
     strategy:
       matrix:
         spack_spec:
@@ -30,7 +33,8 @@ jobs:
           ls && pwd
           . /opt/spack/share/spack/setup-env.sh
           spack debug report
-          spack mirror add binary_mirror https://binaries.spack.io/develop
+          spack mirror add spack_public_mirror https://binaries.spack.io/develop
+          spack mirror add E4S https://cache.e4s.io
           spack buildcache keys --install --trust
           spack spec $SPACK_SPEC target=x86_64
           spack --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
