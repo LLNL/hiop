@@ -38,7 +38,7 @@ jobs:
           spack mirror add spack_public_mirror https://binaries.spack.io/develop
           spack buildcache keys --install --trust
           # Need to create an environment to install hiop in the action's branch
-          spack env create -d $(pwd)/spack-env
+          spack env create -d ./spack-env
           spack env activate ./spack-env
           spack add $SPACK_SPEC target=x86_64
           spack develop -path $(pwd) --no-clone hiop@develop
