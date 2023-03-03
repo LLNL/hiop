@@ -4,8 +4,9 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    runs-on: ubuntu-22.04
-    container: spack/ubuntu-jammy:latest
+    # 20.04 is a version shared by E4S cache and Spack binaries for x86_64
+    runs-on: ubuntu-20.04
+    container: spack/ubuntu-focal:latest
     strategy:
       matrix:
         spack_spec:
