@@ -4,6 +4,7 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
+    # Since we use the spack public build cache, lets use latest Ubuntu
     runs-on: ubuntu-22.04
     container: spack/ubuntu-jammy
     strategy:
@@ -25,11 +26,6 @@ jobs:
       - name: Build Environment
         env:
           SPACK_SPEC: ${{ matrix.spack_spec }}
-
-        # Note that x86 is used here because the e4s buildcache has many builds
-        # cached for ubuntu 18.04 with target x86, the lowest common denominator
-        # for x86 systems. This allows us to use far more prebuilt packages,
-        # which should speed up the builds by quite a bit.
         run: |
           ls && pwd
           . /opt/spack/share/spack/setup-env.sh
