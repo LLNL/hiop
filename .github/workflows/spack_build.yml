@@ -37,10 +37,14 @@ jobs:
           # Just use the public mirror to bootstrap concretizer
           spack mirror add spack_public_mirror https://binaries.spack.io/develop
           spack buildcache keys --install --trust
-          spack spec $SPACK_SPEC target=x86_64
+          # Need to create an environment to install hiop in the action's branch
+          spack env create -d $(pwd)/spack-env
+          spack env activate ./spack-env
+          spack add $SPACK_SPEC target=x86_64
+          spack develop -path $(pwd) --no-clone hiop@develop
+          spack concretize --reuse
           # Add E4S mirror for faster builds
           spack mirror add E4S https://cache.e4s.io
           spack buildcache keys --install --trust
-          spack develop -path $(pwd) --no-clone hiop@develop
-          spack --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
+          spack --stacktrace install --fail-fast
 
