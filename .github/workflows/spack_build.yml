@@ -49,5 +49,6 @@ jobs:
           spack mirror add E4S https://cache.e4s.io/23.02
           spack buildcache keys --install --trust
           spack concretize --reuse
+          git config --global --add safe.directory $(pwd)
           spack --stacktrace install --fail-fast
 
