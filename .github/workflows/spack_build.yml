@@ -42,7 +42,7 @@ jobs:
           spack env create -d ./spack-env
           spack env activate ./spack-env
           spack add $SPACK_SPEC target=x86_64
-          spack develop -path $(pwd) --no-clone hiop@develop
+          spack develop --path $(pwd) --no-clone hiop@develop
           spack concretize --reuse
           # Add E4S mirror for faster builds
           spack mirror add E4S https://cache.e4s.io
