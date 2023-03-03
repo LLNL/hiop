@@ -4,13 +4,8 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    # https://spack.io/spack-binary-packages/
-    # Spack public build cache is only 18.04
-    # https://oaciss.uoregon.edu/e4s/inventory.html
-    # E4S cache supports other OS, mostly 20.04 for x86_64
-    # E4S cache supports a tagged version of spack, hence 0.19.1
-    runs-on: ubuntu-20.04
-    container: spack/ubuntu-focal:v0.19.1
+    runs-on: ubuntu-22.04
+    container: spack/ubuntu-jammy:latest
     strategy:
       matrix:
         spack_spec:
@@ -37,6 +32,7 @@ jobs:
           . /opt/spack/share/spack/setup-env.sh
           spack debug report
           # Just use the public mirror to bootstrap concretizer
+          # https://spack.io/spack-binary-packages
           spack mirror add spack_public_mirror https://binaries.spack.io/develop
           spack buildcache keys --install --trust
           # Need to create an environment to install hiop in the action's branch
@@ -44,7 +40,8 @@ jobs:
           spack env activate ./spack-env
           spack add $SPACK_SPEC target=x86_64
           spack develop --path $(pwd) --no-clone hiop@develop
-          # Add E4S mirror for faster builds
+          # Add E4S mirror - likely relying on spack cache but nice backup
+          # https://oaciss.uoregon.edu/e4s/inventory.html
           # Need to add build cache before concretizing to re-use dependencies
           # Using custom e4s cache due to known bug
           # TODO: Update cache link after bug is resolved
