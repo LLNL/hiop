@@ -4,8 +4,8 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    runs-on: ubuntu-latest
-    container: spack/ubuntu-bionic
+    runs-on: ubuntu-22.04
+    container: spack/ubuntu-jammy
     strategy:
       matrix:
         spack_spec:
