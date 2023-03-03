@@ -44,8 +44,8 @@ jobs:
           spack develop --path $(pwd) --no-clone hiop@develop
           # Add E4S mirror for faster builds
           # Need to add build cache before concretizing to re-use dependencies
-          # spack mirror add E4S https://cache.e4s.io
-          # spack buildcache keys --install --trust
-          spack concretize --reuse
-          spack --stacktrace install --fail-fast
+          spack -d mirror add E4S https://cache.e4s.io
+          spack -d buildcache keys --install --trust
+          spack -d concretize --reuse
+          spack -d --stacktrace install --fail-fast
 
