@@ -33,9 +33,12 @@ jobs:
           ls && pwd
           . /opt/spack/share/spack/setup-env.sh
           spack debug report
+          # Just use the public mirror to bootstrap concretizer
           spack mirror add spack_public_mirror https://binaries.spack.io/develop
-          spack mirror add E4S https://cache.e4s.io
           spack buildcache keys --install --trust
           spack spec $SPACK_SPEC target=x86_64
+          # Add E4S mirror for faster builds
+          spack mirror add E4S https://cache.e4s.io
+          spack buildcache keys --install --trust
           spack --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
 
