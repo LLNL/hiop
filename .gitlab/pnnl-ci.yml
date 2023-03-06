@@ -13,6 +13,7 @@ variables:
     - marianas
 
 .pnnl_nohpc_tags:
+  image: curlimages/curl
   tags:
     - basic
     - exasgd
