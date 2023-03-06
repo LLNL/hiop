@@ -124,9 +124,12 @@ pnnl_cleanup:
     STATUS_NAME: PNNL_GitLab
     GIT_STRATEGY: none
   script:
-    - curl --version
-    - echo curl -X POST -H @${GITHUB_CURL_HEADERS} https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA}?state=${CI_JOB_NAME}\&context=${STATUS_NAME}\&target_url=${CI_PIPELINE_URL}
-    - curl -X POST -H @${GITHUB_CURL_HEADERS} https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA}?state=${CI_JOB_NAME}\&context=${STATUS_NAME}\&target_url=${CI_PIPELINE_URL}
+    - |
+      curl -L \
+      -X POST \
+      -H @${GITHUB_CURL_HEADERS} \
+      https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
+      -d '{"state":"${CI_JOB_NAME}","target_url":"${CI_PIPELINE_URL}","context"="${STATUS_NAME}"}'
   environment:
     name: reporting-github
 
