@@ -125,6 +125,7 @@ pnnl_cleanup:
     GIT_STRATEGY: none
   script:
     - |
+      set -x
       curl -L \
       -X POST \
       -H @${GITHUB_CURL_HEADERS} \
