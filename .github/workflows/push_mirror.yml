@@ -4,7 +4,7 @@ on: [push, delete]
 
 jobs:
   PNNL_GitLab:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v1
       - uses: spyoungtech/mirror-action@master

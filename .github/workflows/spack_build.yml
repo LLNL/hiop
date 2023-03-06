@@ -4,8 +4,9 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    runs-on: ubuntu-latest
-    container: spack/ubuntu-bionic
+    # 20.04 is a version shared by E4S cache and Spack binaries for x86_64
+    runs-on: ubuntu-20.04
+    container: spack/ubuntu-focal:latest
     strategy:
       matrix:
         spack_spec:
@@ -21,21 +22,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Build Environment
         env:
           SPACK_SPEC: ${{ matrix.spack_spec }}
-
-        # Note that x86 is used here because the e4s buildcache has many builds
-        # cached for ubuntu 18.04 with target x86, the lowest common denominator
-        # for x86 systems. This allows us to use far more prebuilt packages,
-        # which should speed up the builds by quite a bit.
         run: |
           ls && pwd
           . /opt/spack/share/spack/setup-env.sh
-          spack -d debug report
-          spack -d mirror add binary_mirror https://binaries.spack.io/develop
-          spack -d buildcache keys --install --trust
-          spack -d spec $SPACK_SPEC target=x86_64
-          spack -d --stacktrace install --fail-fast $SPACK_SPEC target=x86_64
+          spack debug report
+          # Just use the public mirror to bootstrap concretizer
+          # https://spack.io/spack-binary-packages
+          spack mirror add spack_public_mirror https://binaries.spack.io/develop
+          spack buildcache keys --install --trust
+          # Need to create an environment to install hiop in the action's branch
+          spack env create -d ./spack-env
+          spack env activate ./spack-env
+          spack add $SPACK_SPEC target=x86_64
+          spack develop --path $(pwd) --no-clone hiop@develop
+          # Add E4S mirror - likely relying on spack cache but nice backup
+          # https://oaciss.uoregon.edu/e4s/inventory.html
+          # Need to add build cache before concretizing to re-use dependencies
+          # Using custom e4s cache due to known bug
+          # TODO: Update cache link after bug is resolved
+          spack mirror add E4S https://cache.e4s.io/23.02
+          spack buildcache keys --install --trust
+          spack concretize --reuse
+          git config --global --add safe.directory $(pwd)
+          spack --stacktrace install --fail-fast
 
