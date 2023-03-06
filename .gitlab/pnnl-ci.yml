@@ -9,7 +9,15 @@ variables:
     - k8s
     - ikp
     - exasgd
+    - deception
     - marianas
+
+.pnnl_nohpc_tags:
+  tags:
+    - basic
+    - exasgd
+    - ikp
+    - k8s
 
 .newell:
   variables:
@@ -103,12 +111,12 @@ pnnl_cleanup:
   - |
     set -xv
     export WORKDIR="$HOME/gitlab/"
-    find $WORKDIR -type d -mindepth 1 -mmin +360 -prune -print -exec rm -rf {} \; || true
+    find $WORKDIR -type d -mindepth 1 -mmin +120 -prune -print -exec rm -rf {} \; || true
     ls -hal $WORKDIR
 
 .report-status:
   extends:
-    - .pnnl_tags
+    - .pnnl_nohpc_tags
   variables:
     STATUS_PROJECT: LLNL/hiop
     STATUS_NAME: PNNL_GitLab
