@@ -186,6 +186,10 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
   assert(m==n_cons_);
   size_type n = n_vars_;
   assert(m-1 == n-1+rankdefic_ineq_);
+
+  // RAJA doesn't like member objects
+  bool rankdefic_eq = rankdefic_eq_;
+  bool rankdefic_ineq = rankdefic_ineq_;
   
   // serial part
   RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
@@ -198,14 +202,14 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
       cupp[1] = 1e20;
       type[1] = hiopInterfaceBase::hiopNonlinear;
 
-      if(rankdefic_ineq_) {
+      if(rankdefic_ineq) {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
         clow[n-1] = -1e+20;
         cupp[n-1] = 19.;
         type[n-1] = hiopInterfaceBase::hiopNonlinear;
       }
 
-      if(rankdefic_eq_) {
+      if(rankdefic_eq) {
           //  4*x_1 + 2*x_2 == 10
           clow[m-1] = 10;
           cupp[m-1] = 10;
@@ -279,6 +283,10 @@ bool SparseRajaEx2::eval_cons(const size_type& n, const size_type& m, const doub
   assert(m==n_cons_);
   assert(n_cons_==2+n-3+rankdefic_eq_+rankdefic_ineq_);
 
+  // RAJA doesn't like member objects
+  bool rankdefic_eq = rankdefic_eq_;
+  bool rankdefic_ineq = rankdefic_ineq_;
+
   // serial part
   RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -288,12 +296,12 @@ bool SparseRajaEx2::eval_cons(const size_type& n, const size_type& m, const doub
       // --- constraint 2 body ---> 2*x_1 + x_3
       cons[1] = 2*x[0] + 1*x[2];
 
-      if(rankdefic_ineq_) {
+      if(rankdefic_ineq) {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
         cons[n-1] = 4*x[0] + 2*x[2];
       }
 
-      if(rankdefic_eq_) {
+      if(rankdefic_eq) {
         //  4*x_1 + 2*x_2 == 10
         cons[m-1] = 4*x[0] + 2*x[1];
       }
@@ -322,7 +330,11 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
   assert(n>=3);
 
   assert(nnzJacS == 4 + 2*(n-3) + 2*rankdefic_eq_ + 2*rankdefic_ineq_);
- 
+
+  // RAJA doesn't like member objects
+  bool rankdefic_eq = rankdefic_eq_;
+  bool rankdefic_ineq = rankdefic_ineq_;
+
   if(iJacS !=nullptr && jJacS != nullptr) {
     // serial part
     RAJA::forall<ex2_raja_exec>(RAJA::RangeSegment(0, 1),
@@ -339,7 +351,7 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
         iJacS[3] = 1;
         jJacS[3] = 2;
 
-        if(rankdefic_ineq_) {   
+        if(rankdefic_ineq) {
           // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
           iJacS[2*n-2] = n-1;
           jJacS[2*n-2] = 0;
@@ -347,7 +359,7 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
           jJacS[2*n-1] = 2;
         }
 
-        if(rankdefic_eq_) {
+        if(rankdefic_eq) {
           //  4*x_1 + 2*x_2 == 10
           iJacS[2*m-2] = m-1;
           jJacS[2*m-2] = 0;
@@ -380,13 +392,13 @@ bool SparseRajaEx2::eval_Jac_cons(const size_type& n,
         MJacS[2] = 2.0;
         MJacS[3] = 1.0;
 
-        if(rankdefic_ineq_) {   
+        if(rankdefic_ineq) {
           // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
           MJacS[2*n-2] = 4.0;
           MJacS[2*n-1] = 2.0;
-        }      
+        }
 
-        if(rankdefic_eq_) {
+        if(rankdefic_eq) {
           //  4*x_1 + 2*x_2 == 10
           MJacS[2*m-2] = 4.0;
           MJacS[2*m-1] = 2.0;
