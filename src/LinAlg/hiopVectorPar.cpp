@@ -1301,10 +1301,6 @@ bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
   double* ixl_vec = ixl.local_data();
   double* ixu_vec = ixu.local_data();
 
-#ifdef HIOP_DEEPCHECKS
-  const int maxBndsCloseMsgs=3;
-  int nBndsClose=0;
-#endif
   int nlocal = this->get_local_size();
   for(int i=0;i <nlocal; i++) {
     if(xl_vec[i] > -1e20) {
@@ -1334,18 +1330,32 @@ bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
     } else {
 #ifdef HIOP_DEEPCHECKS
 #define min_dist 1e-8
+      const int maxBndsCloseMsgs=3;
+      int nBndsClose=0;
+      int myrank_ = 0;
+      int numranks = 1;  
+#ifdef HIOP_USE_MPI
+      int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
+      err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
+#endif
+
       if(fixed_var_tol<min_dist) { 
         if(nBndsClose<maxBndsCloseMsgs) {
           if(std::fabs(xl_vec[i]-xu_vec[i]) / std::max(1.,std::fabs(xu_vec[i]))<min_dist) {
-            log->printf(hovWarning, 
-                        "Lower (%g) and upper bound (%g) for variable %d are very close. "
-                        "Consider fixing this variable or increase 'fixed_var_tolerance'.\n",
-                        i, xl_vec[i], xu_vec[i]);
+            if(myrank_==0) {
+              fprintf(stdout,
+                      "Lower (%g) and upper bound (%g) for variable %d are very close. "
+                      "Consider fixing this variable or increase 'fixed_var_tolerance'.\n",
+                      i, xl_vec[i], xu_vec[i]);
+            }
             nBndsClose++;
           }
         }
         if(nBndsClose==maxBndsCloseMsgs) {
-          log->printf(hovWarning, "[further messages were surpressed]\n");
+          if(myrank_==0) {
+            fprintf(stdout,
+                    "[further messages were surpressed]\n");
+          }
           nBndsClose++;
         }
       }
