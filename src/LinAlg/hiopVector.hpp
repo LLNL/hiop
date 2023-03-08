@@ -1014,11 +1014,10 @@ public:
    * @param[out] n_bnds_low - number of variables with lower bounds only
    * @param[out] n_bnds_upp - number of variables with upper bounds only
    * @param[out] n_bnds_lu - number of variables with both lower and upper bounds
-   * @param[out] nfixed_vars - number of fixed variables
+   * @param[out] n_fixed_vars - number of fixed variables
    * @param[in] fixed_var_tol - tolerance used to define fixed variables
    * 
    * @pre this is a local method
-   * @todo: add unit test, or should we remove this function?
    */
   virtual bool process_bounds_local(const hiopVector& xu,
                                     hiopVector& ixl,
@@ -1026,7 +1025,7 @@ public:
                                     size_type& n_bnds_low,
                                     size_type& n_bnds_upp,
                                     size_type& n_bnds_lu,
-                                    size_type& nfixed_vars,
+                                    size_type& n_fixed_vars,
                                     const double& fixed_var_tol) = 0;
 
   /**
@@ -1038,7 +1037,6 @@ public:
    * @param[in] fixed_var_perturb - perturbation added to bounds
    * 
    * @pre this is a local method
-   * @todo: add unit test, or should we remove this function?
    */
   virtual void relax_bounds_vec(hiopVector& xu,
                                 const double& fixed_var_tol,

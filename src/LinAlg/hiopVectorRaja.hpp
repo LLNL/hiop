@@ -318,7 +318,7 @@ public:
                                     size_type& n_bnds_low,
                                     size_type& n_bnds_upp,
                                     size_type& n_bnds_lu,
-                                    size_type& nfixed_vars,
+                                    size_type& n_fixed_vars,
                                     const double& fixed_var_tol);
 
   virtual void relax_bounds_vec(hiopVector& xu,

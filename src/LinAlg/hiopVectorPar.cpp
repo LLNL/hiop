@@ -1288,13 +1288,13 @@ bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
                                          size_type& n_bnds_low,
                                          size_type& n_bnds_upp,
                                          size_type& n_bnds_lu,
-                                         size_type& nfixed_vars,
+                                         size_type& n_fixed_vars,
                                          const double& fixed_var_tol)
 {
   n_bnds_low = 0;
   n_bnds_upp = 0;
   n_bnds_lu = 0;
-  nfixed_vars = 0;
+  n_fixed_vars = 0;
 
   const double* xl_vec = this->local_data_const();
   const double* xu_vec = xu.local_data_const();
@@ -1326,7 +1326,7 @@ bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
 
     if( xu_vec[i] < 1e20 &&
         fabs(xl_vec[i]-xu_vec[i]) <= fixed_var_tol*std::fmax(1.,std::fabs(xu_vec[i]))) {
-      nfixed_vars++;
+      n_fixed_vars++;
     } else {
 #ifdef HIOP_DEEPCHECKS
 #define min_dist 1e-8

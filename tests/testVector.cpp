@@ -326,6 +326,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   fail += test.vectorMatchesPattern(*x, *y, rank);
   fail += test.vectorAdjustDuals_plh(*x, *y, *z, *a, rank);
+  fail += test.vector_process_bounds(*x, *y, *z, *a);
+  fail += test.vector_relax_bounds(*x, *y);
 
   if (rank == 0)
   {

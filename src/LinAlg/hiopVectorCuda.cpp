@@ -1087,6 +1087,53 @@ bool hiopVectorCuda::is_equal(const hiopVector& vec) const
   assert(false&&"NOT needed. Remove this func. TODO");
 }
 
+bool hiopVectorCuda::process_bounds_local(const hiopVector& xu,
+                                          hiopVector& ixl,
+                                          hiopVector& ixu,
+                                          size_type& n_bnds_low,
+                                          size_type& n_bnds_upp,
+                                          size_type& n_bnds_lu,
+                                          size_type& n_fixed_vars,
+                                          const double& fixed_var_tol)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(xu.get_local_size()==n_local_);
+  assert(ixl.get_local_size()==n_local_);
+  assert(ixu.get_local_size()==n_local_);
+#endif
+  const double* xl_arr = data_;
+  const double* xu_arr = xu.local_data_const();
+  double* ixl_arr = ixl.local_data();
+  double* ixu_arr = ixu.local_data();
+  
+  hiop::cuda::process_bounds_local_kernel(n_local_,
+                                          xl_arr,
+                                          xu_arr,
+                                          ixl_arr,
+                                          ixu_arr,
+                                          n_bnds_low,
+                                          n_bnds_upp,
+                                          n_bnds_lu,
+                                          n_fixed_vars,
+                                          fixed_var_tol);
+}
+
+void hiopVectorCuda::relax_bounds_vec(hiopVector& xu,
+                                      const double& fixed_var_tol,
+                                      const double& fixed_var_perturb)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(xu.get_local_size()==n_local_);
+#endif
+  double* xl_arr = data_;
+  double* xu_arr = xu.local_data();
+  
+  hiop::cuda::relax_bounds_kernel(n_local_,
+                                  xl_arr,
+                                  xu_arr,
+                                  fixed_var_tol,
+                                  fixed_var_perturb);
+}
 
 } // namespace hiop
 

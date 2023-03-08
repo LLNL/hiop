@@ -296,6 +296,25 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                        double *vd,
                                        const double* dd);
 
+/** @brief process variable bounds */
+void process_bounds_local_kernel(int n_local,
+                                 const double* xl,
+                                 const double* xu,
+                                 double* ixl,
+                                 double* ixu,
+                                 int& n_bnds_low,
+                                 int& n_bnds_upp,
+                                 int& n_bnds_lu,
+                                 int& n_fixed_vars,
+                                 double fixed_var_tol);
+
+/** @brief relax variable bounds */
+void relax_bounds_kernel(int n_local,
+                         double* xl,
+                         double* xu,
+                         double fixed_var_tol,
+                         double fixed_var_perturb);
+
 /// for hiopVectorIntHip
 /**
  * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 

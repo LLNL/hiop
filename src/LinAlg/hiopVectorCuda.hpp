@@ -347,6 +347,19 @@ public:
   /// @brief check if `this` vector is identical to `vec`
   virtual bool is_equal(const hiopVector& vec) const;
 
+  virtual bool process_bounds_local(const hiopVector& xu,
+                                    hiopVector& ixl,
+                                    hiopVector& ixu,
+                                    size_type& n_bnds_low,
+                                    size_type& n_bnds_upp,
+                                    size_type& n_bnds_lu,
+                                    size_type& n_fixed_vars,
+                                    const double& fixed_var_tol);
+
+  virtual void relax_bounds_vec(hiopVector& xu,
+                                const double& fixed_var_tol,
+                                const double& fixed_var_perturb);
+
   /* functions for this class */
   inline MPI_Comm get_mpi_comm() const { return comm_; }
 

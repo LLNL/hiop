@@ -635,6 +635,71 @@ __global__ void copyToStartingAt_w_pattern_hip(int n_src,
   }
 }
 
+/** @brief process variable bounds */
+__global__ void process_bounds_hip(int n,
+                                   const double* xl,
+                                   const double* xu,
+                                   double* ixl,
+                                   double* ixu,
+                                   double* bnds_low,
+                                   double* bnds_upp,
+                                   double* bnds_lu,
+                                   double* fixed_vars,
+                                   double fixed_var_tol)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+  for (int i = tid; i < n; i += num_threads) {
+    // preemptive loop to reduce number of iterations?
+    bnds_low[i] = 0;
+    bnds_upp[i] = 0;
+    bnds_lu[i] = 0;
+    fixed_vars[i] = 0;
+
+    if(xl[i] > -1e20) {
+      ixl[i] = 1.;
+      bnds_low[i] = 1;
+      if(xu[i] < 1e20) {
+        bnds_lu[i] = 1;
+      }
+    } else {
+      ixl[i] = 0.;
+    }
+
+    if(xu[i] < 1e20) {
+      ixu[i] = 1.;
+      bnds_upp[i] = 1;
+    } else {
+      ixu[i] = 0.;
+    }
+
+    if(xu[i] < 1e20 &&
+       fabs(xl[i]-xu[i]) <= fixed_var_tol*fmax(1.,std::fabs(xu[i]))) {
+      fixed_vars[i] = 1;
+    }
+  }
+}
+
+/** @brief relax variable bounds */
+__global__ void relax_bounds_hip(int n,
+                                 double* xla,
+                                 double* xua,
+                                 double fixed_var_tol,
+                                 double fixed_var_perturb)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  
+  for (int i = tid; i < n; i += num_threads) {
+    double xuabs = fabs(xua[i]);
+    if(fabs(xua[i]-xla[i]) <= fixed_var_tol*fmax(1.,xuabs)) {
+      xua[i] += fixed_var_perturb * std::fmax(1.,xuabs);
+      xla[i] -= fixed_var_perturb * std::fmax(1.,xuabs);
+    }
+  }
+}
+
 namespace hiop
 {
 namespace hip
@@ -1271,7 +1336,70 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                                            dd);
 }
 
+/** @brief process variable bounds */
+void process_bounds_local_kernel(int n_local,
+                                 const double* xl,
+                                 const double* xu,
+                                 double* ixl,
+                                 double* ixu,
+                                 int& n_bnds_low,
+                                 int& n_bnds_upp,
+                                 int& n_bnds_lu,
+                                 int& n_fixed_vars,
+                                 double fixed_var_tol)
+{
+  int num_blocks = (n_local+block_size-1)/block_size;
 
+  thrust::device_ptr<int> bnds_low_d_ptr = thrust::device_malloc(n_local*sizeof(int));
+  int* bnds_low_r_ptr = thrust::raw_pointer_cast(bnds_low_d_ptr);
+
+  thrust::device_ptr<int> bnds_upp_d_ptr = thrust::device_malloc(n_local*sizeof(int));
+  int* bnds_upp_r_ptr = thrust::raw_pointer_cast(bnds_upp_d_ptr);
+
+  thrust::device_ptr<int> bnds_lu_d_ptr = thrust::device_malloc(n_local*sizeof(int));
+  int* bnds_lu_r_ptr = thrust::raw_pointer_cast(bnds_lu_d_ptr);
+
+  thrust::device_ptr<int> n_fixed_vars_d_ptr = thrust::device_malloc(n_local*sizeof(int));
+  int* n_fixed_vars_r_ptr = thrust::raw_pointer_cast(n_fixed_vars_d_ptr);
+
+  // set values
+  process_bounds_hip<<<num_blocks,block_size>>>(n,
+                                                xl,
+                                                xu,
+                                                ixl,
+                                                ixu,
+                                                bnds_low_r_ptr,
+                                                bnds_upp_r_ptr,
+                                                bnds_lu_r_ptr,
+                                                n_fixed_vars_r_ptr,
+                                                fixed_var_tol);
+
+  // compute sum
+  n_bnds_low = thrust::reduce(thrust::device, bnds_low_d_ptr, bnds_low_d_ptr+n_local, 0.0, thrust::plus<int>());
+  n_bnds_upp = thrust::reduce(thrust::device, bnds_upp_d_ptr, bnds_upp_d_ptr+n_local, 0.0, thrust::plus<int>());
+  n_bnds_lu = thrust::reduce(thrust::device, bnds_lu_d_ptr, bnds_lu_d_ptr+n_local, 0.0, thrust::plus<int>());
+  n_fixed_vars = thrust::reduce(thrust::device, n_fixed_vars_d_ptr, n_fixed_vars_d_ptr+n_local, 0.0, thrust::plus<int>());
+
+  thrust::device_free(bnds_low_d_ptr);
+  thrust::device_free(bnds_upp_d_ptr);
+  thrust::device_free(bnds_lu_d_ptr);
+  thrust::device_free(n_fixed_vars_d_ptr);
+}
+
+/** @brief relax variable bounds */
+void relax_bounds_kernel(int n_local,
+                         double* xl,
+                         double* xu,
+                         double fixed_var_tol,
+                         double fixed_var_perturb)
+{
+  int num_blocks = (n_local+block_size-1)/block_size;
+  relax_bounds_hip<<<num_blocks,block_size>>>(n_local,
+                                              xl,
+                                              xu,
+                                              fixed_var_tol,
+                                              fixed_var_perturb);
+}
 
 /// for hiopVectorIntHip
 /**

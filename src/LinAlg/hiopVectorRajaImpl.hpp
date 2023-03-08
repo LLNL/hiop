@@ -2239,7 +2239,7 @@ bool hiopVectorRaja<MEM, POL>::process_bounds_local(const hiopVector& xu,
                                                     size_type& n_bnds_low,
                                                     size_type& n_bnds_upp,
                                                     size_type& n_bnds_lu,
-                                                    size_type& nfixed_vars,
+                                                    size_type& n_fixed_vars,
                                                     const double& fixed_var_tol)
 {
 #ifdef HIOP_DEEPCHECKS
@@ -2261,7 +2261,7 @@ bool hiopVectorRaja<MEM, POL>::process_bounds_local(const hiopVector& xu,
   RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_low(0);
   RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_upp(0);
   RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_lu(0);
-  RAJA::ReduceSum< hiop_raja_reduce, int > sum_nfixed_vars(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_fixed_vars(0);
 
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, nlocal),
     RAJA_LAMBDA(RAJA::Index_type i) 
@@ -2285,20 +2285,20 @@ bool hiopVectorRaja<MEM, POL>::process_bounds_local(const hiopVector& xu,
 
       if(xu_vec[i] < 1e20 &&
          fabs(xl_vec[i]-xu_vec[i]) <= fixed_var_tol*std::fmax(1.,std::fabs(xu_vec[i]))) {
-        sum_nfixed_vars += 1;
+        sum_n_fixed_vars += 1;
       }
     });
 
   n_bnds_low = sum_n_bnds_low.get();
   n_bnds_upp = sum_n_bnds_upp.get();
   n_bnds_lu = sum_n_bnds_lu.get();
-  nfixed_vars = sum_nfixed_vars.get();
+  n_fixed_vars = sum_n_fixed_vars.get();
 
   return true;
 }
 
 template<class MEM, class POL>
-bool hiopVectorRaja<MEM, POL>::relax_bounds_vec(hiopVector& xu,
+void hiopVectorRaja<MEM, POL>::relax_bounds_vec(hiopVector& xu,
                                                 const double& fixed_var_tol,
                                                 const double& fixed_var_perturb)
 {
@@ -2311,17 +2311,15 @@ bool hiopVectorRaja<MEM, POL>::relax_bounds_vec(hiopVector& xu,
   double *xua = xu.local_data();
   size_type n = this->get_local_size();
 
-  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, nlocal),
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n),
     RAJA_LAMBDA(RAJA::Index_type i) 
     {
       double xuabs = std::fabs(xua[i]);
       if(std::fabs(xua[i]-xla[i]) <= fixed_var_tol*std::fmax(1.,xuabs)) {
-        xua[i] += fixed_var_perturb*std::fmax(1.,xuabs);
-        xla[i] -= fixed_var_perturb*std::fmax(1.,xuabs);
+        xua[i] += fixed_var_perturb * std::fmax(1.,xuabs);
+        xla[i] -= fixed_var_perturb * std::fmax(1.,xuabs);
       }
     });
-
-  return true;
 }
 
 } // namespace hiop
