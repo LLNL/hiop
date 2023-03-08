@@ -2232,4 +2232,96 @@ bool hiopVectorRaja<MEM, POL>::is_equal(const hiopVector& vec) const
   return all_equal;
 }
 
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM, POL>::process_bounds_local(const hiopVector& xu,
+                                                    hiopVector& ixl,
+                                                    hiopVector& ixu,
+                                                    size_type& n_bnds_low,
+                                                    size_type& n_bnds_upp,
+                                                    size_type& n_bnds_lu,
+                                                    size_type& nfixed_vars,
+                                                    const double& fixed_var_tol)
+{
+#ifdef HIOP_DEEPCHECKS
+  const hiopVectorRaja& vxu = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(xu);
+  const hiopVectorRaja& vixl = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(ixl);
+  const hiopVectorRaja& vixu = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(ixu);
+  assert(vxu.n_local_ == this->n_local_);
+  assert(vixl.n_local_ == this->n_local_);
+  assert(vixu.n_local_ == this->n_local_);
+#endif
+
+  const double* xl_vec = this->local_data_const();
+  const double* xu_vec = xu.local_data_const();
+  double* ixl_vec = ixl.local_data();
+  double* ixu_vec = ixu.local_data();
+
+  size_type nlocal = this->get_local_size();
+
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_low(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_upp(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_lu(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_nfixed_vars(0);
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, nlocal),
+    RAJA_LAMBDA(RAJA::Index_type i) 
+    {
+      if(xl_vec[i] > -1e20) {
+        ixl_vec[i] = 1.;
+        sum_n_bnds_low += 1;
+        if(xu_vec[i] < 1e20) {
+          sum_n_bnds_lu += 1;
+        }
+      } else {
+        ixl_vec[i] = 0.;
+      }
+
+      if(xu_vec[i] < 1e20) {
+        ixu_vec[i] = 1.;
+        sum_n_bnds_upp += 1;
+      } else {
+        ixu_vec[i] = 0.;
+      }
+
+      if(xu_vec[i] < 1e20 &&
+         fabs(xl_vec[i]-xu_vec[i]) <= fixed_var_tol*std::fmax(1.,std::fabs(xu_vec[i]))) {
+        sum_nfixed_vars += 1;
+      }
+    });
+
+  n_bnds_low = sum_n_bnds_low.get();
+  n_bnds_upp = sum_n_bnds_upp.get();
+  n_bnds_lu = sum_n_bnds_lu.get();
+  nfixed_vars = sum_nfixed_vars.get();
+
+  return true;
+}
+
+template<class MEM, class POL>
+bool hiopVectorRaja<MEM, POL>::relax_bounds_vec(hiopVector& xu,
+                                                const double& fixed_var_tol,
+                                                const double& fixed_var_perturb)
+{
+#ifdef HIOP_DEEPCHECKS
+  const hiopVectorRaja& vxu = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(xu);
+  assert(vxu.n_local_ == this->n_local_);
+#endif
+
+  double *xla = this->local_data();
+  double *xua = xu.local_data();
+  size_type n = this->get_local_size();
+
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, nlocal),
+    RAJA_LAMBDA(RAJA::Index_type i) 
+    {
+      double xuabs = std::fabs(xua[i]);
+      if(std::fabs(xua[i]-xla[i]) <= fixed_var_tol*std::fmax(1.,xuabs)) {
+        xua[i] += fixed_var_perturb*std::fmax(1.,xuabs);
+        xla[i] -= fixed_var_perturb*std::fmax(1.,xuabs);
+      }
+    });
+
+  return true;
+}
+
 } // namespace hiop

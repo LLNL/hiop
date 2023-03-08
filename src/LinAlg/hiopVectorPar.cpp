@@ -1282,6 +1282,96 @@ bool hiopVectorPar::is_equal(const hiopVector& vec) const
   return all_equal;
 }
 
+bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
+                                         hiopVector& ixl,
+                                         hiopVector& ixu,
+                                         size_type& n_bnds_low,
+                                         size_type& n_bnds_upp,
+                                         size_type& n_bnds_lu,
+                                         size_type& nfixed_vars,
+                                         const double& fixed_var_tol)
+{
+  n_bnds_low = 0;
+  n_bnds_upp = 0;
+  n_bnds_lu = 0;
+  nfixed_vars = 0;
 
+  const double* xl_vec = this->local_data_const();
+  const double* xu_vec = xu.local_data_const();
+  double* ixl_vec = ixl.local_data();
+  double* ixu_vec = ixu.local_data();
+
+#ifdef HIOP_DEEPCHECKS
+  const int maxBndsCloseMsgs=3;
+  int nBndsClose=0;
+#endif
+  int nlocal = this->get_local_size();
+  for(int i=0;i <nlocal; i++) {
+    if(xl_vec[i] > -1e20) {
+      ixl_vec[i] = 1.;
+      n_bnds_low++;
+      if(xu_vec[i] < 1e20) {
+        n_bnds_lu++;
+      }
+    } else {
+      ixl_vec[i] = 0.;
+    }
+
+    if(xu_vec[i] < 1e20) {
+      ixu_vec[i] = 1.;
+      n_bnds_upp++;
+    } else {
+      ixu_vec[i] = 0.;
+    }
+
+#ifdef HIOP_DEEPCHECKS
+    assert(xl_vec[i] <= xu_vec[i] && "please fix the inconsistent bounds, otherwise the problem is infeasible");
+#endif
+
+    if( xu_vec[i] < 1e20 &&
+        fabs(xl_vec[i]-xu_vec[i]) <= fixed_var_tol*std::fmax(1.,std::fabs(xu_vec[i]))) {
+      nfixed_vars++;
+    } else {
+#ifdef HIOP_DEEPCHECKS
+#define min_dist 1e-8
+      if(fixed_var_tol<min_dist) { 
+        if(nBndsClose<maxBndsCloseMsgs) {
+          if(std::fabs(xl_vec[i]-xu_vec[i]) / std::max(1.,std::fabs(xu_vec[i]))<min_dist) {
+            log->printf(hovWarning, 
+                        "Lower (%g) and upper bound (%g) for variable %d are very close. "
+                        "Consider fixing this variable or increase 'fixed_var_tolerance'.\n",
+                        i, xl_vec[i], xu_vec[i]);
+            nBndsClose++;
+          }
+        }
+        if(nBndsClose==maxBndsCloseMsgs) {
+          log->printf(hovWarning, "[further messages were surpressed]\n");
+          nBndsClose++;
+        }
+      }
+#endif
+    }
+  } // end of for(int i=0;i <nlocal; i++) loop
+
+  return true;
+}
+
+void hiopVectorPar::relax_bounds_vec(hiopVector& xu,
+                                     const double& fixed_var_tol,
+                                     const double& fixed_var_perturb)
+{
+  double *xla = this->local_data();
+  double *xua = xu.local_data();
+  size_type n = this->get_local_size();
+
+  double xuabs;
+  for(index_type i=0; i<n; i++) {
+    xuabs = std::fabs(xua[i]);
+    if(std::fabs(xua[i]-xla[i]) <= fixed_var_tol*std::fmax(1.,xuabs)) {
+      xua[i] += fixed_var_perturb*std::fmax(1.,xuabs);
+      xla[i] -= fixed_var_perturb*std::fmax(1.,xuabs);
+    }
+  }
+}
 
 };

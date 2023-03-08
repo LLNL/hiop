@@ -193,8 +193,8 @@ bool hiopNlpFormulation::finalizeInitialization()
   if(strFixedVars_ != options->GetString("fixed_var")) {
     doinit=true;
   }
-  const double fixedVarTol = options->GetNumeric("fixed_var_tolerance");
-  if(dFixedVarsTol_ != fixedVarTol) {
+  const double fixed_var_tol = options->GetNumeric("fixed_var_tolerance");
+  if(dFixedVarsTol_ != fixed_var_tol) {
     doinit=true;
   }
 
@@ -257,12 +257,12 @@ bool hiopNlpFormulation::finalizeInitialization()
   //preprocess variables bounds - this is curently done on the CPU
   //
   size_type nfixed_vars_local;
-  process_bounds(n_bnds_low_local_,n_bnds_upp_local_, n_bnds_lu_, nfixed_vars_local);
+  process_bounds(n_bnds_low_local_, n_bnds_upp_local_, n_bnds_lu_, nfixed_vars_local);
 
   ///////////////////////////////////////////////////////////////////////////
   //  Handling of fixed variables
   //////////////////////////////////////////////////////////////////////////
-  dFixedVarsTol_ = fixedVarTol;  
+  dFixedVarsTol_ = fixed_var_tol;
   size_type nfixed_vars=nfixed_vars_local;
 #ifdef HIOP_USE_MPI
   int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_); 
@@ -277,11 +277,15 @@ bool hiopNlpFormulation::finalizeInitialization()
       // remove free variables
       //
       log->printf(hovWarning, "Fixed variables will be removed internally.\n");
+      if(options->GetString("compute_mode")=="gpu") {
+        assert(false && "HiOp hasn't support removing fixed variables under GPU mode yet.");
+        return false;
+      }
 
       fixedVarsRemover = new hiopFixedVarsRemover(this,
                                                   *xl_,
                                                   *xu_,
-                                                  fixedVarTol,
+                                                  fixed_var_tol,
                                                   nfixed_vars,
                                                   nfixed_vars_local);
       
@@ -417,7 +421,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   cons_body_ = nullptr;
   
   delete cons_Jac_;
-  cons_Jac_ = NULL;
+  cons_Jac_ = nullptr;
 
   delete cons_lambdas_;
   cons_lambdas_ = nullptr;
@@ -439,89 +443,14 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
                                         size_type& n_bnds_lu,
                                         size_type& nfixed_vars)
 {
-
-  n_bnds_low = 0;
-  n_bnds_upp = 0;
-  n_bnds_lu = 0;
-  nfixed_vars = 0;
-
-#if !defined(HIOP_USE_MPI)
-  int* vec_distrib_ = nullptr;
-  MPI_Comm comm_ = MPI_COMM_SELF;
-#endif  
-  hiopVectorPar xl_tmp(n_vars_, vec_distrib_, comm_);
-  hiopVectorPar xu_tmp(n_vars_, vec_distrib_, comm_);
-  hiopVectorPar ixl_tmp(n_vars_, vec_distrib_, comm_);
-  hiopVectorPar ixu_tmp(n_vars_, vec_distrib_, comm_);
-  
-  this->xl_->copy_to_vectorpar(xl_tmp);
-  this->xu_->copy_to_vectorpar(xu_tmp);
-  this->ixl_->copy_to_vectorpar(ixl_tmp);
-  this->ixu_->copy_to_vectorpar(ixu_tmp);
-  
-  double *ixl_vec = ixl_tmp.local_data_host();
-  double *ixu_vec = ixu_tmp.local_data_host();
-
-  double* xl_vec = xl_tmp.local_data_host();
-  double* xu_vec = xu_tmp.local_data_host();
-#ifdef HIOP_DEEPCHECKS
-  const int maxBndsCloseMsgs=3; int nBndsClose=0;
-#endif
-  const double fixedVarTol = options->GetNumeric("fixed_var_tolerance");
-  int nlocal=xl_->get_local_size();
-  for(int i=0;i<nlocal; i++) {
-    if(xl_vec[i] > -1e20) {
-      ixl_vec[i] = 1.;
-      n_bnds_low++;
-      if(xu_vec[i] < 1e20) {
-        n_bnds_lu++;
-      }
-    } else {
-      ixl_vec[i] = 0.;
-    }
-
-    if(xu_vec[i] < 1e20) {
-      ixu_vec[i] = 1.;
-      n_bnds_upp++;
-    } else {
-      ixu_vec[i] = 0.;
-    }
-
-#ifdef HIOP_DEEPCHECKS
-    assert(xl_vec[i] <= xu_vec[i] && "please fix the inconsistent bounds, otherwise the problem is infeasible");
-#endif
-
-    //if(xl_vec[i]==xu_vec[i]) {
-    if( xu_vec[i]<1e20 &&
-        fabs(xl_vec[i]-xu_vec[i]) <= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
-      nfixed_vars++;
-    } else {
-#ifdef HIOP_DEEPCHECKS
-#define min_dist 1e-8
-      if(fixedVarTol<min_dist) { 
-        if(nBndsClose<maxBndsCloseMsgs) {
-          if(fabs(xl_vec[i]-xu_vec[i]) / std::max(1.,fabs(xu_vec[i]))<min_dist) {
-            log->printf(hovWarning, 
-                        "Lower (%g) and upper bound (%g) for variable %d are very close. "
-                        "Consider fixing this variable or increase 'fixed_var_tolerance'.\n",
-                        i, xl_vec[i], xu_vec[i]);
-            nBndsClose++;
-          }
-        } 
-        if(nBndsClose==maxBndsCloseMsgs) {
-          log->printf(hovWarning, "[further messages were surpressed]\n");
-          nBndsClose++;
-        }
-      }
-#endif
-    }
-  }
-  
-  this->xl_->copy_from_vectorpar(xl_tmp);
-  this->xu_->copy_from_vectorpar(xu_tmp);
-  this->ixl_->copy_from_vectorpar(ixl_tmp);
-  this->ixu_->copy_from_vectorpar(ixu_tmp);
-
+  this->xl_->process_bounds_local(*this->xu_,
+                                  *this->ixl_,
+                                  *this->ixu_,
+                                  n_bnds_low,
+                                  n_bnds_upp,
+                                  n_bnds_lu,
+                                  nfixed_vars,
+                                  options->GetNumeric("fixed_var_tolerance"));
   return true;
 } 
 

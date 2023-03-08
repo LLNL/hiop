@@ -290,7 +290,7 @@ public:
 #endif
 protected:
   /* Preprocess bounds in a form supported by the NLP formulation. Returns counts of
-   * the variables with lower, upper, and lower and lower bounds, as well of the fixed 
+   * the variables with lower, upper, and lower and upper bounds, as well of the fixed
    * variables. 
    */
   virtual bool process_bounds(size_type& n_bnds_low,
