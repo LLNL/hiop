@@ -2051,6 +2051,34 @@ public:
   }
 
   /**
+   * @brief Test:
+   * the number of identical elements between x and y, i.e., x[i] == y[i] 
+   */
+  bool vector_num_match(hiop::hiopVector& x, hiop::hiopVector& y, const int rank)
+  {
+    const local_ordinal_type Nx = x.get_size();
+    int fail = 0;
+    int n_match = 0;
+    x.setToConstant(one);
+    y.setToConstant(one);
+    
+    real_type actual = x.num_match(y);
+    real_type expected = Nx;
+    
+    fail += !isEqual(expected, actual);
+
+    if(rank == 0) {
+      setLocalElement(&x, getLocalSize(&x) - 1, two);
+    }
+    actual = x.num_match(y);
+    expected = Nx - 1;
+    fail += !isEqual(expected, actual);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
    * @brief Test that hiop correctly processes variable bounds
    * 
    * @note This is local method only

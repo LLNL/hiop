@@ -1087,6 +1087,20 @@ bool hiopVectorCuda::is_equal(const hiopVector& vec) const
   assert(false&&"NOT needed. Remove this func. TODO");
 }
 
+size_type hiopVectorCuda::num_match(const hiopVector& vec) const
+{
+  double* dd = data_;
+  double* vd = vec.local_data();
+  int sum_match = sum_match = hiop::cuda::num_match_local_kernel(n_local_, dd, vd);
+
+#ifdef HIOP_USE_MPI
+  int sumG;
+  int ierr=MPI_Allreduce(&sum_match, &sumG, 1, MPI_INT, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  return sumG;
+#endif
+  return sum_match;
+}
+
 bool hiopVectorCuda::process_bounds_local(const hiopVector& xu,
                                           hiopVector& ixl,
                                           hiopVector& ixu,

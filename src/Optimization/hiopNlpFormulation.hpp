@@ -296,7 +296,7 @@ protected:
   virtual bool process_bounds(size_type& n_bnds_low,
                               size_type& n_bnds_upp,
                               size_type& n_bnds_lu,
-                              size_type& nfixed_vars);
+                              size_type& n_fixed_vars);
   /* Preprocess constraints in a form supported the NLP formulation. */
   virtual bool process_constraints();
 protected:

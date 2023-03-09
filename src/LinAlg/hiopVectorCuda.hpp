@@ -347,6 +347,8 @@ public:
   /// @brief check if `this` vector is identical to `vec`
   virtual bool is_equal(const hiopVector& vec) const;
 
+  virtual size_type num_match(const hiopVector& vec) const;
+
   virtual bool process_bounds_local(const hiopVector& xu,
                                     hiopVector& ixl,
                                     hiopVector& ixu,

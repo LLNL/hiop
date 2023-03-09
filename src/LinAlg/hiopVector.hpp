@@ -998,10 +998,18 @@ public:
    * @brief check if `this` vector is identical to `vec`
    *
    * @param[in] vec - vector used to be compared with `this`
-   * @todo: add unit test, or should we remove this function?
+   * @todo: should we remove this function?
    */
   virtual bool is_equal(const hiopVector& vec) const = 0;
 
+  /**
+   * @brief return the numbers of identical elements between two vectors
+   *
+   * @param[in] vec - vector used to be compared with `this`
+   * @post `vec` is not modified
+   */
+  virtual size_type num_match(const hiopVector& vec) const = 0;
+  
   /**
    * @brief preprocess bounds in a form supported by the NLP formulation. Returns counts of
    * the variables with lower, upper, and lower and upper bounds, as well of the fixed 

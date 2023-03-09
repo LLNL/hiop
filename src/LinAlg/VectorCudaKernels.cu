@@ -705,6 +705,24 @@ __global__ void relax_bounds_cu(int n,
   }
 }
 
+/** @brief set d_ptr[i] = 1 if d1[i] == d2[i], otherwirse 0 */
+__global__ void set_if_match_cu(int n,
+                                double* d_ptr,
+                                double* d1,
+                                double* d2)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  
+  for (int i = tid; i < n; i += num_threads) {
+    if(d1[i]==d2[i]) {
+      d_ptr[i] = 1;
+    } else {
+      d_ptr[i] = 0;
+    }
+  }
+}
+
 namespace hiop
 {
 namespace cuda
@@ -1177,7 +1195,6 @@ double min_w_pattern_kernel(int n, const double* d1, const double* id, double ma
 
   thrust::device_ptr<double> ret_dev_ptr = thrust::min_element(thrust::device, dv_ptr, dv_ptr+n);
 
-  // TODO: how to return double from device to host?
   double *ret_host = new double[1];
   double *ret_ptr = thrust::raw_pointer_cast(ret_dev_ptr);
   cudaError_t cuerr = cudaMemcpy(ret_host, ret_ptr, (1)*sizeof(double), cudaMemcpyDeviceToHost);
@@ -1339,6 +1356,24 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                                            nnz_cumsum,
                                                            vd,
                                                            dd);
+}
+
+int num_match_local_kernel(int n, double* d1, const double* d2)
+{
+  int num_blocks = (n+block_size-1)/block_size;
+  
+  // TODO: how to avoid this temp vec?
+  thrust::device_ptr<int> dv_ptr = thrust::device_malloc(n*sizeof(int));
+  int* d_ptr = thrust::raw_pointer_cast(dv_ptr);
+
+  // set d_ptr[i] = 1 if d1[i] == d2[i], otherwirse 0
+  set_if_match_cu<<<num_blocks,block_size>>>(n, d_ptr, d1, d2);
+  
+  int rval = thrust::reduce(thrust::device, d_ptr, d_ptr+n, 0, thrust::plus<int>());
+
+  thrust::device_free(dv_ptr);
+  
+  return rval;
 }
 
 /** @brief process variable bounds */

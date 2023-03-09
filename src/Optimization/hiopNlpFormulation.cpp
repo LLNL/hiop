@@ -441,7 +441,7 @@ bool hiopNlpFormulation::finalizeInitialization()
 bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
                                         size_type& n_bnds_upp,
                                         size_type& n_bnds_lu,
-                                        size_type& nfixed_vars)
+                                        size_type& n_fixed_vars)
 {
   this->xl_->process_bounds_local(*this->xu_,
                                   *this->ixl_,
@@ -449,7 +449,7 @@ bool hiopNlpFormulation::process_bounds(size_type& n_bnds_low,
                                   n_bnds_low,
                                   n_bnds_upp,
                                   n_bnds_lu,
-                                  nfixed_vars,
+                                  n_fixed_vars,
                                   options->GetNumeric("fixed_var_tolerance"));
   return true;
 } 
@@ -485,24 +485,18 @@ bool hiopNlpFormulation::process_constraints()
   assert(gl->get_local_size()==n_cons_);
   assert(gu->get_local_size()==n_cons_);
 
+  n_cons_eq_ = gl->num_match(*gu);
+  n_cons_ineq_ = n_cons_ - n_cons_eq_;
+
   // transfer to host 
   hiopVectorPar gl_host(n_cons_);
   hiopVectorPar gu_host(n_cons_);
   gl->copy_to_vectorpar(gl_host);
   gu->copy_to_vectorpar(gu_host);
-
+  
   double* gl_vec = gl_host.local_data();
   double* gu_vec = gu_host.local_data();
-  n_cons_eq_ = 0;
-  n_cons_ineq_ = 0; 
-  for(int i=0;i<n_cons_; i++) {
-    if(gl_vec[i]==gu_vec[i]) {
-      n_cons_eq_++;
-    } else {
-      n_cons_ineq_++;
-    }
-  }
-  
+
   /* Allocate host  c_rhs, dl, and du (all serial in this formulation) for on host processing. */
   hiopVectorPar c_rhs_host(n_cons_eq_);
   cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];

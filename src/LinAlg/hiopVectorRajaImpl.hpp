@@ -2233,6 +2233,35 @@ bool hiopVectorRaja<MEM, POL>::is_equal(const hiopVector& vec) const
 }
 
 template<class MEM, class POL>
+size_type hiopVectorRaja<MEM, POL>::num_match(const hiopVector& vec) const
+{
+#ifdef HIOP_DEEPCHECKS
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
+  assert(v.n_local_ == n_local_);
+#endif 
+
+  const double* data_v = vec.local_data_const();
+  const double* data = data_dev_;
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum(0);
+  RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
+    RAJA_LAMBDA(RAJA::Index_type i) 
+    {
+      if(data[i]==data_v[i]) {
+        sum += 1;        
+      }
+    });
+  int all_equal = (sum.get() == 0);
+  
+#ifdef HIOP_USE_MPI
+  int all_equalG;
+  int ierr = MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_SUM, comm_);
+  assert(MPI_SUCCESS==ierr);
+  return all_equalG;
+#endif  
+  return all_equal;
+}
+
+template<class MEM, class POL>
 bool hiopVectorRaja<MEM, POL>::process_bounds_local(const hiopVector& xu,
                                                     hiopVector& ixl,
                                                     hiopVector& ixu,

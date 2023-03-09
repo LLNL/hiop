@@ -1282,6 +1282,28 @@ bool hiopVectorPar::is_equal(const hiopVector& vec) const
   return all_equal;
 }
 
+
+size_type hiopVectorPar::num_match(const hiopVector& vec) const
+{
+  if(n_local_ != vec.get_local_size()) {
+    return 0;
+  }
+  int sum_match = 0;
+  const double* data_v = vec.local_data_const();
+  for(auto i=0; i<n_local_; ++i) {
+    if(data_[i]==data_v[i]) {
+      sum_match++;
+    }
+  }
+
+#ifdef HIOP_USE_MPI
+  int sumG;
+  int ierr=MPI_Allreduce(&sum_match, &sumG, 1, MPI_INT, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  return sumG;
+#endif
+  return sum_match;
+}
+
 bool hiopVectorPar::process_bounds_local(const hiopVector& xu,
                                          hiopVector& ixl,
                                          hiopVector& ixu,
