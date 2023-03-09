@@ -1093,8 +1093,8 @@ bool hiopVectorHip::is_equal(const hiopVector& vec) const
 
 size_type hiopVectorHip::num_match(const hiopVector& vec) const
 {
-  double* dd = data_;
-  double* vd = vec.local_data();
+  const double* dd = data_;
+  const double* vd = vec.local_data_const();
   int sum_match = sum_match = hiop::cuda::num_match_local_kernel(n_local_, dd, vd);
 
 #ifdef HIOP_USE_MPI
@@ -1134,6 +1134,8 @@ bool hiopVectorHip::process_bounds_local(const hiopVector& xu,
                                          n_bnds_lu,
                                          n_fixed_vars,
                                          fixed_var_tol);
+
+  return true;
 }
 
 void hiopVectorHip::relax_bounds_vec(hiopVector& xu,

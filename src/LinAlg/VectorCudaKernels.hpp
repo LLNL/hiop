@@ -297,7 +297,7 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                        const double* dd);
 
 /// @brief return the numbers of identical elements between two vectors
-int num_match_local_kernel(int n, double* d1, const double* d2);
+int num_match_local_kernel(int n, const double* d1, const double* d2);
 
 /** @brief process variable bounds */
 void process_bounds_local_kernel(int n_local,

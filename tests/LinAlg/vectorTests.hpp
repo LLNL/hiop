@@ -2058,7 +2058,6 @@ public:
   {
     const local_ordinal_type Nx = x.get_size();
     int fail = 0;
-    int n_match = 0;
     x.setToConstant(one);
     y.setToConstant(one);
     

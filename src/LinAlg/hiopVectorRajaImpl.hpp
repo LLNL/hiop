@@ -2250,7 +2250,7 @@ size_type hiopVectorRaja<MEM, POL>::num_match(const hiopVector& vec) const
         sum += 1;        
       }
     });
-  int all_equal = (sum.get() == 0);
+  int all_equal = sum.get();
   
 #ifdef HIOP_USE_MPI
   int all_equalG;

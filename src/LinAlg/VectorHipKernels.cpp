@@ -702,9 +702,9 @@ __global__ void relax_bounds_hip(int n,
 
 /** @brief set d_ptr[i] = 1 if d1[i] == d2[i], otherwirse 0 */
 __global__ void set_if_match_hip(int n,
-                                 double* d_ptr,
-                                 double* d1,
-                                 double* d2)
+                                 int* d_ptr,
+                                 const double* d1,
+                                 const double* d2)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1353,7 +1353,7 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                                            dd);
 }
 
-int num_match_local_kernel(int n, double* d1, const double* d2)
+int num_match_local_kernel(int n, const double* d1, const double* d2)
 {
   int num_blocks = (n+block_size-1)/block_size;
   
@@ -1362,7 +1362,7 @@ int num_match_local_kernel(int n, double* d1, const double* d2)
   int* d_ptr = thrust::raw_pointer_cast(dv_ptr);
 
   // set d_ptr[i] = 1 if d1[i] == d2[i], otherwirse 0
-  set_if_match_cu<<<num_blocks,block_size>>>(n, d_ptr, d1, d2);
+  set_if_match_hip<<<num_blocks,block_size>>>(n, d_ptr, d1, d2);
   
   int rval = thrust::reduce(thrust::device, d_ptr, d_ptr+n, 0, thrust::plus<int>());
 

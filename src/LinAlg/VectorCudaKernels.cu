@@ -707,9 +707,9 @@ __global__ void relax_bounds_cu(int n,
 
 /** @brief set d_ptr[i] = 1 if d1[i] == d2[i], otherwirse 0 */
 __global__ void set_if_match_cu(int n,
-                                double* d_ptr,
-                                double* d1,
-                                double* d2)
+                                int* d_ptr,
+                                const double* d1,
+                                const double* d2)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1358,7 +1358,7 @@ void copyToStartingAt_w_pattern_kernel(int n_src,
                                                            dd);
 }
 
-int num_match_local_kernel(int n, double* d1, const double* d2)
+int num_match_local_kernel(int n, const double* d1, const double* d2)
 {
   int num_blocks = (n+block_size-1)/block_size;
   
