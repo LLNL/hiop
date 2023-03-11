@@ -524,7 +524,13 @@ bool hiopNlpFormulation::process_constraints()
                                     cons_ineq_type_,
                                     cons_type);
   
-  
+ 
+  hiopVectorIntSeq cons_eq_mapping_host(n_cons_eq_);
+  hiopVectorIntSeq cons_ineq_mapping_host(n_cons_ineq_);
+ 
+  cons_eq_mapping_->copy_to_vectorseq(cons_eq_mapping_host);
+  cons_ineq_mapping_->copy_to_vectorseq(cons_ineq_mapping_host);
+
   /* delete the temporary buffers */
   delete gl; 
   delete gu; 
