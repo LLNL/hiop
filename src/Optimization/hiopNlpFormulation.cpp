@@ -488,6 +488,18 @@ bool hiopNlpFormulation::process_constraints()
   n_cons_eq_ = gl->num_match(*gu);
   n_cons_ineq_ = n_cons_ - n_cons_eq_;
 
+  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
+  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
+  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
+  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
+  du_ = dl_->alloc_clone();
+  idl_ = dl_->alloc_clone();
+  idu_ = du_->alloc_clone();
+
+  cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
+  cons_ineq_type_ = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq_];
+  
+
   // transfer to host 
   hiopVectorPar gl_host(n_cons_);
   hiopVectorPar gu_host(n_cons_);
@@ -497,100 +509,26 @@ bool hiopNlpFormulation::process_constraints()
   double* gl_vec = gl_host.local_data();
   double* gu_vec = gu_host.local_data();
 
-  /* Allocate host  c_rhs, dl, and du (all serial in this formulation) for on host processing. */
-  hiopVectorPar c_rhs_host(n_cons_eq_);
-  cons_eq_type_ = new hiopInterfaceBase::NonlinearityType[n_cons_eq_];
-  hiopVectorPar dl_host(n_cons_ineq_);
-  hiopVectorPar du_host(n_cons_ineq_);
-  cons_ineq_type_ = new  hiopInterfaceBase::NonlinearityType[n_cons_ineq_];
-  hiopVectorIntSeq cons_eq_mapping_host(n_cons_eq_);
-  hiopVectorIntSeq cons_ineq_mapping_host(n_cons_ineq_);
-
-  /* copy lower and upper bounds - constraints */
-  double* dl_vec = dl_host.local_data();
-  double* du_vec = du_host.local_data();
-
-  double *c_rhsvec = c_rhs_host.local_data();
-  index_type *cons_eq_mapping = cons_eq_mapping_host.local_data();
-  index_type *cons_ineq_mapping = cons_ineq_mapping_host.local_data();
-
-  /* splitting (preprocessing) step done on the CPU */
-  int it_eq=0, it_ineq=0;
-  for(int i=0;i<n_cons_; i++) {
-    if(gl_vec[i]==gu_vec[i]) {
-      cons_eq_type_[it_eq] = cons_type[i]; 
-      c_rhsvec[it_eq] = gl_vec[i]; 
-      cons_eq_mapping[it_eq] = i;
-      it_eq++;
-    } else {
-#ifdef HIOP_DEEPCHECKS
-      assert(gl_vec[i] <= gu_vec[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
-#endif
-      cons_ineq_type_[it_ineq] = cons_type[i];
-      dl_vec[it_ineq] = gl_vec[i]; 
-      du_vec[it_ineq] = gu_vec[i]; 
-      cons_ineq_mapping[it_ineq] = i;
-      it_ineq++;
-    }
-  }
-  assert(it_eq==n_cons_eq_);
-  assert(it_ineq==n_cons_ineq_);
+  c_rhs_->process_constraints_local(*gl,
+                                    *gu,
+                                    *dl_,
+                                    *du_,
+                                    *idl_,
+                                    *idu_,
+                                    n_ineq_low_,
+                                    n_ineq_upp_,
+                                    n_ineq_lu_,
+                                    *cons_eq_mapping_,
+                                    *cons_ineq_mapping_,
+                                    cons_eq_type_,
+                                    cons_ineq_type_,
+                                    cons_type);
+  
   
   /* delete the temporary buffers */
   delete gl; 
   delete gu; 
   delete[] cons_type;
-
-  /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
-  n_ineq_low_ = 0;
-  n_ineq_upp_ = 0; 
-  n_ineq_lu_ = 0;
-
-  hiopVectorPar idl_host(n_cons_ineq_);
-  hiopVectorPar idu_host(n_cons_ineq_);
-  
-  double* idl_vec = idl_host.local_data(); 
-  double* idu_vec = idu_host.local_data();
-  for(int i=0; i<n_cons_ineq_; i++) {
-    if(dl_vec[i]>-1e20) { 
-      idl_vec[i]=1.;
-      n_ineq_low_++; 
-      if(du_vec[i]< 1e20) {
-        n_ineq_lu_++;
-      }
-    }
-    else {
-      idl_vec[i]=0.;
-    }
-
-    if(du_vec[i]< 1e20) { 
-      idu_vec[i]=1.;
-      n_ineq_upp_++; 
-    } else {
-      idu_vec[i]=0.;
-    }
-  }
-
-  //
-  // copy from temporary host vectors
-  //
-  c_rhs_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_eq_);
-  c_rhs_->copy_from_vectorpar(c_rhs_host);
-  
-  dl_ = LinearAlgebraFactory::create_vector(mem_space, n_cons_ineq_);
-  dl_->copy_from_vectorpar(dl_host);
-  du_ = dl_->alloc_clone();
-  du_->copy_from_vectorpar(du_host);
-  
-  cons_eq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_eq_);
-  cons_eq_mapping_->copy_from_vectorseq(cons_eq_mapping_host);
-  cons_ineq_mapping_ = LinearAlgebraFactory::create_vector_int(mem_space, n_cons_ineq_);
-  cons_ineq_mapping_->copy_from_vectorseq(cons_ineq_mapping_host);
-  
-  idl_ = dl_->alloc_clone();
-  idl_->copy_from_vectorpar(idl_host);
-  idu_ = du_->alloc_clone();
-  idu_->copy_from_vectorpar(idu_host);
   
   return true;
 }
