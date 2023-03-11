@@ -159,13 +159,13 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
     {
       xlow[0] = -1e20;
       xupp[0] =  1e20;
-      type[0] = hiopNonlinear;
+//      type[0] = hiopNonlinear;
       xlow[1] = 0.0;
       xupp[1] = 1e20;
-      type[1] = hiopNonlinear;
+//      type[1] = hiopNonlinear;
       xlow[2] = 1.0;
       xupp[2] = 10.0;
-      type[2] = hiopNonlinear;      
+//      type[2] = hiopNonlinear;      
     });
 
   if(n>3) {
@@ -174,9 +174,16 @@ bool SparseRajaEx2::get_vars_info(const size_type& n, double *xlow, double* xupp
       {
         xlow[i] = 0.5;
         xupp[i] = 1e20;
-        type[i] = hiopNonlinear;
+//        type[i] = hiopNonlinear;
       });
   }
+
+  // Use a sequential policy for host computations for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, n),
+    [=] (RAJA::Index_type i)
+    {
+      type[i] = hiopNonlinear;
+    });
 
   return true;
 }
@@ -197,23 +204,23 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
     {      
       clow[0] = 10.0;
       cupp[0] = 10.0;
-      type[0] = hiopInterfaceBase::hiopNonlinear;
+//      type[0] = hiopInterfaceBase::hiopNonlinear;
       clow[1] = 5.0;
       cupp[1] = 1e20;
-      type[1] = hiopInterfaceBase::hiopNonlinear;
+//      type[1] = hiopInterfaceBase::hiopNonlinear;
 
       if(rankdefic_ineq) {
         // [-inf] <= 4*x_1 + 2*x_3 <= [ 19 ]
         clow[n-1] = -1e+20;
         cupp[n-1] = 19.;
-        type[n-1] = hiopInterfaceBase::hiopNonlinear;
+//        type[n-1] = hiopInterfaceBase::hiopNonlinear;
       }
 
       if(rankdefic_eq) {
           //  4*x_1 + 2*x_2 == 10
           clow[m-1] = 10;
           cupp[m-1] = 10;
-          type[m-1] = hiopInterfaceBase::hiopNonlinear;
+//          type[m-1] = hiopInterfaceBase::hiopNonlinear;
       }
     });
 
@@ -223,9 +230,16 @@ bool SparseRajaEx2::get_cons_info(const size_type& m, double* clow, double* cupp
       {
         clow[conidx] = 1.0;
         cupp[conidx] = 2*n;
-        type[conidx] = hiopInterfaceBase::hiopNonlinear;
+//        type[conidx] = hiopInterfaceBase::hiopNonlinear;
       });
   }
+
+  // Must be a sequential host policy for now
+  RAJA::forall<RAJA::loop_exec>(RAJA::RangeSegment(0, m),
+    [=] (RAJA::Index_type i)
+    {
+      type[i] = hiopNonlinear;
+    });
 
   return true;
 }
