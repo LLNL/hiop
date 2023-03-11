@@ -319,7 +319,8 @@ public:
 
   virtual size_type numberOfOffDiagNonzeros() const
   {
-    assert("not implemented"&&0);return 0;
+    assert("not implemented" && false);
+    return 0;
   }
 
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,

@@ -394,11 +394,11 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const ExecSpaceInfo
 #ifdef HIOP_USE_RAJA
       if(hi.mem_backend_ == "UMPIRE") {
 #if defined(HIOP_USE_CUDA)
-    return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(rows, cols, nnz, mem_space_upper);
+        return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(rows, cols, nnz, mem_space_upper);
 #elif defined(HIOP_USE_HIP)
-    return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>(rows, cols, nnz, mem_space_upper);
+        return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>(rows, cols, nnz, mem_space_upper);
 #else // this is for #if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
-    return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>(rows, cols, nnz, mem_space_upper); 
+        return new hiopMatrixRajaSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>(rows, cols, nnz, mem_space_upper); 
 #endif //HIOP_USE_CUDA
       } else { // if(hi.mem_backend_ == "UMPIRE")
         // RAJA exec policy but memory backend not based on Umpire
@@ -442,7 +442,8 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sparse(const ExecSpaceInfo
       if(mem_space_upper == "CUDA") {
 #ifdef HIOP_USE_CUDA
           assert(mem_space_upper == "DEVICE");
-          return new hiopMatrixRajaSparseTriplet<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(rows, cols, nnz, mem_space_upper);
+          assert(false && "not supported yet");
+          return nullptr;
 #else
           assert(false && "requested memory space not available because Hiop was not built with CUDA");
           return nullptr;
@@ -559,7 +560,8 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const ExecSpace
       if(mem_space_upper == "CUDA") {
 #ifdef HIOP_USE_CUDA
           assert(mem_space_upper == "DEVICE");
-          return new hiopMatrixRajaSymSparseTriplet<hiop::MemBackendCuda, hiop::ExecPolicyRajaCuda>(size, nnz, mem_space_upper);
+          assert(false && "not supported yet");
+          return nullptr;
 #else
           assert(false && "requested memory space not available because Hiop was not built with CUDA");
           return nullptr;
@@ -576,21 +578,6 @@ hiopMatrixSparse* LinearAlgebraFactory::create_matrix_sym_sparse(const ExecSpace
   assert(false && "should not reach here");
   return nullptr;
 }
-
-// {
-//   const std::string mem_space_upper = toupper(hi.mem_space_);
-//   if(mem_space_upper == "DEFAULT") {
-//     return new hiopMatrixSymSparseTriplet(size, nnz);
-//   } else {
-// #ifdef HIOP_USE_RAJA
-//     return new hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>(size, nnz, mem_space_upper);
-// #else
-//     assert(false && "requested memory space not available because Hiop was not"
-//            "built with RAJA support");
-//     return new hiopMatrixSymSparseTriplet(size, nnz);
-// #endif
-//   }
-// }
 
 /**
  * @brief Static method to create a raw C array
