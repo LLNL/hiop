@@ -62,6 +62,8 @@
 #include "hiopMatrixDense.hpp"
 #include "hiopMatrixSparse.hpp"
 
+#include "ExecSpace.hpp"
+
 #include <cassert>
 #include <string>
 
@@ -72,6 +74,7 @@ namespace hiop
  * @brief Sparse matrix of doubles in triplet format - it is not distributed
  * @note for now (i,j) are expected ordered: first on rows 'i' and then on cols 'j'
  */
+template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopMatrixRajaSparseTriplet : public hiopMatrixSparse
 {
 public:
@@ -302,7 +305,10 @@ public:
                                      int **csr_jCol,
                                      double **csr_kVal,
                                      int **index_covert_CSR2Triplet,
-                                     int **index_covert_extra_Diag2CSR) {assert(0 && "not implemented");}
+                                     int **index_covert_extra_Diag2CSR)
+  {
+    assert(0 && "not implemented");
+  }
 
   virtual bool is_diagonal() const;
 
@@ -311,7 +317,11 @@ public:
     assert(false && "not yet implemented");
   }
 
-  virtual size_type numberOfOffDiagNonzeros() const {assert("not implemented"&&0);return 0;};
+  virtual size_type numberOfOffDiagNonzeros() const
+  {
+    assert("not implemented" && false);
+    return 0;
+  }
 
   virtual void set_Jac_FR(const hiopMatrixSparse& Jac_c,
                           const hiopMatrixSparse& Jac_d,
@@ -355,6 +365,16 @@ public:
   virtual bool checkIndexesAreOrdered() const;
 #endif
 protected:
+  mutable ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+
+  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
+  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
+  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
+  //combinations work).
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  mutable ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+
   int* iRow_; ///< row indices of the nonzero entries
   int* jCol_; ///< column indices of the nonzero entries
   double* values_; ///< values of the nonzero entries
@@ -373,7 +393,8 @@ protected:
     size_type num_rows_;
     std::string mem_space_;
     RowStartsInfo()
-      : idx_start_(NULL), num_rows_(0)
+      : idx_start_(nullptr),
+        num_rows_(0)
     {}
     RowStartsInfo(size_type n_rows, std::string memspace);
     virtual ~RowStartsInfo();
@@ -385,7 +406,11 @@ protected:
   mutable RowStartsInfo* row_starts_;
 
 protected:
-  RowStartsInfo* allocAndBuildRowStarts() const; 
+  RowStartsInfo* allocAndBuildRowStarts() const;
+  RowStartsInfo* allocRowStarts(size_type sz, std::string memspace) const
+  {
+    return new RowStartsInfo(sz, memspace);
+  }
 private:
   hiopMatrixRajaSparseTriplet() 
     : hiopMatrixSparse(0, 0, 0), iRow_(NULL), jCol_(NULL), values_(NULL)
@@ -399,28 +424,26 @@ private:
 };
 
 /** Sparse symmetric matrix in triplet format. Only the upper triangle is stored */
-class hiopMatrixRajaSymSparseTriplet : public hiopMatrixRajaSparseTriplet 
+template<class MEMBACKEND, class EXECPOLICYRAJA>
+class hiopMatrixRajaSymSparseTriplet : public hiopMatrixRajaSparseTriplet<MEMBACKEND, EXECPOLICYRAJA>
 {
 public: 
   hiopMatrixRajaSymSparseTriplet(int n, int nnz, std::string memspace)
-    : hiopMatrixRajaSparseTriplet(n, n, nnz, memspace), nnz_offdiag_{-1}
+    : hiopMatrixRajaSparseTriplet<MEMBACKEND, EXECPOLICYRAJA>(n, n, nnz, memspace),
+      nnz_offdiag_{-1}
   {
   }
   virtual ~hiopMatrixRajaSymSparseTriplet() {}  
 
   /** y = beta * y + alpha * this * x */
-  virtual void timesVec(double beta,  hiopVector& y,
-			double alpha, const hiopVector& x) const;
-  virtual void timesVec(double beta,  double* y,
-			double alpha, const double* x) const;
-
-  virtual void transTimesVec(double beta,   hiopVector& y,
-			     double alpha, const hiopVector& x) const
+  virtual void timesVec(double beta,  hiopVector& y, double alpha, const hiopVector& x) const;
+  virtual void timesVec(double beta,  double* y, double alpha, const double* x) const;
+  
+  virtual void transTimesVec(double beta, hiopVector& y, double alpha, const hiopVector& x) const
   {
     return timesVec(beta, y, alpha, x);
   }
-  virtual void transTimesVec(double beta,   double* y,
-			     double alpha, const double* x) const
+  virtual void transTimesVec(double beta, double* y, double alpha, const double* x) const
   {
     return timesVec(beta, y, alpha, x);
   }
@@ -469,7 +492,6 @@ public:
                            int* jHSS,
                            double* MHSS,
                            const hiopVector& add_diag);
-
 protected:
   mutable int nnz_offdiag_;     ///< number of nonzero entries
 

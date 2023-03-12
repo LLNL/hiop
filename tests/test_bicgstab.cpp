@@ -23,12 +23,6 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   size_type m = A->m();
   size_type n = A->n();
 
-  int num_entries = n * m - (m * (m - 1) / 2);
-  int density = num_entries / nnz;
-
-  auto iRow_idx = 0;
-  auto jCol_idx = 0;
-
   for (auto i = 0; i < m; i++)
   {
     iRow[nonZerosUsed] = i;
@@ -61,13 +55,30 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
 }
 
 #ifdef HIOP_USE_RAJA
+#include "hiopMatrixRajaSparseTriplet.hpp"
+//TODO: this is a quick hack. Will need to modify this class to be aware of the instantiated
+// template parameters for vector and matrix RAJA classes. Likely a better approach would be
+// to revise the tests to try out multiple configurations of the memory backends and execution
+// policies for RAJA dense matrix.
+#if defined(HIOP_USE_CUDA)
+#include <ExecPoliciesRajaCudaImpl.hpp>
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+#elif defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaHipImpl.hpp>
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+#else
+//#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
+#include <ExecPoliciesRajaOmpImpl.hpp>
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+#endif
+
 /**
  * @brief Initialize RAJA sparse matrix with a homogeneous pattern to test a
  * realistic use-case.
  */
 void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
 {
-  auto* A = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(mat);
+  auto* A = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(mat);
   size_type* iRow = A->i_row_host();
   size_type* jCol = A->j_col_host();
   double* val = A->M_host();
@@ -76,12 +87,6 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
 
   size_type m = A->m();
   size_type n = A->n();
-
-  int num_entries = n * m - (m * (m - 1) / 2);
-  int density = num_entries / nnz;
-
-  auto iRow_idx = 0;
-  auto jCol_idx = 0;
 
   for (auto i = 0; i < m; i++)
   {

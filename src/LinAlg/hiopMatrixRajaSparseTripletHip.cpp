@@ -45,93 +45,39 @@
 // herein do not necessarily state or reflect those of the United States Government or 
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
-#pragma once
 
-#include <string>
-#include <iostream>
-#include <ExecSpace.hpp>
-#include <hiopMPI.hpp>
-#include <hiopVector.hpp>
-#include <hiopMatrixDense.hpp>
-#include <hiopMatrixSparse.hpp>
-#include <hiopMatrixSparseCSR.hpp>
-#include <hiopVectorInt.hpp>
-
-namespace hiop {
-
-  
 /**
- * @brief Factory for HiOp's linear algebra objects
- * 
+ * @file hiopMatrixRajaSparseTripletHip.cpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ *
  */
-class LinearAlgebraFactory
+
+#include "hiopMatrixRajaSparseTriplet.hpp"
+
+#include "MemBackendHipImpl.hpp"
+#include "MemBackendUmpireImpl.hpp"
+#include "MemBackendCppImpl.hpp"
+#include "ExecPoliciesRajaHipImpl.hpp"
+
+namespace hiop
 {
-public:
-  LinearAlgebraFactory()  = delete; 
-  ~LinearAlgebraFactory() = delete;
+using hiop_raja_exec = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_exec;
+using hiop_raja_reduce = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_reduce;
+using matrix_exec = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::matrix_exec;
+using hiop_raja_atomic = ExecRajaPoliciesBackend<ExecPolicyRajaHip>::hiop_raja_atomic;
+}
 
-  /**
-   * @brief Static method to create vector
-   */
-  static hiopVector* create_vector(const ExecSpaceInfo& hi,
-                                   const size_type& glob_n,
-                                   index_type* col_part = nullptr,
-                                   MPI_Comm comm = MPI_COMM_SELF);
-  /**
-   * @brief Static method to create local int vector.
-   */
-  static hiopVectorInt* create_vector_int(const ExecSpaceInfo& hi,
-                                          size_type size);
+#include "hiopMatrixRajaSparseTripletImpl.hpp"
 
-  /**
-   * @brief Static method to create a dense matrix.
-   * 
-   */
-  static hiopMatrixDense* create_matrix_dense(const ExecSpaceInfo& hi,
-                                              const size_type& m,
-                                              const size_type& glob_n,
-                                              index_type* col_part = NULL,
-                                              MPI_Comm comm = MPI_COMM_SELF,
-                                              const size_type& m_max_alloc = -1);
-  /**
-   * @brief Static method to create the default, triplet sparse matrix
-   */
-  static hiopMatrixSparse* create_matrix_sparse(const ExecSpaceInfo& hi,
-                                                size_type rows,
-                                                size_type cols,
-                                                size_type nnz);
+namespace hiop
+{
 
-  /**
-   * @brief Static method to create an empty CSR sparse matrix of the type that supports the
-   * memory space passed as argument.
-   */
-  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space);
-  
-  /**
-   * @brief Static method to create a CSR sparse matrix of the type that supports the
-   * memory space passed as argument.
-   */
-  static hiopMatrixSparseCSR* create_matrix_sparse_csr(const std::string& mem_space,
-                                                       size_type rows,
-                                                       size_type cols,
-                                                       size_type nnz);
-
-  /**
-   * @brief Static method to create a symmetric sparse matrix
-   */
-  static hiopMatrixSparse* create_matrix_sym_sparse(const ExecSpaceInfo& hi,
-                                                    size_type size,
-                                                    size_type nnz);
-  
-  /**
-   * @brief Static method to create a raw C array
-   */
-  static double* create_raw_array(const std::string& mem_space, size_type n);
-
-  /**
-   * @brief Static method to delete a raw C array
-   */
-  static void delete_raw_array(const std::string& mem_space, double* a);
-};
-
-} // namespace hiop
+//
+//Explicit instantiations: force compilation 
+//
+template class hiopMatrixRajaSparseTriplet<MemBackendUmpire, ExecPolicyRajaHip>;
+template class hiopMatrixRajaSparseTriplet<MemBackendHip, ExecPolicyRajaHip>;
+template class hiopMatrixRajaSymSparseTriplet<MemBackendUmpire, ExecPolicyRajaHip>;
+template class hiopMatrixRajaSymSparseTriplet<MemBackendHip, ExecPolicyRajaHip>;
+}

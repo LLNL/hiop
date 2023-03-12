@@ -70,15 +70,18 @@
 #include <ExecPoliciesRajaCudaImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaCuda>;
 #elif defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaHipImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaHip>;
 #else
 //#if !defined(HIOP_USE_CUDA) && !defined(HIOP_USE_HIP)
 #include <ExecPoliciesRajaOmpImpl.hpp>
 using hiopVectorRajaT = hiop::hiopVectorRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
 using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>;
+using hiopMatrixSymSparseTripletRajaT = hiop::hiopMatrixRajaSymSparseTriplet<hiop::MemBackendUmpire, hiop::ExecPolicyRajaOmp>; 
 #endif
 
 namespace hiop{ namespace tests {
@@ -120,22 +123,22 @@ real_type MatrixTestsRajaSymSparseTriplet::getLocalElement(
 
 real_type* MatrixTestsRajaSymSparseTriplet::getMatrixData(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(A);
   mat->copyFromDev();
   return mat->M_host();
 }
 
 const local_ordinal_type* MatrixTestsRajaSymSparseTriplet::getRowIndices(const hiop::hiopMatrixSparse* A)
 {
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaSymSparseTriplet*>(A);
-  const_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(mat)->copyFromDev(); // UB?
+  const auto* mat = dynamic_cast<const hiopMatrixSymSparseTripletRajaT*>(A);
+  const_cast<hiopMatrixSymSparseTripletRajaT*>(mat)->copyFromDev(); // UB?
   return mat->i_row_host();
 }
 
 const local_ordinal_type* MatrixTestsRajaSymSparseTriplet::getColumnIndices(const hiop::hiopMatrixSparse* A)
 {
-  const auto* mat = dynamic_cast<const hiop::hiopMatrixRajaSymSparseTriplet*>(A);
-  const_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(mat)->copyFromDev(); // UB?
+  const auto* mat = dynamic_cast<const hiopMatrixSymSparseTripletRajaT*>(A);
+  const_cast<hiopMatrixSymSparseTripletRajaT*>(mat)->copyFromDev(); // UB?
   return mat->j_col_host();
 }
 
@@ -204,7 +207,7 @@ int MatrixTestsRajaSymSparseTriplet::verifyAnswer(
 
 local_ordinal_type* MatrixTestsRajaSymSparseTriplet::numNonzerosPerRow(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(A);
   mat->copyFromDev();
   auto nnz = mat->numberOfNonzeros();
   auto iRow = mat->i_row_host();
@@ -225,7 +228,7 @@ local_ordinal_type* MatrixTestsRajaSymSparseTriplet::numNonzerosPerRow(hiop::hio
 
 local_ordinal_type* MatrixTestsRajaSymSparseTriplet::numNonzerosPerCol(hiop::hiopMatrixSparse* A)
 {
-  auto* mat = dynamic_cast<hiop::hiopMatrixRajaSymSparseTriplet*>(A);
+  auto* mat = dynamic_cast<hiopMatrixSymSparseTripletRajaT*>(A);
   mat->copyFromDev();
   auto nnz = mat->numberOfNonzeros();
   auto iRow = mat->i_row_host();
