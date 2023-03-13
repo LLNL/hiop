@@ -64,9 +64,6 @@
 #include "hiopLinSolverSparseGinkgo.hpp"
 #endif
 
-#ifdef HIOP_USE_GPU
-#include "hiopMatrixRajaSparseTriplet.hpp"
-#endif
 #endif
 
 namespace hiop
