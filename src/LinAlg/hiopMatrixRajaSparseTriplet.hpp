@@ -390,11 +390,13 @@ protected:
   {
     index_type *idx_start_; //size num_rows+1
     index_type *idx_start_host_; //size num_rows+1
+    index_type register_row_st_;
     size_type num_rows_;
     std::string mem_space_;
     RowStartsInfo()
       : idx_start_(nullptr),
-        num_rows_(0)
+        num_rows_(0), 
+        register_row_st_{0}
     {}
     RowStartsInfo(size_type n_rows, std::string memspace);
     virtual ~RowStartsInfo();

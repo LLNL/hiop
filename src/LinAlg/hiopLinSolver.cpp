@@ -99,7 +99,7 @@ namespace hiop {
     //we default to triplet matrix for now; derived classes using CSR matrices will not call
     //this constructor (will call the 1-parameter constructor below) so they avoid creating
     //the triplet matrix
-    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
+    M_ = LinearAlgebraFactory::create_matrix_sparse(nlp->options->GetString("mem_space"), n, n, nnz);
     //this class will own `M_`
     sys_mat_owned_ = true;
     nlp_ = nlp;
@@ -124,7 +124,7 @@ namespace hiop {
   
   hiopLinSolverNonSymSparse::hiopLinSolverNonSymSparse(int n, int nnz, hiopNlpFormulation* nlp)
   {
-    M_ = new hiopMatrixSparseTriplet(n, n, nnz);
+    M_ = LinearAlgebraFactory::create_matrix_sparse(nlp->options->GetString("mem_space"), n, n, nnz);
     sys_mat_owned_ = false;
     nlp_ = nlp;
     perf_report_ = "on"==hiop::tolower(nlp->options->GetString("time_kkt"));

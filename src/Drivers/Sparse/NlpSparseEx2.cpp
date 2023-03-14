@@ -153,7 +153,6 @@ bool SparseEx2::eval_cons(const size_type& n,
   return false;
 }
 
-/* Four constraints no matter how large n is */
 bool SparseEx2::eval_cons(const size_type& n, const size_type& m, const double* x, bool new_x, double* cons)
 {
   assert(n==n_vars); assert(m==n_cons);
@@ -170,7 +169,7 @@ bool SparseEx2::eval_cons(const size_type& n, const size_type& m, const double* 
   // --- constraint 2 body ---> 2*x_1 + x_3
   cons[conidx++] += 2*x[0] + 1*x[2];
 
-  // --- constraint 3 body --->   2*x_1 + 0.5*x_i, for i>=4
+  // --- constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
   for(auto i=3; i<n; i++) {
     cons[conidx++] += 2*x[0] + 0.5*x[i];
   }

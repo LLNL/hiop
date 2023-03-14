@@ -7,6 +7,20 @@ target_link_libraries(NlpSparseEx2.exe HiOp::HiOp)
 add_executable(NlpSparseEx3.exe NlpSparseEx3.cpp NlpSparseEx3Driver.cpp)
 target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
 
+if(HIOP_USE_RAJA)
+  if(HIOP_USE_GPU AND HIOP_USE_CUDA)
+    set_source_files_properties(
+      NlpSparseRajaEx2.cpp 
+      NlpSparseRajaEx2Driver.cpp 
+      PROPERTIES LANGUAGE CUDA
+    )
+  
+    add_executable(NlpSparseRajaEx2.exe  NlpSparseRajaEx2Driver.cpp  NlpSparseRajaEx2.cpp)
+    target_link_libraries(NlpSparseRajaEx2.exe HiOp::HiOp)
+    install(TARGETS NlpSparseRajaEx2.exe DESTINATION bin)
+  endif()
+endif()
+
 if(HIOP_BUILD_SHARED)
   add_executable(NlpSparseCEx1.exe NlpSparseCEx1.c)
   target_link_libraries(NlpSparseCEx1.exe HiOp::HiOp)
@@ -52,6 +66,11 @@ if(HIOP_USE_GINKGO)
       add_test(NAME NlpSparse2_6 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx2.exe>" "500" "-ginkgo_hip" "-inertiafree" "-selfcheck")
   endif(HIOP_USE_HIP)
 endif(HIOP_USE_GINKGO)
+
+if(HIOP_USE_RAJA AND HIOP_USE_GPU AND HIOP_USE_CUDA)
+  add_test(NAME NlpSparseRaja2_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:NlpSparseRajaEx2.exe> 500 -selfcheck ")
+endif()
+
 add_test(NAME NlpSparse3_1 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx3.exe>" "500" "-selfcheck")
 if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
   add_test(NAME NlpSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseCEx1.exe>")

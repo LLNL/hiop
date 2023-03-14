@@ -1619,4 +1619,89 @@ namespace hiop
         break;
     } // switch
   } // GramSchmidt
+
+
+
+  hiopLinSolverSymSparseCUSOLVERGPU::hiopLinSolverSymSparseCUSOLVERGPU(const int& n, 
+                                                                       const int& nnz, 
+                                                                       hiopNlpFormulation* nlp)
+    : hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp), 
+      rhs_host_{nullptr},
+      M_host_{nullptr}
+  {
+    rhs_host_ = LinearAlgebraFactory::create_vector("default", n);
+    M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
+  }
+  
+  hiopLinSolverSymSparseCUSOLVERGPU::~hiopLinSolverSymSparseCUSOLVERGPU()
+  {
+    delete rhs_host_;
+    delete M_host_;
+  }
+
+  int hiopLinSolverSymSparseCUSOLVERGPU::matrixChanged()
+  {
+    size_type nnz = M_->numberOfNonzeros();
+    double* mval_dev = M_->M();
+    double* mval_host= M_host_->M();
+
+    index_type* irow_dev = M_->i_row();
+    index_type* irow_host= M_host_->i_row();
+
+    index_type* jcol_dev = M_->j_col();
+    index_type* jcol_host= M_host_->j_col();
+
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));      
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+    }
+    
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+    
+    int vret = hiopLinSolverSymSparseCUSOLVER::matrixChanged();
+
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+    
+    return vret;
+  }
+  
+  bool hiopLinSolverSymSparseCUSOLVERGPU::solve(hiopVector& x)
+  {
+    double* mval_dev = x.local_data();
+    double* mval_host= rhs_host_->local_data();
+   
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyHostToHost));
+    }
+
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
+    bool bret = hiopLinSolverSymSparseCUSOLVER::solve(*rhs_host_);
+
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
+    }
+ 
+    return bret;
+  }
+
 } // namespace hiop
