@@ -335,7 +335,7 @@ namespace hiop
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "cusolver-lu") {
 #if defined(HIOP_USE_CUSOLVER_LU)
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           linsol_actual = "CUSOLVER-LU";
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
@@ -695,7 +695,7 @@ namespace hiop
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER_LU)
           actual_lin_solver = "CUSOLVER-LU";
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
@@ -766,7 +766,7 @@ namespace hiop
         
         if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER_LU)        
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
                             n,

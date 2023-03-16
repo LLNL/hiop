@@ -202,6 +202,10 @@ protected:
   int refactorizationSetupCusolverRf();
 
   void IRsetup();
+
+private:
+  hiopVector* rhs_host_;
+  hiopMatrixSparse* M_host_;
 };
 
 class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER

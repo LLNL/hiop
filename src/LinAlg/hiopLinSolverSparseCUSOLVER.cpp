@@ -80,8 +80,13 @@ namespace hiop
       ordering_{ 1 }, 
       fact_{ "klu" }, // default
       refact_{ "glu" }, // default
-      factorizationSetupSucc_{ 0 }
+      factorizationSetupSucc_{ 0 },
+      rhs_host_{nullptr},
+      M_host_{nullptr}
   {
+    rhs_host_ = LinearAlgebraFactory::create_vector("default", n);
+    M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
+
     // handles
     cusparseCreate(&handle_);
     cusolverSpCreate(&handle_cusolver_);
@@ -232,6 +237,9 @@ namespace hiop
     delete [] mia_;
     delete [] mja_;
 
+    delete rhs_host_;
+    delete M_host_;
+    
     // Experimental code: delete IR
     if(use_ir_ == "yes") {
       // destroy IR object
@@ -242,6 +250,30 @@ namespace hiop
 
   int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
   {
+    size_type nnz = M_->numberOfNonzeros();
+    double* mval_dev = M_->M();
+    double* mval_host= M_host_->M();
+
+    index_type* irow_dev = M_->i_row();
+    index_type* irow_host= M_host_->i_row();
+
+    index_type* jcol_dev = M_->j_col();
+    index_type* jcol_host= M_host_->j_col();
+
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));      
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
+    }
+    
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
@@ -267,6 +299,11 @@ namespace hiop
         nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
         // This is not a catastrophic failure
         // The matrix is singular so return -1 to regularaize!
+        
+        swap_ptr = M_;
+        M_ = M_host_;
+        M_host_ = swap_ptr;
+        
         return -1;
       } else { // Numeric was succesfull so now can set up
         factorizationSetupSucc_ = 1;
@@ -314,19 +351,37 @@ namespace hiop
       }
       // end of factor
     }
+
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
     return 0;
   }
 
   bool hiopLinSolverSymSparseCUSOLVER::solve(hiopVector& x)
   {
+    double* mval_dev = x.local_data();
+    double* mval_host= rhs_host_->local_data();
+   
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyHostToHost));
+    }
+
+    hiopMatrixSparse* swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
     assert(x.get_size() == M_->n());
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
-    hiopVector* rhs = x.new_copy();
-    double* dx = x.local_data();
+    hiopVector* rhs = rhs_host_->new_copy();
+    double* dx = rhs_host_->local_data();
     double* drhs = rhs->local_data();
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
@@ -352,6 +407,17 @@ namespace hiop
         nlp_->log->printf(hovError,  // catastrophic failure
                           "Solve failed with status: %d\n", 
                           sp_status_);
+
+        swap_ptr = M_;
+        M_ = M_host_;
+        M_host_ = swap_ptr;
+
+        if("device" == nlp_->options->GetString("mem_space")) {
+        checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+        } else {
+        checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
+        }
+
         return false;
       }
     } else {
@@ -383,6 +449,17 @@ namespace hiop
             nlp_->log->printf(hovError,  // catastrophic failure
                               "Solve failed with status: %d\n", 
                               sp_status_);
+
+            swap_ptr = M_;
+            M_ = M_host_;
+            M_host_ = swap_ptr;
+
+            if("device" == nlp_->options->GetString("mem_space")) {
+            checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+            } else {
+            checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
+            }
+
             return false;
           }
         } else {
@@ -400,6 +477,17 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     delete rhs;
     rhs = nullptr;
+    
+    swap_ptr = M_;
+    M_ = M_host_;
+    M_host_ = swap_ptr;
+
+    if("device" == nlp_->options->GetString("mem_space")) {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    } else {
+      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
+    }
+    
     return 1;
   }
 
