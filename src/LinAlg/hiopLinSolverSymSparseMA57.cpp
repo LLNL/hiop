@@ -195,7 +195,7 @@ namespace hiop
     int job = 1; // full solve
     int one = 1;
     icntl_[9-1] = 1; // do one step of iterative refinement
-
+    // printf("WELCOME TO MA57!\n");
     hiopVector* x = dynamic_cast<hiopVector*>(&x_in);
     assert(x!=nullptr);
     

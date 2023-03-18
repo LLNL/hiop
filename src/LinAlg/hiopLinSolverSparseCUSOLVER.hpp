@@ -219,7 +219,7 @@ protected:
    * 
    * @return int 
    */
-  int triangular_solve(double* dx, double* drhs);
+  int triangular_solve(double* dx, double* drhs, double tol);
 
   /** Function to compute nnz and set row pointers */
   void compute_nnz();
@@ -304,6 +304,7 @@ public:
   double getInitialResidalNorm();
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
+  void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
 
   // Simple accessors
   int& maxit()
@@ -331,6 +332,11 @@ public:
     return mat_A_;
   }
 
+  int& conv_cond()
+  {
+    return conv_cond_;
+  }
+
 private:
   // Krylov vectors
   double* d_V_;
@@ -341,18 +347,22 @@ private:
   int restart_;
   int maxit_;
   double tol_;
+  int conv_cond_; // convergence condition, can be 0, 1, 2 for IR
   std::string orth_option_;
   // the matrix in question
   cusparseSpMatDescr_t mat_A_;
+  int* dia_;
+  double* da_;
   // needed for matvec
   cusparseDnVecDescr_t vec_x_ = NULL;
   cusparseDnVecDescr_t vec_Ax_ = NULL;
   int n_;
+  int nnz_;
   // handles - MUST BE SET AT INIT
   cusparseHandle_t cusparse_handle_;
   cublasHandle_t cublas_handle_;
   cusolverRfHandle_t cusolverrf_handle_;
-
+  cusolverSpHandle_t cusolver_handle_;
   // aux cariables, avoid multiple allocs at all costs
 
   // GPU:
@@ -388,6 +398,12 @@ private:
 
   template <typename T>
   void hiopCheckCudaError(T result, const char* const file, int const line);
+  //KS: needed for testing -- condider delating later
+  double matrixAInfNrm();
+  double vectorInfNrm(int n, double* d_v);
+  //end of testing
+  
+  // not used (yet)
 
 };
 

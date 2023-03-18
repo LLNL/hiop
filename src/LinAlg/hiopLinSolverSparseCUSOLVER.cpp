@@ -181,6 +181,16 @@ namespace hiop
                             use_ir_.c_str());
           ir_->orth_option() = "mgs";
         }
+
+        ir_->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
+
+        if ((ir_->conv_cond() <0) || (ir_->conv_cond() >2)){
+          nlp_->log->printf(hovWarning, 
+                            "Wrong IR convergence condition: %d. Use int value: 0, 1 or 2. Setting default (0)  ...\n",
+                            ir_->conv_cond());
+          ir_->conv_cond() = 0;
+        }
+
       } else {
         nlp_->log->printf(hovWarning, 
                           "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
@@ -279,12 +289,22 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
+    // Set IR tolerance to be `factor*mu` and no less than `mintol`
+    double factor = nlp_->options->GetNumeric("ir_inner_cusolver_tol_factor");
+    double mintol = nlp_->options->GetNumeric("ir_inner_cusolver_tol_min");
+    double ir_tol = std::min(factor*(nlp_->mu()), mintol);
+    nlp_->log->printf(hovScalars,
+                      "Barrier parameter mu = %g, IR tolerance set to %g.\n", nlp_->mu(), ir_tol);
+    // // Debugging output
+    // std::cout << "mu in cusolver = " <<  nlp_->mu() << "\n";
+    // std::cout << "ir tol         = " <<  ir_tol << "\n";
+
     hiopVector* rhs = x.new_copy();
     double* dx = x.local_data();
     double* drhs = rhs->local_data();
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
-    triangular_solve(dx, drhs);
+    triangular_solve(dx, drhs, ir_tol);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     delete rhs;
@@ -393,6 +413,7 @@ namespace hiop
   {
     checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
     // re-factor here
+    // printf("System size: %d x %d with %d nnz \n", n_, n_, nnz_);
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
                                         n_,
@@ -421,7 +442,7 @@ namespace hiop
     return 0;
   }
 
-  int hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, double* drhs)
+  int hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, double* drhs, double ir_tol)
   {
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
@@ -438,6 +459,7 @@ namespace hiop
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
+   
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
@@ -461,8 +483,16 @@ namespace hiop
           if(sp_status_ == 0) {
             // Experimental code for IR
             if(use_ir_ == "yes") {
+              // Set tolerance based on barrier parameter mu
+              ir_->set_tol(ir_tol);
+              nlp_->log->printf(hovScalars,
+                                "Running iterative refinement with tol %e\n", ir_tol);
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+              //experimental code 
+
+              //end of experimental code
               ir_->fgmres(devr_, devx_);             
+
               nlp_->log->printf(hovScalars, 
                                 "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
                                 ir_->getInitialResidalNorm(), 
@@ -471,6 +501,8 @@ namespace hiop
             }
             // End of Experimental code
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+
+
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
                               "Solve failed with status: %d\n", 
@@ -1013,7 +1045,7 @@ namespace hiop
     cudaFree(d_Up_csr);
     cudaFree(d_Ui_csr);
     cudaFree(d_Ux_csr);
-    
+
     return 0;
   }
 
@@ -1037,6 +1069,7 @@ namespace hiop
   // Parametrized constructor
   ReSolve::CusolverInnerIR::CusolverInnerIR(int restart, 
                                                                                double tol, 
+                                     
                                                                                int maxit)
     : restart_{restart}, 
       maxit_{maxit},
@@ -1157,33 +1190,78 @@ namespace hiop
     return fgmres_iters_;
   }
 
+  
+  double ReSolve::CusolverInnerIR::matrixAInfNrm()
+  {
+    double nrm;
+    matrix_row_sums(n_, nnz_, dia_, da_, d_Z_); 
+    cusolverSpDnrminf(cusolver_handle_,
+                      n_,
+                      d_Z_,
+                      &nrm,
+                      mv_buffer_  /* at least 8192 bytes */);
+    return nrm;
+  }
+
+  double ReSolve::CusolverInnerIR::vectorInfNrm(int n, double* d_v)
+  {
+    double nrm; 
+
+    cusolverSpDnrminf(cusolver_handle_,
+                      n,
+                      d_v,
+                      &nrm,
+                      mv_buffer_  /* at least 8192 bytes */);
+    return nrm;
+  }
+
   void ReSolve::CusolverInnerIR::fgmres(double *d_x, double *d_b)
   {
     int outer_flag = 1;
     int notconv = 1; 
-    int i=0;
-    int it=0;
+    int i = 0;
+    int it = 0;
     int j;
     int k;
     int k1;
 
     double t;
     double rnorm;
+    double bnorm;
     // double rnorm_aux;
     double tolrel;
     //V[0] = b-A*x_0
     cudaMemcpy(&(d_V_[0]), d_b, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
+  
     cudaMatvec(d_x, d_V_, "residual");
 
     rnorm = 0.0;
+    cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
     cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
-
-    //gmres outer loop
+    bnorm = sqrt(bnorm);
     while(outer_flag) {
       // check if maybe residual is already small enough?
-      if(fabs(rnorm - ZERO) <= EPSILON) {
+      if(it == 0) {
+        tolrel = tol_ * rnorm;
+        if(fabs(tolrel) < 1e-16) {
+          tolrel = 1e-16;
+        }
+      }
+      int exit_cond = 0;
+      if (conv_cond_ == 0){
+        exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON));
+      } else {
+        if (conv_cond_ == 1){
+          exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_));
+        } else {
+          if (conv_cond_ == 2){
+            exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
+          }
+        }
+      }
+      if (exit_cond) {
         outer_flag = 0;
         final_residual_norm_ = rnorm;
         initial_residual_norm_ = rnorm;
@@ -1191,12 +1269,6 @@ namespace hiop
         break;
       }
 
-      if(it == 0) {
-        tolrel = tol_ * rnorm;
-        if(fabs(tolrel) < 1e-16) {
-          tolrel = 1e-16;
-        }
-      }
       // normalize first vector
       t = 1.0 / rnorm;
       cublasDscal(cublas_handle_, n_, &t, d_V_, 1);
@@ -1280,6 +1352,7 @@ namespace hiop
 
       cudaMemcpy(&d_V_[0], d_b, sizeof(double)*n_, cudaMemcpyDeviceToDevice);
       cudaMatvec(d_x, d_V_, "residual");
+
       rnorm = 0.0;
       cublasDdot(cublas_handle_, n_, d_V_, 1, d_V_, 1, &rnorm);
       // rnorm = ||V_1||
@@ -1307,7 +1380,7 @@ namespace hiop
                    &one_, 
                    vec_Ax_, 
                    CUDA_R_64F,
-                   CUSPARSE_MV_ALG_DEFAULT,
+                   CUSPARSE_SPMV_CSR_ALG2,
                    mv_buffer_);
     } else {
       // just b = A*x
@@ -1319,7 +1392,7 @@ namespace hiop
                    &zero_, 
                    vec_Ax_, 
                    CUDA_R_64F,
-                   CUSPARSE_MV_ALG_DEFAULT, 
+                   CUSPARSE_SPMV_CSR_ALG2, 
                    mv_buffer_);
     }
     cusparseDestroyDnVec(vec_x_);
@@ -1468,7 +1541,7 @@ namespace hiop
         break;
         // the two low synch schemes
       case 2:
-	// KS: the kernels are limited by the size of the shared memory on the GPU. If too many vectors in Krylov space, use standard cublas routines.
+        // KS: the kernels are limited by the size of the shared memory on the GPU. If too many vectors in Krylov space, use standard cublas routines.
         // V[1:i]^T[V[i] w]
         if(i < 200) {
        	  mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
@@ -1661,7 +1734,7 @@ namespace hiop
         break;
 
       default:
-          assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
+        assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
         break;
     } // switch
   } // GramSchmidt
