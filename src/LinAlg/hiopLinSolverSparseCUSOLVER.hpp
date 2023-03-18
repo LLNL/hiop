@@ -220,6 +220,7 @@ public:
   double getInitialResidalNorm();
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
+  void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
 
 private:
   // Krylov vectors

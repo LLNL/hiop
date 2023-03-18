@@ -325,6 +325,16 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
+    // Set IR tolerance to be `factor*mu` and no less than `mintol`
+    double factor = nlp_->options->GetNumeric("ir_inner_cusolver_tol_factor");
+    double mintol = nlp_->options->GetNumeric("ir_inner_cusolver_tol_min");
+    double ir_tol = std::min(factor*(nlp_->mu()), mintol);
+    nlp_->log->printf(hovScalars,
+                      "Barrier parameter mu = %g, IR tolerance set to %g.\n", nlp_->mu(), ir_tol);
+    // // Debugging output
+    // std::cout << "mu in cusolver = " <<  nlp_->mu() << "\n";
+    // std::cout << "ir tol         = " <<  ir_tol << "\n";
+
     hiopVector* rhs = x.new_copy();
     double* dx = x.local_data();
     double* drhs = rhs->local_data();
@@ -369,6 +379,10 @@ namespace hiop
           if(sp_status_ == 0) {
             // Experimental code for IR
             if(use_ir_ == "yes") {
+              // Set tolerance based on barrier parameter mu
+              ir_->set_tol(ir_tol);
+              nlp_->log->printf(hovScalars,
+                                "Running iterative refinement with tol %e\n", ir_tol);
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
               ir_->fgmres(devr_, devx_);             
               nlp_->log->printf(hovScalars, 
