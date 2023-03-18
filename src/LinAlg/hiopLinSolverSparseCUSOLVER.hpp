@@ -241,6 +241,7 @@ public:
   double getInitialResidalNorm();
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
+  void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
 
 private:
   // Krylov vectors
@@ -252,18 +253,22 @@ private:
   int restart_;
   int maxit_;
   double tol_;
+  int conv_cond_; // convergence condition, can be 0, 1, 2 for IR
   std::string orth_option_;
   // the matrix in question
   cusparseSpMatDescr_t mat_A_;
+  int* dia_;
+  double* da_;
   // needed for matvec
   cusparseDnVecDescr_t vec_x_ = NULL;
   cusparseDnVecDescr_t vec_Ax_ = NULL;
   int n_;
+  int nnz_;
   // handles - MUST BE SET AT INIT
   cusparseHandle_t cusparse_handle_;
   cublasHandle_t cublas_handle_;
   cusolverRfHandle_t cusolverrf_handle_;
-
+  cusolverSpHandle_t cusolver_handle_;
   // aux cariables, avoid multiple allocs at all costs
 
   // GPU:
@@ -296,7 +301,11 @@ private:
 
   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
   void cudaMatvec(double* d_x, double* d_b, std::string option);
-
+  //KS: needed for testing -- condider delating later
+  double matrixAInfNrm();
+  double vectorInfNrm(int n, double* d_v);
+  //end of testing
+  
   // not used (yet)
 
   hiopLinSolverSymSparseCUSOLVERLU* LU_data;

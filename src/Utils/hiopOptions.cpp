@@ -981,6 +981,22 @@ void hiopOptionsNLP::register_options()
                         1e-1,
                         "(F)GMRES tolerance (default is 1e-12). ");
 
+    register_num_option("ir_inner_cusolver_tol_min",
+                        1e-6,
+                        1e-16,
+                        1e-1,
+                        "FGMRES minimum tolerance (default is 1e-6). ");
+   register_int_option("ir_inner_conv_cond",
+                        0,
+                        0,
+                        2,
+                        "FGMRES convergence check for IR (default is 0) ");
+    register_num_option("ir_inner_cusolver_tol_factor",
+                        1e-2,
+                        1e-20,
+                        1.0,
+                        "FGMRES tolerance factor multiplying mu. (default 1e-2)");
+
     register_int_option("ir_inner_maxit",
                         50,
                         0,

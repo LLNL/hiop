@@ -168,6 +168,29 @@ __global__ void massAxpy3_kernel(int N,
   }
 }
 
+__global__ void matrixInfNormPart1(const int n, 
+                                   const int nnz, 
+                                   const int* a_ia,
+                                   const double* a_val, 
+                                   double* result) {
+
+  // one thread per row, pass through rows
+  // and sum
+  // can be done through atomics
+  //\sum_{j=1}^m abs(a_{ij})
+
+  int idx = blockIdx.x*blockDim.x + threadIdx.x;
+  while (idx < n){
+    double sum = 0.0f;
+    for (int i = a_ia[idx]; i < a_ia[idx+1]; ++i) {
+      sum = sum + fabs(a_val[i]);
+    }
+    result[idx] = sum;
+    idx += (blockDim.x*gridDim.x);
+  }
+}
+
+
 void mass_inner_product_two_vectors(int n, 
                                     int i, 
                                     double* vec1, 
@@ -182,3 +205,11 @@ void mass_axpy(int n, int i, double* x, double* y, double* alpha)
   massAxpy3_kernel<<<(n + 384 - 1) / 384, 384>>>(n, i + 1, x, y, alpha);
 }
 
+void matrix_row_sums(int n, 
+                     int nnz, 
+                     int* a_ia,
+                     double* a_val, 
+                     double* result)
+{
+  matrixInfNormPart1<<<1000,1024>>>(n, nnz, a_ia, a_val, result);
+}
