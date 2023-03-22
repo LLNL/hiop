@@ -350,6 +350,7 @@ int MatrixTestsSparseTriplet::getLocalElement(hiop::hiopVectorInt* xvec, int idx
     return x->local_data_host_const()[idx];
   } else {
     assert(false && "Wrong type of vector passed into `MatrixTestsSparseTriplet::getLocalElement`!");
+    return 0;
   }
 }
 

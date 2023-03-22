@@ -47,7 +47,7 @@
 // product endorsement purposes.
 
 #include "hiopHessianLowRank.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopVectorPar.hpp"
 
 #include "hiop_blasdefs.hpp"

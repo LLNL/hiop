@@ -46,13 +46,14 @@
 // product endorsement purposes.
 
 /**
- * @file MathCudaKernels.cu
+ * @file MathKernelsCuda.cu
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
+#include "MathKernelsCuda.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,7 +63,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include "hiopCppStdUtils.hpp"
-#include "MathDeviceKernels.hpp"
+#include <thrust/functional.h>
+#include <functional>
 
 __global__
 void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, double minv, double maxv)
@@ -78,9 +80,39 @@ void array_random_uniform_cuda(int n, double* d_array, unsigned long seed, doubl
     }
 }
 
+__global__ void set_to_constant_cu(int n, double *vec, double val)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    vec[i] = val;	
+  }
+}
+
+__global__ void copy_to_mapped_dest_cu(int n, const double* src, double* dest, const int* mapping)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    dest[mapping[i]] = src[i];	
+  }
+}
+
+__global__ void copy_from_mapped_src_cu(int n, const double* src, double* dest, const int* mapping)
+{
+
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    dest[i] = src[mapping[i]];	
+  }
+}
+
 namespace hiop
 {
-namespace device
+namespace cuda
 {
 
 int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
@@ -110,6 +142,27 @@ int array_random_uniform_kernel(int n, double* d_array)
   return 1;
 }
 
-} //end of namespace device
+void set_to_val_kernel(int n, double* values, double val)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  set_to_constant_cu<<<num_blocks,block_size>>>(n, values, val);
+}
+
+void copy_src_to_mapped_dest_kernel(int n, const double* src, double* dest, const int* mapping)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  copy_to_mapped_dest_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
+}
+
+void copy_mapped_src_to_dest_kernel(int n, const double* src, double* dest, const int* mapping)
+{
+  int block_size=256;
+  int num_blocks = (n+block_size-1)/block_size;
+  copy_from_mapped_src_cu<<<num_blocks,block_size>>>(n, src, dest, mapping);
+}
+
+} //end of namespace cuda
 } //end of namespace hiop
 

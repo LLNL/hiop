@@ -25,8 +25,23 @@ if(HIOP_USE_RAJA)
 endif()
 
 if(HIOP_USE_GPU AND HIOP_USE_CUDA)
+  set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsCuda.cpp )
   set(cuda_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC})
   set_source_files_properties(${cuda_sources} PROPERTIES LANGUAGE CUDA)
+endif()
+
+if(HIOP_USE_GPU AND HIOP_USE_HIP)
+  set(testVector_SRC ${testVector_SRC} LinAlg/vectorTestsHip.cpp )
+  set(hip_sources ${testVector_SRC} ${testMatrix_SRC} ${testMatrixSparse_SRC} ${testMatrixSymSparse_SRC})
+
+  # Mark appropriate source files as HIP. I guess in the future just a
+  # LANGUAGE HIP property will suffice. For now do it via compile flags
+  # Reference: https://www.olcf.ornl.gov/wp-content/uploads/2021/01/2021UM-Day-3-Joo-Developing-for-Frontier-using-HIP-on-Spock.pdf
+#  set_source_files_properties(${hip_sources} PROPERTIES LANGUAGE HIP)
+
+  # HIP kernels
+  set_source_files_properties( ${hip_sources} PROPERTIES LANGUAGE CXX)
+  set_source_files_properties( ${hip_sources} PROPERTIES COMPILE_FLAGS "-x hip")
 endif()
 
 # Build vector test

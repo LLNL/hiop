@@ -789,9 +789,15 @@ namespace hiop
    * *************************************************************************
    */
   hiopKKTLinSysSparseFull::hiopKKTLinSysSparseFull(hiopNlpFormulation* nlp)
-    : hiopKKTLinSysFull(nlp), rhs_(nullptr),
-      Hx_(nullptr), Hd_(nullptr), HessSp_(nullptr), Jac_cSp_(nullptr), Jac_dSp_(nullptr),
-      write_linsys_counter_(-1), csr_writer_(nlp)
+    : hiopKKTLinSysFull(nlp),
+      rhs_(nullptr),
+      Hx_(nullptr),
+      Hd_(nullptr),
+      HessSp_(nullptr),
+      Jac_cSp_(nullptr),
+      Jac_dSp_(nullptr),
+      write_linsys_counter_(-1),
+      csr_writer_(nlp)
   {
     nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
     assert(nlpSp_);

@@ -65,7 +65,7 @@
 
 #include <hiopVector.hpp>
 #include <hiopVectorInt.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include "testBase.hpp"
 
 namespace hiop { namespace tests {
@@ -440,6 +440,54 @@ public:
   }
 
   /**
+   * @brief Test vector method for copying data to another vector
+   * starting from prescribed index in destination vector. 
+   * 
+   * @pre Vectors are not distributed.
+   * @pre Memory space for hiop::LinearAlgebraFactory is set appropriately
+   */  
+  bool vectorCopyToStartingAt_w_pattern(
+      hiop::hiopVector& from,
+      hiop::hiopVector& to,
+      hiop::hiopVector& pattern,
+      const int rank=0)
+  {
+    const local_ordinal_type to_size = getLocalSize(&to);
+    const local_ordinal_type from_size = getLocalSize(&from);
+    assert(to_size == to.get_size() && to_size > from_size + 2
+           && "This test cannot be ran with distributed vectors");
+    assert(getLocalSize(&pattern) == from_size && from_size > 1
+           && "pattern_size must be equal to the source size");
+    const int start_idx = to_size - from_size;
+    const real_type from_val = one;
+    const real_type from_val_st_ed = three;
+    const real_type to_val = two;
+
+    from.setToConstant(from_val);
+    to.setToConstant(to_val);
+    pattern.setToConstant(zero);
+    if (rank == 0) {
+      setLocalElement(&from, 0, from_val_st_ed);
+      setLocalElement(&from, from_size-1, from_val_st_ed);
+      setLocalElement(&pattern, 0, one);
+      setLocalElement(&pattern, from_size-1, one);
+    }
+
+    from.copyToStartingAt_w_pattern(to, start_idx, pattern);
+
+    // Check that the start and end values of `from' vector are copied to the `to' vector
+    const int fail = verifyAnswer(&to,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (rank == 0 && (i == start_idx || i == start_idx + 1) ? from_val_st_ed : to_val);
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &from);    
+  }
+
+
+  /**
    * @brief Test vector method for copying data from another two vectors
    * 
    * @pre Vectors are not distributed.
@@ -464,18 +512,12 @@ public:
 
     const real_type c_val = one;
     const real_type d_val = two;
- 
+
     c.setToConstant(c_val);
     d.setToConstant(d_val);
 
-    for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map.local_data_host()[i] = i;
-    }
-    for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map.local_data_host()[i] = i + c_size;
-    }
-    c_map.copy_to_dev();
-    d_map.copy_to_dev();
+    c_map.linspace(0, 1);
+    d_map.linspace(c_size, 1);
 
     cd.copy_from_two_vec_w_pattern(c, c_map, d, d_map);
 
@@ -513,18 +555,9 @@ public:
     assert(c_size + d_size == cd_size && "size doesn't match");
 
     const real_type cd_val = two;
- 
-    c.setToZero();
-    d.setToZero();
 
-    for(local_ordinal_type i = 0; i < c_size; ++i) {
-      c_map.local_data_host()[i] = i;
-    }
-    for(local_ordinal_type i = 0; i < d_size; ++i) {
-      d_map.local_data_host()[i] = i + c_size;
-    }
-    c_map.copy_to_dev();
-    d_map.copy_to_dev();
+    c_map.linspace(0, 1);
+    d_map.linspace(c_size, 1);
 
     cd.setToConstant(cd_val);
     cd.copy_to_two_vec_w_pattern(c, c_map, d, d_map);
@@ -2018,7 +2051,7 @@ public:
   }
 
   /// Returns element _i_ of vector _x_.
-  real_type getLocalElement(const hiop::hiopVector* x, local_ordinal_type i)
+  real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
   {
     return getLocalDataConst(x)[i];
   }
@@ -2095,7 +2128,7 @@ public:
 
 protected:
   // Interface to methods specific to vector implementation
-  virtual const real_type* getLocalDataConst(const hiop::hiopVector* x) = 0;
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x) = 0;
   virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val) = 0;
   virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val) = 0;
   virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val) = 0;

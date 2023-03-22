@@ -63,7 +63,7 @@
 #include "hiopVector.hpp"
 
 #include "hiopOptions.hpp"
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include "hiopLinearOperator.hpp"
 
 #include <cmath>

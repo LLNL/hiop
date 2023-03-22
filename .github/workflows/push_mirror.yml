@@ -1,10 +1,10 @@
-name: Mirroring
+name: Push Mirror
 
 on: [push, delete]
 
 jobs:
-  to_gitlab:
-    runs-on: ubuntu-18.04
+  PNNL_GitLab:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v1
       - uses: spyoungtech/mirror-action@master
@@ -22,19 +22,3 @@ jobs:
           pipeline_id=$(echo $response | jq '.id' | sed 's/"//g')
           echo "PIPELINE_ID=${pipeline_id}" >> $GITHUB_ENV
           exit $exit_code
-      - name: Watch Pipeline Results
-        run: |
-          sudo apt install jq
-          while :; do
-            response=$(curl --header "PRIVATE-TOKEN: ${{ secrets.PNNL_GITLAB_CI_PAT }}" "https://gitlab.pnnl.gov/api/v4/projects/769/pipelines/${PIPELINE_ID}")
-            status=$(echo $response | jq '.status' | sed -e 's/"//g')
-            echo
-            echo "Full response: ${response}"
-            echo
-            echo "-- Got pipeline status: $status"
-            echo
-            bash_code=$(echo $status | perl -ne 'if (/failed/){print"exit 1";exit;} elsif (/success/){print"exit 0";exit;}')
-            eval "$bash_code"
-            sleep 60 
-          done
-

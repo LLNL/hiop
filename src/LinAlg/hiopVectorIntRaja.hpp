@@ -49,43 +49,33 @@
 #pragma once
 
 /**
- * @file hiopVectorIntRajaPar.hpp
+ * @file hiopVectorIntRaja.hpp
  *
  * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
  *
  */
 
 #include "hiopVectorInt.hpp"
+
+#include "ExecSpace.hpp"
 #include <string>
 
 namespace hiop
 {
-
+//forward declarations of the "friend" testing classes
+namespace tests
+{
+class VectorTestsIntRaja;
+class MatrixTestsRajaSparseTriplet;
+}
+  
+template<class MEMBACKEND, class EXECPOLICYRAJA>
 class hiopVectorIntRaja : public hiopVectorInt
 {
-private:
-  index_type *buf_host_;
-  index_type *buf_;
-  std::string mem_space_;
-
 public:
   hiopVectorIntRaja(size_type sz, std::string mem_space="HOST");
-
+  hiopVectorIntRaja(const hiopVectorIntRaja&) = delete;
   ~hiopVectorIntRaja();
-
-  /**
-   * @brief Copy array data from the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_from_dev();
-
-  /**
-   * @brief Copy array data to the device.
-   *
-   * @note This is a no-op if the memory space is _host_ or _uvm_.
-   */
-  void copy_to_dev();
 
   virtual inline index_type* local_data_host() { return buf_host_; }
 
@@ -97,6 +87,10 @@ public:
   
   virtual void copy_from(const index_type* v_local);
 
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src);
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const;
+
+  
   /// @brief Set all elements to zero.
   virtual void set_to_zero();
 
@@ -114,6 +108,43 @@ public:
    *
    */ 
   virtual void linspace(const index_type& i0, const index_type& di);
+
+  /// Return a const reference to the internal execution space object
+  const ExecSpace<MEMBACKEND, EXECPOLICYRAJA>& exec_space() const
+  {
+    return exec_space_;
+  }
+private:
+  friend class tests::VectorTestsIntRaja;
+  friend class tests::MatrixTestsRajaSparseTriplet;
+  /**
+   * @brief Copy array data from the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_from_dev();
+
+  /**
+   * @brief Copy array data to the device.
+   *
+   * @note This is a no-op if the memory space is _host_ or _uvm_.
+   */
+  void copy_to_dev();
+
+private:
+  ExecSpace<MEMBACKEND, EXECPOLICYRAJA> exec_space_;
+  using MEMBACKENDHOST = typename MEMBACKEND::MemBackendHost;
+
+  //EXECPOLICYRAJA is used internally as a execution policy. EXECPOLICYHOST is not used internally
+  //in this class. EXECPOLICYHOST can be any host policy as long as memory allocations and
+  //and transfers within and from `exec_space_host_` work with EXECPOLICYHOST (currently all such
+  //combinations work).
+  using EXECPOLICYHOST = hiop::ExecPolicySeq;
+  ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST> exec_space_host_;
+
+  index_type *buf_host_;
+  index_type *buf_;
+  std::string mem_space_;
 };
 
 } // namespace hiop

@@ -1,10 +1,11 @@
-// Copyright (c) 2022, Lawrence Livermore National Security, LLC.
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read "Additional BSD Notice" below.
+// Please also read “Additional BSD Notice” below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -46,69 +47,40 @@
 // product endorsement purposes.
 
 /**
- * @file MathHipKernels.cpp
+ * @file vectorTestsCuda.hpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
- * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
+ * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
+ * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * 
+ */
+#pragma once
+
+#include "vectorTests.hpp"
+
+namespace hiop { namespace tests {
+
+/**
+ * @brief Utilities for testing hiopVectorCuda class
+ *
+ * @todo In addition to set and get element ass set and get buffer methods.
  *
  */
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <hip/hip_runtime.h>
-#include <hiprand_kernel.h>
-#include "hiopCppStdUtils.hpp"
-#include "MathDeviceKernels.hpp"
-
-
-__global__
-void array_random_uniform_hip(int n, double* d_array, unsigned long seed, double minv, double maxv)
+class VectorTestsCuda : public VectorTests
 {
-    const int num_threads = blockDim.x * gridDim.x;
-    const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
-    const double delta = maxv - minv;
-    hiprandState state;
-    hiprand_init(seed, tid, 0, &state);
-    for (int i = tid; i < n; i += num_threads) {
-      const double ranv = hiprand_uniform_double( &state ); // from 0 to 1
-      d_array[i] = ranv * delta + minv;	
-    }
-}
+public:
+  VectorTestsCuda(){}
+  virtual ~VectorTestsCuda(){}
 
-namespace hiop
-{
-namespace device
-{
+private:
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x);
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val);
+  virtual void deleteLocalBuffer(real_type* buffer);
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x);
+  MPI_Comm getMPIComm(hiop::hiopVector* x);
+};
 
-int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
-{
-  int block_size=256;
-  int grid_size = (n+block_size-1)/block_size;
-  
-  unsigned long seed = generate_seed();
-  array_random_uniform_hip<<<grid_size,block_size>>>(n, d_array, seed, minv, maxv);
-  hipDeviceSynchronize();
-
-  return 1;
-}
-
-int array_random_uniform_kernel(int n, double* d_array)
-{  
-  unsigned long seed = generate_seed();
-
-  hiprandGenerator_t generator;
-  hiprandCreateGenerator(&generator, HIPRAND_RNG_PSEUDO_DEFAULT);
-  hiprandSetPseudoRandomGeneratorSeed(generator, seed);
-  
-  // generate random val from 0 to 1
-  hiprandGenerateUniformDouble(generator, d_array, n);
-
-  hiprandDestroyGenerator(generator);
-
-  return 1;
-}
-
-} //end of namespace device
-} //end of namespace hiop
-
+}} // namespace hiop::tests

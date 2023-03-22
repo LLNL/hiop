@@ -849,12 +849,11 @@ void hiopOptionsNLP::register_options()
   //     - 'hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this
   //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
   //     - 'gpu' compute mode: not supported with the above values for 'KKTLinsys'
-  // - For KKTLinsys 'condensed' (symmetric positive definite system), under
+  // - For KKTLinsys 'condensed' and `normal` (symmetric positive definite system), under
   //     - 'cpu' compute mode only ma57 is supported (not efficient, use only for debugging)
   //     - 'hybrid' compute mode, cusolve-chol is supported and will be selected under 'auto' or
   //     incompatible/unsupported value for 'linear_solver_sparse'.
   //     - 'gpu' compute mode: work in progress
-  // - TODO: normal equations
 
   {
     vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo", "cusolver-chol"};
@@ -899,7 +898,7 @@ void hiopOptionsNLP::register_options()
     vector<string> range {"syncfree", "sparselib"};
 
     register_str_option("ginkgo_trisolve",
-                        "sparselib",
+                        "syncfree",
                         range,
                         "Selects the triangular solver for Ginkgo.");
   }
@@ -913,6 +912,8 @@ void hiopOptionsNLP::register_options()
   // (Host execution)
   // - symamd-eigen: use sym. approx. min. degree algorithm from EIGEN package (default, Host execution)
   // - symrcm: use symmetric reverse Cuthill-McKee as implemented by CUDA csrsymrcm (Host execution)
+  // - amd-ssparse: symmetric approximate minimum degree (AMD) from Suite Sparse library.
+  // - colamd-ssparse: column approximate minimum degree (COLAMD) from Suite Sparse library.
   {
     vector<string> range = { "metis", "symamd-cuda", "symamd-eigen", "symrcm", "amd-ssparse", "colamd-ssparse"};
     auto default_value = range[1];
@@ -949,24 +950,36 @@ void hiopOptionsNLP::register_options()
                         "'glu' is experimental and 'rf' is NVIDIA's stable refactorization. ");
   }
 
-
-    register_int_option("ir_inner_cusolver_restart",
+    register_int_option("ir_inner_restart",
                         20,
                         1,
                         100,
-                        "FGMRES restart value (default is 20). ");
+                        "(F)GMRES restart value (default is 20). ");
 
-    register_num_option("ir_inner_cusolver_tol",
+    register_num_option("ir_inner_tol",
                         1e-12,
                         1e-16,
                         1e-1,
-                        "FGMRES tolerance (default is 1e-12). ");
+                        "(F)GMRES tolerance (default is 1e-12). ");
 
-    register_int_option("ir_inner_cusolver_maxit",
+    register_num_option("ir_inner_cusolver_tol_min",
+                        1e-6,
+                        1e-16,
+                        1e-1,
+                        "FGMRES minimum tolerance (default is 1e-6). ");
+
+    register_num_option("ir_inner_cusolver_tol_factor",
+                        1e-2,
+                        1e-20,
+                        1.0,
+                        "FGMRES tolerance factor multiplying mu. (default 1e-2)");
+
+    register_int_option("ir_inner_maxit",
                         50,
                         0,
                         1000,
-                        "FGMRES maximum number of iterations (default is 50). ");
+                        "(F)GMRES maximum number of iterations (default is 50). ");
+
 {
     vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
@@ -1004,15 +1017,7 @@ void hiopOptionsNLP::register_options()
                         "This is the scaling factor used to determines if the "
                         "direction is considered to have sufficiently positive curvature (1e-11 by default)");
   }  
-  //computations
-  {
-    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
-    register_str_option("compute_mode",
-                        "auto",
-                        range,
-                        "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
-                        "'cpu', 'gpu' and 'hybrid' based on the other options passed");
-  }
+
   //inertia correction and Jacobian regularization
   {
     //Hessian related
@@ -1147,14 +1152,9 @@ void hiopOptionsNLP::register_options()
   // memory space selection
   {
 #ifdef HIOP_USE_RAJA
-    vector<string> range(4);
-    range[0] = "default";
-    range[1] = "host";
-    range[2] = "device";
-    range[3] = "um";
+    vector<string> range = {"default", "host", "device", "um"};
 #else
-    vector<string> range(1);
-    range[0] = "default";
+    vector<string> range = {"default"};
 #endif
     register_str_option("mem_space",
                         range[0],
@@ -1168,6 +1168,71 @@ void hiopOptionsNLP::register_options()
                         range,
                         "Determines the memory space to which HiOp will return the solutions. By default,");
   }
+
+  // compute mode
+  {
+    //! todo: proposing to remove this option
+    vector<string> range(4); range[0]="auto"; range[1]="cpu"; range[2]="hybrid"; range[3]="gpu";
+    register_str_option("compute_mode",
+                        "auto",
+                        range,
+                        "'auto', 'cpu', 'hybrid', 'gpu'; 'hybrid'=linear solver on gpu; 'auto' will decide between "
+                        "'cpu', 'gpu' and 'hybrid' based on the other options passed");
+  }
+
+  // memory backend
+  {
+    // auto - solver decides which memory backend to use (mem_space controls the memory space)
+    // stdcpp - C++ mem backend (HOST mem_space)
+    // umpire - use umpire; mem_space controls the mem_space
+    // cuda - cuda mem backend (works only with DEVICE mem_space)
+    // hip - hip mem backend  (works only with DEVICE mem_space)
+    //
+    // note: mem_space can control the selection of the memory backend (maybe we don't need mem_backend option?)
+    vector<string> range = {"auto", "stdcpp"};
+#if defined(HIOP_USE_RAJA)
+    range.push_back("umpire");
+#endif
+#if defined(HIOP_USE_CUDA)
+    range.push_back("cuda");
+#endif
+#if defined(HIOP_USE_HIP)
+    range.push_back("hip");
+#endif    
+
+    register_str_option("mem_backend",
+                        "auto",
+                        range,
+                        "'auto', 'stdcpp', 'umpire', 'cuda', 'hip'");
+  }
+  // execution policies
+  {
+    // auto - solver decides based on its capabilities and values of mem_space and mem_backend
+    // seq  - cpu sequential (compatible only with HOST mem_space and stdcpp mem_backend
+    // raja - RAJA backend
+    //          - raja-openmp execution; requires mem_space = 'HOST'   mem_backend = 'stdcpp' or 'umpire'
+    //          - raja-cuda execution;   requires mem_space = 'DEVICE' mem_backend = 'cuda' or 'umpire'
+    //          - raja-hip execution;    requires mem_space = 'DEVICE' mem_backend = 'hip' or 'umpire'
+    // cuda - only cuda kernels;         requires mem_space = 'DEVICE' mem_backend = 'cuda' or 'umpire'
+    // hip  - only hip kernels;          requires mem_space = 'DEVICE' mem_backend = 'hip' or 'umpire'
+
+    vector<string> range = {"auto", "seq"};
+#if defined(HIOP_USE_RAJA)
+    range.push_back("raja");
+#endif
+#if defined(HIOP_USE_CUDA)
+    range.push_back("cuda");
+#endif
+#if defined(HIOP_USE_HIP)
+    range.push_back("hip");
+#endif    
+
+    register_str_option("exec_policies",
+                        "auto",
+                        range,
+                        "");
+  }
+
 }
 
 void hiopOptionsNLP::ensure_consistence()

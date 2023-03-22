@@ -2,7 +2,7 @@
 # Set headers to be installed as part of the hiop interface
 set(hiopLinAlg_INTERFACE_HEADERS
   hiop_blasdefs.hpp
-  hiopLinAlgFactory.hpp
+  LinAlgFactory.hpp
   hiopLinSolver.hpp
   hiopLinSolverSymDenseLapack.hpp
   hiopLinSolverSymDenseMagma.hpp
@@ -20,7 +20,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixDense.hpp
   hiopMatrixDenseRowMajor.hpp
   hiopMatrixMDS.hpp
-  hiopMatrixRajaDense.hpp
+  hiopMatrixDenseRaja.hpp
   hiopMatrixRajaSparseTriplet.hpp
   hiopMatrixSparse.hpp
   hiopMatrixSparseTriplet.hpp
@@ -30,10 +30,13 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopMatrixSparseCsrCuda.hpp
   hiopVector.hpp
   hiopVectorInt.hpp
+  hiopVectorIntCuda.hpp
+  hiopVectorIntHip.hpp
   hiopVectorIntRaja.hpp
   hiopVectorIntSeq.hpp
+  hiopVectorCuda.hpp
+  hiopVectorHip.hpp
   hiopVectorPar.hpp
-  hiopVectorRajaPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
   )
@@ -44,7 +47,7 @@ set(hiopLinAlg_SRC
   hiopVectorIntSeq.cpp
   hiopMatrixDenseRowMajor.cpp
   hiopLinSolver.cpp
-  hiopLinAlgFactory.cpp
+  LinAlgFactory.cpp
   hiopMatrixMDS.cpp
   hiopMatrixComplexDense.cpp
   hiopMatrixSparseTripletStorage.cpp
@@ -56,11 +59,24 @@ set(hiopLinAlg_SRC
 )
 
 set(hiopLinAlg_RAJA_SRC
-  hiopVectorRajaPar.cpp
-  hiopVectorIntRaja.cpp
-  hiopMatrixRajaDense.cpp
   hiopMatrixRajaSparseTriplet.cpp
 )
+
+if(HIOP_USE_CUDA)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaCuda.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaCuda.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaCuda.cpp)
+elseif(HIOP_USE_HIP)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaHip.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaHip.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaHip.cpp)
+else()
+  #raja - omp
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorRajaOmp.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopVectorIntRajaOmp.cpp)
+  list(APPEND hiopLinAlg_RAJA_SRC hiopMatrixDenseRajaOmp.cpp)
+endif()
+
 
 set(hiopLinAlg_MAGMA_SRC
   hiopLinSolverSymDenseMagma.cpp
@@ -94,6 +110,22 @@ set(hiopLinAlg_FGMRESKERNELS_SRC
 )
 set(hiopLinAlg_CUDASPARSE_SRC
   hiopMatrixSparseCsrCuda.cpp
+)
+
+set(hiopLinAlg_CUDAVECTOR_SRC
+  hiopVectorCuda.cpp
+  hiopVectorIntCuda.cpp
+)
+set(hiopLinAlg_CUDAVECTORKERNELS_SRC
+  VectorCudaKernels.cu
+)
+
+set(hiopLinAlg_HIPVECTOR_SRC
+  hiopVectorHip.cpp
+  hiopVectorIntHip.cpp
+)
+set(hiopLinAlg_HIPVECTORKERNELS_SRC
+  VectorHipKernels.cpp
 )
 
 set(hiopLinAlg_KRON_REDUCTION_SRC
@@ -133,14 +165,29 @@ endif()
 
 # Add sparse CUDA matrix code (even when HIOP_SPARSE is not defined since it can be used in MDS)
 if(HIOP_USE_CUDA)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC})
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSE_SRC} ${hiopLinAlg_CUDAVECTOR_SRC})
   set_source_files_properties(${hiopLinAlg_CUDASPARSEKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
-  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC})
+  set_source_files_properties(${hiopLinAlg_CUDAVECTORKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUDASPARSEKERNELS_SRC} ${hiopLinAlg_CUDAVECTORKERNELS_SRC})
 endif(HIOP_USE_CUDA)
+
+# Add Hip vector code (even when HIOP_SPARSE is not defined since it can be used in MDS)
+if(HIOP_USE_HIP)
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_HIPVECTOR_SRC})
+
+  # Mark appropriate source files as HIP. I guess in the future just a
+  # LANGUAGE HIP property will suffice. For now do it via compile flags
+  # Reference: https://www.olcf.ornl.gov/wp-content/uploads/2021/01/2021UM-Day-3-Joo-Developing-for-Frontier-using-HIP-on-Spock.pdf
+#  set_source_files_properties(${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES LANGUAGE HIP)
+
+  set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES LANGUAGE CXX)
+  set_source_files_properties( ${hiopLinAlg_HIPVECTORKERNELS_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
+
+  list(APPEND hiopLinAlg_SRC ${hiopLinAlg_HIPVECTORKERNELS_SRC})
+endif(HIOP_USE_HIP)
 
 # Add RAJA/Umpire sources when enabled
 if(HIOP_USE_RAJA)
-  list(APPEND hiopLinAlg_INTERFACE_HEADERS hiop_raja_defs.hpp)
   list(APPEND hiopLinAlg_SRC ${hiopLinAlg_RAJA_SRC})
 endif()
 

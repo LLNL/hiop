@@ -56,7 +56,7 @@
 #include "hiopLinSolver.hpp"
 
 #include "hiopOptions.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 namespace hiop {
   hiopLinSolver::hiopLinSolver()

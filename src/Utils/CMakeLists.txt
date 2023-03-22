@@ -1,7 +1,7 @@
 set(hiopUtils_SRC
   hiopLogger.cpp
   hiopOptions.cpp
-  MathHostKernels.cpp
+  MathKernelsHost.cpp
 )
 
 set(hiopUtils_RAJA_SRC
@@ -21,11 +21,15 @@ set(hiopUtils_INTERFACE_HEADERS
   hiopOptions.hpp
   hiopRunStats.hpp
   hiopTimer.hpp
-  MathHostKernels.hpp
+  MathKernelsHost.hpp
 )
 
-if(HIOP_USE_GPU)
-  list(APPEND hiopUtils_INTERFACE_HEADERS MathDeviceKernels.hpp)
+if(HIOP_USE_CUDA)
+  list(APPEND hiopUtils_INTERFACE_HEADERS MathKernelsCuda.hpp)
+endif()
+
+if(HIOP_USE_HIP)
+  list(APPEND hiopUtils_INTERFACE_HEADERS MathKernelsHip.hpp)
 endif()
 
 if(HIOP_USE_RAJA)
@@ -38,7 +42,7 @@ if(HIOP_USE_CUDA)
   set_source_files_properties(${hiopUtils_RAJA_SRC} PROPERTIES LANGUAGE CUDA)
 
   # CUDA kernels
-  set(hiopUtils_CUDA_SRC MathCudaKernels.cu)
+  set(hiopUtils_CUDA_SRC MathKernelsCuda.cu)
   set_source_files_properties(${hiopUtils_CUDA_SRC} PROPERTIES LANGUAGE CUDA)
   list(APPEND hiopUtils_SRC ${hiopUtils_CUDA_SRC})
 endif()
@@ -54,7 +58,7 @@ if(HIOP_USE_HIP)
   set_source_files_properties(${hiopUtils_RAJA_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
 
   # HIP kernels
-  set(hiopUtils_HIP_SRC MathHipKernels.cpp)
+  set(hiopUtils_HIP_SRC MathKernelsHip.cpp)
   set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES LANGUAGE CXX)
   set_source_files_properties( ${hiopUtils_HIP_SRC} PROPERTIES COMPILE_FLAGS "-x hip")
   list(APPEND hiopUtils_SRC ${hiopUtils_HIP_SRC})

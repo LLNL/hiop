@@ -53,7 +53,7 @@
  */
  
 #include "hiopFactAcceptor.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopPDPerturbation.hpp"
 
 #include <cmath>

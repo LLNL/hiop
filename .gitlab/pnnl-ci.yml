@@ -1,0 +1,152 @@
+stages:
+  - build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+.pnnl_tags: 
+  tags:
+    - k8s
+    - ikp
+    - exasgd
+    - deception
+    - marianas
+
+.pnnl_nohpc_tags:
+  # Use curl base image as ubuntu base is missing it
+  image: curlimages/curl
+  tags:
+    - basic
+    - exasgd
+    - ikp
+    - k8s
+
+.newell:
+  variables:
+    SLURM_Q: "newell_shared"
+    MY_CLUSTER: "newell"
+    SLURM_ARGS: --gres=gpu:1 --exclusive
+
+.marianas:
+  variables:
+    SLURM_Q: "dl"
+    MY_CLUSTER: "marianas"
+    SLURM_ARGS: --gres=gpu:1 --exclusive
+
+.incline:
+  variables:
+    SLURM_Q: "incline"
+    MY_CLUSTER: "incline"
+    SLURM_ARGS: --exclusive
+
+.pnnl_build: 
+  extends:
+    - .pnnl_tags
+  variables:
+    CTEST_CMD: 'ctest --output-on-failure'
+    TIMELIMIT: '1:00:00'
+  stage: build
+  needs: []
+  script:
+    - |
+      #
+      #  NOTES:  WORKDIR is on constance/marianas/newell
+      #          ./      is only on the Kubernetes instance
+      #
+      set -xv
+      export WORKDIR="$HOME/gitlab/$CI_JOB_ID/"
+      mkdir -p "$WORKDIR"
+      cp -R ./* "$WORKDIR"
+      cd "$WORKDIR"
+      touch output
+      tail -f output &
+      tailpid=$!
+
+      if [[ $MY_CLUSTER == "marianas" ]]; then
+        export SLURM_Q=`perl $WORKDIR/scripts/findIdleDLNodes.pl`
+      fi
+
+      # Extra args for ctest
+      export CTEST_CMD=$CTEST_CMD
+
+      sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
+      res=1
+      set +xv
+      while :;
+        do
+        if [[ "$(awk 'BEGIN{i=0}/BUILD_STATUS/{i++}END{print i}' output)" != "0" ]]; then
+          kill $tailpid
+          res=$(grep BUILD_STATUS output | tail -n 1 | cut -f2 -d':')
+          break
+        fi
+        sleep 10
+      done
+      echo "finished batch job: $res"
+      exit $res
+
+# For PNNL CI
+build_on_marianas:
+  extends:
+    - .pnnl_build
+    - .marianas
+
+build_on_newell:
+  extends:
+    - .pnnl_build
+    - .newell
+
+build_on_incline:
+  extends:
+    - .pnnl_build
+    - .incline
+  allow_failure: true
+
+pnnl_cleanup:
+  needs: []
+  extends:
+    - .pnnl_tags
+  stage: .pre
+  variables:
+    GIT_STRATEGY: none
+  script:
+  # clears directory of files more than 2 hours/120 minutes old
+  - |
+    set -xv
+    export WORKDIR="$HOME/gitlab/"
+    find $WORKDIR -type d -mindepth 1 -mmin +120 -prune -print -exec rm -rf {} \; || true
+    ls -hal $WORKDIR
+
+.report-status:
+  extends:
+    - .pnnl_nohpc_tags
+  variables:
+    STATUS_PROJECT: LLNL/hiop
+    STATUS_NAME: PNNL_GitLab
+    GIT_STRATEGY: none
+  script:
+    - |
+      set -x
+      curl -L \
+      -X POST \
+      -H @${GITHUB_CURL_HEADERS} \
+      https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
+      -d "{\"state\":\"${CI_JOB_NAME}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${STATUS_NAME}\"}"
+  environment:
+    name: reporting-github
+
+pending:
+  stage: .pre
+  extends:
+    - .report-status
+
+success:
+  stage: .post
+  extends:
+    - .report-status
+
+failed:
+  stage: .post
+  extends:
+    - .report-status
+  rules:
+    - when: on_failure

@@ -11,7 +11,7 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
 endif ()
 
-project (hiop VERSION "0.7.1")
+project (hiop VERSION "0.7.2")
 
 string(TIMESTAMP HIOP_RELEASE_DATE "%Y-%m-%d")
 
@@ -388,6 +388,7 @@ configure_file(
 include_directories(${CMAKE_BINARY_DIR})
 
 include_directories(src/Interface)
+include_directories(src/ExecBackends)
 include_directories(src/Optimization)
 include_directories(src/LinAlg)
 include_directories(src/Utils)

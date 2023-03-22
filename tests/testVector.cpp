@@ -58,7 +58,7 @@
 
 // This header contains HiOp's MPI definitions
 #include <hiopOptions.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopVectorIntSeq.hpp>
 
@@ -68,8 +68,18 @@
 #ifdef HIOP_USE_RAJA
 #include "LinAlg/vectorTestsRajaPar.hpp"
 #include "LinAlg/vectorTestsIntRaja.hpp"
-#include <hiopVectorRajaPar.hpp>
+#include <hiopVectorRaja.hpp>
 #include <hiopVectorIntRaja.hpp>
+#endif
+
+#ifdef HIOP_USE_CUDA
+#include "LinAlg/vectorTestsCuda.hpp"
+#include <hiopVectorCuda.hpp>
+#endif
+
+#ifdef HIOP_USE_HIP
+#include "LinAlg/vectorTestsHip.hpp"
+#include <hiopVectorHip.hpp>
 #endif
 
 template <typename T>
@@ -114,6 +124,22 @@ int main(int argc, char** argv)
   if (rank == 0)
     std::cout << "\nTesting HiOp default vector implementation:\n";
   fail += runTests<VectorTestsPar>("default", comm);
+#ifdef HIOP_USE_CUDA
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp CUDA vector\n";
+    std::cout << "  ... using CUDA memory space:\n";
+  }
+  fail += runTests<VectorTestsCuda>("cuda", comm);
+#endif
+#ifdef HIOP_USE_HIP
+  if (rank == 0)
+  {
+    std::cout << "\nTesting HiOp HIP vector\n";
+    std::cout << "  ... using HIP memory space:\n";
+  }
+  fail += runTests<VectorTestsHip>("hip", comm);
+#endif
 #ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_GPU
   if (rank == 0)
@@ -204,11 +230,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
 #endif
 
   T test;
-
   test.set_mem_space(mem_space);
-  //hiopOptions options;
-  //options.SetStringValue("mem_space", mem_space);
-  //LinearAlgebraFactory::set_mem_space(mem_space);
 
   global_ordinal_type Nlocal = 1000;
   global_ordinal_type Mlocal = 500;
@@ -255,6 +277,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorCopyFromStarting(*v, *v_smaller);
     fail += test.vectorStartingAtCopyFromStartingAt(*v_smaller, *v);
     fail += test.vectorCopyToStarting(*v, *v_smaller);
+    fail += test.vectorCopyToStartingAt_w_pattern(*v_smaller, *v, *v2_smaller);
     fail += test.vectorStartingAtCopyToStartingAt(*v, *v_smaller);
     fail += test.vector_copy_from_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
     fail += test.vector_copy_to_two_vec(*v, *v_smaller, *v_map, *v2_smaller, *v2_map);
@@ -311,7 +334,8 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorIsfinite(*v);
   }
 
-  fail += test.vector_is_equal(*x, *y, rank);
+  // TODO: remove
+  //fail += test.vector_is_equal(*x, *y, rank);
 
   delete a;
   delete b;

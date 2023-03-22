@@ -171,7 +171,7 @@ private:
       //(opt_compute_mode == "hybrid" || opt_compute_mode == "gpu") {
 #ifdef HIOP_USE_CUDA
       assert(opt_compute_mode != "gpu" && "When code is GPU-ready, remove this method");
-      return "DEVICE";
+      return "CUDA";
 #else
       assert(false && "compute mode not supported without HIOP_USE_CUDA build");
       return "DEFAULT";

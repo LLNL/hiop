@@ -6,7 +6,7 @@
 //this include is not needed in general
 //we use hiopMatrixDense in this particular example for convienience
 #include "hiopMatrixDense.hpp" 
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 
 #ifdef HIOP_USE_MPI
 #include "mpi.h"

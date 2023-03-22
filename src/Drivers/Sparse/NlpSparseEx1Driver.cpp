@@ -222,9 +222,9 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
     nlp.options->SetStringValue("cusolver_lu_refactorization", "rf");
-    nlp.options->SetIntegerValue("ir_inner_cusolver_maxit", 100);
-    nlp.options->SetNumericValue("ir_inner_cusolver_tol", 1e-16);
-    nlp.options->SetIntegerValue("ir_inner_cusolver_restart", 20);
+    nlp.options->SetIntegerValue("ir_inner_maxit", 100);
+    nlp.options->SetNumericValue("ir_inner_tol", 1e-16);
+    nlp.options->SetIntegerValue("ir_inner_restart", 20);
     nlp.options->SetStringValue("ir_inner_cusolver_gs_scheme", "mgs_pm");
     nlp.options->SetStringValue("compute_mode", "hybrid");
     // LU solver needs to use inertia free approach
@@ -236,6 +236,7 @@ int main(int argc, char **argv)
     nlp.options->SetStringValue("linsol_mode", "speculative");
     nlp.options->SetStringValue("linear_solver_sparse", "ginkgo");
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
+    nlp.options->SetIntegerValue("ir_outer_maxit", 0);
     if (use_ginkgo_cuda) {
         nlp.options->SetStringValue("ginkgo_exec", "cuda");
     } else if (use_ginkgo_hip) {

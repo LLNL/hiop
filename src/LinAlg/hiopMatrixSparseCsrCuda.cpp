@@ -57,9 +57,10 @@
 #ifdef HIOP_USE_CUDA
 
 #include "hiopVectorPar.hpp"
-#include "MatrixSparseCsrCudaKernels.hpp"
+#include "hiopVectorCuda.hpp"
 
-#include "hiopVectorRajaPar.hpp"
+#include "MatrixSparseCsrCudaKernels.hpp"
+#include "MemBackendCudaImpl.hpp"
 
 #include <algorithm> //for std::min
 #include <cmath> //for std::isfinite
@@ -77,7 +78,6 @@
 
 namespace hiop
 {
-
 hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols, size_type nnz)
   : hiopMatrixSparseCSR(rows, cols, nnz),
     irowptr_(nullptr),
@@ -298,18 +298,28 @@ void hiopMatrixSparseCSRCUDA::addDiagonal(const double& alpha, const hiopVector&
 {
   assert(nrows_ == D.get_size());
   assert(nrows_ == ncols_ && "Matrix must be square");
-#ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
-#else
-  assert( "input vector must be Raja (and data on the device)");
-#endif
-  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, alpha, D.local_data_const());
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be CUDA");
+
+  hiop::cuda::csr_add_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  alpha,
+                                  D.local_data_const(),
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 void hiopMatrixSparseCSRCUDA::addDiagonal(const double& val)
 {
   assert(nrows_ == ncols_ && "Matrix must be square");
-  hiop::cuda::csr_add_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
+  hiop::cuda::csr_add_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  val,
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 void hiopMatrixSparseCSRCUDA::addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
 {
@@ -430,9 +440,10 @@ void hiopMatrixSparseCSRCUDA::copy_to(hiopMatrixSparseCSRSeq& W)
   assert(W.m() == nrows_);
   assert(W.n() == ncols_);
   assert(W.numberOfNonzeros() == nnz_);
-  cudaMemcpy(W.i_row(), this->i_row(), sizeof(index_type)*(1+nrows_), cudaMemcpyDeviceToHost);
-  cudaMemcpy(W.j_col(), this->j_col(), sizeof(index_type)*nnz_, cudaMemcpyDeviceToHost);
-  cudaMemcpy(W.M(), this->M(), sizeof(double)*nnz_, cudaMemcpyDeviceToHost);
+
+  W.exec_space_.copy(W.i_row(), this->i_row(), 1+nrows_, exec_space_);
+  W.exec_space_.copy(W.j_col(), this->j_col(), nnz_, exec_space_);
+  W.exec_space_.copy(W.M(), this->M(), nnz_, exec_space_);
 }
 
 void hiopMatrixSparseCSRCUDA::
@@ -615,11 +626,11 @@ void hiopMatrixSparseCSRCUDA::print(FILE* file,
     std::stringstream ss;
     if(nullptr==msg) {
       if(numranks>1) {
-        ss << "CSR matrix of size " << m() << " " << n() << " and nonzeros " 
+        ss << "CSR CUDA matrix of size " << m() << " " << n() << " and nonzeros " 
            << numberOfNonzeros() << ", printing " <<  max_elems << " elems (on rank="
            << myrank_ << ")" << std::endl;
       } else {
-        ss << "CSR matrix of size " << m() << " " << n() << " and nonzeros " 
+        ss << "CSR CUDA matrix of size " << m() << " " << n() << " and nonzeros " 
            << numberOfNonzeros() << ", printing " <<  max_elems << " elems" << std::endl;
       }
     } else {
@@ -902,9 +913,9 @@ void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& 
 
   //transfer coo/triplet to device
   int* d_rowind=nullptr;
-  cudaMalloc(&d_rowind, nnz_*sizeof(index_type));
+  d_rowind = exec_space_.alloc_array<index_type>(nnz_);
   assert(d_rowind);
-  cudaMemcpy(d_rowind, M.i_row(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);
+  exec_space_.copy(d_rowind, M.i_row(), nnz_, M.exec_space_);
 
   //use cuda API
   cusparseStatus_t st = cusparseXcoo2csr(h_cusparse_,
@@ -915,7 +926,7 @@ void hiopMatrixSparseCSRCUDA::form_from_symbolic(const hiopMatrixSparseTriplet& 
                                          CUSPARSE_INDEX_BASE_ZERO);
   assert(CUSPARSE_STATUS_SUCCESS == st);
 
-  cudaFree(d_rowind);
+  exec_space_.dealloc_array(d_rowind);
   
   //j indexes can be just transfered
   cudaMemcpy(jcolind_, M.j_col(), nnz_*sizeof(index_type), cudaMemcpyHostToDevice);
@@ -1027,18 +1038,16 @@ void hiopMatrixSparseCSRCUDA::form_diag_from_symbolic(const hiopVector& D)
 
   assert(irowptr_ && jcolind_ && values_);
 
-  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_);
+  hiop::cuda::csr_form_diag_symbolic_kernel(nrows_, irowptr_, jcolind_, exec_space_.exec_policies().bl_sz_vector_loop);
 }
 
 void hiopMatrixSparseCSRCUDA::form_diag_from_numeric(const hiopVector& D)
 {
   assert(D.get_size()==ncols_ && D.get_size()==nrows_ && D.get_size()==nnz_);
   assert(irowptr_ && jcolind_ && values_);
-#ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
-#else
-  assert( "input vector must be Raja (and data on the device)");
-#endif
+
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be CUDA");
+
   cudaError_t ret = cudaMemcpy(values_,
                                D.local_data_const(),
                                nrows_*sizeof(double),
@@ -1057,12 +1066,17 @@ void hiopMatrixSparseCSRCUDA::scale_cols(const hiopVector& D)
 void hiopMatrixSparseCSRCUDA::scale_rows(const hiopVector& D)
 {
   assert(nrows_ == D.get_size());
-#ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&D) && "input vector must be Raja (and data on the device)");
-#else
-  assert( "input vector must be Raja (and data on the device)");
-#endif
-  hiop::cuda::csr_scalerows_kernel(nrows_, ncols_, nnz_, irowptr_, jcolind_, values_, D.local_data_const());
+    
+  assert(dynamic_cast<const hiopVectorCuda*>(&D) && "input vector must be CUDA");
+
+  hiop::cuda::csr_scalerows_kernel(nrows_,
+                                   ncols_,
+                                   nnz_,
+                                   irowptr_,
+                                   jcolind_,
+                                   values_,
+                                   D.local_data_const(),
+                                   exec_space_.exec_policies().bl_sz_vector_loop);
 }
 
 // sparsity pattern of M=X+Y, where X is `this`
@@ -1236,17 +1250,26 @@ void hiopMatrixSparseCSRCUDA::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
 void hiopMatrixSparseCSRCUDA::set_diagonal(const double& val)
 {
   assert(irowptr_ && jcolind_ && values_);
-  hiop::cuda::csr_set_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, val);
+  hiop::cuda::csr_set_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  val,
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 void hiopMatrixSparseCSRCUDA::extract_diagonal(hiopVector& diag_out) const
 {
-#ifdef HIOP_USE_RAJA
-  assert(dynamic_cast<const hiopVectorRajaPar*>(&diag_out) && "input vector must be Raja (and data on the device)");
-#else
-  assert( "input vector must be Raja (and data on the device)");
-#endif
-  hiop::cuda::csr_get_diag_kernel(nrows_, nnz_, irowptr_, jcolind_, values_, diag_out.local_data());
+  assert(dynamic_cast<const hiopVectorCuda*>(&diag_out) && "input vector must be RAJA-CUDA");
+
+  hiop::cuda::csr_get_diag_kernel(nrows_,
+                                  nnz_,
+                                  irowptr_,
+                                  jcolind_,
+                                  values_,
+                                  diag_out.local_data(),
+                                  exec_space_.exec_policies().bl_sz_binary_search);
 }
 
 bool hiopMatrixSparseCSRCUDA::check_csr_is_ordered()

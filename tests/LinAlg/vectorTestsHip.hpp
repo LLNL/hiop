@@ -1,10 +1,11 @@
-// Copyright (c) 2022, Lawrence Livermore National Security, LLC.
+// Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp
 // is released under the BSD 3-clause license (https://opensource.org/licenses/BSD-3-Clause).
-// Please also read "Additional BSD Notice" below.
+// Please also read “Additional BSD Notice” below.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -46,27 +47,37 @@
 // product endorsement purposes.
 
 /**
- * @file MathHostKernels.hpp
+ * @file vectorTestsHip.hpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
- * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
+ * 
+ */
+#pragma once
+
+#include "vectorTests.hpp"
+
+namespace hiop { namespace tests {
+
+/**
+ * @brief Utilities for testing hiopVectorHip class
+ *
+ * @todo In addition to set and get element ass set and get buffer methods.
  *
  */
-
-#ifndef MATH_KERNEL_HOST
-#define MATH_KERNEL_HOST
-
-namespace hiop
+class VectorTestsHip : public VectorTests
 {
-namespace host
-{
-  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
-  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
+public:
+  VectorTestsHip(){}
+  virtual ~VectorTestsHip(){}
 
-  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
-  int array_random_uniform_kernel(int n, double* d_array);
+private:
+  virtual const real_type* getLocalDataConst(hiop::hiopVector* x);
+  virtual void setLocalElement(hiop::hiopVector* x, local_ordinal_type i, real_type val);
+  virtual real_type* createLocalBuffer(local_ordinal_type N, real_type val);
+  virtual local_ordinal_type* createIdxBuffer(local_ordinal_type N, local_ordinal_type val);
+  virtual void deleteLocalBuffer(real_type* buffer);
+  virtual bool reduceReturn(int failures, hiop::hiopVector* x);
+  MPI_Comm getMPIComm(hiop::hiopVector* x);
+};
 
-} //end of namespace host
-} //end of namespace hiop
-
-#endif
+}} // namespace hiop::tests

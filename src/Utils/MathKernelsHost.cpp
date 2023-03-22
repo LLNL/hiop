@@ -46,27 +46,54 @@
 // product endorsement purposes.
 
 /**
- * @file MathDeviceKernels.hpp
+ * @file MathKernelsHost.cpp
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LNNL
  *
  */
 
-#ifndef MATH_KERNEL_DEVICE
-#define MATH_KERNEL_DEVICE
+#include "MathKernelsHost.hpp"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <random>
+
+#include "hiopCppStdUtils.hpp"
 
 namespace hiop
 {
-namespace device
+namespace host
 {
-  // Generates uniformly distributed double-precision floating-point values, from minv to maxv
-  int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv);
 
-  // Generates uniformly distributed double-precision floating-point values, from 0.0 to 1.0
-  int array_random_uniform_kernel(int n, double* d_array);
+int array_random_uniform_kernel(int n, double* d_array, double minv, double maxv)
+{
+  std::uniform_real_distribution<double> unif(minv,maxv);
+  std::default_random_engine re;
 
-} //end of namespace device
-} //end of namespace hiop
+  re.seed(generate_seed());
 
-#endif
+  for(auto i=0; i<n; ++i) {
+    d_array[i] = unif(re);
+  }
+
+  return 1;
+}
+
+int array_random_uniform_kernel(int n, double* d_array)
+{
+  std::uniform_real_distribution<double> unif(0.0, 1.0);
+  std::default_random_engine re;
+
+  re.seed(generate_seed());
+
+  for(auto i=0; i<n; ++i) {
+    d_array[i] = unif(re);
+  }
+
+  return 1;
+}
+
+}  //end of namespace
+} //end of namespace
+

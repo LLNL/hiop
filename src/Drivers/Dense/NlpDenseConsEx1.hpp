@@ -2,7 +2,7 @@
 #define  HIOP_EXAMPLE_DENSE_EX1
 
 #include "hiopVector.hpp"
-#include "hiopLinAlgFactory.hpp"
+#include "LinAlgFactory.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopInterface.hpp"
 #include "hiopAlgFilterIPM.hpp"

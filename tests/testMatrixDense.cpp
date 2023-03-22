@@ -58,14 +58,14 @@
 
 #include <hiopOptions.hpp>
 #include <hiopMPI.hpp>
-#include <hiopLinAlgFactory.hpp>
+#include <LinAlgFactory.hpp>
 #include <hiopVectorPar.hpp>
 #include <hiopMatrixDenseRowMajor.hpp>
 #include "LinAlg/matrixTestsDenseRowMajor.hpp"
 
 #ifdef HIOP_USE_RAJA
-#include <hiopVectorRajaPar.hpp>
-#include <hiopMatrixRajaDense.hpp>
+#include <hiopVectorRaja.hpp>
+#include <hiopMatrixDenseRaja.hpp>
 #include "LinAlg/matrixTestsRajaDense.hpp"
 #endif
 

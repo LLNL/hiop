@@ -57,24 +57,17 @@
 #include "hiopLinSolverSymSparseMA57.hpp"
 #endif
 
-#ifdef HIOP_USE_RAJA
-#include "hiopVectorRajaPar.hpp"
-
 #ifdef HIOP_USE_CUDA
 #include "hiopLinSolverCholCuSparse.hpp"
 #include "hiopMatrixSparseCsrCuda.hpp"
-#else
-//#error "RAJA (HIOP_USE_RAJA) build needed with HIOP_USE_CUDA"
+#include "hiopVectorCuda.hpp"
 #endif // HIOP_USE_CUDA
-#endif // HIOP_USE_RAJA
 
 #include "hiopMatrixSparseTripletStorage.hpp"
 #include "hiopMatrixSparseCSRSeq.hpp"
 
-
 namespace hiop
-{
-
+{  
 hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
     JacD_(nullptr),
@@ -179,24 +172,24 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopPDPerturbation& pd
 
   //temporary code, see above note
   {
-    if(mem_space_internal == "DEVICE") {
-#ifdef HIOP_USE_RAJA
-      auto Hd_raja = dynamic_cast<hiopVectorRajaPar*>(Hd_copy_);
+    if(mem_space_internal == "CUDA") {
+#ifdef HIOP_USE_CUDA
+      auto Hd_cuda = dynamic_cast<hiopVectorCuda*>(Hd_copy_);
       auto Hd_par =  dynamic_cast<hiopVectorPar*>(Hd_);
-      assert(Hd_raja && "incorrect type for vector class");
+      assert(Hd_cuda && "incorrect type for vector class");
       assert(Hd_par && "incorrect type for vector class");      
-      Hd_raja->copy_from_host_vec(*Hd_par);
+      Hd_cuda->copy_from_vectorpar(*Hd_par);
 
-      auto Dx_delta_raja = dynamic_cast<hiopVectorRajaPar*>(Dx_plus_deltawx_);
-      auto deltawx_raja = dynamic_cast<hiopVectorRajaPar*>(deltawx_);
+      auto Dx_delta_cuda = dynamic_cast<hiopVectorCuda*>(Dx_plus_deltawx_);
+      auto deltawx_cuda = dynamic_cast<hiopVectorCuda*>(deltawx_);
       auto Dx_par = dynamic_cast<hiopVectorPar*>(Dx_);
       const hiopVectorPar& deltawx_host = dynamic_cast<const hiopVectorPar&>(delta_wx_in);
-      assert(Dx_delta_raja && Dx_par && "incorrect type for vector class");
-      
-      Dx_delta_raja->copy_from_host_vec(*Dx_par);
-      deltawx_raja->copy_from_host_vec(deltawx_host);
+      assert(Dx_delta_cuda && Dx_par && "incorrect type for vector class");
+
+      Dx_delta_cuda->copy_from_vectorpar(*Dx_par);
+      deltawx_cuda->copy_from_vectorpar(deltawx_host);
 #else
-      assert(false && "compute mode not available under current build. Enable CUDA and RAJA.");
+      assert(false && "compute mode not available under current build: enable CUDA.");
       Hd_copy_->copyFrom(*Hd_);
       Dx_plus_deltawx_->copyFrom(*Dx_);
       deltawx_->copyFrom(delta_wx_in);
@@ -507,13 +500,11 @@ hiopKKTLinSysCondensedSparse::determine_and_create_linsys()
 
     assert((linsolv=="cusolver-chol" || linsolv=="auto") && "Only cusolver-chol or auto is supported on gpu.");
     
-#ifdef HIOP_USE_RAJA
 #ifdef HIOP_USE_CUDA
     nlp_->log->printf(hovWarning,
                       "KKT_SPARSE_Condensed linsys: alloc cuSOLVER-chol matrix size %d\n", n);
     assert(M_condensed_);
     linSys_ = new hiopLinSolverCholCuSparse(M_condensed_, nlp_);
-#endif
 #endif    
     
     //Return NULL (and assert) if a GPU sparse linear solver is not present
