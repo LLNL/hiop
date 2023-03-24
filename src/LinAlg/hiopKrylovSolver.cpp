@@ -680,11 +680,11 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     ss_info_ << "\t - Error code " << flag_ << "\n\t - Abs res=" << abs_resid_ << "n\t - Rel res="
              << rel_resid_ << std::endl;
     ss_info_ << "\t - ||rhs||_2=" << n2b << "   ||sol||_2=" << b.twonorm() << std::endl;
-    return false;
     RANGE_POP();
+    return false;
   }
-  return true;
   RANGE_POP();
+  return true;
 }
 
 

@@ -1663,6 +1663,6 @@ namespace hiop
           assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
         break;
     } // switch
-  RANGE_POP();
+    RANGE_POP();
   } // GramSchmidt
 } // namespace hiop
