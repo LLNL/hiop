@@ -438,6 +438,7 @@ namespace hiop
 
   void hiopLinSolverSymSparseCUSOLVER::firstCall()
   {
+    RANGE_PUSH(__FUNCTION__);
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
@@ -493,6 +494,7 @@ namespace hiop
     } else { // for future
       assert(0 && "Only KLU is available for the first factorization.\n");
     }
+    RANGE_POP();
   }
 
   void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
@@ -1146,6 +1148,7 @@ namespace hiop
 
   void hiopLinSolverSymSparseCUSOLVERInnerIR::fgmres(double *d_x, double *d_b)
   {
+    RANGE_PUSH(__FUNCTION__);
     int outer_flag = 1;
     int notconv = 1; 
     int i=0;
@@ -1284,6 +1287,7 @@ namespace hiop
         fgmres_iters_ = it;
       }
     } // outer while
+    RANGE_POP();
   }
 
   //b-Ax
@@ -1322,6 +1326,7 @@ namespace hiop
 
   void hiopLinSolverSymSparseCUSOLVERInnerIR::GramSchmidt(int i)
   {
+    RANGE_PUSH(__FUNCTION__);
     double t;
     const double one = 1.0;
     const double minusone = -1.0;
@@ -1658,5 +1663,6 @@ namespace hiop
           assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
         break;
     } // switch
+  RANGE_POP();
   } // GramSchmidt
 } // namespace hiop
