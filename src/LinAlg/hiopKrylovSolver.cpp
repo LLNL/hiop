@@ -384,6 +384,7 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
 bool hiopBiCGStabSolver::solve(hiopVector& b)
 {
+  RANGE_PUSH(__FUNCTION__);
   std::stringstream().swap(ss_info_);
   // rhs = 0 --> solution = 0
   const double n2b = b.twonorm();
@@ -395,6 +396,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     abs_resid_ = 0;
     ss_info_ << "BiCGStab converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
              << " iter=" << iter_ << std::endl;
+    RANGE_POP();
     return true;
   }
 
@@ -439,6 +441,7 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     abs_resid_ = normr;
     ss_info_ << "BiCGStab converged: actual normResid=" << abs_resid_ << " relResid=" << rel_resid_ 
              << " iter=" << iter_ << std::endl;
+    RANGE_POP();
     return true;
   }
   
@@ -678,8 +681,10 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
              << rel_resid_ << std::endl;
     ss_info_ << "\t - ||rhs||_2=" << n2b << "   ||sol||_2=" << b.twonorm() << std::endl;
     return false;
+    RANGE_POP();
   }
   return true;
+  RANGE_POP();
 }
 
 
