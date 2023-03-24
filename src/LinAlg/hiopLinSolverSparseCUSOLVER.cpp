@@ -389,7 +389,17 @@ namespace hiop
               nlp_->log->printf(hovScalars,
                                 "Running iterative refinement with tol %e\n", ir_tol);
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+        //experimental code 
+      
+        //end of experimental code
               ir_->fgmres(devr_, devx_);             
+
+#if 0
+              printf("\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
+                                ir_->getInitialResidalNorm(), 
+                                ir_->getFinalResidalNorm(), 
+                                ir_->getFinalNumberOfIterations());
+#endif
               nlp_->log->printf(hovScalars, 
                                 "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
                                 ir_->getInitialResidalNorm(), 
@@ -398,6 +408,8 @@ namespace hiop
             }
             // End of Experimental code
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+     
+
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
                               "Solve failed with status: %d\n", 
@@ -1034,7 +1046,7 @@ namespace hiop
                                             &(ir_->one_),
                                             ir_->vec_Ax_,
                                             CUDA_R_64F,
-                                            CUSPARSE_MV_ALG_DEFAULT,
+                                            CUSPARSE_SPMV_CSR_ALG2,
                                             &buffer_size));
 
     cudaDeviceSynchronize();
@@ -1148,6 +1160,7 @@ namespace hiop
     double tolrel;
     //V[0] = b-A*x_0
     cudaMemcpy(&(d_V_[0]), d_b, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
+  
     cudaMatvec(d_x, d_V_, "residual");
 
     rnorm = 0.0;
@@ -1155,10 +1168,18 @@ namespace hiop
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
 
+    //rnorm = ||V_1||
     //gmres outer loop
     while(outer_flag) {
       // check if maybe residual is already small enough?
-      if(fabs(rnorm - ZERO) <= EPSILON) {
+      if(it == 0) {
+        tolrel = tol_ * rnorm;
+        if(fabs(tolrel) < 1e-16) {
+          tolrel = 1e-16;
+        }
+      }
+   //   if ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_)) {
+      if ((fabs(rnorm - ZERO) <= EPSILON)) {
         outer_flag = 0;
         final_residual_norm_ = rnorm;
         initial_residual_norm_ = rnorm;
@@ -1166,12 +1187,7 @@ namespace hiop
         break;
       }
 
-      if(it == 0) {
-        tolrel = tol_ * rnorm;
-        if(fabs(tolrel) < 1e-16) {
-          tolrel = 1e-16;
-        }
-      }
+// printf("Residual norm in the beginning of cycle %16.16e, WE NEED %16.16e or BELOW abs %16.16e \n", rnorm, tolrel, tol_);
       // normalize first vector
       t = 1.0 / rnorm;
       cublasDscal(cublas_handle_, n_, &t, d_V_, 1);
@@ -1223,6 +1239,7 @@ namespace hiop
 
         // residual norm estimate
         rnorm = fabs(h_rs_[i + 1]);
+//printf("it = %d, norm of res: %16.16e \n ", it, rnorm);
         // check convergence
         if(i + 1 >= restart_ || rnorm <= tolrel || it >= maxit_) {
           notconv = 0;
@@ -1258,7 +1275,9 @@ namespace hiop
       rnorm = 0.0;
       cublasDdot(cublas_handle_, n_, d_V_, 1, d_V_, 1, &rnorm);
       // rnorm = ||V_1||
+//printf("it = %d, norm of res(true) BEFORE SQRT: %16.16e \n ", it, rnorm);
       rnorm = sqrt(rnorm);
+//printf("it = %d, norm of res(true): %16.16e \n ", it, rnorm);
 
       if(!outer_flag) {
         final_residual_norm_ = rnorm;
@@ -1282,7 +1301,7 @@ namespace hiop
                    &one_, 
                    vec_Ax_, 
                    CUDA_R_64F,
-                   CUSPARSE_MV_ALG_DEFAULT,
+                   CUSPARSE_SPMV_CSR_ALG2,
                    mv_buffer_);
     } else {
       // just b = A*x
@@ -1294,7 +1313,7 @@ namespace hiop
                    &zero_, 
                    vec_Ax_, 
                    CUDA_R_64F,
-                   CUSPARSE_MV_ALG_DEFAULT, 
+                   CUSPARSE_SPMV_CSR_ALG2, 
                    mv_buffer_);
     }
     cusparseDestroyDnVec(vec_x_);
