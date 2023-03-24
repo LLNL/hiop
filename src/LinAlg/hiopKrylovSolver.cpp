@@ -384,7 +384,6 @@ bool hiopPCGSolver::solve(hiopVector& b)
 
 bool hiopBiCGStabSolver::solve(hiopVector& b)
 {
-  RANGE_PUSH(__FUNCTION__);
   std::stringstream().swap(ss_info_);
   // rhs = 0 --> solution = 0
   const double n2b = b.twonorm();
@@ -683,7 +682,6 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     RANGE_POP();
     return false;
   }
-  RANGE_POP();
   return true;
 }
 
