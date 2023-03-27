@@ -1149,6 +1149,7 @@ namespace hiop
 
     double t;
     double rnorm;
+   double bnorm;
     // double rnorm_aux;
     double tolrel;
     //V[0] = b-A*x_0
@@ -1158,8 +1159,10 @@ namespace hiop
 
     rnorm = 0.0;
     cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
+    cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
+    bnorm = sqrt(bnorm);
 
     //rnorm = ||V_1||
     //gmres outer loop
@@ -1171,8 +1174,12 @@ namespace hiop
           tolrel = 1e-16;
         }
       }
-   //   if ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_)) {
-      if ((fabs(rnorm - ZERO) <= EPSILON)) {
+      //2. "alternative" IR2
+      if ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm))) {
+        //1. "alternative" IR
+        //if ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_)) {
+        //0. base case, "normal IR"
+        //if ((fabs(rnorm - ZERO) <= EPSILON)) {
         outer_flag = 0;
         final_residual_norm_ = rnorm;
         initial_residual_norm_ = rnorm;
