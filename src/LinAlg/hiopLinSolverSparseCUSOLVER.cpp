@@ -147,7 +147,7 @@ namespace hiop
           ir_->restart_ = 20;
         }
 
-
+     
         ir_->tol_  = nlp_->options->GetNumeric("ir_inner_tol");
         if ((ir_->tol_ <0) || (ir_->tol_ >1)){
           nlp_->log->printf(hovWarning, 
@@ -181,6 +181,16 @@ namespace hiop
                             use_ir_.c_str());
           ir_->orth_option_ = "mgs";
         }
+
+        ir_->conv_cond_ =  nlp_->options->GetInteger("ir_inner_conv_cond");
+
+        if ((ir_->conv_cond_ <0) || (ir_->conv_cond_ >2)){
+          nlp_->log->printf(hovWarning, 
+                            "Wrong IR convergence condition: %d. Use int value: 0, 1 or 2. Setting default (0)  ...\n",
+                            ir_->conv_cond_);
+          ir_->conv_cond_ = 0;
+        }
+
       } else {
         nlp_->log->printf(hovWarning, 
                           "Currently, inner iterative refinement works ONLY with cuSolverRf ... \n");
@@ -1159,6 +1169,7 @@ namespace hiop
 
     double t;
     double rnorm;
+   double bnorm;
     // double rnorm_aux;
     double tolrel;
     //V[0] = b-A*x_0
@@ -1168,8 +1179,10 @@ namespace hiop
 
     rnorm = 0.0;
     cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
+    cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
+    bnorm = sqrt(bnorm);
 
     //rnorm = ||V_1||
     //gmres outer loop
@@ -1181,8 +1194,19 @@ namespace hiop
           tolrel = 1e-16;
         }
       }
-   //   if ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_)) {
-      if ((fabs(rnorm - ZERO) <= EPSILON)) {
+      int exit_cond = 0;
+      if (conv_cond_ == 0){
+        exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON));
+      }else {
+        if (conv_cond_ == 1){
+          exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_));
+        } else {
+          if (conv_cond_ == 2){
+            exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
+          }
+        }
+      }
+      if (exit_cond) {
         outer_flag = 0;
         final_residual_norm_ = rnorm;
         initial_residual_norm_ = rnorm;

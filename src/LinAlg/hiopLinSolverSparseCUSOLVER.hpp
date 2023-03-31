@@ -232,6 +232,7 @@ private:
   int restart_;
   int maxit_;
   double tol_;
+  int conv_cond_; // convergence condition, can be 0, 1, 2 for IR
   std::string orth_option_;
   // the matrix in question
   cusparseSpMatDescr_t mat_A_;
