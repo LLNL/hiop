@@ -1036,10 +1036,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
-          mpi_test_flag = req_cont_idx->test();
+          //mpi_test_flag = req_cont_idx->test();
           /* contigency starts at 0 
            * sychronous implmentation of contingencist
           */
+          mpi_test_flag=true;
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
             for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1098,7 +1099,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_;r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
-          MPI_Wait(&req_cont_idx->request_, &status_);
+          //MPI_Wait(&req_cont_idx->request_, &status_);
         }
         
         recourse_val = rval;
@@ -1522,10 +1523,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // request the next subproblem index 
         req_cont_idx->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
-          mpi_test_flag = req_cont_idx->test();
+          //mpi_test_flag = req_cont_idx->test();
           /* contigency starts at 0 
            * sychronous implmentation of contingencist
           */
+          mpi_test_flag = true;
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
             for(int ri=0; ri<cont_idx.size(); ri++) {
@@ -1596,7 +1598,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_; r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
-          MPI_Wait(&req_cont_idx->request_, &status_);
+          //MPI_Wait(&req_cont_idx->request_, &status_);
         }
       }
 
