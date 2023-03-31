@@ -151,12 +151,14 @@ namespace hiop
     }
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
-      int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
+      //int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
+      int ierr = MPI_Recv(&idx, 1, MPI_INT, rank_from, tag, comm, MPI_STATUS_IGNORE);
       assert(MPI_SUCCESS == ierr);
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
-      int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
+      //int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
+      int ierr = MPI_Send(&idx, 1, MPI_INT, rank_to, tag, comm);
       assert(MPI_SUCCESS == ierr);
     }
     double value(){return idx;}
