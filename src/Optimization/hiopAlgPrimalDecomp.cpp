@@ -148,19 +148,29 @@ namespace hiop
       int mpi_test_flag; MPI_Status mpi_status;
       int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
       assert(MPI_SUCCESS == ierr);
+#ifndef NDEBUG
+      if (mpi_test_flag) {
+        request_ = MPI_REQUEST_NULL;
+      }
+#endif // NDEBUG
       return mpi_test_flag;
     }
     void wait() {
       int ierr = MPI_Wait(&request_, MPI_STATUS_IGNORE);
       assert(MPI_SUCCESS == ierr);
+#ifndef NDEBUG
+      request_ = MPI_REQUEST_NULL;
+#endif // NDEBUG
     }
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
@@ -1108,6 +1118,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           MPI_Wait(&(rec_prob[r]->request_), &status_);
           req_cont_idx[r]->wait();
         }
+
+        // Ensure we've completed all NB operations.
+        for(auto curr : req_cont_idx) {
+          assert(curr->request_ == MPI_REQUEST_NULL);
+        }
         
         recourse_val = rval;
 
@@ -1612,6 +1627,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         for(int r=1; r<comm_size_; r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
           req_cont_idx[r]->wait();
+        }
+
+        // Ensure we've completed all NB operations.
+        for(auto curr : req_cont_idx) {
+          assert(curr->request_ == MPI_REQUEST_NULL);
         }
       }
 
