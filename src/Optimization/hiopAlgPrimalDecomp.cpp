@@ -88,7 +88,20 @@ namespace hiop
       int mpi_test_flag; MPI_Status mpi_status;
       int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
       assert(MPI_SUCCESS == ierr);
+#ifndef NDEBUG
+      if (mpi_test_flag) {
+        request_ = MPI_REQUEST_NULL;
+      }
+#endif // NDEBUG
       return mpi_test_flag;
+    }
+
+    void wait() {
+      auto ierr = MPI_Wait(&request_, MPI_STATUS_IGNORE);
+      assert(MPI_SUCCESS == ierr);
+#ifndef NDEBUG
+      request_ = MPI_REQUEST_NULL;
+#endif // NDEBUG
     }
 
     // only receive signal (that computation is finished), no actual functional information
@@ -1115,14 +1128,30 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       if(my_rank_==0) {
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_;r++) {
-          MPI_Wait(&(rec_prob[r]->request_), &status_);
+          rec_prob[r]->wait();
           req_cont_idx[r]->wait();
         }
 
         // Ensure we've completed all NB operations.
-        for(auto curr : req_cont_idx) {
-          assert(curr->request_ == MPI_REQUEST_NULL);
+        try {
+            for(auto curr : rec_prob) {
+              assert(curr->request_ == MPI_REQUEST_NULL);
+              if(curr->request_ != MPI_REQUEST_NULL) {
+                  throw std::runtime_error("PCR: actually failed");
+              }
+            }
+            for(auto curr : req_cont_idx) {
+              assert(curr->request_ == MPI_REQUEST_NULL);
+              if(curr->request_ != MPI_REQUEST_NULL) {
+                  throw std::runtime_error("PCR: actually failed");
+              }
+            }
         }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+        std::cerr << "PCR: one: confirmed NB ops completed" << std::endl;
         
         recourse_val = rval;
 
@@ -1625,14 +1654,30 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         }
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_; r++) {
-          MPI_Wait(&(rec_prob[r]->request_), &status_);
+          rec_prob[r]->wait();
           req_cont_idx[r]->wait();
         }
 
-        // Ensure we've completed all NB operations.
-        for(auto curr : req_cont_idx) {
-          assert(curr->request_ == MPI_REQUEST_NULL);
+        try {
+            // Ensure we've completed all NB operations.
+            for(auto curr : rec_prob) {
+              assert(curr->request_ == MPI_REQUEST_NULL);
+              if(curr->request_ != MPI_REQUEST_NULL) {
+                    throw std::runtime_error("PCR: actually failed");
+              }
+            }
+            for(auto curr : req_cont_idx) {
+              assert(curr->request_ == MPI_REQUEST_NULL);
+              if(curr->request_ != MPI_REQUEST_NULL) {
+                    throw std::runtime_error("PCR: actually failed");
+              }
+            }
         }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+        std::cerr << "PCR: two: confirmed NB ops completed" << std::endl;
       }
 
       //std::cout<<"my rank "<<my_rank_<< " grad "<< grad_r_vec[0]<< " "<<grad_r_vec[1]<<std::endl;
