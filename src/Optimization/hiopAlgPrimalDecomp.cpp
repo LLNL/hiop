@@ -107,6 +107,7 @@ namespace hiop
     // only receive signal (that computation is finished), no actual functional information
     void post_recv_end_signal(int tag, int rank_from, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       int recv_sign = 0;
       int ierr = MPI_Irecv(&recv_sign, 1, MPI_INT, rank_from, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
@@ -114,6 +115,7 @@ namespace hiop
     // only sende signal (that computation is finished), no actual functional information
     void post_send_end_signal(int tag, int rank_to, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       int send_sign = 0;
       int ierr = MPI_Isend(&send_sign, 1, MPI_INT, rank_to, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
@@ -121,12 +123,14 @@ namespace hiop
 
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       double* buffer_arr = buffer->local_data();
       int ierr = MPI_Irecv(buffer_arr, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
+      assert(request_ == MPI_REQUEST_NULL);
       double* buffer_arr = buffer->local_data();
       int ierr = MPI_Isend(buffer_arr, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
@@ -1060,6 +1064,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           }
           grad_acc->axpy(1.0, *grad_aux);
         }
+        rec_prob[my_rank_]->wait(); // Ensure send buffer is safe to use.
         rec_prob[my_rank_]->set_value(rec_val);
 
         rec_prob[my_rank_]->set_grad(grad_acc_vec);
@@ -1111,6 +1116,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               grad_acc->axpy(1.0, *grad_aux);
             }
 
+            rec_prob[my_rank_]->wait(); // Ensure send buffer is safe to use.
             rec_prob[my_rank_]->set_value(rec_val);
 
             rec_prob[my_rank_]->set_grad(grad_acc_vec);
@@ -1576,6 +1582,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         //rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
         // send signal that subproblem has been solved
+        rec_prob[my_rank_]->wait(); // Ensure send buffer is safe to use.
         rec_prob[my_rank_]->post_send_end_signal(2, rank_master, comm_world_);
 
         // request the next subproblem index 
@@ -1633,6 +1640,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             //rec_prob[my_rank_]->set_grad(grad_acc_vec);
            
             // send signal that the subproblem has been solved 
+            rec_prob[my_rank_]->wait(); // Ensure send buffer is safe to use.
             rec_prob[my_rank_]->post_send_end_signal(2, rank_master, comm_world_);
             //rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
             // log_->printf(hovIteration, "send recourse value flag for test %d \n", mpi_test_flag); 
