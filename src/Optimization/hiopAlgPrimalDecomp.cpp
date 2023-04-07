@@ -139,6 +139,7 @@ namespace hiop
   {
     ReqContingencyIdx() : ReqContingencyIdx(-1) {}
     ReqContingencyIdx(const int& idx_)
+      : request_(MPI_REQUEST_NULL)
     {
       idx=idx_;
     }
@@ -148,6 +149,10 @@ namespace hiop
       int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
       assert(MPI_SUCCESS == ierr);
       return mpi_test_flag;
+    }
+    void wait() {
+      int ierr = MPI_Wait(&request_, MPI_STATUS_IGNORE);
+      assert(MPI_SUCCESS == ierr);
     }
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
@@ -764,7 +769,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
 #ifdef HIOP_USE_MPI
   hiopSolveStatus hiopAlgPrimalDecomposition::run()
-  {
+{
     log_->printf(hovSummary, "===============\nHiop Primal Decomposition SOLVER\n===============\n");
     if(options_->GetString("print_options") != "no") {
       log_->write(nullptr, *options_, hovSummary);
@@ -877,7 +882,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         rec_prob.push_back(new ReqRecourseApprox(nc_));
       }
       
-      ReqContingencyIdx* req_cont_idx = new ReqContingencyIdx(0);
+      std::vector<ReqContingencyIdx* > req_cont_idx;
+      for(int r=0; r<comm_size_;r++) {
+        req_cont_idx.push_back(new ReqContingencyIdx(0));
+      }
 
       // master rank communication
       if(my_rank_ == 0) {
@@ -942,8 +950,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               }
               // this is for dealing with the end of contingencies where some ranks have already finished
               if(idx<S_) {
-                req_cont_idx->set_idx(cont_idx[idx]);
-                req_cont_idx->post_send(1,r,comm_world_);
+                req_cont_idx[r]->wait();    // Ensure previous cont idx send has completed.
+                req_cont_idx[r]->set_idx(cont_idx[idx]);
+                req_cont_idx[r]->post_send(1,r,comm_world_);
                 rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
                 // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_prob[r]->value());
               } else {
@@ -970,8 +979,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // send end signal to all evaluators
         int cur_idx = -1;
         for(int r=1; r<comm_size_; r++) {
-          req_cont_idx->set_idx(-1);
-          req_cont_idx->post_send(1,r,comm_world_);
+          req_cont_idx[r]->wait();  // Ensure previous idx send has completed.
+          req_cont_idx[r]->set_idx(-1);
+          req_cont_idx[r]->post_send(1,r,comm_world_);
         }
         t2 = MPI_Wtime(); 
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
@@ -1032,16 +1042,16 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         rec_prob[my_rank_]->set_grad(grad_acc_vec);
         rec_prob[my_rank_]->post_send(2, rank_master, comm_world_);
 
-        req_cont_idx->post_recv(1, rank_master, comm_world_);
+        req_cont_idx[my_rank_]->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
-          mpi_test_flag = req_cont_idx->test();
+          mpi_test_flag = req_cont_idx[my_rank_]->test();
           /* contigency starts at 0 
            * sychronous implmentation of contingencist
           */
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
             for(int ri=0; ri<cont_idx.size(); ri++) {
-              cont_idx[ri] = req_cont_idx->value();
+              cont_idx[ri] = req_cont_idx[my_rank_]->value();
             }
             if(cont_idx[0]==-1) {
               break;
@@ -1086,7 +1096,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // log_->printf(hovIteration, "send recourse value flag for test %d \n", mpi_test_flag); 
         
             // post recv for new index
-            req_cont_idx->post_recv(1, rank_master, comm_world_);
+            req_cont_idx[my_rank_]->post_recv(1, rank_master, comm_world_);
             // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
           }
         }
@@ -1096,7 +1106,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_;r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
-          MPI_Wait(&req_cont_idx->request_, &status_);
+          req_cont_idx[r]->wait();
         }
         
         recourse_val = rval;
@@ -1202,7 +1212,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         delete it;
       }
 
-      delete req_cont_idx;
+      for(auto it : req_cont_idx) {
+        delete it;
+      }
       
       if(end_signal) {
         break;
@@ -1343,7 +1355,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         rec_prob.push_back(new ReqRecourseApprox(nc_));
       }
       
-      ReqContingencyIdx* req_cont_idx = new ReqContingencyIdx(0);
+      std::vector<ReqContingencyIdx* > req_cont_idx;
+      for(int r=0; r<comm_size_; r++) {
+        req_cont_idx.push_back(new ReqContingencyIdx(0));
+      }
 
 
       rval = 0.;
@@ -1417,8 +1432,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               }
               // this is for dealing with the end of contingencies where some ranks have already finished
               if(idx<S_) {
-                req_cont_idx->set_idx(cont_idx[idx]);
-                req_cont_idx->post_send(1,r,comm_world_);
+                req_cont_idx[r]->wait();    // Ensure previous send has completed.
+                req_cont_idx[r]->set_idx(cont_idx[idx]);
+                req_cont_idx[r]->post_send(1,r,comm_world_);
                 
                 rec_prob[r]->post_recv_end_signal(2,r,comm_world_);// 2 is the tag, r is the rank source 
                 // rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
@@ -1447,8 +1463,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // send end signal to all evaluators
         int cur_idx = -1;
         for(int r=1; r<comm_size_; r++) {
-          req_cont_idx->set_idx(-1);
-          req_cont_idx->post_send(1,r,comm_world_);
+          req_cont_idx[r]->wait();  // Ensure previous send has completed.
+          req_cont_idx[r]->set_idx(-1);
+          req_cont_idx[r]->post_send(1,r,comm_world_);
         }
         t2 = MPI_Wtime(); 
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
@@ -1518,16 +1535,16 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         rec_prob[my_rank_]->post_send_end_signal(2, rank_master, comm_world_);
 
         // request the next subproblem index 
-        req_cont_idx->post_recv(1, rank_master, comm_world_);
+        req_cont_idx[my_rank_]->post_recv(1, rank_master, comm_world_);
         while(cont_idx[0]!=-1) {//loop until end signal received
-          mpi_test_flag = req_cont_idx->test();
+          mpi_test_flag = req_cont_idx[my_rank_]->test();
           /* contigency starts at 0 
            * sychronous implmentation of contingencist
           */
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
             for(int ri=0; ri<cont_idx.size(); ri++) {
-              cont_idx[ri] = req_cont_idx->value();
+              cont_idx[ri] = req_cont_idx[my_rank_]->value();
             }
             if(cont_idx[0]==-1) {
               break;
@@ -1577,7 +1594,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // log_->printf(hovIteration, "send recourse value flag for test %d \n", mpi_test_flag); 
         
             // post recv for new index
-            req_cont_idx->post_recv(1, rank_master, comm_world_);
+            req_cont_idx[my_rank_]->post_recv(1, rank_master, comm_world_);
             // ierr = MPI_Irecv(&cont_idx[0], 1, MPI_INT, rank_master, 1, comm_world_, &request_[0]);
 
           }
@@ -1594,7 +1611,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         int mpi_test_flag = 0;
         for(int r=1; r<comm_size_; r++) {
           MPI_Wait(&(rec_prob[r]->request_), &status_);
-          MPI_Wait(&req_cont_idx->request_, &status_);
+          req_cont_idx[r]->wait();
         }
       }
 
@@ -1713,7 +1730,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         delete it;
       }
 
-      delete req_cont_idx;
+      for(auto it : req_cont_idx) {
+        delete it;
+      }
       
       if(end_signal) {
         break;
