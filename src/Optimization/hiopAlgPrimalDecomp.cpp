@@ -183,7 +183,7 @@ namespace hiop
       int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
       assert(MPI_SUCCESS == ierr);
     }
-    double value(){return idx;}
+    int value(){return idx;}
     void set_idx(const int& i){idx = i;}
     MPI_Request request_;
   private:
