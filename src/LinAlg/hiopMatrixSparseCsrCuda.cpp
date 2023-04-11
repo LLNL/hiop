@@ -154,7 +154,7 @@ hiopMatrixSparseCSRCUDA::~hiopMatrixSparseCSRCUDA()
   cusparseStatus_t st = cusparseDestroyMatDescr(mat_descr_);
   assert(st == CUSPARSE_STATUS_SUCCESS);
 
-  st == cusparseSpGEMM_destroyDescr(gemm_sp_descr_);
+  st = cusparseSpGEMM_destroyDescr(gemm_sp_descr_);
   assert(st == CUSPARSE_STATUS_SUCCESS);
 }
 
