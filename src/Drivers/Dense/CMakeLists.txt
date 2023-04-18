@@ -1,3 +1,10 @@
+set(hiopDenseEx_INTERFACE_HEADERS
+  NlpDenseConsEx1.hpp
+  NlpDenseConsEx2.hpp
+  NlpDenseConsEx3.hpp
+  NlpDenseConsExLido.hpp
+  )
+
 add_executable(NlpDenseConsEx1.exe NlpDenseConsEx1.cpp NlpDenseConsEx1Driver.cpp)
 target_link_libraries(NlpDenseConsEx1.exe HiOp::HiOp)
 
@@ -7,10 +14,18 @@ target_link_libraries(NlpDenseConsEx2.exe HiOp::HiOp)
 add_executable(NlpDenseConsEx3.exe NlpDenseConsEx3Driver.cpp)
 target_link_libraries(NlpDenseConsEx3.exe HiOp::HiOp)
 
+add_executable(NlpDenseConsExLido.exe NlpDenseConsExLido.cpp NlpDenseConsExLidoDriver.cpp)
+target_link_libraries(NlpDenseConsExLido.exe HiOp::HiOp)
+
 if(HIOP_BUILD_FORTRAN_EXAMPLE)
   add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
   target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
 endif()
+
+install(
+  FILES ${hiopDenseEx_INTERFACE_HEADERS}
+  DESTINATION include
+  )
 
 ##########################################################
 # CMake Tests
