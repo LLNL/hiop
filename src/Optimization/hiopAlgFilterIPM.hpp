@@ -167,7 +167,8 @@ protected:
                                    double& logoptim,
                                    double& logfeas,
                                    double& logcomplem,
-                                   double& logoverall);
+                                   double& logoverall,
+                                   double& cons_violation);
 
   virtual double thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu);
 
@@ -242,6 +243,7 @@ protected:
   double _err_nlp_optim0,_err_nlp_feas0,_err_nlp_complem0;//initial errors, not scaled by sd, sc, and sc
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
   double _err_nlp, _err_log; //max of the above (scaled)
+  double _err_cons_violation; // constraint violation (Note: this is slightly different from _err_nlp_feas)
   double onenorm_pr_curr_; //one norm of the constraint infeasibility
 
   //class for updating the duals multipliers
@@ -277,6 +279,9 @@ protected:
   double theta_mu;      //exponent for a Mehtrotra-style decrease of mu
   double eps_tol;       //abs tolerance for the NLP error
   double eps_rtol;      //rel tolerance for the NLP error
+  double dual_tol_;     //abs tolerance for the dual infeasibility
+  double cons_tol_;     //abs tolerance for the constraint violation
+  double comp_tol_;     //abs tolerance for the complementary conditions
   double tau_min;       //min value for the fraction-to-the-boundary parameter: tau_k=max{tau_min,1-\mu_k}
   double kappa_eps;     //tolerance for the barrier problem, relative to mu: error<=kappa_eps*mu
   double kappa1,kappa2; //params for default starting point

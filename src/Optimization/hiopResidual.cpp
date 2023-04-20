@@ -79,6 +79,9 @@ hiopResidual::hiopResidual(hiopNlpFormulation* nlp_)
 
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 1e6;
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 1e6;
+  nrmOne_nlp_feasib = nrmOne_nlp_optim = 1e6;
+  nrmOne_bar_feasib = nrmOne_bar_optim = 1e6;
+  nrmInf_cons_violation = 1e6;
 }
 
 hiopResidual::~hiopResidual()
@@ -159,6 +162,7 @@ int hiopResidual::update(const hiopIterate& it,
   nrmInf_bar_optim = nrmInf_bar_feasib = nrmInf_bar_complem = 0;
   nrmOne_nlp_feasib = nrmOne_bar_feasib = 0.;
   nrmOne_nlp_optim = nrmOne_bar_optim = 0.;
+  nrmInf_cons_violation = 0.;
 
   size_type nx_loc=rx->get_local_size();
   const double&  mu=logprob.mu;
@@ -201,16 +205,31 @@ int hiopResidual::update(const hiopIterate& it,
   buf = ryc->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
   nrmOne_nlp_feasib += ryc->onenorm();
+  nrmInf_cons_violation = fmax(nrmInf_cons_violation, buf);
 
   nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryc=%22.17e\n", buf);
+ 
+  // compute constraint violation. Use ryd as a temporary vector
+  double arg1 = 0.0;
+  ryd->copyFrom(d);
+  ryd->axpy(-1.0, nlp->get_dl());
+  arg1 = ryd->min_w_pattern(nlp->get_idl());
+  buf = (arg1<0.)? -arg1 : 0.0;
+  nrmInf_cons_violation = fmax(nrmInf_cons_violation, buf);
+  
+  ryd->copyFrom(nlp->get_du());
+  ryd->axpy(-1.0, d);
+  arg1 = ryd->min_w_pattern(nlp->get_idu());
+  buf = (arg1<0.)? -arg1 : 0.0;
+  nrmInf_cons_violation = fmax(nrmInf_cons_violation, buf);
 
-  //ryd
+ //ryd
   ryd->copyFrom(*it.d);
   ryd->axpy(-1.0, d);
   buf = ryd->infnorm_local();
   nrmInf_nlp_feasib = fmax(nrmInf_nlp_feasib, buf);
   nrmOne_nlp_feasib += ryd->onenorm();
-  nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryd=%22.17e\n", buf);
+  nlp->log->printf(hovScalars,"NLP resid [update]: inf norm ryd=%22.17e\n", buf);  
   
   //rxl=x-sxl-xl
   if(nlp->n_low_local()>0) {
