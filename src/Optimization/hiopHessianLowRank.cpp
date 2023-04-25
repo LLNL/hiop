@@ -136,8 +136,8 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
   nlp->log->printf(hovScalars, "Hessian Low Rank: sigma update strategy is %d [%s]\n", sigma_update_strategy, sigma_strategy.c_str());
 
-#ifdef HIOP_DEEPCHECKS
   _Dx   = DhInv->alloc_clone();
+#ifdef HIOP_DEEPCHECKS
   _Vmat = V->alloc_clone();
 #endif
 
@@ -146,9 +146,7 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
 hiopHessianLowRank::~hiopHessianLowRank()
 {
   if(DhInv) delete DhInv;
-#ifdef HIOP_DEEPCHECKS
   delete _Dx;
-#endif
 
   if(St) delete St;
   if(Yt) delete Yt;
@@ -190,9 +188,9 @@ bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
 {
   DhInv->setToConstant(sigma);
   DhInv->axpy(1.0,Dx);
+  _Dx->copyFrom(Dx);
 #ifdef HIOP_DEEPCHECKS
   assert(DhInv->allPositive());
-  _Dx->copyFrom(Dx);
 #endif
   DhInv->invert();
   nlp->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv, hovMatrices);
@@ -903,7 +901,16 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
   return *_Y1;
 }
 #ifdef HIOP_DEEPCHECKS
-void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) 
+
+void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x)
+{
+  this->timesVecCmn(beta, y, alpha, x, false);
+}
+
+#endif //HIOP_DEEPCHECKS
+
+
+void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) const
 {
   size_type n=St->n();
   assert(l_curr==St->m());
@@ -913,7 +920,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
   //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
 
-  bool print=true;
+  bool print=FOOTPRINT_INTERVAL_RESET;
   if(print) {
     nlp->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
     nlp->log->write("S=", *St, hovMatrices);
@@ -987,17 +994,16 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   delete yk;
   delete sk;
 }
-void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x)
-{
-  this->timesVecCmn(beta, y, alpha, x, false);
-}
-
 
 void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x)
 {
-  this->timesVecCmn(beta, y, alpha, x, true);
+  this->timesVecCmn(beta, y, alpha, x);
 }
-#endif //HIOP_DEEPCHECKS
+
+void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
+{
+  this->timesVecCmn(beta, y, alpha, x);
+}
 
 /**************************************************************************
  * Internal helpers
