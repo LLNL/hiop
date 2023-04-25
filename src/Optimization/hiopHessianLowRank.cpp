@@ -920,7 +920,7 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
   //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
 
-  bool print=FOOTPRINT_INTERVAL_RESET;
+  bool print=false;
   if(print) {
     nlp->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
     nlp->log->write("S=", *St, hovMatrices);
