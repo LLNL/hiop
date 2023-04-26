@@ -174,7 +174,8 @@ public:
     hiopLinSolverSymDense* linSys = dynamic_cast<hiopLinSolverSymDense*> (linSys_);
     assert(linSys && "fail to get an object for correct linear system");
 
-    int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+    int nx=rx.get_local_size(), nyc=ryc.get_local_size(), nyd=ryd.get_local_size();
+
     if(rhsXYcYd == nullptr) {
       rhsXYcYd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
                                                      nx+nyc+nyd);

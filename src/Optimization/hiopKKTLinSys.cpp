@@ -927,7 +927,6 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   const size_type nyc = resid->ryc->get_local_size();
   const size_type nyd = resid->ryd->get_local_size();
   size_type dim_rhs = 5*nx + 5*nd + nyc + nyd;
-  
   /***********************************************************************
    * solve the compressed system as a preconditioner
    * (be aware that rx_tilde is reused/modified inside this function)
