@@ -871,7 +871,7 @@ bool hiopCompoundVector::isfinite_local() const
 void hiopCompoundVector::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 
-  MPI_Comm comm_ = MPI_COMM_NULL;
+  MPI_Comm comm_ = MPI_COMM_SELF;
 
   if(nullptr == file) {
     file = stdout;
@@ -879,7 +879,6 @@ void hiopCompoundVector::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr
 
 #ifdef HIOP_USE_MPI
   if(rank>=0) {
-    comm_ = MPI_COMM_SELF;
     int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
   }

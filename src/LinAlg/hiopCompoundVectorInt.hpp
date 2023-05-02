@@ -56,6 +56,7 @@
  */
 
 #include "hiopVectorInt.hpp"
+#include <cassert>
 
 #include <vector>
 
