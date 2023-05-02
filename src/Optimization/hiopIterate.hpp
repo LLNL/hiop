@@ -175,6 +175,7 @@ public:
   friend class hiopKKTLinSysFull;
   friend class hiopKKTLinSysSparseFull;
   friend class hiopKKTLinSysNormalEquation;
+  friend class hiopCompoundVector;
 
 private:
   /** Primal variables */

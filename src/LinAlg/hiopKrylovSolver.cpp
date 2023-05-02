@@ -92,12 +92,8 @@ namespace hiop {
       MR_opr_{Mright_opr},
       x0_{nullptr}
   {
-    x0_ = hiop::LinearAlgebraFactory::create_vector(mem_space_, n);
     if(x0) {
-      assert(x0->get_size() == x0_->get_size());
-      x0_->copyFrom(*x0);
-    } else {
-      x0_->setToZero();
+      x0_ = x0->new_copy();
     }
   }
   
@@ -106,15 +102,11 @@ namespace hiop {
     delete x0_;
   }
 
-  void hiopKrylovSolver::set_x0(const hiopVector& x0)
-  {
-    assert(x0.get_size() == x0_->get_size());
-    x0_->copyFrom(x0);
-  }
-
   void hiopKrylovSolver::set_x0(const double xval)
   {
-    x0_->setToConstant(xval);
+    if(x0_) {
+      x0_->setToConstant(xval);
+    }
   }
   
   /*
@@ -166,11 +158,15 @@ bool hiopPCGSolver::solve(hiopVector& b)
     qk_ = b.alloc_clone();    //work vectors
   }
 
+  if(nullptr == x0_) {
+    x0_ = b.alloc_clone();    //work vectors
+    x0_->setToZero();
+  }
+
   //////////////////////////////////////////////////////////////////
   // Starting procedure
   //////////////////////////////////////////////////////////////////
 
-  assert(x0_);
   hiopVector* xk_ = x0_;
   
   flag_ = 1;
@@ -410,11 +406,14 @@ bool hiopBiCGStabSolver::solve(hiopVector& b)
     rt_ = xmin_->new_copy();    //work vectors
   }
 
+  if(nullptr == x0_) {
+    x0_ = b.alloc_clone();    //work vectors
+    x0_->setToZero();
+  }
+
   //////////////////////////////////////////////////////////////////
   // Starting procedure
   //////////////////////////////////////////////////////////////////
-
-  assert(x0_);
   hiopVector* xk_ = x0_;
 
   flag_ = 1;

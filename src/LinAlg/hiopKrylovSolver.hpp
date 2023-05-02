@@ -59,6 +59,7 @@
 #include "hiopMatrix.hpp"
 #include "hiopMatrixDense.hpp"
 #include "hiopVector.hpp"
+#include "hiopCompoundVector.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -90,9 +91,6 @@ public:
    * exit is contains the solution(s).
    */
   virtual bool solve(hiopVector& x) = 0;
-
-  /// Set the initial guess for the Krylov solver
-  virtual void set_x0(const hiopVector& x0);
 
   /// Set the iterate to a constant value
   virtual void set_x0(double xval);

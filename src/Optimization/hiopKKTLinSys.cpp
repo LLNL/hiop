@@ -67,8 +67,7 @@ hiopKKTLinSys::hiopKKTLinSys(hiopNlpFormulation* nlp)
     safe_mode_(true),
     kkt_opr_(nullptr),
     prec_opr_(nullptr),
-    ir_rhs_(nullptr),
-    ir_x0_(nullptr),
+    ir_sol_(nullptr),
     bicgIR_(nullptr),
     delta_wx_(nullptr),
     delta_wd_(nullptr),
@@ -84,8 +83,7 @@ hiopKKTLinSys::~hiopKKTLinSys()
 {
   delete kkt_opr_;
   delete prec_opr_;
-  delete ir_rhs_;
-  delete ir_x0_;
+  delete ir_sol_;
   delete bicgIR_;
 }
 
@@ -946,10 +944,9 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
    ***********************************************************************/
 
   if(nullptr == kkt_opr_) {
-    kkt_opr_ = new hiopMatVecKKTFullOpr(this, iter_, resid, dir);
-    prec_opr_ = new hiopPrecondKKTOpr(this, iter_, resid, dir);
-    ir_rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
-    ir_x0_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
+    ir_sol_ = new hiopCompoundVector(dir);
+    kkt_opr_ = new hiopMatVecKKTFullOpr(this, iter_);
+    prec_opr_ = new hiopPrecondKKTOpr(this, iter_);
     bicgIR_ = new hiopBiCGStabSolver(dim_rhs, nlp_->options->GetString("mem_space"), kkt_opr_, prec_opr_);
   }
 
@@ -958,18 +955,7 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
 
   // form the rhs for the sparse linSys  
   nlp_->runStats.kkt.tmSolveRhsManip.start();
-  resid->rx->copyToStarting(*ir_rhs_,   0);
-  resid->rd->copyToStarting(*ir_rhs_,   nx);
-  resid->ryc->copyToStarting(*ir_rhs_,  nx+nd);
-  resid->ryd->copyToStarting(*ir_rhs_,  nx+nd+nyc);
-  resid->rxl->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd);
-  resid->rxu->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx);
-  resid->rdl->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx+nx);
-  resid->rdu->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx+nx+nd);
-  resid->rszl->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd);
-  resid->rszu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
-  resid->rsvl->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
-  resid->rsvu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
+  ir_sol_->copy_from_resid(resid);
   nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
   double tol = std::min(mu_*nlp_->options->GetNumeric("ir_outer_tol_factor"), nlp_->options->GetNumeric("ir_outer_tol_min"));
@@ -977,21 +963,7 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   bicgIR_->set_tol(tol);
   bicgIR_->set_x0(0.0);
 
-  bool bret = bicgIR_->solve(*ir_rhs_);
-
-  // assemble dir from ir solution  
-  dir->x->startingAtCopyFromStartingAt(0,   *ir_rhs_, 0);
-  dir->d->startingAtCopyFromStartingAt(0,   *ir_rhs_, nx);
-  dir->yc->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd);
-  dir->yd->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc);
-  dir->sxl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd);
-  dir->sxu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx);
-  dir->sdl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx);
-  dir->sdu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd);
-  dir->zl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd);
-  dir->zu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
-  dir->vl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
-  dir->vu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
+  bool bret = bicgIR_->solve(*ir_sol_);
 
   nlp_->runStats.kkt.nIterRefinInner += bicgIR_->get_sol_num_iter();
   nlp_->runStats.kkt.tmSolveInner.stop();
@@ -1013,9 +985,9 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
 #ifdef HIOP_DEEPCHECKS
 double hiopKKTLinSysCompressedXDYcYd::
 errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
-		      const hiopVector& ryc, const hiopVector& ryd,
-		      const hiopVector& dx, const hiopVector& dd,
-		      const hiopVector& dyc, const hiopVector& dyd)
+                      const hiopVector& ryc, const hiopVector& ryd,
+                      const hiopVector& dx, const hiopVector& dd,
+                      const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
   assert(perturb_calc_);
@@ -1580,7 +1552,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
   grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; 
   Jac_d_ = Jac_d;
-  Hess_=Hess;
+  Hess_ = Hess;
   nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
 
@@ -1622,9 +1594,7 @@ bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 hiopMatVecKKTFullOpr::hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, 
-                               const hiopIterate* iter,
-                               const hiopResidual* resid,
-                               const hiopIterate* dir)
+                                           const hiopIterate* iter)
     : kkt_(kkt),
       iter_(iter),
       resid_(nullptr),
@@ -1689,18 +1659,20 @@ bool hiopMatVecKKTFullOpr::split_vec_to_build_it(const hiopVector& x)
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
 
-  dx_->startingAtCopyFromStartingAt(0,   x, 0);
-  dd_->startingAtCopyFromStartingAt(0,   x, nx);
-  dyc_->startingAtCopyFromStartingAt(0,  x, nx+nineq);
-  dyd_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq);
-  dsxl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq);
-  dsxu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx);
-  dsdl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx);
-  dsdu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx+nineq);
-  dzl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  dzu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  dvl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  dvu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  const auto& dir_ir = dynamic_cast<const hiopCompoundVector&>(x);
+  dx_->copyFrom(dir_ir.getVector(0));
+  dd_->copyFrom(dir_ir.getVector(1));
+  dyc_->copyFrom(dir_ir.getVector(2));
+  dyd_->copyFrom(dir_ir.getVector(3));
+  dsxl_->copyFrom(dir_ir.getVector(4));
+  dsxu_->copyFrom(dir_ir.getVector(5));
+  dsdl_->copyFrom(dir_ir.getVector(6));
+  dsdu_->copyFrom(dir_ir.getVector(7));
+  dzl_->copyFrom(dir_ir.getVector(8));
+  dzu_->copyFrom(dir_ir.getVector(9));
+  dvl_->copyFrom(dir_ir.getVector(10));
+  dvu_->copyFrom(dir_ir.getVector(11));
+
   return true;
 }
 
@@ -1710,18 +1682,20 @@ bool hiopMatVecKKTFullOpr::combine_res_to_build_vec(hiopVector& y)
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
 
-  yrx_->copyToStarting(   y, 0);
-  yrd_->copyToStarting(   y, nx);
-  yryc_->copyToStarting(  y, nx+nineq);
-  yryd_->copyToStarting(  y, nx+nineq+neq);
-  yrsxl_->copyToStarting( y, nx+nineq+neq+nineq);
-  yrsxu_->copyToStarting( y, nx+nineq+neq+nineq+nx);
-  yrsdl_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx);
-  yrsdu_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx+nineq);
-  yrzl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  yrzu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  yrvl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  yrvu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  auto& res_ir = dynamic_cast<hiopCompoundVector&>(y);
+  res_ir.getVector(0).copyFrom(*yrx_);
+  res_ir.getVector(1).copyFrom(*yrd_);
+  res_ir.getVector(2).copyFrom(*yryc_);
+  res_ir.getVector(3).copyFrom(*yryd_);
+  res_ir.getVector(4).copyFrom(*yrsxl_);
+  res_ir.getVector(5).copyFrom(*yrsxu_);
+  res_ir.getVector(6).copyFrom(*yrsdl_);
+  res_ir.getVector(7).copyFrom(*yrsdu_);
+  res_ir.getVector(8).copyFrom(*yrzl_);
+  res_ir.getVector(9).copyFrom(*yrzu_);
+  res_ir.getVector(10).copyFrom(*yrvl_);
+  res_ir.getVector(11).copyFrom(*yrvu_);
+
   return true;
 }
 
@@ -1945,9 +1919,7 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 hiopPrecondKKTOpr::hiopPrecondKKTOpr(hiopKKTLinSys* kkt, 
-                               const hiopIterate* iter,
-                               const hiopResidual* resid,
-                               const hiopIterate* dir)
+                               const hiopIterate* iter)
   : kkt_(kkt),
     iter_(iter),
     resid_(nullptr),
@@ -2012,20 +1984,22 @@ bool hiopPrecondKKTOpr::split_vec_to_build_res(const hiopVector& vec)
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
-  assert(vec.get_local_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+  assert(vec.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
 
-  yrx_->startingAtCopyFromStartingAt(0,   vec, 0);
-  yrd_->startingAtCopyFromStartingAt(0,   vec, nx);
-  yryc_->startingAtCopyFromStartingAt(0,  vec, nx+nineq);
-  yryd_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq);
-  yrsxl_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq);
-  yrsxu_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx);
-  yrsdl_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx+nx);
-  yrsdu_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx+nx+nineq);
-  yrzl_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  yrzu_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  yrvl_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  yrvu_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  const auto& res_ir = dynamic_cast<const hiopCompoundVector&>(vec);
+  yrx_->copyFrom(res_ir.getVector(0));
+  yrd_->copyFrom(res_ir.getVector(1));
+  yryc_->copyFrom(res_ir.getVector(2));
+  yryd_->copyFrom(res_ir.getVector(3));
+  yrsxl_->copyFrom(res_ir.getVector(4));
+  yrsxu_->copyFrom(res_ir.getVector(5));
+  yrsdl_->copyFrom(res_ir.getVector(6));
+  yrsdu_->copyFrom(res_ir.getVector(7));
+  yrzl_->copyFrom(res_ir.getVector(8));
+  yrzu_->copyFrom(res_ir.getVector(9));
+  yrvl_->copyFrom(res_ir.getVector(10));
+  yrvu_->copyFrom(res_ir.getVector(11));
+
   return true;
 }
 
@@ -2034,20 +2008,22 @@ bool hiopPrecondKKTOpr::combine_dir_to_build_vec(hiopVector& vec)
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
-  assert(vec.get_local_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+  assert(vec.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
 
-  dx_->copyToStarting(   vec, 0);
-  dd_->copyToStarting(   vec, nx);
-  dyc_->copyToStarting(  vec, nx+nineq);
-  dyd_->copyToStarting(  vec, nx+nineq+neq);
-  dsxl_->copyToStarting( vec, nx+nineq+neq+nineq);
-  dsxu_->copyToStarting( vec, nx+nineq+neq+nineq+nx);
-  dsdl_->copyToStarting( vec, nx+nineq+neq+nineq+nx+nx);
-  dsdu_->copyToStarting( vec, nx+nineq+neq+nineq+nx+nx+nineq);
-  dzl_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  dzu_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  dvl_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  dvu_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
+  auto& dir_ir = dynamic_cast<hiopCompoundVector&>(vec);
+  dir_ir.getVector(0).copyFrom(*dx_);
+  dir_ir.getVector(1).copyFrom(*dd_);
+  dir_ir.getVector(2).copyFrom(*dyc_);
+  dir_ir.getVector(3).copyFrom(*dyd_);
+  dir_ir.getVector(4).copyFrom(*dsxl_);
+  dir_ir.getVector(5).copyFrom(*dsxu_);
+  dir_ir.getVector(6).copyFrom(*dsdl_);
+  dir_ir.getVector(7).copyFrom(*dsdu_);
+  dir_ir.getVector(8).copyFrom(*dzl_);
+  dir_ir.getVector(9).copyFrom(*dzu_);
+  dir_ir.getVector(10).copyFrom(*dvl_);
+  dir_ir.getVector(11).copyFrom(*dvu_);
+
   return true;
 }
 

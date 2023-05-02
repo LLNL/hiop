@@ -39,6 +39,8 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopVectorPar.hpp
   hiopLinearOperator.hpp
   hiopKrylovSolver.hpp
+  hiopCompoundVector.hpp
+  hiopCompoundVectorInt.hpp
   )
 
 # Set linear algebra common source files
@@ -56,6 +58,8 @@ set(hiopLinAlg_SRC
   hiopMatrixSparseCSRSeq.cpp
   hiopLinearOperator.cpp
   hiopKrylovSolver.cpp
+  hiopCompoundVector.cpp
+  hiopCompoundVectorInt.cpp
 )
 
 if(HIOP_USE_CUDA)

@@ -56,6 +56,7 @@
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
 #include "hiopKrylovSolver.hpp"
+#include "hiopCompoundVector.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -188,8 +189,7 @@ protected:
   hiopPrecondKKTOpr *prec_opr_;
 
   /// Temporary vector to be used in the iterative refinement solve;
-  hiopVector* ir_rhs_;
-  hiopVector* ir_x0_;
+  hiopCompoundVector* ir_sol_;
 
   /// iterative refinement from BiCGStab solver
   hiopBiCGStabSolver* bicgIR_;
@@ -618,7 +618,7 @@ protected:
 class hiopMatVecKKTFullOpr : public hiopLinearOperator
 {
 public:
-  hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+  hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, const hiopIterate* iter);
 
   virtual ~hiopMatVecKKTFullOpr()
   {
@@ -694,7 +694,7 @@ private:
 class hiopPrecondKKTOpr : public hiopLinearOperator
 {
 public:
-  hiopPrecondKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+  hiopPrecondKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter);
 
   virtual ~hiopPrecondKKTOpr()
   {
@@ -759,6 +759,9 @@ protected:
   hiopVector* yrzu_;
   hiopVector* yrvl_;
   hiopVector* yrvu_;
+  
+  hiopCompoundVector dir_ir;
+  hiopCompoundVector res_ir;
 };
 
 };
