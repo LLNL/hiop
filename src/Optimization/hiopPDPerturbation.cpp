@@ -78,14 +78,16 @@ namespace hiop
     delta_c_bar_     = nlp->options->GetNumeric("delta_c_bar");
     kappa_c_         = nlp->options->GetNumeric("kappa_c");
 
-    delta_wx_curr_ = nlp_->alloc_primal_vec();
-    delta_wd_curr_ = nlp_->alloc_dual_ineq_vec();
-    delta_cc_curr_ = nlp_->alloc_dual_eq_vec();
-    delta_cd_curr_ = nlp_->alloc_dual_ineq_vec();
-    delta_wx_last_ = nlp_->alloc_primal_vec();
-    delta_wd_last_ = nlp_->alloc_dual_ineq_vec();
-    delta_cc_last_ = nlp_->alloc_dual_eq_vec();
-    delta_cd_last_ = nlp_->alloc_dual_ineq_vec();
+    if(nullptr == delta_wx_curr_) {
+      delta_wx_curr_ = nlp_->alloc_primal_vec();
+      delta_wd_curr_ = nlp_->alloc_dual_ineq_vec();
+      delta_cc_curr_ = nlp_->alloc_dual_eq_vec();
+      delta_cd_curr_ = nlp_->alloc_dual_ineq_vec();
+      delta_wx_last_ = nlp_->alloc_primal_vec();
+      delta_wd_last_ = nlp_->alloc_dual_ineq_vec();
+      delta_cc_last_ = nlp_->alloc_dual_eq_vec();
+      delta_cd_last_ = nlp_->alloc_dual_ineq_vec();
+    }
 
     delta_wx_curr_->setToZero();
     delta_wd_curr_->setToZero();
