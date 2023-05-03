@@ -1655,9 +1655,12 @@ hiopMatVecKKTFullOpr::hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt,
 
 bool hiopMatVecKKTFullOpr::split_vec_to_build_it(const hiopVector& x)
 {
+#ifdef HIOP_DEEPCHECKS
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
+  assert(x.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+#endif
 
   const auto& dir_ir = dynamic_cast<const hiopCompoundVector&>(x);
   dx_->copyFrom(dir_ir.getVector(0));
@@ -1678,9 +1681,12 @@ bool hiopMatVecKKTFullOpr::split_vec_to_build_it(const hiopVector& x)
 
 bool hiopMatVecKKTFullOpr::combine_res_to_build_vec(hiopVector& y)
 {
+#ifdef HIOP_DEEPCHECKS
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
+  assert(y.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+#endif
 
   auto& res_ir = dynamic_cast<hiopCompoundVector&>(y);
   res_ir.getVector(0).copyFrom(*yrx_);
@@ -1981,10 +1987,12 @@ hiopPrecondKKTOpr::hiopPrecondKKTOpr(hiopKKTLinSys* kkt,
 
 bool hiopPrecondKKTOpr::split_vec_to_build_res(const hiopVector& vec)
 {
+#ifdef HIOP_DEEPCHECKS
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
   assert(vec.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+#endif
 
   const auto& res_ir = dynamic_cast<const hiopCompoundVector&>(vec);
   yrx_->copyFrom(res_ir.getVector(0));
@@ -2005,10 +2013,12 @@ bool hiopPrecondKKTOpr::split_vec_to_build_res(const hiopVector& vec)
 
 bool hiopPrecondKKTOpr::combine_dir_to_build_vec(hiopVector& vec)
 {
+#ifdef HIOP_DEEPCHECKS
   size_type nx = dx_->get_size();
   size_type neq = dyc_->get_size();
   size_type nineq = dyd_->get_size();
   assert(vec.get_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
+#endif
 
   auto& dir_ir = dynamic_cast<hiopCompoundVector&>(vec);
   dir_ir.getVector(0).copyFrom(*dx_);
