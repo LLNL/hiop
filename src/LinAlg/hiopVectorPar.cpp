@@ -245,12 +245,14 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
                                                  const hiopVector& v_in,
                                                  int start_idx_src)
 {
-  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
   size_type howManyToCopyDest = this->n_local_ - start_idx_dest;
 
-//  assert(n_local_==n_ && "only for local/non-distributed vectors");
-//  assert(v.n_local_==v.n_ && "only for local/non-distributed vectors");
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==n_ && "only for local/non-distributed vectors");
+  assert(v.n_local_==v.n_ && "only for local/non-distributed vectors");
+#endif
   assert((start_idx_dest>=0 && start_idx_dest<this->n_local_) || this->n_local_==0);
+  const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(v_in);
   assert((start_idx_src>=0 && start_idx_src<v.n_local_) || v.n_local_==0 || v.n_local_==start_idx_src);
   size_type howManyToCopySrc = v.n_local_-start_idx_src;
 
@@ -270,14 +272,18 @@ void hiopVectorPar::startingAtCopyFromStartingAt(int start_idx_dest,
 void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_) const
 {
   hiopVectorPar& v = dynamic_cast<hiopVectorPar&>(v_);
-//  assert(n_local_==n_ && "are you sure you want to call this?");
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==n_ && "are you sure you want to call this?");
+#endif
   assert(start_index+v.n_local_ <= n_local_);
   v.exec_space_.copy(v.data_, data_+start_index, v.n_local_, exec_space_);
 }
 /* Copy 'this' to v starting at start_index in 'v'. */
 void hiopVectorPar::copyToStarting(hiopVector& v_, int start_index/*_in_dest*/) const
 {
-//  assert(n_local_==n_ && "only for local/non-distributed vectors");
+#ifdef HIOP_DEEPCHECKS
+  assert(n_local_==n_ && "only for local/non-distributed vectors");
+#endif
   hiopVectorPar& v = dynamic_cast<hiopVectorPar&>(v_);
   assert(start_index+n_local_ <= v.n_local_);
   v.exec_space_.copy(v.data_+start_index, data_, n_local_, exec_space_); 
