@@ -324,6 +324,21 @@ public:
                                 const double& fixed_var_tol,
                                 const double& fixed_var_perturb);
 
+  virtual void process_constraints_local(const hiopVector& gl_vec,
+                                         const hiopVector& gu_vec,
+                                         hiopVector& dl_vec,
+                                         hiopVector& du_vec,
+                                         hiopVector& idl_vec,
+                                         hiopVector& idu_vec,
+                                         size_type& n_ineq_low,
+                                         size_type& n_ineq_upp,
+                                         size_type& n_ineq_lu,
+                                         hiopVectorInt& cons_eq_mapping,
+                                         hiopVectorInt& cons_ineq_mapping,
+                                         hiopInterfaceBase::NonlinearityType* eqcon_type,
+                                         hiopInterfaceBase::NonlinearityType* incon_type,
+                                         hiopInterfaceBase::NonlinearityType* cons_type);
+
   /**
    * @brief accessor to the execution policy
    */

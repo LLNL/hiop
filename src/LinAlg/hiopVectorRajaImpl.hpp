@@ -2351,4 +2351,150 @@ void hiopVectorRaja<MEM, POL>::relax_bounds_vec(hiopVector& xu,
     });
 }
 
+template<class MEM, class POL>
+void hiopVectorRaja<MEM, POL>::process_constraints_local(const hiopVector& gl_vec,
+                                                         const hiopVector& gu_vec,
+                                                         hiopVector& dl_vec,
+                                                         hiopVector& du_vec,
+                                                         hiopVector& idl_vec,
+                                                         hiopVector& idu_vec,
+                                                         size_type& n_ineq_low,
+                                                         size_type& n_ineq_upp,
+                                                         size_type& n_ineq_lu,
+                                                         hiopVectorInt& cons_eq_mapping,
+                                                         hiopVectorInt& cons_ineq_mapping,
+                                                         hiopInterfaceBase::NonlinearityType* eqcon_type,
+                                                         hiopInterfaceBase::NonlinearityType* incon_type,
+                                                         hiopInterfaceBase::NonlinearityType* cons_type)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(gl_vec.get_local_size() == gu_vec.get_local_size());
+  assert(dl_vec.get_local_size() == du_vec.get_local_size());
+  assert(dl_vec.get_local_size() == idl_vec.get_local_size());
+  assert(dl_vec.get_local_size() == idu_vec.get_local_size());
+  assert(dl_vec.get_local_size() + this->get_local_size() == gu_vec.get_local_size());
+#endif
+
+  double *dl = dl_vec.local_data();
+  double *du = du_vec.local_data();
+  const double *gl = gl_vec.local_data_const();
+  const double *gu = gu_vec.local_data_const();
+  double* idl = idl_vec.local_data();
+  double* idu = idu_vec.local_data();
+
+  double *c_rhs = this->local_data();
+  index_type *eqcon_map = cons_eq_mapping.local_data();
+  index_type *incon_map = cons_ineq_mapping.local_data();
+
+  size_type n_eq = this->get_local_size();
+  size_type n_in = dl_vec.get_local_size();
+  size_type n_cons = n_eq + n_in;
+  
+  hiopVectorInt* find_eq = LinearAlgebraFactory::create_vector_int(mem_space_, n_cons);
+  hiopVectorInt* find_in = LinearAlgebraFactory::create_vector_int(mem_space_, n_cons);
+  index_type* idx_eq_cumsum = find_eq->local_data();
+  index_type* idx_in_cumsum = find_in->local_data();
+
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_low(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_upp(0);
+  RAJA::ReduceSum< hiop_raja_reduce, int > sum_n_bnds_lu(0);
+
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_cons),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(gl[i] == gu[i]) {
+        idx_eq_cumsum[i] = 1;
+        idx_in_cumsum[i] = 0;
+      } else {
+        idx_eq_cumsum[i] = 0;
+        idx_in_cumsum[i] = 1;
+      }
+    }
+  );
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(idx_eq_cumsum, n_cons), RAJA::operators::plus<index_type>());
+  RAJA::inclusive_scan_inplace<hiop_raja_exec>(RAJA::make_span(idx_in_cumsum, n_cons), RAJA::operators::plus<index_type>());
+  
+  //     eg. eq -- ineq
+  //     (0 1 0)  -- (1,0,1)  
+  //     (0,1,1)  -- (1,1,2)  after scan
+  // map [1]         [0,2]
+
+  RAJA::forall<hiop_raja_exec>(
+    RAJA::RangeSegment(0, n_cons),
+    RAJA_LAMBDA(RAJA::Index_type i)
+    {
+      if(i == 0) {
+        if(idx_eq_cumsum[i] == 1) {
+          eqcon_type[i] = cons_type[i];
+          c_rhs[i] = gl[i]; 
+          eqcon_map[i] = i;
+        } else {
+          incon_map[i] = cons_type[i];
+          dl[i] = gl[i]; 
+          du[i] = gu[i]; 
+          incon_map[i] = i;
+
+          if(gl[i]>-1e20) {
+            idl[i] = 1.;
+            sum_n_bnds_low += 1;
+            if(gu[i]< 1e20) {
+              sum_n_bnds_lu += 1;
+            }
+          } else {
+            idl[i] = 0.;
+          }
+          if(gu[i]< 1e20) {
+            idu[i] = 1.;
+            sum_n_bnds_upp += 1;
+          } else {
+            idu[i] = 0.;
+          }
+        }
+      } else {
+        if(idx_eq_cumsum[i] != idx_eq_cumsum[i-1]){
+          assert(idx_eq_cumsum[i] == idx_eq_cumsum[i-1] + 1);
+          int eq_idx = idx_eq_cumsum[i] - 1;
+          eqcon_type[eq_idx] = cons_type[i];
+          c_rhs[eq_idx] = gl[i];
+          eqcon_map[eq_idx] = i;
+        } else {
+          assert(idx_in_cumsum[i] == idx_in_cumsum[i-1] + 1);
+          int in_idx = idx_in_cumsum[i] - 1;
+          incon_type[in_idx] = cons_type[i];
+          dl[in_idx] = gl[i];
+          du[in_idx] = gu[i];
+          incon_map[in_idx] = i;
+
+          if(gl[i]>-1e20) {
+            idl[in_idx] = 1.;
+            sum_n_bnds_low += 1; 
+            if(gu[i]< 1e20) {
+              sum_n_bnds_lu += 1; 
+            }
+          } else {
+            idl[in_idx] = 0.;
+          }
+          if(gu[i]< 1e20) {
+            idu[in_idx] = 1.;
+            sum_n_bnds_upp += 1; 
+          } else {
+            idu[in_idx] = 0.;
+          }
+        }
+      }
+    }
+  );
+
+  n_ineq_low = sum_n_bnds_low.get();
+  n_ineq_upp = sum_n_bnds_upp.get();
+  n_ineq_lu = sum_n_bnds_lu.get();
+
+  delete find_eq;
+  delete find_in;  	
+
+}
+
+
 } // namespace hiop

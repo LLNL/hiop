@@ -622,6 +622,28 @@ __global__ void compute_cusum_cu(int n, int* vec, const double* id)
   }
 }
 
+/** @brief set veq[i]=1 and vineq[i]=0 if v1[i-1]=v2[i-1], and veq[i]=0 and vineq[i]=01if v1[i-1]!=v2[i-1]*/
+__global__ void mark_cons_cu(int n, int* veq, int* vineq, const double* v1, const double* v2)
+{
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
+  for (int i = tid; i < n; i += num_threads) {
+    if(i==0) {
+      veq[i] = 0;
+      vineq[i] = 0;
+    } else {
+      // from i=1..n
+      if(v1[i-1]==v2[i-1]){
+        veq[i] = 1;
+        vineq[i] = 0;
+      } else {
+        veq[i] = 0;   
+        vineq[i] = 1;     
+      }
+    }
+  }
+}
+
 /// @brief Copy the entries in 'dd' where corresponding 'ix' is nonzero, to vd starting at start_index_in_dest.
 __global__ void copyToStartingAt_w_pattern_cu(int n_src, 
                                               int n_dest,
@@ -1460,6 +1482,19 @@ void compute_cusum_kernel(int sz, int* buf, const double* id)
 
   thrust::device_ptr<int> dev_v = thrust::device_pointer_cast(buf);
   thrust::inclusive_scan(dev_v, dev_v + sz, dev_v); // in-place scan
+}
+
+/** @brief compute cusum from the given pattern*/
+void compute_cusum_kernel(int sz, int* ebuf, int* ibuf, const double* v1, const double* v2)
+{
+  int num_blocks = (sz+block_size-1)/block_size;
+  mark_cons_cu<<<num_blocks,block_size>>>(sz, ebuf, ibuf, v1, v2);
+
+  thrust::device_ptr<int> dev_e = thrust::device_pointer_cast(ebuf);
+  thrust::device_ptr<int> dev_i = thrust::device_pointer_cast(ibuf);
+
+  thrust::inclusive_scan(dev_e, dev_e + sz, dev_e); // in-place scan
+  thrust::inclusive_scan(dev_i, dev_i + sz, dev_i); // in-place scan
 }
 
 }

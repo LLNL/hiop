@@ -1406,4 +1406,92 @@ void hiopVectorPar::relax_bounds_vec(hiopVector& xu,
   }
 }
 
+void hiopVectorPar::process_constraints_local(const hiopVector& gl_vec,
+                                              const hiopVector& gu_vec,
+                                              hiopVector& dl_vec,
+                                              hiopVector& du_vec,
+                                              hiopVector& idl_vec,
+                                              hiopVector& idu_vec,
+                                              size_type& n_ineq_low,
+                                              size_type& n_ineq_upp,
+                                              size_type& n_ineq_lu,
+                                              hiopVectorInt& cons_eq_mapping,
+                                              hiopVectorInt& cons_ineq_mapping,
+                                              hiopInterfaceBase::NonlinearityType* eqcon_type,
+                                              hiopInterfaceBase::NonlinearityType* incon_type,
+                                              hiopInterfaceBase::NonlinearityType* cons_type)
+{
+#ifdef HIOP_DEEPCHECKS
+  assert(gl_vec.get_local_size() == gu_vec.get_local_size());
+  assert(dl_vec.get_local_size() == du_vec.get_local_size());
+  assert(dl_vec.get_local_size() == idl_vec.get_local_size());
+  assert(dl_vec.get_local_size() == idu_vec.get_local_size());
+  assert(dl_vec.get_local_size() + this->get_local_size() == gu_vec.get_local_size());
+#endif
+
+  double *dl = dl_vec.local_data();
+  double *du = du_vec.local_data();
+  const double *gl = gl_vec.local_data_const();
+  const double *gu = gu_vec.local_data_const();
+  double* idl = idl_vec.local_data();
+  double* idu = idu_vec.local_data();
+
+  double *c_rhs = this->local_data();
+  index_type *eqcon_map = cons_eq_mapping.local_data();
+  index_type *incon_map = cons_ineq_mapping.local_data();
+
+  size_type n_eq = this->get_local_size();
+  size_type n_in = dl_vec.get_local_size();
+  size_type n_cons = n_eq + n_in;
+
+  /* splitting (preprocessing) step done on the CPU */
+  size_type it_eq = 0;
+  size_type it_in = 0;
+  for(index_type i = 0; i < n_cons; i++) {
+    if(gl[i] == gu[i]) {
+      eqcon_type[it_eq] = cons_type[i]; 
+      c_rhs[it_eq] = gl[i]; 
+      eqcon_map[it_eq] = i;
+      it_eq++;
+    } else {
+#ifdef HIOP_DEEPCHECKS
+      assert(gl[i] <= gu[i] && "please fix the inconsistent inequality constraints, otherwise the problem is infeasible");
+#endif
+      incon_map[it_in] = cons_type[i];
+      dl[it_in] = gl[i]; 
+      du[it_in] = gu[i]; 
+      incon_map[it_in] = i;
+      it_in++;
+    }
+  }
+  assert(it_eq == n_eq);
+  assert(it_in == n_in);
+
+  /* iterate over the inequalities and build the idl(ow) and idu(pp) vectors */
+  n_ineq_low = 0;
+  n_ineq_upp = 0;
+  n_ineq_lu = 0;
+
+  for(index_type i=0; i<n_in; i++) {
+    if(dl[i]>-1e20) { 
+      idl[i] = 1.;
+      n_ineq_low++; 
+      if(du[i]< 1e20) {
+        n_ineq_lu++;
+      }
+    }
+    else {
+      idl[i]=0.;
+    }
+
+    if(du[i]< 1e20) { 
+      idu[i] = 1.;
+      n_ineq_upp++; 
+    } else {
+      idu[i]=0.;
+    }
+  }
+}
+
+
 };

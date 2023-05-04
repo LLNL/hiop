@@ -1019,8 +1019,8 @@ public:
    * @param[in] xu - lower bound of primal variable `x`
    * @param[in] ixl - index of the variables with lower bounds
    * @param[in] ixu - index of the variables with upper bounds
-   * @param[out] n_bnds_low - number of variables with lower bounds only
-   * @param[out] n_bnds_upp - number of variables with upper bounds only
+   * @param[out] n_bnds_low - number of variables with lower bounds
+   * @param[out] n_bnds_upp - number of variables with upper bounds
    * @param[out] n_bnds_lu - number of variables with both lower and upper bounds
    * @param[out] n_fixed_vars - number of fixed variables
    * @param[in] fixed_var_tol - tolerance used to define fixed variables
@@ -1049,6 +1049,44 @@ public:
   virtual void relax_bounds_vec(hiopVector& xu,
                                 const double& fixed_var_tol,
                                 const double& fixed_var_perturb) = 0;
+
+  /**
+   * @brief process constraints. Firstly the constraints are split to equalities and 
+   *        inequalities. Then it preprocesses inequality bounds and returns counts of
+   *        the constraints with lower, upper, and lower and upper bounds.
+   *
+   * @param[in] this - crhs, the right hand side of equality constraints
+   * @param[in] gl_vec - lower bounds for all the constraints
+   * @param[in] gu_vec - upper bounds for all the constraints
+   * @param[out] dl_vec - lower bounds for inequality constraints
+   * @param[out] du_vec - upper bounds for inequality constraints
+   * @param[out] idl_vec - index of the inequality constraints with lower bounds
+   * @param[out] idu_vec - index of the inequality constraints with upper bounds
+   * @param[out] n_ineq_low - number of inequality constraints with lower bounds
+   * @param[out] n_ineq_upp - number of inequality constraints with lower bounds
+   * @param[out] n_ineq_lu - number of inequality constraints with both lower and upper bounds
+   * @param[out] cons_eq_mapping - a map between equality constaints and full list of constraints
+   * @param[out] cons_ineq_mapping - a map between inequality constaints and full list of constraints
+   * @param[out] eqcon_type - types of all the equality constraints
+   * @param[out] incon_type - types of all the inequality constraints
+   * @param[in] cons_type - types of all the constraints
+   * 
+   * @pre this is a local method
+   */
+  virtual void process_constraints_local(const hiopVector& gl_vec,
+                                         const hiopVector& gu_vec,
+                                         hiopVector& dl_vec,
+                                         hiopVector& du_vec,
+                                         hiopVector& idl_vec,
+                                         hiopVector& idu_vec,
+                                         size_type& n_ineq_low,
+                                         size_type& n_ineq_upp,
+                                         size_type& n_ineq_lu,
+                                         hiopVectorInt& cons_eq_mapping,
+                                         hiopVectorInt& cons_ineq_mapping,
+                                         hiopInterfaceBase::NonlinearityType* eqcon_type,
+                                         hiopInterfaceBase::NonlinearityType* incon_type,
+                                         hiopInterfaceBase::NonlinearityType* cons_type) = 0;
 
 protected:
   size_type n_; //we assume sequential data

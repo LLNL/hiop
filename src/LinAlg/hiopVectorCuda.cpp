@@ -1151,5 +1151,23 @@ void hiopVectorCuda::relax_bounds_vec(hiopVector& xu,
                                   fixed_var_perturb);
 }
 
+void hiopVectorCuda::process_constraints_local(const hiopVector& gl_vec,
+                                               const hiopVector& gu_vec,
+                                               hiopVector& dl_vec,
+                                               hiopVector& du_vec,
+                                               hiopVector& idl_vec,
+                                               hiopVector& idu_vec,
+                                               size_type& n_ineq_low,
+                                               size_type& n_ineq_upp,
+                                               size_type& n_ineq_lu,
+                                               hiopVectorInt& cons_eq_mapping,
+                                               hiopVectorInt& cons_ineq_mapping,
+                                               hiopInterfaceBase::NonlinearityType* eqcon_type,
+                                               hiopInterfaceBase::NonlinearityType* incon_type,
+                                               hiopInterfaceBase::NonlinearityType* cons_type)
+{
+  assert(0&&"not yet");
+}
+
 } // namespace hiop
 
