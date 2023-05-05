@@ -576,6 +576,25 @@ void hiopOptionsNLP::register_options()
                       "Exponential reduction coefficient for mu (default 1.5) (eqn (7) in Filt-IPM paper)");
   register_num_option("eta_phi", 1e-8, 0, 0.01, "Parameter of (suff. decrease) in Armijo Rule");
   register_num_option("tolerance", 1e-8, 1e-14, 1e-1, "Absolute error tolerance for the NLP (default 1e-8)");
+
+  register_num_option("cons_tol",
+                      1e-4,
+                      1e-16,
+                      1e+10,
+                      "Absolute error tolerance for the constraint violation (default 1e-4)");
+
+  register_num_option("dual_tol",
+                      1.0,
+                      1e-16,
+                      1e+10,
+                      "Absolute error tolerance for the dual infeasibility (default 1.0)");
+
+  register_num_option("comp_tol",
+                      1e-4,
+                      1e-16,
+                      1e+10,
+                      "Absolute error tolerance for the complementary conditions (default 1e-4)");
+
   register_num_option("rel_tolerance",
                       0.,
                       0.,
@@ -1235,6 +1254,36 @@ void hiopOptionsNLP::ensure_consistence()
                  "There is no reason to set 'acceptable_tolerance' tighter than 'tolerance'. "
                  "Will set the two to 'tolerance'.\n");
       set_val("acceptable_tolerance", eps_tol);
+    }
+  }
+
+  double dual_tol = GetNumeric("dual_tol");
+  if(dual_tol < eps_tol) {
+    if(is_user_defined("dual_tol")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'dual_tol' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("dual_tol", eps_tol);
+    }
+  }
+
+  double cons_tol = GetNumeric("cons_tol");
+  if(cons_tol < eps_tol) {
+    if(is_user_defined("cons_tol")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'cons_tol' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("cons_tol", eps_tol);
+    }
+  }
+
+  double comp_tol = GetNumeric("comp_tol");
+  if(comp_tol < eps_tol) {
+    if(is_user_defined("comp_tol")) {
+      log_printf(hovWarning,
+                 "There is no reason to set 'comp_tol' tighter than 'tolerance'. "
+                 "Will set the two to 'tolerance'.\n");
+      set_val("comp_tol", eps_tol);
     }
   }
 

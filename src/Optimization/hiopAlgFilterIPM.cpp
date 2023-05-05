@@ -208,6 +208,9 @@ void hiopAlgFilterIPMBase::reload_options()
   theta_mu = nlp->options->GetNumeric("theta_mu");         //exponent for higher than linear decrease of mu
   tau_min  = nlp->options->GetNumeric("tau_min");          //min value for the fraction-to-the-boundary
   eps_tol  = nlp->options->GetNumeric("tolerance");        //absolute error for the nlp
+  cons_tol_  = nlp->options->GetNumeric("cons_tol");  //absolute error for the constraints
+  dual_tol_  = nlp->options->GetNumeric("dual_tol");  //absolute error for the dual optimality
+  comp_tol_  = nlp->options->GetNumeric("comp_tol");  //absolute error for the complementary
   eps_rtol = nlp->options->GetNumeric("rel_tolerance");    //relative error (to errors for the initial point)
   kappa_eps= nlp->options->GetNumeric("kappa_eps");        //relative (to mu) error for the log barrier
 
@@ -605,8 +608,8 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
 double hiopAlgFilterIPMBase::thetaLogBarrier(const hiopIterate& it, const hiopResidual& resid, const double& mu)
 {
   //actual nlp errors
-  double optim, feas, complem;
-  resid.getNlpErrors(optim, feas, complem);
+  double optim, feas, complem, cons_violation;
+  resid.getNlpErrors(optim, feas, complem, cons_violation);
   return feas;
 }
 
@@ -621,7 +624,8 @@ bool hiopAlgFilterIPMBase::evalNlpAndLogErrors(const hiopIterate& it,
                                                double& logoptim,
                                                double& logfeas,
                                                double& logcomplem,
-                                               double& logoverall)
+                                               double& logoverall,
+                                               double& cons_violation)
 {
   nlp->runStats.tmSolverInternal.start();
 
@@ -660,25 +664,26 @@ bool hiopAlgFilterIPMBase::evalNlpAndLogErrors(const hiopIterate& it,
   sc = fmin(sc, 1e+8);
 
   //actual nlp errors
-  resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem);
+  resid.getNlpErrors(nlpoptim, nlpfeas, nlpcomplem, cons_violation);
 
   //finally, the scaled nlp error
-  nlpoverall = fmax(nlpoptim/sd, fmax(nlpfeas, nlpcomplem/sc));
+  nlpoverall = fmax(nlpoptim/sd, fmax(cons_violation, nlpcomplem/sc));
 
   nlp->log->printf(hovScalars,
-                   "nlpoverall %g  nloptim %g  sd %g  nlpfeas %g  nlpcomplem %g  sc %g\n",
+                   "nlpoverall %g  nloptim %g  sd %g  nlpfeas %g  nlpcomplem %g  sc %g cons_violation %g\n",
                    nlpoverall,
                    nlpoptim,
                    sd,
                    nlpfeas,
                    nlpcomplem,
+                   cons_violation,
                    sc);
 
   //actual log errors
   resid.getBarrierErrors(logoptim, logfeas, logcomplem);
 
   //finally, the scaled barrier error
-  logoverall = fmax(logoptim/sd, fmax(logfeas, logcomplem/sc));
+  logoverall = fmax(logoptim/sd, fmax(cons_violation, logcomplem/sc));
   nlp->runStats.tmSolverInternal.stop();
   return true;
 }
@@ -789,20 +794,32 @@ int hiopAlgFilterIPMBase::getNumIterations() const
 bool hiopAlgFilterIPMBase::
 checkTermination(const double& err_nlp, const int& iter_num, hiopSolveStatus& status)
 {
-  if(err_nlp<=eps_tol)   { solver_status_ = Solve_Success;     return true; }
-  if(iter_num>=max_n_it) { solver_status_ = Max_Iter_Exceeded; return true; }
+  if(err_nlp<=eps_tol &&
+     _err_nlp_optim <= dual_tol_ && 
+     _err_cons_violation <= cons_tol_ &&
+     _err_nlp_complem <= comp_tol_) {
+    solver_status_ = Solve_Success;
+    return true;
+  }
+  if(iter_num>=max_n_it) {
+    solver_status_ = Max_Iter_Exceeded;
+    return true;
+  }
 
   if(eps_rtol>0) {
     if(_err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
-       _err_nlp_optim   <= eps_rtol * _err_nlp_optim0 &&
+       _err_nlp_feas    <= eps_rtol * _err_nlp_feas0 &&
        _err_nlp_complem <= std::max(eps_rtol,1e-6) * std::min(1.,_err_nlp_complem0)) {
       solver_status_ = Solve_Success_RelTol;
       return true;
     }
   }
 
-  if(err_nlp<=eps_tol_accep) n_accep_iters_++;
-  else n_accep_iters_ = 0;
+  if(err_nlp<=eps_tol_accep) {
+    n_accep_iters_++;
+  } else {
+    n_accep_iters_ = 0;
+  }
 
   if(n_accep_iters_>=accep_n_it) { solver_status_ = Solve_Acceptable_Level; return true; }
 
@@ -1011,18 +1028,20 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
                                _err_log_optim,
                                _err_log_feas,
                                _err_log_complem,
-                               _err_log);
+                               _err_log,
+                               _err_cons_violation);
     if(!bret) {
       solver_status_ = Error_In_User_Function;
       return Error_In_User_Function;
     }
 
     nlp->log->printf(hovScalars,
-                     "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+                     "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n cons_violation: %23.17e\n",
                      _err_nlp_feas,
                      _err_nlp_optim,
                      _err_nlp_complem,
-                     _err_nlp);
+                     _err_nlp,
+                     _err_cons_violation);
     nlp->log->printf(hovScalars,
                      "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
                      _err_log_feas,
@@ -1083,14 +1102,15 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
       bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
                                  _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log,
+                                 _err_cons_violation);
       if(!bret) {
         solver_status_ = Error_In_User_Function;
         return Error_In_User_Function;
       }
       nlp->log->printf(hovScalars,
-                       "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-                       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+                       "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n cons_violation:%23.17e\n",
+                       _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp, _err_cons_violation);
       nlp->log->printf(hovScalars,
                        "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
                        _err_log_feas, _err_log_optim, _err_log_complem, _err_log);
@@ -1806,7 +1826,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                                _err_log_optim,
                                _err_log_feas,
                                _err_log_complem,
-                               _err_log);
+                               _err_log,
+                               _err_cons_violation);
     if(!bret) {
       solver_status_ = Error_In_User_Function;
       nlp->runStats.tmOptimizTotal.stop();
@@ -1816,11 +1837,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     nlp->log->
       printf(hovScalars,
-             "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
+             "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n cons_violation:%23.17e\n",
              _err_nlp_feas,
              _err_nlp_optim,
              _err_nlp_complem,
-             _err_nlp);
+             _err_nlp,
+             _err_cons_violation);
     nlp->log->
       printf(hovScalars,
              "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
@@ -1882,7 +1904,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       
       bret = evalNlpAndLogErrors(*it_curr, *resid, _mu,
                                  _err_nlp_optim, _err_nlp_feas, _err_nlp_complem, _err_nlp,
-                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log);
+                                 _err_log_optim, _err_log_feas, _err_log_complem, _err_log,
+                                 _err_cons_violation);
       if(!bret) {
         solver_status_ = Error_In_User_Function;
         delete kkt;
@@ -1890,8 +1913,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       }
       nlp->log->
         printf(hovScalars,
-               "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",
-               _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp);
+               "  Nlp    errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n cons_violation:%23.17e\n",
+               _err_nlp_feas, _err_nlp_optim, _err_nlp_complem, _err_nlp, _err_cons_violation);
       nlp->log->
         printf(hovScalars,
                "  LogBar errs: pr-infeas:%23.17e   dual-infeas:%23.17e  comp:%23.17e  overall:%23.17e\n",

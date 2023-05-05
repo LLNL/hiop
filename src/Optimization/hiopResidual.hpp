@@ -94,10 +94,19 @@ public:
                           const hiopLogBarProblem& logprob);
 
   /* Return the Nlp and Log-bar errors computed at the previous update call. */
-  inline void getNlpErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_nlp_optim; feas=nrmInf_nlp_feasib; comple=nrmInf_nlp_complem;};
+  inline void getNlpErrors(double& optim, double& feas, double& comple, double& cons_violation) const
+  { 
+    optim = nrmInf_nlp_optim;
+    feas = nrmInf_nlp_feasib;
+    comple = nrmInf_nlp_complem;
+    cons_violation = nrmInf_cons_violation;
+  };
   inline void getBarrierErrors(double& optim, double& feas, double& comple) const
-  { optim=nrmInf_bar_optim; feas=nrmInf_bar_feasib; comple=nrmInf_bar_complem;};
+  { 
+    optim = nrmInf_bar_optim;
+    feas = nrmInf_bar_feasib;
+    comple = nrmInf_bar_complem;
+  };
   /* get the previously computed Infeasibility */
   inline double getInfeasInfNorm() const {
     return nrmInf_nlp_feasib;
@@ -167,7 +176,7 @@ private:
    *  for the barrier subproblem
    */
   double nrmInf_bar_optim, nrmInf_bar_feasib, nrmInf_bar_complem;
-  
+
   /** storage for the one norm of [ryc,ryd]. This is the one norm of constraint violations.
   */ 
   double nrmOne_nlp_feasib;
@@ -175,6 +184,8 @@ private:
   double nrmOne_nlp_optim;
   double nrmOne_bar_optim;
   
+  /** inf norm of constraint violation */
+  double nrmInf_cons_violation;
 
   // and associated info from problem formulation
   hiopNlpFormulation * nlp;
