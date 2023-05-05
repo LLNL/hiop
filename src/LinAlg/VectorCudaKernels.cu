@@ -393,7 +393,33 @@ __global__ void add_linear_damping_term_cu(int n, double* data, const double* ix
 }
 
 /** @brief y[i] = 1.0 if x[i] is positive and id[i] = 1.0, otherwise y[i] = 0 */
-__global__ void is_posive_w_pattern_cu(int n, double* data, const double* vd, const double* id)
+__global__ void is_posive_w_pattern_cu(int n, int* data, const double* vd, const double* id)
+{
+  extern __shared__ int shared_sum[];
+  const int num_threads = blockDim.x * gridDim.x;
+  const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  int sum = 0;
+  for (int i = tid; i < n; i += num_threads) {
+    sum += (id[i] == 1.0 && vd[i] > 0.0) ? 1 : 0;
+  }
+  shared_sum[threadIdx.x] = sum;
+  __syncthreads();
+  
+  for(int s = blockDim.x / 2; s > 0; s >>= 1) {
+    if(threadIdx.x < s) {
+      shared_sum[threadIdx.x] += shared_sum[threadIdx.x + s];
+    }
+     __syncthreads();
+  }
+
+  // Store the result for this block in global memory
+  if(threadIdx.x == 0) {
+    data[blockIdx.x] = shared_sum[0];
+  }
+}
+
+/** @brief y[i] = 1.0 if x[i] is positive and id[i] = 1.0, otherwise y[i] = 0 */
+__global__ void is_posive_w_pattern_cu_back(int n, double* data, const double* vd, const double* id)
 {
   const int num_threads = blockDim.x * gridDim.x;
   const int tid = blockIdx.x * blockDim.x + threadIdx.x;    
@@ -914,13 +940,30 @@ void add_linear_damping_term_kernel(int n_local,
 }
 
 /** @brief Checks if selected elements of `this` are positive */
-void is_posive_w_pattern_kernel(int n_local,
-                                double* yd,
+int is_posive_w_pattern_kernel(int n_local,
+//                                double* yd,
                                 const double* xd,
                                 const double* id)
 {
   int num_blocks = (n_local+block_size-1)/block_size;
-  is_posive_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
+//  is_posive_w_pattern_cu<<<num_blocks,block_size>>>(n_local, yd, xd, id);
+
+  int *h_retval = (int*)malloc(num_blocks*sizeof(int));
+  int *d_retval;
+  cudaMalloc(&d_retval,num_blocks*sizeof(int));
+    
+  is_posive_w_pattern_cu<<<num_blocks,block_size, block_size*sizeof(int)>>>(n_local, d_retval, xd, id);
+  cudaDeviceSynchronize();
+  cudaMemcpy(h_retval, d_retval, num_blocks*sizeof(int), cudaMemcpyDeviceToHost);
+  
+  int sum_result = 0;
+  for(int i=0;i<num_blocks;i++) {
+    sum_result += h_retval[i];
+  }
+
+  cudaFree(d_retval);
+  free(h_retval);
+  return sum_result;
 }
 
 /// set value with pattern
@@ -1197,12 +1240,13 @@ double min_local_kernel(int n, double* d1)
 int all_positive_w_pattern_kernel(int n, const double* d1, const double* id)
 {
   // TODO: how to avoid this temp vec?
-  thrust::device_vector<double> v_temp(n);
-  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+//  thrust::device_vector<double> v_temp(n);
+//  double* dv_ptr = thrust::raw_pointer_cast(v_temp.data());
+//  is_posive_w_pattern_kernel(n, dv_ptr, d1, id);
+//  return thrust::reduce(thrust::device, v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
 
-  hiop::cuda::is_posive_w_pattern_kernel(n, dv_ptr, d1, id);
-  
-  return thrust::reduce(thrust::device, v_temp.begin(), v_temp.end(), (int)0, thrust::plus<int>());
+  int irev = hiop::cuda::is_posive_w_pattern_kernel(n, d1, id);
+  return irev;
 }
 
 /** @brief compute min(d1) for selected elements*/

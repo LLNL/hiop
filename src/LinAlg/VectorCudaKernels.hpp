@@ -159,8 +159,8 @@ void add_linear_damping_term_kernel(int n_local,
                                     double ct);
 
 /** @brief y[i] = 1.0 if x[i] is positive and id[i] = 1.0, otherwise y[i] = 0 */
-void is_posive_w_pattern_kernel(int n_local,
-                                double* yd,
+int is_posive_w_pattern_kernel(int n_local,
+//                                double* yd,
                                 const double* xd,
                                 const double* id);
 
