@@ -340,7 +340,7 @@ bool hiopKKTLinSysCurvCheck::factorize()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-    if(hovScalars < nlp_->options->GetInteger("verbosity_level")) {
+    if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
       nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e (ic %d)\n",
                         delta_wx_->infnorm(), delta_cc_->infnorm(), num_refactorization); 
     }
@@ -394,7 +394,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-  if(hovScalars < nlp_->options->GetInteger("verbosity_level")) {
+  if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
     nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e \n",
                       delta_wx_->infnorm(), delta_cc_->infnorm()); 
   }
@@ -425,7 +425,7 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       assert(1==continue_re_fact);
     }
 
-    if(hovScalars < nlp_->options->GetInteger("verbosity_level")) {
+    if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
       nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e \n",
                         delta_wx_->infnorm(), delta_cc_->infnorm()); 
     }
