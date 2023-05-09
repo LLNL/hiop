@@ -237,7 +237,16 @@ public:
   hiopLinSolverSymSparseCUSOLVERInnerIR();
   hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
   ~hiopLinSolverSymSparseCUSOLVERInnerIR();
-  int setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, int n, double* d_T, int* d_P, int* d_Q, double* devx, double* devr);
+  int setup(cusparseHandle_t cusparse_handle,
+            cublasHandle_t cublas_handle,
+            cusolverRfHandle_t cusolverrf_handle,
+            int n,
+            double* d_T,
+            int* d_P,
+            int* d_Q,
+            double* devx,
+            double* devr);
+
   int getFinalNumberOfIterations();
   double getFinalResidalNorm();
   double getInitialResidalNorm();
@@ -325,9 +334,9 @@ private:
   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
   void cudaMatvec(double* d_x, double* d_b, std::string option);
 
-  template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
+  template <typename T>
+  void hiopCheckCudaError(T result, const char* const file, int const line);
 
-  // friend class hiopLinSolverSymSparseCUSOLVER;
 };
 
 /**
