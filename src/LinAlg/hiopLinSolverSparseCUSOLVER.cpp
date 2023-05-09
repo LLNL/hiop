@@ -1114,7 +1114,7 @@ namespace hiop
     cusparseCreateDnVec(&vec_x_,  n_, devx, CUDA_R_64F);
     cusparseCreateDnVec(&vec_Ax_, n_, devr, CUDA_R_64F);
     size_t buffer_size;
-    /*checkCudaErrors*/(cusparseSpMV_bufferSize(cusparse_handle_, 
+    checkCudaErrors(cusparseSpMV_bufferSize(cusparse_handle_, 
                                             CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                             &(minusone_),
                                             mat_A_,
@@ -1126,14 +1126,14 @@ namespace hiop
                                             &buffer_size));
 
     cudaDeviceSynchronize();
-    /*checkCudaErrors*/(cudaMalloc(&mv_buffer_, buffer_size));
+    checkCudaErrors(cudaMalloc(&mv_buffer_, buffer_size));
 
     // allocate space for the GPU
 
-    /*checkCudaErrors*/(cudaMalloc(&(d_V_),      n_ * (restart_ + 1) * sizeof(double)));
-    /*checkCudaErrors*/(cudaMalloc(&(d_Z_),      n_ * (restart_ + 1) * sizeof(double)));
-    /*checkCudaErrors*/(cudaMalloc(&(d_rvGPU_),   2 * (restart_ + 1) * sizeof(double)));
-    /*checkCudaErrors*/(cudaMalloc(&(d_Hcolumn_), 2 * (restart_ + 1) * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_V_),      n_ * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_Z_),      n_ * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_rvGPU_),   2 * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_Hcolumn_), 2 * (restart_ + 1) * (restart_ + 1) * sizeof(double)));
 
     // and for the CPU
 
@@ -1150,7 +1150,7 @@ namespace hiop
 
     if(orth_option_ == "cgs2") {
       h_aux_ = new double[restart_ + 1];
-      /*checkCudaErrors*/(cudaMalloc(&(d_H_col_), (restart_ + 1) * sizeof(double)));
+      checkCudaErrors(cudaMalloc(&(d_H_col_), (restart_ + 1) * sizeof(double)));
     }
 
     if(orth_option_ == "mgs_pm") {
@@ -1682,6 +1682,23 @@ namespace hiop
         break;
     } // switch
   } // GramSchmidt
+
+  // Error checking utility for CUDA
+  // KS: might later become part of src/Utils, putting it here for now
+  template <typename T>
+  void hiopLinSolverSymSparseCUSOLVERInnerIR::hiopCheckCudaError(T result,
+                                                          const char* const file,
+                                                          int const line)
+  {
+    if(result) {
+      fprintf(stdout, 
+                        "CUDA error at %s:%d, error# %d\n", 
+                        file, 
+                        line, 
+                        result);
+      assert(false);
+    }
+  }
 
 
 

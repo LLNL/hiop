@@ -325,6 +325,8 @@ private:
   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
   void cudaMatvec(double* d_x, double* d_b, std::string option);
 
+  template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
+
   // friend class hiopLinSolverSymSparseCUSOLVER;
 };
 
