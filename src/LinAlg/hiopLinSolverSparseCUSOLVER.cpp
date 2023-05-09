@@ -990,63 +990,64 @@ namespace hiop
   // Experimental: setup the iterative refinement
   void hiopLinSolverSymSparseCUSOLVER::IRsetup()
   {
-    ir_->cusparse_handle_ = handle_;
-    ir_->cublas_handle_ = handle_cublas_;
-    ir_->cusolverrf_handle_ = handle_rf_;
-    ir_->n_ = n_;
+    ir_->setup(handle_, handle_cublas_, handle_rf_, d_T_, d_P_, d_Q_, devx_, devr_);
+    // ir_->cusparse_handle_ = handle_;
+    // ir_->cublas_handle_ = handle_cublas_;
+    // ir_->cusolverrf_handle_ = handle_rf_;
+    // ir_->n_ = n_;
 
-    // only set pointers
-    ir_->d_T_ = d_T_;
-    ir_->d_P_ = d_P_;
-    ir_->d_Q_ = d_Q_;
+    // // only set pointers
+    // ir_->d_T_ = d_T_;
+    // ir_->d_P_ = d_P_;
+    // ir_->d_Q_ = d_Q_;
 
-    // setup matvec
+    // // setup matvec
 
-    cusparseCreateDnVec(&ir_->vec_x_, n_, devx_, CUDA_R_64F);
-    cusparseCreateDnVec(&ir_->vec_Ax_, n_, devr_, CUDA_R_64F);
-    size_t buffer_size;
-    checkCudaErrors(cusparseSpMV_bufferSize(ir_->cusparse_handle_, 
-                                            CUSPARSE_OPERATION_NON_TRANSPOSE, 
-                                            &(ir_->minusone_),
-                                            ir_->mat_A_,
-                                            ir_->vec_x_,
-                                            &(ir_->one_),
-                                            ir_->vec_Ax_,
-                                            CUDA_R_64F,
-                                            CUSPARSE_MV_ALG_DEFAULT,
-                                            &buffer_size));
+    // cusparseCreateDnVec(&ir_->vec_x_, n_, devx_, CUDA_R_64F);
+    // cusparseCreateDnVec(&ir_->vec_Ax_, n_, devr_, CUDA_R_64F);
+    // size_t buffer_size;
+    // checkCudaErrors(cusparseSpMV_bufferSize(ir_->cusparse_handle_, 
+    //                                         CUSPARSE_OPERATION_NON_TRANSPOSE, 
+    //                                         &(ir_->minusone_),
+    //                                         ir_->mat_A_,
+    //                                         ir_->vec_x_,
+    //                                         &(ir_->one_),
+    //                                         ir_->vec_Ax_,
+    //                                         CUDA_R_64F,
+    //                                         CUSPARSE_MV_ALG_DEFAULT,
+    //                                         &buffer_size));
 
-    cudaDeviceSynchronize();
-    checkCudaErrors(cudaMalloc(&ir_->mv_buffer_, buffer_size));
+    // cudaDeviceSynchronize();
+    // checkCudaErrors(cudaMalloc(&ir_->mv_buffer_, buffer_size));
 
-    // allocate space for the GPU
+    // // allocate space for the GPU
 
-    checkCudaErrors(cudaMalloc(&(ir_->d_V_), n_ * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_Z_), n_ * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_rvGPU_), 2 * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_Hcolumn_), 2 * (ir_->restart_ + 1) * (ir_->restart_ + 1) * sizeof(double)));
+    // checkCudaErrors(cudaMalloc(&(ir_->d_V_), n_ * (ir_->restart_ + 1) * sizeof(double)));
+    // checkCudaErrors(cudaMalloc(&(ir_->d_Z_), n_ * (ir_->restart_ + 1) * sizeof(double)));
+    // checkCudaErrors(cudaMalloc(&(ir_->d_rvGPU_), 2 * (ir_->restart_ + 1) * sizeof(double)));
+    // checkCudaErrors(cudaMalloc(&(ir_->d_Hcolumn_), 2 * (ir_->restart_ + 1) * (ir_->restart_ + 1) * sizeof(double)));
 
-    // and for the CPU
+    // // and for the CPU
 
-    ir_->h_H_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
-    ir_->h_c_ = new double[ir_->restart_];      // needed for givens
-    ir_->h_s_ = new double[ir_->restart_];      // same
-    ir_->h_rs_ = new double[ir_->restart_ + 1]; // for residual norm history
+    // ir_->h_H_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
+    // ir_->h_c_ = new double[ir_->restart_];      // needed for givens
+    // ir_->h_s_ = new double[ir_->restart_];      // same
+    // ir_->h_rs_ = new double[ir_->restart_ + 1]; // for residual norm history
 
-    // for specific orthogonalization options, need a little more memory
-    if(ir_->orth_option_ == "mgs_two_synch" || ir_->orth_option_ == "mgs_pm") {
-      ir_->h_L_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
-      ir_->h_rv_ = new double[ir_->restart_ + 1];
-    }
+    // // for specific orthogonalization options, need a little more memory
+    // if(ir_->orth_option_ == "mgs_two_synch" || ir_->orth_option_ == "mgs_pm") {
+    //   ir_->h_L_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
+    //   ir_->h_rv_ = new double[ir_->restart_ + 1];
+    // }
 
-    if(ir_->orth_option_ == "cgs2") {
-      ir_->h_aux_ = new double[ir_->restart_ + 1];
-      checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_ + 1) * sizeof(double)));
-    }
+    // if(ir_->orth_option_ == "cgs2") {
+    //   ir_->h_aux_ = new double[ir_->restart_ + 1];
+    //   checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_ + 1) * sizeof(double)));
+    // }
 
-    if(ir_->orth_option_ == "mgs_pm") {
-      ir_->h_aux_ = new double[ir_->restart_ + 1];
-    }
+    // if(ir_->orth_option_ == "mgs_pm") {
+    //   ir_->h_aux_ = new double[ir_->restart_ + 1];
+    // }
   }
   // Experimental code ends here
 
@@ -1094,6 +1095,68 @@ namespace hiop
     if(orth_option_ == "mgs_pm" || orth_option_ == "cgs2") {
       delete[] h_aux_;
     }
+  }
+
+  int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, double* d_T, int* d_P, int* d_Q, double* devx, double* devr)
+  {
+    cusparse_handle_ = cusparse_handle;
+    cublas_handle_ = cublas_handle;
+    cusolverrf_handle_ = cusolverrf_handle;
+    n_ = n_;
+
+    // only set pointers
+    d_T_ = d_T;
+    d_P_ = d_P;
+    d_Q_ = d_Q;
+
+    // setup matvec
+
+    cusparseCreateDnVec(&vec_x_,  n_, devx, CUDA_R_64F);
+    cusparseCreateDnVec(&vec_Ax_, n_, devr, CUDA_R_64F);
+    size_t buffer_size;
+    /*checkCudaErrors*/(cusparseSpMV_bufferSize(cusparse_handle_, 
+                                            CUSPARSE_OPERATION_NON_TRANSPOSE, 
+                                            &(minusone_),
+                                            mat_A_,
+                                            vec_x_,
+                                            &(one_),
+                                            vec_Ax_,
+                                            CUDA_R_64F,
+                                            CUSPARSE_MV_ALG_DEFAULT,
+                                            &buffer_size));
+
+    cudaDeviceSynchronize();
+    /*checkCudaErrors*/(cudaMalloc(&mv_buffer_, buffer_size));
+
+    // allocate space for the GPU
+
+    /*checkCudaErrors*/(cudaMalloc(&(d_V_),      n_ * (restart_ + 1) * sizeof(double)));
+    /*checkCudaErrors*/(cudaMalloc(&(d_Z_),      n_ * (restart_ + 1) * sizeof(double)));
+    /*checkCudaErrors*/(cudaMalloc(&(d_rvGPU_),   2 * (restart_ + 1) * sizeof(double)));
+    /*checkCudaErrors*/(cudaMalloc(&(d_Hcolumn_), 2 * (restart_ + 1) * (restart_ + 1) * sizeof(double)));
+
+    // and for the CPU
+
+    h_H_  = new double[restart_ * (restart_ + 1)];
+    h_c_  = new double[restart_];      // needed for givens
+    h_s_  = new double[restart_];      // same
+    h_rs_ = new double[restart_ + 1]; // for residual norm history
+
+    // for specific orthogonalization options, need a little more memory
+    if(orth_option_ == "mgs_two_synch" || orth_option_ == "mgs_pm") {
+      h_L_  = new double[restart_ * (restart_ + 1)];
+      h_rv_ = new double[restart_ + 1];
+    }
+
+    if(orth_option_ == "cgs2") {
+      h_aux_ = new double[restart_ + 1];
+      /*checkCudaErrors*/(cudaMalloc(&(d_H_col_), (restart_ + 1) * sizeof(double)));
+    }
+
+    if(orth_option_ == "mgs_pm") {
+      h_aux_ = new double[restart_ + 1];
+    }
+    return 0;
   }
 
   double hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm()
