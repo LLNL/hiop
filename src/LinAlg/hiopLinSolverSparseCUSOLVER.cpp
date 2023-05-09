@@ -128,36 +128,36 @@ namespace hiop
     if ((maxit_test < 0) || (maxit_test > 1000)){
       nlp_->log->printf(hovWarning, 
                         "Wrong maxit value: %d. Use int maxit value between 0 and 1000. Setting default (50)  ...\n",
-                        ir_->maxit_);
+                        ir_->maxit());
       maxit_test = 50;
     }
     use_ir_ = "no";
     if(maxit_test > 0){
       use_ir_ = "yes";
       ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
-      ir_->maxit_ = maxit_test;
+      ir_->maxit() = maxit_test;
     } 
     if(use_ir_ == "yes") {
       if((refact_ == "rf")) {
 
-        ir_->restart_ =  nlp_->options->GetInteger("ir_inner_restart");
+        ir_->restart() =  nlp_->options->GetInteger("ir_inner_restart");
 
-        if ((ir_->restart_ <0) || (ir_->restart_ >100)){
+        if ((ir_->restart() <0) || (ir_->restart() >100)){
           nlp_->log->printf(hovWarning, 
                             "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            ir_->restart_);
-          ir_->restart_ = 20;
+                            ir_->restart());
+          ir_->restart() = 20;
         }
 
 
-        ir_->tol_  = nlp_->options->GetNumeric("ir_inner_tol");
-        if ((ir_->tol_ <0) || (ir_->tol_ >1)){
+        ir_->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
+        if ((ir_->tol() <0) || (ir_->tol() >1)){
           nlp_->log->printf(hovWarning, 
                             "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            ir_->tol_);
-          ir_->tol_ = 1e-12;
+                            ir_->tol());
+          ir_->tol() = 1e-12;
         }
-        ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        ir_->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
          * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
@@ -175,22 +175,22 @@ namespace hiop
          * 
          * 3) A recently submitted paper by Stephen Thomas (Thomas 202*) takes the triangular solve idea further and uses a different approximation for 
          * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
-         * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephe's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
+         * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephen's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
          */ 
-        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch" && ir_->orth_option_ != "mgs_pm") {
+        if(ir_->orth_option() != "mgs" && ir_->orth_option() != "cgs2" && ir_->orth_option() != "mgs_two_synch" && ir_->orth_option() != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
                             "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
                             use_ir_.c_str());
-          ir_->orth_option_ = "mgs";
+          ir_->orth_option() = "mgs";
         }
 
-        ir_->conv_cond_ =  nlp_->options->GetInteger("ir_inner_conv_cond");
+        ir_->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
 
-        if ((ir_->conv_cond_ <0) || (ir_->conv_cond_ >2)){
+        if ((ir_->conv_cond() <0) || (ir_->conv_cond() >2)){
           nlp_->log->printf(hovWarning, 
                             "Wrong IR convergence condition: %d. Use int value: 0, 1 or 2. Setting default (0)  ...\n",
-                            ir_->conv_cond_);
-          ir_->conv_cond_ = 0;
+                            ir_->conv_cond());
+          ir_->conv_cond() = 0;
         }
 
       } else {
@@ -464,8 +464,8 @@ namespace hiop
     checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
-    if (use_ir_ == "yes"){
-      cusparseCreateCsr(&(ir_->mat_A_), 
+    if(use_ir_ == "yes") {
+      cusparseCreateCsr(&(ir_->mat_A()), 
                         n_, 
                         n_, 
                         nnz_,
@@ -1028,67 +1028,7 @@ namespace hiop
   // Experimental: setup the iterative refinement
   void hiopLinSolverSymSparseCUSOLVER::IRsetup()
   {
-    ir_->cusparse_handle_ = handle_;
-    ir_->cublas_handle_ = handle_cublas_;
-    ir_->cusolverrf_handle_ = handle_rf_;
-    ir_->cusolver_handle_ = handle_cusolver_;
-    ir_->n_ = n_;
-    ir_->nnz_ = nnz_;
-
-    ir_->dia_ = dia_;
-    ir_->da_ = da_;
-    // only set pointers
-    ir_->d_T_ = d_T_;
-    ir_->d_P_ = d_P_;
-    ir_->d_Q_ = d_Q_;
-
-    // setup matvec
-
-    cusparseCreateDnVec(&ir_->vec_x_, n_, devx_, CUDA_R_64F);
-    cusparseCreateDnVec(&ir_->vec_Ax_, n_, devr_, CUDA_R_64F);
-    size_t buffer_size;
-    checkCudaErrors(cusparseSpMV_bufferSize(ir_->cusparse_handle_, 
-                                            CUSPARSE_OPERATION_NON_TRANSPOSE, 
-                                            &(ir_->minusone_),
-                                            ir_->mat_A_,
-                                            ir_->vec_x_,
-                                            &(ir_->one_),
-                                            ir_->vec_Ax_,
-                                            CUDA_R_64F,
-                                            CUSPARSE_SPMV_CSR_ALG2,
-                                            &buffer_size));
-
-    cudaDeviceSynchronize();
-    checkCudaErrors(cudaMalloc(&ir_->mv_buffer_, buffer_size));
-
-    // allocate space for the GPU
-
-    checkCudaErrors(cudaMalloc(&(ir_->d_V_), n_ * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_Z_), n_ * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_rvGPU_), 2 * (ir_->restart_ + 1) * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(ir_->d_Hcolumn_), 2 * (ir_->restart_ + 1) * (ir_->restart_ + 1) * sizeof(double)));
-
-    // and for the CPU
-
-    ir_->h_H_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
-    ir_->h_c_ = new double[ir_->restart_];      // needed for givens
-    ir_->h_s_ = new double[ir_->restart_];      // same
-    ir_->h_rs_ = new double[ir_->restart_ + 1]; // for residual norm history
-
-    // for specific orthogonalization options, need a little more memory
-    if(ir_->orth_option_ == "mgs_two_synch" || ir_->orth_option_ == "mgs_pm") {
-      ir_->h_L_ = new double[ir_->restart_ * (ir_->restart_ + 1)];
-      ir_->h_rv_ = new double[ir_->restart_ + 1];
-    }
-
-    if(ir_->orth_option_ == "cgs2") {
-      ir_->h_aux_ = new double[ir_->restart_ + 1];
-      checkCudaErrors(cudaMalloc(&(ir_->d_H_col_), (ir_->restart_ + 1) * sizeof(double)));
-    }
-
-    if(ir_->orth_option_ == "mgs_pm") {
-      ir_->h_aux_ = new double[ir_->restart_ + 1];
-    }
+    ir_->setup(handle_, handle_cublas_, handle_rf_, n_, d_T_, d_P_, d_Q_, devx_, devr_);
   }
   // Experimental code ends here
 
@@ -1137,6 +1077,76 @@ namespace hiop
     if(orth_option_ == "mgs_pm" || orth_option_ == "cgs2") {
       delete[] h_aux_;
     }
+  }
+
+  int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle,
+                                                   cublasHandle_t cublas_handle,
+                                                   cusolverRfHandle_t cusolverrf_handle,
+                                                   int n,
+                                                   double* d_T,
+                                                   int* d_P,
+                                                   int* d_Q,
+                                                   double* devx,
+                                                   double* devr)
+  {
+    cusparse_handle_ = cusparse_handle;
+    cublas_handle_ = cublas_handle;
+    cusolverrf_handle_ = cusolverrf_handle;
+    n_ = n;
+
+    // only set pointers
+    d_T_ = d_T;
+    d_P_ = d_P;
+    d_Q_ = d_Q;
+
+    // setup matvec
+
+    cusparseCreateDnVec(&vec_x_,  n_, devx, CUDA_R_64F);
+    cusparseCreateDnVec(&vec_Ax_, n_, devr, CUDA_R_64F);
+    size_t buffer_size;
+    checkCudaErrors(cusparseSpMV_bufferSize(cusparse_handle_, 
+                                            CUSPARSE_OPERATION_NON_TRANSPOSE, 
+                                            &(minusone_),
+                                            mat_A_,
+                                            vec_x_,
+                                            &(one_),
+                                            vec_Ax_,
+                                            CUDA_R_64F,
+                                            CUSPARSE_MV_ALG_DEFAULT,
+                                            &buffer_size));
+
+    cudaDeviceSynchronize();
+    checkCudaErrors(cudaMalloc(&mv_buffer_, buffer_size));
+
+    // allocate space for the GPU
+
+    checkCudaErrors(cudaMalloc(&(d_V_),      n_ * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_Z_),      n_ * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_rvGPU_),   2 * (restart_ + 1) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&(d_Hcolumn_), 2 * (restart_ + 1) * (restart_ + 1) * sizeof(double)));
+
+    // and for the CPU
+
+    h_H_  = new double[restart_ * (restart_ + 1)];
+    h_c_  = new double[restart_];      // needed for givens
+    h_s_  = new double[restart_];      // same
+    h_rs_ = new double[restart_ + 1]; // for residual norm history
+
+    // for specific orthogonalization options, need a little more memory
+    if(orth_option_ == "mgs_two_synch" || orth_option_ == "mgs_pm") {
+      h_L_  = new double[restart_ * (restart_ + 1)];
+      h_rv_ = new double[restart_ + 1];
+    }
+
+    if(orth_option_ == "cgs2") {
+      h_aux_ = new double[restart_ + 1];
+      checkCudaErrors(cudaMalloc(&(d_H_col_), (restart_ + 1) * sizeof(double)));
+    }
+
+    if(orth_option_ == "mgs_pm") {
+      h_aux_ = new double[restart_ + 1];
+    }
+    return 0;
   }
 
   double hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm()
@@ -1214,13 +1224,13 @@ namespace hiop
         }
       }
       int exit_cond = 0;
-      if (conv_cond_ == 0){
+      if (conv_cond() == 0){
         exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON));
       } else {
-        if (conv_cond_ == 1){
+        if (conv_cond() == 1){
           exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_));
         } else {
-          if (conv_cond_ == 2){
+          if (conv_cond() == 2){
             exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
           }
         }
@@ -1702,6 +1712,25 @@ namespace hiop
         break;
     } // switch
   } // GramSchmidt
+
+  // Error checking utility for CUDA
+  // KS: might later become part of src/Utils, putting it here for now
+  template <typename T>
+  void hiopLinSolverSymSparseCUSOLVERInnerIR::hiopCheckCudaError(T result,
+                                                                 const char* const file,
+                                                                 int const line)
+  {
+#ifdef DEBUG
+    if(result) {
+      fprintf(stdout, 
+              "CUDA error at %s:%d, error# %d\n", 
+              file, 
+              line, 
+              result);
+      assert(false);
+    }
+#endif
+  }
 
 
 

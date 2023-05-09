@@ -228,9 +228,10 @@ private:
   hiopMatrixSparse* M_host_;
 };
 
-// Forward declaration of LU class
-class hiopLinSolverSymSparseCUSOLVERLU;
-
+/**
+ * @brief Iterative refinement class
+ * 
+ */
 class hiopLinSolverSymSparseCUSOLVERInnerIR
 {
 
@@ -238,12 +239,53 @@ public:
   hiopLinSolverSymSparseCUSOLVERInnerIR();
   hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
   ~hiopLinSolverSymSparseCUSOLVERInnerIR();
+  int setup(cusparseHandle_t cusparse_handle,
+            cublasHandle_t cublas_handle,
+            cusolverRfHandle_t cusolverrf_handle,
+            int n,
+            double* d_T,
+            int* d_P,
+            int* d_Q,
+            double* devx,
+            double* devr);
+
   int getFinalNumberOfIterations();
   double getFinalResidalNorm();
   double getInitialResidalNorm();
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
   void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
+
+  // Simple accessors
+  int& maxit()
+  {
+    return maxit_;
+  }
+
+  double& tol()
+  {
+    return tol_;
+  }
+
+  std::string& orth_option()
+  {
+    return orth_option_;
+  }
+
+  int& restart()
+  {
+    return restart_;
+  }
+
+  cusparseSpMatDescr_t& mat_A()
+  {
+    return mat_A_;
+  }
+
+  int& conv_cond()
+  {
+    return conv_cond_;
+  }
 
 private:
   // Krylov vectors
@@ -308,13 +350,16 @@ private:
   double vectorInfNrm(int n, double* d_v);
   //end of testing
   
-  // not used (yet)
 
-  hiopLinSolverSymSparseCUSOLVERLU* LU_data;
-  friend class hiopLinSolverSymSparseCUSOLVER;
+  template <typename T>
+  void hiopCheckCudaError(T result, const char* const file, int const line);
+
 };
 
-// class to store and operatate on LU data: will be needed in the future
+/**
+ * @brief Class to store and operatate on LU data: will be needed in the future
+ * 
+ */
 class hiopLinSolverSymSparseCUSOLVERLU
 {
 public:
@@ -328,49 +373,10 @@ public:
   void intermediateCleanup();
 
 private:
-  // buffers needed for tri solves
-  void* LBuffer_;
-  void* UBuffer_;
-  // needed for triangular solves
-  cusparseMatDescr_t descrL_;
-  cusparseMatDescr_t descrU_;
-  csrsv2Info_t infoL_;
-  csrsv2Info_t infoU_;
-  cusparseSolvePolicy_t policy_;
 
-  // matrix data of L and U factors
-  double* d_Lx_;
-  int* d_Lp_;
-  int* d_Li_;
-
-  double* d_Ux_;
-  int* d_Up_;
-  int* d_Ui_;
-
-  // matrix CPU data - this is needed to avoid allocating over and over and over
-
-  double* Lx_;
-  int* Lp_;
-  int* Li_;
-
-  double* Ux_;
-  int* Up_;
-  int* Ui_;
-
-  // permutation vectors
-  int* d_P_ = NULL;
-  int* d_Q_ = NULL;
-
-  // aux vectors;
-  double* d_x3_;
-  double* d_xtemp_;
-  // solve or not using this data
-  // if manual is 0, then RfSolve() is used
-  int manual_ = 1;
-
-  int analysis_done_ = 0;
-  friend class hiopLinSolverSymSparseCUSOLVER;
 };
+
+
 } // namespace hiop
 
 #endif
