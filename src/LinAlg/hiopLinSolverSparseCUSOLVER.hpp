@@ -226,9 +226,10 @@ private:
   hiopMatrixSparse* M_host_;
 };
 
-// Forward declaration of LU class
-class hiopLinSolverSymSparseCUSOLVERLU;
-
+/**
+ * @brief Iterative refinement class
+ * 
+ */
 class hiopLinSolverSymSparseCUSOLVERInnerIR
 {
 
@@ -297,13 +298,13 @@ private:
   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
   void cudaMatvec(double* d_x, double* d_b, std::string option);
 
-  // not used (yet)
-
-  hiopLinSolverSymSparseCUSOLVERLU* LU_data;
   friend class hiopLinSolverSymSparseCUSOLVER;
 };
 
-// class to store and operatate on LU data: will be needed in the future
+/**
+ * @brief Class to store and operatate on LU data: will be needed in the future
+ * 
+ */
 class hiopLinSolverSymSparseCUSOLVERLU
 {
 public:
@@ -317,49 +318,10 @@ public:
   void intermediateCleanup();
 
 private:
-  // buffers needed for tri solves
-  void* LBuffer_;
-  void* UBuffer_;
-  // needed for triangular solves
-  cusparseMatDescr_t descrL_;
-  cusparseMatDescr_t descrU_;
-  csrsv2Info_t infoL_;
-  csrsv2Info_t infoU_;
-  cusparseSolvePolicy_t policy_;
 
-  // matrix data of L and U factors
-  double* d_Lx_;
-  int* d_Lp_;
-  int* d_Li_;
-
-  double* d_Ux_;
-  int* d_Up_;
-  int* d_Ui_;
-
-  // matrix CPU data - this is needed to avoid allocating over and over and over
-
-  double* Lx_;
-  int* Lp_;
-  int* Li_;
-
-  double* Ux_;
-  int* Up_;
-  int* Ui_;
-
-  // permutation vectors
-  int* d_P_ = NULL;
-  int* d_Q_ = NULL;
-
-  // aux vectors;
-  double* d_x3_;
-  double* d_xtemp_;
-  // solve or not using this data
-  // if manual is 0, then RfSolve() is used
-  int manual_ = 1;
-
-  int analysis_done_ = 0;
-  friend class hiopLinSolverSymSparseCUSOLVER;
 };
+
+
 } // namespace hiop
 
 #endif
