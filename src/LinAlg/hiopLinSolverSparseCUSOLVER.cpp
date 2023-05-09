@@ -990,7 +990,7 @@ namespace hiop
   // Experimental: setup the iterative refinement
   void hiopLinSolverSymSparseCUSOLVER::IRsetup()
   {
-    ir_->setup(handle_, handle_cublas_, handle_rf_, d_T_, d_P_, d_Q_, devx_, devr_);
+    ir_->setup(handle_, handle_cublas_, handle_rf_, n_, d_T_, d_P_, d_Q_, devx_, devr_);
     // ir_->cusparse_handle_ = handle_;
     // ir_->cublas_handle_ = handle_cublas_;
     // ir_->cusolverrf_handle_ = handle_rf_;
@@ -1097,12 +1097,12 @@ namespace hiop
     }
   }
 
-  int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, double* d_T, int* d_P, int* d_Q, double* devx, double* devr)
+  int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, int n, double* d_T, int* d_P, int* d_Q, double* devx, double* devr)
   {
     cusparse_handle_ = cusparse_handle;
     cublas_handle_ = cublas_handle;
     cusolverrf_handle_ = cusolverrf_handle;
-    n_ = n_;
+    n_ = n;
 
     // only set pointers
     d_T_ = d_T;

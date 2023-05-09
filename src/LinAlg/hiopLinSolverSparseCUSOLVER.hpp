@@ -237,7 +237,7 @@ public:
   hiopLinSolverSymSparseCUSOLVERInnerIR();
   hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
   ~hiopLinSolverSymSparseCUSOLVERInnerIR();
-  int setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, double* d_T, int* d_P, int* d_Q, double* devx, double* devr);
+  int setup(cusparseHandle_t cusparse_handle, cublasHandle_t cublas_handle, cusolverRfHandle_t cusolverrf_handle, int n, double* d_T, int* d_P, int* d_Q, double* devx, double* devr);
   int getFinalNumberOfIterations();
   double getFinalResidalNorm();
   double getInitialResidalNorm();
