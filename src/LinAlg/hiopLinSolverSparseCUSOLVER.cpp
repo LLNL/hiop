@@ -126,36 +126,36 @@ namespace hiop
     if ((maxit_test < 0) || (maxit_test > 1000)){
       nlp_->log->printf(hovWarning, 
                         "Wrong maxit value: %d. Use int maxit value between 0 and 1000. Setting default (50)  ...\n",
-                        ir_->maxit_);
+                        ir_->maxit());
       maxit_test = 50;
     }
     use_ir_ = "no";
     if(maxit_test > 0){
       use_ir_ = "yes";
       ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
-      ir_->maxit_ = maxit_test;
+      ir_->maxit() = maxit_test;
     } 
     if(use_ir_ == "yes") {
       if(refact_ == "rf") {
 
-        ir_->restart_ =  nlp_->options->GetInteger("ir_inner_restart");
+        ir_->restart() =  nlp_->options->GetInteger("ir_inner_restart");
 
-        if ((ir_->restart_ <0) || (ir_->restart_ >100)){
+        if ((ir_->restart() <0) || (ir_->restart() >100)){
           nlp_->log->printf(hovWarning, 
                             "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            ir_->restart_);
-          ir_->restart_ = 20;
+                            ir_->restart());
+          ir_->restart() = 20;
         }
 
 
-        ir_->tol_  = nlp_->options->GetNumeric("ir_inner_tol");
-        if ((ir_->tol_ <0) || (ir_->tol_ >1)){
+        ir_->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
+        if ((ir_->tol() <0) || (ir_->tol() >1)){
           nlp_->log->printf(hovWarning, 
                             "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            ir_->tol_);
-          ir_->tol_ = 1e-12;
+                            ir_->tol());
+          ir_->tol() = 1e-12;
         }
-        ir_->orth_option_ = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        ir_->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
          * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
@@ -175,11 +175,11 @@ namespace hiop
          * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
          * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephe's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
          */ 
-        if(ir_->orth_option_ != "mgs" && ir_->orth_option_ != "cgs2" && ir_->orth_option_ != "mgs_two_synch" && ir_->orth_option_ != "mgs_pm") {
+        if(ir_->orth_option() != "mgs" && ir_->orth_option() != "cgs2" && ir_->orth_option() != "mgs_two_synch" && ir_->orth_option() != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
                             "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
                             use_ir_.c_str());
-          ir_->orth_option_ = "mgs";
+          ir_->orth_option() = "mgs";
         }
       } else {
         nlp_->log->printf(hovWarning, 
@@ -428,7 +428,7 @@ namespace hiop
     checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
     if (use_ir_ == "yes"){
-      cusparseCreateCsr(&(ir_->mat_A_), 
+      cusparseCreateCsr(&(ir_->mat_A()), 
                         n_, 
                         n_, 
                         nnz_,

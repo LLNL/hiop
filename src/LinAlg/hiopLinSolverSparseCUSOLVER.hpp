@@ -244,6 +244,32 @@ public:
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
 
+  // Simple accessors
+  int& maxit()
+  {
+    return maxit_;
+  }
+
+  double& tol()
+  {
+    return tol_;
+  }
+
+  std::string& orth_option()
+  {
+    return orth_option_;
+  }
+
+  int& restart()
+  {
+    return restart_;
+  }
+
+  cusparseSpMatDescr_t& mat_A()
+  {
+    return mat_A_;
+  }
+
 private:
   // Krylov vectors
   double* d_V_;
@@ -299,7 +325,7 @@ private:
   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
   void cudaMatvec(double* d_x, double* d_b, std::string option);
 
-  friend class hiopLinSolverSymSparseCUSOLVER;
+  // friend class hiopLinSolverSymSparseCUSOLVER;
 };
 
 /**
