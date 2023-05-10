@@ -136,7 +136,7 @@ namespace hiop
       ir_->maxit_ = maxit_test;
     } 
     if(use_ir_ == "yes") {
-      if(refact_ == "rf") {
+      if((refact_ == "rf")) {
 
         ir_->restart_ =  nlp_->options->GetInteger("ir_inner_restart");
 
@@ -297,6 +297,8 @@ namespace hiop
     } else { // Numeric_ != nullptr OR factorizationSetupSucc_ == 1
       checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       // re-factor here
+
+printf("System size: %d x %d with %d nnz \n", n_, n_, nnz_);
       if(refact_ == "glu") {
         sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
                                          n_,
@@ -366,6 +368,28 @@ namespace hiop
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
+  //evaluate matrix norm and the error
+  //first compute the r
+#if 0
+    cudaMemcpy(&(ir_->d_V_[0]), devr_, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
+  
+    ir_->cudaMatvec(devx_, ir_->d_V_, "residual");
+double rnorm, bnorm, xnorm;
+    rnorm = 0.0;
+    cublasDdot (handle_cublas_,  n_, ir_->d_V_, 1,  ir_->d_V_, 1, &rnorm);
+    cublasDdot (handle_cublas_,  n_, devr_, 1, devr_, 1, &bnorm);
+    cublasDdot (handle_cublas_,  n_, devx_, 1, devx_, 1, &xnorm);
+    //rnorm = ||V_1||
+    rnorm = sqrt(rnorm);
+    bnorm = sqrt(bnorm);
+    xnorm = sqrt(xnorm);
+double Anorm = ir_->matrixAInfNrm();
+double xnorm_inf = ir_->vectorInfNrm(n_, devx_);
+double rnorm_inf = ir_->vectorInfNrm(n_,  ir_->d_V_); 
+printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf));
+#endif
+//end of norm eval
+   
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
@@ -1029,8 +1053,12 @@ namespace hiop
     ir_->cusparse_handle_ = handle_;
     ir_->cublas_handle_ = handle_cublas_;
     ir_->cusolverrf_handle_ = handle_rf_;
+    ir_->cusolver_handle_ = handle_cusolver_;
     ir_->n_ = n_;
-
+    ir_->nnz_ = nnz_;
+    
+    ir_->dia_ = dia_;
+    ir_->da_ = da_;
     // only set pointers
     ir_->d_T_ = d_T_;
     ir_->d_P_ = d_P_;
@@ -1097,6 +1125,7 @@ namespace hiop
   // Parametrized constructor
   hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, 
                                                                                double tol, 
+                                     
                                                                                int maxit)
     : restart_{restart}, 
       maxit_{maxit},
@@ -1147,12 +1176,37 @@ namespace hiop
     return fgmres_iters_;
   }
 
+  
+  double hiopLinSolverSymSparseCUSOLVERInnerIR::matrixAInfNrm()
+  {
+    double nrm;
+    matrix_row_sums(n_, nnz_, dia_, da_, d_Z_); 
+    cusolverSpDnrminf(cusolver_handle_,
+                      n_,
+                      d_Z_,
+                      &nrm,
+                      mv_buffer_  /* at least 8192 bytes */);
+    return nrm;
+  }
+
+  double hiopLinSolverSymSparseCUSOLVERInnerIR::vectorInfNrm(int n, double* d_v)
+  {
+    double nrm; 
+
+    cusolverSpDnrminf(cusolver_handle_,
+                      n,
+                      d_v,
+                      &nrm,
+                      mv_buffer_  /* at least 8192 bytes */);
+    return nrm;
+  }
+
   void hiopLinSolverSymSparseCUSOLVERInnerIR::fgmres(double *d_x, double *d_b)
   {
     int outer_flag = 1;
     int notconv = 1; 
-    int i=0;
-    int it=0;
+    int i = 0;
+    int it = 0;
     int j;
     int k;
     int k1;
@@ -1168,14 +1222,26 @@ namespace hiop
     cudaMatvec(d_x, d_V_, "residual");
 
     rnorm = 0.0;
-    cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
     cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
+    cublasDdot (cublas_handle_,  n_, d_V_, 1, d_V_, 1, &rnorm);
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
     bnorm = sqrt(bnorm);
-
+//printf("NEW SYSTEM \n");
+#if 0
+    cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
+    cublasDdot (cublas_handle_,  n_, d_x, 1, d_x, 1, &xnorm);
+    bnorm = sqrt(bnorm);
+    xnorm = sqrt(xnorm);
+    double Anorm = matrixAInfNrm();
+    double xnorm_inf = vectorInfNrm(n_, d_x);
+    double rnorm_inf = vectorInfNrm(n_, d_V_); 
+    //printf("\t INF norm of matrix A is %16.16e, NSR (MA57): %16.16e, inf norm of x: %16.16e, inf norm of r: %16.16e, residual norm: %16.16e, residual norm scaled by norm of b %16.16e \n", Anorm, rnorm_inf/(Anorm*xnorm_inf), xnorm_inf, rnorm_inf, rnorm, rnorm/bnorm);
     //rnorm = ||V_1||
     //gmres outer loop
+    // error from Arioli and Duff: r/(|A||x|+|b|)< eps
+    printf("\t BEFORE Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf));
+#endif
     while(outer_flag) {
       // check if maybe residual is already small enough?
       if(it == 0) {
@@ -1192,7 +1258,8 @@ namespace hiop
           exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_));
         } else {
           if (conv_cond_ == 2){
-            exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
+          exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
+           //exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) ||  rnorm< (1e-22*(xnorm*Anorm+bnorm)) );
           }
         }
       }
@@ -1289,6 +1356,7 @@ namespace hiop
 
       cudaMemcpy(&d_V_[0], d_b, sizeof(double)*n_, cudaMemcpyDeviceToDevice);
       cudaMatvec(d_x, d_V_, "residual");
+
       rnorm = 0.0;
       cublasDdot(cublas_handle_, n_, d_V_, 1, d_V_, 1, &rnorm);
       // rnorm = ||V_1||
@@ -1301,6 +1369,17 @@ namespace hiop
         fgmres_iters_ = it;
       }
     } // outer while
+#if 0
+    if ( fgmres_iters_ > 0) {
+      xnorm_inf = vectorInfNrm(n_, d_x);
+      rnorm_inf = vectorInfNrm(n_, d_V_); 
+      cublasDdot(cublas_handle_, n_, d_x, 1, d_x, 1, &xnorm);
+      xnorm = sqrt(xnorm);
+   //   printf("\t NSR AFTER: %16.16e residual norm: %16.16e, residual norm scaled by norm of b: %16.16e \n", rnorm_inf/(Anorm*xnorm_inf), final_residual_norm_, final_residual_norm_/bnorm);
+ //   printf("\t Arioli/Duff criterion AFTER: %16.16e \n ", rnorm/(xnorm*Anorm+bnorm));
+    } 
+    printf("\t AFTER Arioli/Duff criterion vs NSR %16.16e : %16.16e fgmres iters: %d \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf), fgmres_iters_);
+#endif
   }
 
   //b-Ax
