@@ -70,17 +70,17 @@ namespace hiop
                                                                  const int& nnz, 
                                                                  hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
-      kRowPtr_{ nullptr }, 
-      jCol_{ nullptr }, 
-      kVal_{ nullptr },
-      index_covert_CSR2Triplet_{ nullptr },
-      index_covert_extra_Diag2CSR_{ nullptr }, 
-      n_{ n },
-      nnz_{ 0 },
-      ordering_{ 1 }, 
-      fact_{ "klu" }, // default
-      refact_{ "glu" }, // default
-      factorizationSetupSucc_{ 0 }
+    kRowPtr_{ nullptr }, 
+    jCol_{ nullptr }, 
+    kVal_{ nullptr },
+    index_covert_CSR2Triplet_{ nullptr },
+    index_covert_extra_Diag2CSR_{ nullptr }, 
+    n_{ n },
+    nnz_{ 0 },
+    ordering_{ 1 }, 
+    fact_{ "klu" }, // default
+    refact_{ "glu" }, // default
+    factorizationSetupSucc_{ 0 }
   {
     // handles
     cusparseCreate(&handle_);
@@ -147,7 +147,7 @@ namespace hiop
           ir_->restart_ = 20;
         }
 
-     
+
         ir_->tol_  = nlp_->options->GetNumeric("ir_inner_tol");
         if ((ir_->tol_ <0) || (ir_->tol_ >1)){
           nlp_->log->printf(hovWarning, 
@@ -298,7 +298,6 @@ namespace hiop
       checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       // re-factor here
 
-printf("System size: %d x %d with %d nnz \n", n_, n_, nnz_);
       if(refact_ == "glu") {
         sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
                                          n_,
@@ -368,28 +367,7 @@ printf("System size: %d x %d with %d nnz \n", n_, n_, nnz_);
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
-  //evaluate matrix norm and the error
-  //first compute the r
-#if 0
-    cudaMemcpy(&(ir_->d_V_[0]), devr_, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
-  
-    ir_->cudaMatvec(devx_, ir_->d_V_, "residual");
-double rnorm, bnorm, xnorm;
-    rnorm = 0.0;
-    cublasDdot (handle_cublas_,  n_, ir_->d_V_, 1,  ir_->d_V_, 1, &rnorm);
-    cublasDdot (handle_cublas_,  n_, devr_, 1, devr_, 1, &bnorm);
-    cublasDdot (handle_cublas_,  n_, devx_, 1, devx_, 1, &xnorm);
-    //rnorm = ||V_1||
-    rnorm = sqrt(rnorm);
-    bnorm = sqrt(bnorm);
-    xnorm = sqrt(xnorm);
-double Anorm = ir_->matrixAInfNrm();
-double xnorm_inf = ir_->vectorInfNrm(n_, devx_);
-double rnorm_inf = ir_->vectorInfNrm(n_,  ir_->d_V_); 
-printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf));
-#endif
-//end of norm eval
-   
+
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
@@ -418,17 +396,11 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
               nlp_->log->printf(hovScalars,
                                 "Running iterative refinement with tol %e\n", ir_tol);
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
-        //experimental code 
-      
-        //end of experimental code
+              //experimental code 
+
+              //end of experimental code
               ir_->fgmres(devr_, devx_);             
 
-#if 0
-              printf("\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
-                                ir_->getInitialResidalNorm(), 
-                                ir_->getFinalResidalNorm(), 
-                                ir_->getFinalNumberOfIterations());
-#endif
               nlp_->log->printf(hovScalars, 
                                 "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
                                 ir_->getInitialResidalNorm(), 
@@ -437,7 +409,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
             }
             // End of Experimental code
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-     
+
 
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
@@ -673,19 +645,19 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                          const char* const file,
-                                                          int const line)
-  {
-    if(result) {
-      nlp_->log->printf(hovError, 
-                        "CUDA error at %s:%d, error# %d\n", 
-                        file, 
-                        line, 
-                        result);
-      assert(false);
+    void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
+                                                            const char* const file,
+                                                            int const line)
+    {
+      if(result) {
+        nlp_->log->printf(hovError, 
+                          "CUDA error at %s:%d, error# %d\n", 
+                          file, 
+                          line, 
+                          result);
+        assert(false);
+      }
     }
-  }
 
   int hiopLinSolverSymSparseCUSOLVER::initializeKLU()
   {
@@ -837,215 +809,215 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
   }
 
   int
-  hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
-  {
-    // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
-    // later
-    const int nnzL = Numeric_->lnz;
-    const int nnzU = Numeric_->unz;
+    hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
+    {
+      // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
+      // later
+      const int nnzL = Numeric_->lnz;
+      const int nnzU = Numeric_->unz;
 
-    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
+      checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
-    int* Lp = new int[n_ + 1];
-    int* Li = new int[nnzL];
-    double* Lx = new double[nnzL];
-    int* Up = new int[n_ + 1];
-    int* Ui = new int[nnzU];
-    double* Ux = new double[nnzU];
+      int* Lp = new int[n_ + 1];
+      int* Li = new int[nnzL];
+      double* Lx = new double[nnzL];
+      int* Up = new int[n_ + 1];
+      int* Ui = new int[nnzU];
+      double* Ux = new double[nnzU];
 
-    int ok = klu_extract(Numeric_, 
-                         Symbolic_, 
-                         Lp, 
-                         Li, 
-                         Lx, 
-                         Up, 
-                         Ui, 
-                         Ux, 
-                         nullptr, 
-                         nullptr, 
-                         nullptr, 
-                         nullptr, 
-                         nullptr,
-                         nullptr,
-                         nullptr,
-                         &Common_);
+      int ok = klu_extract(Numeric_, 
+                           Symbolic_, 
+                           Lp, 
+                           Li, 
+                           Lx, 
+                           Up, 
+                           Ui, 
+                           Ux, 
+                           nullptr, 
+                           nullptr, 
+                           nullptr, 
+                           nullptr, 
+                           nullptr,
+                           nullptr,
+                           nullptr,
+                           &Common_);
 
-    /* CSC */
-    int* d_Lp;
-    int* d_Li;
-    int* d_Up;
-    int* d_Ui;
-    double* d_Lx;
-    double* d_Ux;
-    /* CSR */
-    int* d_Lp_csr;
-    int* d_Li_csr;
-    int* d_Up_csr;
-    int* d_Ui_csr;
-    double* d_Lx_csr;
-    double* d_Ux_csr;
+      /* CSC */
+      int* d_Lp;
+      int* d_Li;
+      int* d_Up;
+      int* d_Ui;
+      double* d_Lx;
+      double* d_Ux;
+      /* CSR */
+      int* d_Lp_csr;
+      int* d_Li_csr;
+      int* d_Up_csr;
+      int* d_Ui_csr;
+      double* d_Lx_csr;
+      double* d_Ux_csr;
 
-    /* allocate CSC */
-    checkCudaErrors(cudaMalloc(&d_Lp, (n_ + 1) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Li, nnzL * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Lx, nnzL * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&d_Up, (n_ + 1) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Ui, nnzU * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Ux, nnzU * sizeof(double)));
+      /* allocate CSC */
+      checkCudaErrors(cudaMalloc(&d_Lp, (n_ + 1) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Li, nnzL * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Lx, nnzL * sizeof(double)));
+      checkCudaErrors(cudaMalloc(&d_Up, (n_ + 1) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Ui, nnzU * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Ux, nnzU * sizeof(double)));
 
-    /* allocate CSR */
-    checkCudaErrors(cudaMalloc(&d_Lp_csr, (n_ + 1) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Li_csr, nnzL * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Lx_csr, nnzL * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&d_Up_csr, (n_ + 1) * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Ui_csr, nnzU * sizeof(int)));
-    checkCudaErrors(cudaMalloc(&d_Ux_csr, nnzU * sizeof(double)));
+      /* allocate CSR */
+      checkCudaErrors(cudaMalloc(&d_Lp_csr, (n_ + 1) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Li_csr, nnzL * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Lx_csr, nnzL * sizeof(double)));
+      checkCudaErrors(cudaMalloc(&d_Up_csr, (n_ + 1) * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Ui_csr, nnzU * sizeof(int)));
+      checkCudaErrors(cudaMalloc(&d_Ux_csr, nnzU * sizeof(double)));
 
-    /* copy CSC to the GPU */
-    checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
+      /* copy CSC to the GPU */
+      checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
 
-    checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
 
-    /* we dont need these any more */
-    delete[] Lp;
-    delete[] Li;
-    delete[] Lx;
-    delete[] Up;
-    delete[] Ui;
-    delete[] Ux;
+      /* we dont need these any more */
+      delete[] Lp;
+      delete[] Li;
+      delete[] Lx;
+      delete[] Up;
+      delete[] Ui;
+      delete[] Ux;
 
-    /* now CSC to CSR using the new cuda 11 awkward way */
-    size_t bufferSizeL;
-    size_t bufferSizeU;
+      /* now CSC to CSR using the new cuda 11 awkward way */
+      size_t bufferSizeL;
+      size_t bufferSizeU;
 
-    cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_, 
-                                                         n_, 
-                                                         n_, 
-                                                         nnzL, 
-                                                         d_Lx, 
-                                                         d_Lp, 
-                                                         d_Li, 
-                                                         d_Lx_csr, 
-                                                         d_Lp_csr,
-                                                         d_Li_csr, 
-                                                         CUDA_R_64F, 
-                                                         CUSPARSE_ACTION_NUMERIC,
-                                                         CUSPARSE_INDEX_BASE_ZERO, 
-                                                         CUSPARSE_CSR2CSC_ALG1, 
-                                                         &bufferSizeL);
+      cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_, 
+                                                           n_, 
+                                                           n_, 
+                                                           nnzL, 
+                                                           d_Lx, 
+                                                           d_Lp, 
+                                                           d_Li, 
+                                                           d_Lx_csr, 
+                                                           d_Lp_csr,
+                                                           d_Li_csr, 
+                                                           CUDA_R_64F, 
+                                                           CUSPARSE_ACTION_NUMERIC,
+                                                           CUSPARSE_INDEX_BASE_ZERO, 
+                                                           CUSPARSE_CSR2CSC_ALG1, 
+                                                           &bufferSizeL);
 
-    csp = cusparseCsr2cscEx2_bufferSize(handle_, 
-                                        n_, 
-                                        n_, 
-                                        nnzU, 
-                                        d_Ux, 
-                                        d_Up, 
-                                        d_Ui, 
-                                        d_Ux_csr, 
-                                        d_Up_csr, 
-                                        d_Ui_csr, 
-                                        CUDA_R_64F,
-                                        CUSPARSE_ACTION_NUMERIC,
-                                        CUSPARSE_INDEX_BASE_ZERO,
-                                        CUSPARSE_CSR2CSC_ALG1,
-                                        &bufferSizeU);
-    /* allocate buffers */
+      csp = cusparseCsr2cscEx2_bufferSize(handle_, 
+                                          n_, 
+                                          n_, 
+                                          nnzU, 
+                                          d_Ux, 
+                                          d_Up, 
+                                          d_Ui, 
+                                          d_Ux_csr, 
+                                          d_Up_csr, 
+                                          d_Ui_csr, 
+                                          CUDA_R_64F,
+                                          CUSPARSE_ACTION_NUMERIC,
+                                          CUSPARSE_INDEX_BASE_ZERO,
+                                          CUSPARSE_CSR2CSC_ALG1,
+                                          &bufferSizeU);
+      /* allocate buffers */
 
-    double* d_workL;
-    double* d_workU;
-    checkCudaErrors(cudaMalloc((void**)&d_workL, bufferSizeL));
-    checkCudaErrors(cudaMalloc((void**)&d_workU, bufferSizeU));
+      double* d_workL;
+      double* d_workU;
+      checkCudaErrors(cudaMalloc((void**)&d_workL, bufferSizeL));
+      checkCudaErrors(cudaMalloc((void**)&d_workU, bufferSizeU));
 
-    /* actual CSC to CSR */
+      /* actual CSC to CSR */
 
-    csp = cusparseCsr2cscEx2(handle_, 
-                             n_, 
-                             n_, 
-                             nnzL, 
-                             d_Lx, 
-                             d_Lp, 
-                             d_Li,
-                             d_Lx_csr, 
-                             d_Lp_csr,
-                             d_Li_csr,
-                             CUDA_R_64F,
-                             CUSPARSE_ACTION_NUMERIC,
-                             CUSPARSE_INDEX_BASE_ZERO,
-                             CUSPARSE_CSR2CSC_ALG1,
-                             d_workL);
+      csp = cusparseCsr2cscEx2(handle_, 
+                               n_, 
+                               n_, 
+                               nnzL, 
+                               d_Lx, 
+                               d_Lp, 
+                               d_Li,
+                               d_Lx_csr, 
+                               d_Lp_csr,
+                               d_Li_csr,
+                               CUDA_R_64F,
+                               CUSPARSE_ACTION_NUMERIC,
+                               CUSPARSE_INDEX_BASE_ZERO,
+                               CUSPARSE_CSR2CSC_ALG1,
+                               d_workL);
 
-    csp = cusparseCsr2cscEx2(handle_,
-                             n_,
-                             n_,
-                             nnzU,
-                             d_Ux, 
-                             d_Up, 
-                             d_Ui, 
-                             d_Ux_csr, 
-                             d_Up_csr, 
-                             d_Ui_csr, 
-                             CUDA_R_64F,
-                             CUSPARSE_ACTION_NUMERIC,
-                             CUSPARSE_INDEX_BASE_ZERO,
-                             CUSPARSE_CSR2CSC_ALG1,
-                             d_workU);
+      csp = cusparseCsr2cscEx2(handle_,
+                               n_,
+                               n_,
+                               nnzU,
+                               d_Ux, 
+                               d_Up, 
+                               d_Ui, 
+                               d_Ux_csr, 
+                               d_Up_csr, 
+                               d_Ui_csr, 
+                               CUDA_R_64F,
+                               CUSPARSE_ACTION_NUMERIC,
+                               CUSPARSE_INDEX_BASE_ZERO,
+                               CUSPARSE_CSR2CSC_ALG1,
+                               d_workU);
 
-    (void)csp; // mute unused variable warnings
+      (void)csp; // mute unused variable warnings
 
-    /* CSC no longer needed, nor the work arrays! */
+      /* CSC no longer needed, nor the work arrays! */
 
-    cudaFree(d_Lp);
-    cudaFree(d_Li);
-    cudaFree(d_Lx);
+      cudaFree(d_Lp);
+      cudaFree(d_Li);
+      cudaFree(d_Lx);
 
-    cudaFree(d_Up);
-    cudaFree(d_Ui);
-    cudaFree(d_Ux);
+      cudaFree(d_Up);
+      cudaFree(d_Ui);
+      cudaFree(d_Ux);
 
-    cudaFree(d_workU);
-    cudaFree(d_workL);
+      cudaFree(d_workU);
+      cudaFree(d_workL);
 
-    /* actual setup */
+      /* actual setup */
 
-    sp_status_ = cusolverRfSetupDevice(n_, 
-                                       nnz_,
-                                       dia_,
-                                       dja_,
-                                       da_,
-                                       nnzL,
-                                       d_Lp_csr,
-                                       d_Li_csr,
-                                       d_Lx_csr,
-                                       nnzU,
-                                       d_Up_csr,
-                                       d_Ui_csr,
-                                       d_Ux_csr,
-                                       d_P_,
-                                       d_Q_,
-                                       handle_rf_);
-    cudaDeviceSynchronize();
-    sp_status_ = cusolverRfAnalyze(handle_rf_);
- 
-    //clean up 
-    cudaFree(d_Lp_csr);
-    cudaFree(d_Li_csr);
-    cudaFree(d_Lx_csr);
-    
-    cudaFree(d_Up_csr);
-    cudaFree(d_Ui_csr);
-    cudaFree(d_Ux_csr);
-    
-    return 0;
-  }
+      sp_status_ = cusolverRfSetupDevice(n_, 
+                                         nnz_,
+                                         dia_,
+                                         dja_,
+                                         da_,
+                                         nnzL,
+                                         d_Lp_csr,
+                                         d_Li_csr,
+                                         d_Lx_csr,
+                                         nnzU,
+                                         d_Up_csr,
+                                         d_Ui_csr,
+                                         d_Ux_csr,
+                                         d_P_,
+                                         d_Q_,
+                                         handle_rf_);
+      cudaDeviceSynchronize();
+      sp_status_ = cusolverRfAnalyze(handle_rf_);
+
+      //clean up 
+      cudaFree(d_Lp_csr);
+      cudaFree(d_Li_csr);
+      cudaFree(d_Lx_csr);
+
+      cudaFree(d_Up_csr);
+      cudaFree(d_Ui_csr);
+      cudaFree(d_Ux_csr);
+
+      return 0;
+    }
 
   // Experimental: setup the iterative refinement
   void hiopLinSolverSymSparseCUSOLVER::IRsetup()
@@ -1056,7 +1028,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
     ir_->cusolver_handle_ = handle_cusolver_;
     ir_->n_ = n_;
     ir_->nnz_ = nnz_;
-    
+
     ir_->dia_ = dia_;
     ir_->da_ = da_;
     // only set pointers
@@ -1125,11 +1097,11 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
   // Parametrized constructor
   hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, 
                                                                                double tol, 
-                                     
+
                                                                                int maxit)
     : restart_{restart}, 
-      maxit_{maxit},
-      tol_{tol}
+    maxit_{maxit},
+    tol_{tol}
   {}
 
   hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
@@ -1141,7 +1113,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
     cudaFree(d_Z_);
     cudaFree(d_rvGPU_);
     cudaFree(d_Hcolumn_);
-     
+
     if(orth_option_ == "cgs2") {
       cudaFree(d_H_col_);
     }
@@ -1176,7 +1148,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
     return fgmres_iters_;
   }
 
-  
+
   double hiopLinSolverSymSparseCUSOLVERInnerIR::matrixAInfNrm()
   {
     double nrm;
@@ -1213,12 +1185,12 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
 
     double t;
     double rnorm;
-   double bnorm;
+    double bnorm;
     // double rnorm_aux;
     double tolrel;
     //V[0] = b-A*x_0
     cudaMemcpy(&(d_V_[0]), d_b, sizeof(double) * n_, cudaMemcpyDeviceToDevice);
-  
+
     cudaMatvec(d_x, d_V_, "residual");
 
     rnorm = 0.0;
@@ -1227,21 +1199,6 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
     bnorm = sqrt(bnorm);
-//printf("NEW SYSTEM \n");
-#if 0
-    cublasDdot (cublas_handle_,  n_, d_b, 1, d_b, 1, &bnorm);
-    cublasDdot (cublas_handle_,  n_, d_x, 1, d_x, 1, &xnorm);
-    bnorm = sqrt(bnorm);
-    xnorm = sqrt(xnorm);
-    double Anorm = matrixAInfNrm();
-    double xnorm_inf = vectorInfNrm(n_, d_x);
-    double rnorm_inf = vectorInfNrm(n_, d_V_); 
-    //printf("\t INF norm of matrix A is %16.16e, NSR (MA57): %16.16e, inf norm of x: %16.16e, inf norm of r: %16.16e, residual norm: %16.16e, residual norm scaled by norm of b %16.16e \n", Anorm, rnorm_inf/(Anorm*xnorm_inf), xnorm_inf, rnorm_inf, rnorm, rnorm/bnorm);
-    //rnorm = ||V_1||
-    //gmres outer loop
-    // error from Arioli and Duff: r/(|A||x|+|b|)< eps
-    printf("\t BEFORE Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf));
-#endif
     while(outer_flag) {
       // check if maybe residual is already small enough?
       if(it == 0) {
@@ -1253,13 +1210,12 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
       int exit_cond = 0;
       if (conv_cond_ == 0){
         exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON));
-      }else {
+      } else {
         if (conv_cond_ == 1){
           exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < tol_));
         } else {
           if (conv_cond_ == 2){
-          exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
-           //exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) ||  rnorm< (1e-22*(xnorm*Anorm+bnorm)) );
+            exit_cond =  ((fabs(rnorm - ZERO) <= EPSILON) || (rnorm < (tol_*bnorm)));
           }
         }
       }
@@ -1271,7 +1227,6 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
         break;
       }
 
-// printf("Residual norm in the beginning of cycle %16.16e, WE NEED %16.16e or BELOW abs %16.16e \n", rnorm, tolrel, tol_);
       // normalize first vector
       t = 1.0 / rnorm;
       cublasDscal(cublas_handle_, n_, &t, d_V_, 1);
@@ -1323,7 +1278,6 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
 
         // residual norm estimate
         rnorm = fabs(h_rs_[i + 1]);
-//printf("it = %d, norm of res: %16.16e \n ", it, rnorm);
         // check convergence
         if(i + 1 >= restart_ || rnorm <= tolrel || it >= maxit_) {
           notconv = 0;
@@ -1360,26 +1314,13 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
       rnorm = 0.0;
       cublasDdot(cublas_handle_, n_, d_V_, 1, d_V_, 1, &rnorm);
       // rnorm = ||V_1||
-//printf("it = %d, norm of res(true) BEFORE SQRT: %16.16e \n ", it, rnorm);
       rnorm = sqrt(rnorm);
-//printf("it = %d, norm of res(true): %16.16e \n ", it, rnorm);
 
       if(!outer_flag) {
         final_residual_norm_ = rnorm;
         fgmres_iters_ = it;
       }
     } // outer while
-#if 0
-    if ( fgmres_iters_ > 0) {
-      xnorm_inf = vectorInfNrm(n_, d_x);
-      rnorm_inf = vectorInfNrm(n_, d_V_); 
-      cublasDdot(cublas_handle_, n_, d_x, 1, d_x, 1, &xnorm);
-      xnorm = sqrt(xnorm);
-   //   printf("\t NSR AFTER: %16.16e residual norm: %16.16e, residual norm scaled by norm of b: %16.16e \n", rnorm_inf/(Anorm*xnorm_inf), final_residual_norm_, final_residual_norm_/bnorm);
- //   printf("\t Arioli/Duff criterion AFTER: %16.16e \n ", rnorm/(xnorm*Anorm+bnorm));
-    } 
-    printf("\t AFTER Arioli/Duff criterion vs NSR %16.16e : %16.16e fgmres iters: %d \n ", rnorm/(xnorm*Anorm+bnorm), rnorm_inf/(Anorm*xnorm_inf), fgmres_iters_);
-#endif
   }
 
   //b-Ax
@@ -1438,9 +1379,9 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
           } else {
             // display error message and set sw = 0;
             /*
-             nlp_->log->printf(hovWarning, 
-                              "Wrong Gram-Schmidt option. Setting default (modified Gram-Schmidt, mgs) ...\n");
-            */
+               nlp_->log->printf(hovWarning, 
+               "Wrong Gram-Schmidt option. Setting default (modified Gram-Schmidt, mgs) ...\n");
+               */
             sw = 0;
           }
         }
@@ -1558,10 +1499,10 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
         break;
         // the two low synch schemes
       case 2:
-	// KS: the kernels are limited by the size of the shared memory on the GPU. If too many vectors in Krylov space, use standard cublas routines.
+        // KS: the kernels are limited by the size of the shared memory on the GPU. If too many vectors in Krylov space, use standard cublas routines.
         // V[1:i]^T[V[i] w]
         if(i < 200) {
-       	  mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
+          mass_inner_product_two_vectors(n_, i, &d_V_[i * n_],&d_V_[(i+1) * n_], d_V_, d_rvGPU_);
         } else {
           cublasDgemm(cublas_handle_,
                       CUBLAS_OP_T,
@@ -1577,7 +1518,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
                       &zero,
                       d_rvGPU_,//c
                       i+1);//ldc 
-	      } 
+        } 
         // copy rvGPU to L
         cudaMemcpy(&h_L_[(i) * (restart_ + 1)], 
                    d_rvGPU_, 
@@ -1751,7 +1692,7 @@ printf("\t GLU Arioli/Duff criterion vs NSR %16.16e : %16.16e \n ", rnorm/(xnorm
         break;
 
       default:
-          assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
+        assert(0 && "Iterative refinement failed, wrong orthogonalization.\n");
         break;
     } // switch
   } // GramSchmidt
