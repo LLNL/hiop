@@ -62,6 +62,14 @@
 
 #include "hiop_cusolver_defs.hpp"
 #include "klu.h"
+
+
+// Forward declaration of inner IR class
+namespace ReSolve {
+  class CusolverInnerIR;
+}
+
+
 /** implements the linear solver class using nvidia_ cuSolver (GLU
  * refactorization)
  *
@@ -70,13 +78,6 @@
 
 namespace hiop
 {
-
-constexpr double ZERO = 0.0;
-constexpr double EPSILON = 1.0e-18;
-constexpr double EPSMAC  = 1.0e-16;
-
-// Forward declaration of inner IR class
-class hiopLinSolverSymSparseCUSOLVERInnerIR;
 
 class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
 {
@@ -166,7 +167,7 @@ protected:
 
   // iterative refinement
 
-  hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+  ReSolve::CusolverInnerIR* ir_;
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -226,17 +227,26 @@ private:
   hiopMatrixSparse* M_host_;
 };
 
+} // namespace hiop
+
+
+namespace ReSolve {
+
+constexpr double ZERO = 0.0;
+constexpr double EPSILON = 1.0e-18;
+constexpr double EPSMAC  = 1.0e-16;
+
 /**
  * @brief Iterative refinement class
  * 
  */
-class hiopLinSolverSymSparseCUSOLVERInnerIR
+class CusolverInnerIR
 {
 
 public:
-  hiopLinSolverSymSparseCUSOLVERInnerIR();
-  hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
-  ~hiopLinSolverSymSparseCUSOLVERInnerIR();
+  CusolverInnerIR();
+  CusolverInnerIR(int restart, double tol, int maxit);
+  ~CusolverInnerIR();
   int setup(cusparseHandle_t cusparse_handle,
             cublasHandle_t cublas_handle,
             cusolverRfHandle_t cusolverrf_handle,
@@ -360,6 +370,6 @@ private:
 };
 
 
-} // namespace hiop
+} // namespace ReSolve
 
 #endif

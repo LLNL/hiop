@@ -132,7 +132,7 @@ namespace hiop
     use_ir_ = "no";
     if(maxit_test > 0){
       use_ir_ = "yes";
-      ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
+      ir_ = new ReSolve::CusolverInnerIR;
       ir_->maxit() = maxit_test;
     } 
     if(use_ir_ == "yes") {
@@ -994,16 +994,18 @@ namespace hiop
   }
   // Experimental code ends here
 
+} // namespace hiop
+
   ////////////////////////////////////////////////////////
   // Inner iterative refinement class methods
   ////////////////////////////////////////////////////////
 
   // Default constructor
-  hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR()
+  ReSolve::CusolverInnerIR::CusolverInnerIR()
   {}
 
   // Parametrized constructor
-  hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, 
+  ReSolve::CusolverInnerIR::CusolverInnerIR(int restart, 
                                                                                double tol, 
                                                                                int maxit)
     : restart_{restart}, 
@@ -1011,7 +1013,7 @@ namespace hiop
       tol_{tol}
   {}
 
-  hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
+  ReSolve::CusolverInnerIR::~CusolverInnerIR()
   {
     cusparseDestroySpMat(mat_A_);
     // free GPU variables that belong to this class and are not shared with CUSOLVER class
@@ -1040,7 +1042,7 @@ namespace hiop
     }
   }
 
-  int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle,
+  int ReSolve::CusolverInnerIR::setup(cusparseHandle_t cusparse_handle,
                                                    cublasHandle_t cublas_handle,
                                                    cusolverRfHandle_t cusolverrf_handle,
                                                    int n,
@@ -1110,22 +1112,22 @@ namespace hiop
     return 0;
   }
 
-  double hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm()
+  double ReSolve::CusolverInnerIR::getFinalResidalNorm()
   {
     return final_residual_norm_;
   }
 
-  double hiopLinSolverSymSparseCUSOLVERInnerIR::getInitialResidalNorm()
+  double ReSolve::CusolverInnerIR::getInitialResidalNorm()
   {
     return initial_residual_norm_;
   }
 
-  int hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalNumberOfIterations()
+  int ReSolve::CusolverInnerIR::getFinalNumberOfIterations()
   {
     return fgmres_iters_;
   }
 
-  void hiopLinSolverSymSparseCUSOLVERInnerIR::fgmres(double *d_x, double *d_b)
+  void ReSolve::CusolverInnerIR::fgmres(double *d_x, double *d_b)
   {
     int outer_flag = 1;
     int notconv = 1; 
@@ -1261,7 +1263,7 @@ namespace hiop
   }
 
   //b-Ax
-  void hiopLinSolverSymSparseCUSOLVERInnerIR::cudaMatvec(double *d_x, double * d_b, std::string option)
+  void ReSolve::CusolverInnerIR::cudaMatvec(double *d_x, double * d_b, std::string option)
   {
     cusparseCreateDnVec(&vec_x_, n_, d_x, CUDA_R_64F);
     cusparseCreateDnVec(&vec_Ax_, n_, d_b, CUDA_R_64F);
@@ -1294,7 +1296,7 @@ namespace hiop
     cusparseDestroyDnVec(vec_Ax_);
   }
 
-  void hiopLinSolverSymSparseCUSOLVERInnerIR::GramSchmidt(int i)
+  void ReSolve::CusolverInnerIR::GramSchmidt(int i)
   {
     double t;
     const double one = 1.0;
@@ -1637,7 +1639,7 @@ namespace hiop
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-  void hiopLinSolverSymSparseCUSOLVERInnerIR::hiopCheckCudaError(T result,
+  void ReSolve::CusolverInnerIR::hiopCheckCudaError(T result,
                                                                  const char* const file,
                                                                  int const line)
   {
@@ -1653,7 +1655,7 @@ namespace hiop
 #endif
   }
 
-
+namespace hiop {
 
   hiopLinSolverSymSparseCUSOLVERGPU::hiopLinSolverSymSparseCUSOLVERGPU(const int& n, 
                                                                        const int& nnz, 
