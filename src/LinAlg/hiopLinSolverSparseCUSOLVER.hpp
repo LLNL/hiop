@@ -86,14 +86,20 @@ public:
   hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
   virtual ~hiopLinSolverSymSparseCUSOLVER();
 
-  /** Triggers a refactorization of the matrix, if necessary.
+  /** 
+   * @brief Triggers a refactorization of the matrix, if necessary.
    * Overload from base class.
-   * In this case, KLU (SuiteSparse) is used to refactor*/
+   * In this case, KLU (SuiteSparse) is used to refactor
+   */
   virtual int matrixChanged();
 
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved.
-   * On exit is contains the solution(s).  */
+  /** 
+   * @brief Solves a linear system.
+   * 
+   * @param x is on entry the right hand side(s) of the system to be solved.
+   * 
+   * @post On exit `x` is overwritten with the solution(s).
+   */
   virtual bool solve(hiopVector& x_);
 
   /** Multiple rhs not supported yet */
@@ -172,12 +178,48 @@ protected:
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
 
-  /** called the very first time a matrix is factored. Perform KLU
-   * factorization, allocate all aux variables
+  /** 
+   * @brief Called the very first time a matrix is factored. Perform KLU
+   * factorization, allocate all aux variables.
    *
    * @note Converts HiOp triplet matrix to CSR format.
    */
   virtual void firstCall();
+
+  /**
+   * @brief Updates matrix values from HiOp object.
+   * 
+   * @note This function maps data from HiOp supplied matrix M_ to data structures
+   * used by the linear solver.
+   */
+  void update_matrix_values();
+
+  /**
+   * @brief Factorize system matrix
+   * 
+   * @return int - factorization status: success=0, failure=-1
+   */
+  int factorize();
+
+  /**
+   * @brief Set the up the refactorization
+   * 
+   */
+  void setup_refactorization();
+
+  /**
+   * @brief Refactorize system matrix
+   * 
+   * @return int 
+   */
+  int refactorize();
+
+  /**
+   * @brief Invokes triangular solver given matrix factors
+   * 
+   * @return int 
+   */
+  int triangular_solve(double* dx, double* drhs);
 
   /** Function to compute nnz and set row pointers */
   void compute_nnz();
