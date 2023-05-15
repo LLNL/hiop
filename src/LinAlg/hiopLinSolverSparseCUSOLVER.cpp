@@ -128,13 +128,13 @@ namespace hiop
     if ((maxit_test < 0) || (maxit_test > 1000)){
       nlp_->log->printf(hovWarning, 
                         "Wrong maxit value: %d. Use int maxit value between 0 and 1000. Setting default (50)  ...\n",
-                        ir_->maxit());
+                        maxit_test);
       maxit_test = 50;
     }
     use_ir_ = "no";
     if(maxit_test > 0){
       use_ir_ = "yes";
-      ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR;
+      ir_ = new hiopLinSolverSymSparseCUSOLVERInnerIR();
       ir_->maxit() = maxit_test;
     } 
     if(use_ir_ == "yes") {
@@ -375,7 +375,7 @@ namespace hiop
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
         nlp_->log->printf(hovError,  // catastrophic failure
-                          "Solve failed with status: %d\n", 
+                          "GLU solve failed with status: %d\n", 
                           sp_status_);
         return false;
       }
@@ -417,7 +417,7 @@ namespace hiop
 
           } else {
             nlp_->log->printf(hovError,  // catastrophic failure
-                              "Solve failed with status: %d\n", 
+                              "Rf solve failed with status: %d\n", 
                               sp_status_);
             return false;
           }
@@ -465,17 +465,18 @@ namespace hiop
     checkCudaErrors(cudaMemcpy(dia_, kRowPtr_, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(dja_, jCol_, sizeof(int) * nnz_, cudaMemcpyHostToDevice));
     if(use_ir_ == "yes") {
-      cusparseCreateCsr(&(ir_->mat_A()), 
-                        n_, 
-                        n_, 
-                        nnz_,
-                        dia_, 
-                        dja_, 
-                        da_,
-                        CUSPARSE_INDEX_32I, 
-                        CUSPARSE_INDEX_32I,
-                        CUSPARSE_INDEX_BASE_ZERO,
-                        CUDA_R_64F);
+      ir_->setup_system_matrix(n_, nnz_, dia_, dja_, da_);
+      // cusparseCreateCsr(&(ir_->mat_A()), 
+      //                   n_, 
+      //                   n_, 
+      //                   nnz_,
+      //                   dia_, 
+      //                   dja_, 
+      //                   da_,
+      //                   CUSPARSE_INDEX_32I, 
+      //                   CUSPARSE_INDEX_32I,
+      //                   CUSPARSE_INDEX_BASE_ZERO,
+      //                   CUDA_R_64F);
     }
     /*
      * initialize KLU and cuSolver parameters
@@ -815,215 +816,215 @@ namespace hiop
   }
 
   int
-    hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
-    {
-      // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
-      // later
-      const int nnzL = Numeric_->lnz;
-      const int nnzU = Numeric_->unz;
+  hiopLinSolverSymSparseCUSOLVER::refactorizationSetupCusolverRf()
+  {
+    // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
+    // later
+    const int nnzL = Numeric_->lnz;
+    const int nnzU = Numeric_->unz;
 
-      checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_P_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Q_, (n_) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_T_, (n_) * sizeof(double)));
 
-      checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_P_, Numeric_->Pnum, sizeof(int) * (n_), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Q_, Symbolic_->Q, sizeof(int) * (n_), cudaMemcpyHostToDevice));
 
-      int* Lp = new int[n_ + 1];
-      int* Li = new int[nnzL];
-      double* Lx = new double[nnzL];
-      int* Up = new int[n_ + 1];
-      int* Ui = new int[nnzU];
-      double* Ux = new double[nnzU];
+    int* Lp = new int[n_ + 1];
+    int* Li = new int[nnzL];
+    double* Lx = new double[nnzL];
+    int* Up = new int[n_ + 1];
+    int* Ui = new int[nnzU];
+    double* Ux = new double[nnzU];
 
-      int ok = klu_extract(Numeric_, 
-                           Symbolic_, 
-                           Lp, 
-                           Li, 
-                           Lx, 
-                           Up, 
-                           Ui, 
-                           Ux, 
-                           nullptr, 
-                           nullptr, 
-                           nullptr, 
-                           nullptr, 
-                           nullptr,
-                           nullptr,
-                           nullptr,
-                           &Common_);
+    int ok = klu_extract(Numeric_, 
+                          Symbolic_, 
+                          Lp, 
+                          Li, 
+                          Lx, 
+                          Up, 
+                          Ui, 
+                          Ux, 
+                          nullptr, 
+                          nullptr, 
+                          nullptr, 
+                          nullptr, 
+                          nullptr,
+                          nullptr,
+                          nullptr,
+                          &Common_);
 
-      /* CSC */
-      int* d_Lp;
-      int* d_Li;
-      int* d_Up;
-      int* d_Ui;
-      double* d_Lx;
-      double* d_Ux;
-      /* CSR */
-      int* d_Lp_csr;
-      int* d_Li_csr;
-      int* d_Up_csr;
-      int* d_Ui_csr;
-      double* d_Lx_csr;
-      double* d_Ux_csr;
+    /* CSC */
+    int* d_Lp;
+    int* d_Li;
+    int* d_Up;
+    int* d_Ui;
+    double* d_Lx;
+    double* d_Ux;
+    /* CSR */
+    int* d_Lp_csr;
+    int* d_Li_csr;
+    int* d_Up_csr;
+    int* d_Ui_csr;
+    double* d_Lx_csr;
+    double* d_Ux_csr;
 
-      /* allocate CSC */
-      checkCudaErrors(cudaMalloc(&d_Lp, (n_ + 1) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Li, nnzL * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Lx, nnzL * sizeof(double)));
-      checkCudaErrors(cudaMalloc(&d_Up, (n_ + 1) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Ui, nnzU * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Ux, nnzU * sizeof(double)));
+    /* allocate CSC */
+    checkCudaErrors(cudaMalloc(&d_Lp, (n_ + 1) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Li, nnzL * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Lx, nnzL * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_Up, (n_ + 1) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ui, nnzU * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ux, nnzU * sizeof(double)));
 
-      /* allocate CSR */
-      checkCudaErrors(cudaMalloc(&d_Lp_csr, (n_ + 1) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Li_csr, nnzL * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Lx_csr, nnzL * sizeof(double)));
-      checkCudaErrors(cudaMalloc(&d_Up_csr, (n_ + 1) * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Ui_csr, nnzU * sizeof(int)));
-      checkCudaErrors(cudaMalloc(&d_Ux_csr, nnzU * sizeof(double)));
+    /* allocate CSR */
+    checkCudaErrors(cudaMalloc(&d_Lp_csr, (n_ + 1) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Li_csr, nnzL * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Lx_csr, nnzL * sizeof(double)));
+    checkCudaErrors(cudaMalloc(&d_Up_csr, (n_ + 1) * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ui_csr, nnzU * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&d_Ux_csr, nnzU * sizeof(double)));
 
-      /* copy CSC to the GPU */
-      checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
+    /* copy CSC to the GPU */
+    checkCudaErrors(cudaMemcpy(d_Lp, Lp, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Li, Li, sizeof(int) * (nnzL), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Lx, Lx, sizeof(double) * (nnzL), cudaMemcpyHostToDevice));
 
-      checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Up, Up, sizeof(int) * (n_ + 1), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Ui, Ui, sizeof(int) * (nnzU), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_Ux, Ux, sizeof(double) * (nnzU), cudaMemcpyHostToDevice));
 
-      /* we dont need these any more */
-      delete[] Lp;
-      delete[] Li;
-      delete[] Lx;
-      delete[] Up;
-      delete[] Ui;
-      delete[] Ux;
+    /* we dont need these any more */
+    delete[] Lp;
+    delete[] Li;
+    delete[] Lx;
+    delete[] Up;
+    delete[] Ui;
+    delete[] Ux;
 
-      /* now CSC to CSR using the new cuda 11 awkward way */
-      size_t bufferSizeL;
-      size_t bufferSizeU;
+    /* now CSC to CSR using the new cuda 11 awkward way */
+    size_t bufferSizeL;
+    size_t bufferSizeU;
 
-      cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_, 
-                                                           n_, 
-                                                           n_, 
-                                                           nnzL, 
-                                                           d_Lx, 
-                                                           d_Lp, 
-                                                           d_Li, 
-                                                           d_Lx_csr, 
-                                                           d_Lp_csr,
-                                                           d_Li_csr, 
-                                                           CUDA_R_64F, 
-                                                           CUSPARSE_ACTION_NUMERIC,
-                                                           CUSPARSE_INDEX_BASE_ZERO, 
-                                                           CUSPARSE_CSR2CSC_ALG1, 
-                                                           &bufferSizeL);
+    cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_, 
+                                                          n_, 
+                                                          n_, 
+                                                          nnzL, 
+                                                          d_Lx, 
+                                                          d_Lp, 
+                                                          d_Li, 
+                                                          d_Lx_csr, 
+                                                          d_Lp_csr,
+                                                          d_Li_csr, 
+                                                          CUDA_R_64F, 
+                                                          CUSPARSE_ACTION_NUMERIC,
+                                                          CUSPARSE_INDEX_BASE_ZERO, 
+                                                          CUSPARSE_CSR2CSC_ALG1, 
+                                                          &bufferSizeL);
 
-      csp = cusparseCsr2cscEx2_bufferSize(handle_, 
-                                          n_, 
-                                          n_, 
-                                          nnzU, 
-                                          d_Ux, 
-                                          d_Up, 
-                                          d_Ui, 
-                                          d_Ux_csr, 
-                                          d_Up_csr, 
-                                          d_Ui_csr, 
-                                          CUDA_R_64F,
-                                          CUSPARSE_ACTION_NUMERIC,
-                                          CUSPARSE_INDEX_BASE_ZERO,
-                                          CUSPARSE_CSR2CSC_ALG1,
-                                          &bufferSizeU);
-      /* allocate buffers */
+    csp = cusparseCsr2cscEx2_bufferSize(handle_, 
+                                        n_, 
+                                        n_, 
+                                        nnzU, 
+                                        d_Ux, 
+                                        d_Up, 
+                                        d_Ui, 
+                                        d_Ux_csr, 
+                                        d_Up_csr, 
+                                        d_Ui_csr, 
+                                        CUDA_R_64F,
+                                        CUSPARSE_ACTION_NUMERIC,
+                                        CUSPARSE_INDEX_BASE_ZERO,
+                                        CUSPARSE_CSR2CSC_ALG1,
+                                        &bufferSizeU);
+    /* allocate buffers */
 
-      double* d_workL;
-      double* d_workU;
-      checkCudaErrors(cudaMalloc((void**)&d_workL, bufferSizeL));
-      checkCudaErrors(cudaMalloc((void**)&d_workU, bufferSizeU));
+    double* d_workL;
+    double* d_workU;
+    checkCudaErrors(cudaMalloc((void**)&d_workL, bufferSizeL));
+    checkCudaErrors(cudaMalloc((void**)&d_workU, bufferSizeU));
 
-      /* actual CSC to CSR */
+    /* actual CSC to CSR */
 
-      csp = cusparseCsr2cscEx2(handle_, 
-                               n_, 
-                               n_, 
-                               nnzL, 
-                               d_Lx, 
-                               d_Lp, 
-                               d_Li,
-                               d_Lx_csr, 
-                               d_Lp_csr,
-                               d_Li_csr,
-                               CUDA_R_64F,
-                               CUSPARSE_ACTION_NUMERIC,
-                               CUSPARSE_INDEX_BASE_ZERO,
-                               CUSPARSE_CSR2CSC_ALG1,
-                               d_workL);
+    csp = cusparseCsr2cscEx2(handle_, 
+                              n_, 
+                              n_, 
+                              nnzL, 
+                              d_Lx, 
+                              d_Lp, 
+                              d_Li,
+                              d_Lx_csr, 
+                              d_Lp_csr,
+                              d_Li_csr,
+                              CUDA_R_64F,
+                              CUSPARSE_ACTION_NUMERIC,
+                              CUSPARSE_INDEX_BASE_ZERO,
+                              CUSPARSE_CSR2CSC_ALG1,
+                              d_workL);
 
-      csp = cusparseCsr2cscEx2(handle_,
-                               n_,
-                               n_,
-                               nnzU,
-                               d_Ux, 
-                               d_Up, 
-                               d_Ui, 
-                               d_Ux_csr, 
-                               d_Up_csr, 
-                               d_Ui_csr, 
-                               CUDA_R_64F,
-                               CUSPARSE_ACTION_NUMERIC,
-                               CUSPARSE_INDEX_BASE_ZERO,
-                               CUSPARSE_CSR2CSC_ALG1,
-                               d_workU);
+    csp = cusparseCsr2cscEx2(handle_,
+                              n_,
+                              n_,
+                              nnzU,
+                              d_Ux, 
+                              d_Up, 
+                              d_Ui, 
+                              d_Ux_csr, 
+                              d_Up_csr, 
+                              d_Ui_csr, 
+                              CUDA_R_64F,
+                              CUSPARSE_ACTION_NUMERIC,
+                              CUSPARSE_INDEX_BASE_ZERO,
+                              CUSPARSE_CSR2CSC_ALG1,
+                              d_workU);
 
-      (void)csp; // mute unused variable warnings
+    (void)csp; // mute unused variable warnings
 
-      /* CSC no longer needed, nor the work arrays! */
+    /* CSC no longer needed, nor the work arrays! */
 
-      cudaFree(d_Lp);
-      cudaFree(d_Li);
-      cudaFree(d_Lx);
+    cudaFree(d_Lp);
+    cudaFree(d_Li);
+    cudaFree(d_Lx);
 
-      cudaFree(d_Up);
-      cudaFree(d_Ui);
-      cudaFree(d_Ux);
+    cudaFree(d_Up);
+    cudaFree(d_Ui);
+    cudaFree(d_Ux);
 
-      cudaFree(d_workU);
-      cudaFree(d_workL);
+    cudaFree(d_workU);
+    cudaFree(d_workL);
 
-      /* actual setup */
+    /* actual setup */
 
-      sp_status_ = cusolverRfSetupDevice(n_, 
-                                         nnz_,
-                                         dia_,
-                                         dja_,
-                                         da_,
-                                         nnzL,
-                                         d_Lp_csr,
-                                         d_Li_csr,
-                                         d_Lx_csr,
-                                         nnzU,
-                                         d_Up_csr,
-                                         d_Ui_csr,
-                                         d_Ux_csr,
-                                         d_P_,
-                                         d_Q_,
-                                         handle_rf_);
-      cudaDeviceSynchronize();
-      sp_status_ = cusolverRfAnalyze(handle_rf_);
+    sp_status_ = cusolverRfSetupDevice(n_, 
+                                        nnz_,
+                                        dia_,
+                                        dja_,
+                                        da_,
+                                        nnzL,
+                                        d_Lp_csr,
+                                        d_Li_csr,
+                                        d_Lx_csr,
+                                        nnzU,
+                                        d_Up_csr,
+                                        d_Ui_csr,
+                                        d_Ux_csr,
+                                        d_P_,
+                                        d_Q_,
+                                        handle_rf_);
+    cudaDeviceSynchronize();
+    sp_status_ = cusolverRfAnalyze(handle_rf_);
 
-      //clean up 
-      cudaFree(d_Lp_csr);
-      cudaFree(d_Li_csr);
-      cudaFree(d_Lx_csr);
+    //clean up 
+    cudaFree(d_Lp_csr);
+    cudaFree(d_Li_csr);
+    cudaFree(d_Lx_csr);
 
-      cudaFree(d_Up_csr);
-      cudaFree(d_Ui_csr);
-      cudaFree(d_Ux_csr);
+    cudaFree(d_Up_csr);
+    cudaFree(d_Ui_csr);
+    cudaFree(d_Ux_csr);
 
-      return 0;
-    }
+    return 0;
+  }
 
   // Experimental: setup the iterative refinement
   void hiopLinSolverSymSparseCUSOLVER::IRsetup()
@@ -1079,6 +1080,27 @@ namespace hiop
     }
   }
 
+int hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, int nnz, int* dia, int* dja, double* da)
+{
+  dia_ = dia;
+  dja_ = dja;
+  da_  = da;
+  n_   = n;
+  nnz_ = nnz;
+  checkCudaErrors(cusparseCreateCsr(&mat_A_, 
+                    n, 
+                    n, 
+                    nnz,
+                    dia_, 
+                    dja_, 
+                    da_,
+                    CUSPARSE_INDEX_32I, 
+                    CUSPARSE_INDEX_32I,
+                    CUSPARSE_INDEX_BASE_ZERO,
+                    CUDA_R_64F));
+  return 0;
+}
+
   int hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle,
                                                    cublasHandle_t cublas_handle,
                                                    cusolverRfHandle_t cusolverrf_handle,
@@ -1092,7 +1114,7 @@ namespace hiop
     cusparse_handle_ = cusparse_handle;
     cublas_handle_ = cublas_handle;
     cusolverrf_handle_ = cusolverrf_handle;
-    n_ = n;
+    assert(n_ == n && "Size of the linear system incorrectly set in the iterative refinement class!\n");
 
     // only set pointers
     d_T_ = d_T;
@@ -1112,7 +1134,7 @@ namespace hiop
                                             &(one_),
                                             vec_Ax_,
                                             CUDA_R_64F,
-                                            CUSPARSE_MV_ALG_DEFAULT,
+                                            CUSPARSE_SPMV_CSR_ALG2,
                                             &buffer_size));
 
     cudaDeviceSynchronize();
@@ -1259,7 +1281,7 @@ namespace hiop
         it++;
         // Z_i = (LU)^{-1}*V_i
         cudaMemcpy(&d_Z_[i * n_], &d_V_[i * n_], sizeof(double) * n_, cudaMemcpyDeviceToDevice);
-        cusolverRfSolve(cusolverrf_handle_, d_P_, d_Q_, 1, d_T_, n_, &d_Z_[i * n_], n_);
+        checkCudaErrors(cusolverRfSolve(cusolverrf_handle_, d_P_, d_Q_, 1, d_T_, n_, &d_Z_[i * n_], n_));
         cudaDeviceSynchronize();
         // V_{i+1}=A*Z_i
         cudaMatvec(&d_Z_[i * n_], &d_V_[(i + 1) * n_], "matvec");
