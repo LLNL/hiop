@@ -256,6 +256,21 @@ public:
   void fgmres(double* d_x, double* d_b);
   void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
 
+  /**
+   * @brief Set the up system matrix object mat_A_ of type cusparseSpMatDescr_t
+   * 
+   * @param n    - size of the matrix
+   * @param nnz  - number of nonzeros in the matrix
+   * @param irow - array of row pointers
+   * @param jcol - array of column indices
+   * @param val  - array of sparse matrix values
+   * 
+   * @return int
+   * 
+   * @pre Arrays `irow`, `jcol` and `val` are on the device.
+   */
+  int setup_system_matrix(int n, int nnz, int* irow, int* jcol, double* val);
+
   // Simple accessors
   int& maxit()
   {
@@ -277,10 +292,10 @@ public:
     return restart_;
   }
 
-  cusparseSpMatDescr_t& mat_A()
-  {
-    return mat_A_;
-  }
+  // cusparseSpMatDescr_t& mat_A()
+  // {
+  //   return mat_A_;
+  // }
 
   int& conv_cond()
   {
@@ -289,8 +304,8 @@ public:
 
 private:
   // Krylov vectors
-  double* d_V_;
-  double* d_Z_;
+  double* d_V_{ nullptr };
+  double* d_Z_{ nullptr };
   double final_residual_norm_;
   int fgmres_iters_;
   double initial_residual_norm_;
@@ -301,41 +316,42 @@ private:
   std::string orth_option_;
   // the matrix in question
   cusparseSpMatDescr_t mat_A_;
-  int* dia_;
-  double* da_;
+  int* dia_{ nullptr };
+  int* dja_{ nullptr };
+  double* da_{ nullptr };
   // needed for matvec
-  cusparseDnVecDescr_t vec_x_ = NULL;
-  cusparseDnVecDescr_t vec_Ax_ = NULL;
+  cusparseDnVecDescr_t vec_x_{ nullptr };
+  cusparseDnVecDescr_t vec_Ax_{ nullptr };
   int n_;
   int nnz_;
   // handles - MUST BE SET AT INIT
-  cusparseHandle_t cusparse_handle_;
-  cublasHandle_t cublas_handle_;
-  cusolverRfHandle_t cusolverrf_handle_;
-  cusolverSpHandle_t cusolver_handle_;
+  cusparseHandle_t cusparse_handle_{ nullptr };
+  cublasHandle_t cublas_handle_{ nullptr };
+  cusolverRfHandle_t cusolverrf_handle_{ nullptr };
+  cusolverSpHandle_t cusolver_handle_{ nullptr };
   // aux cariables, avoid multiple allocs at all costs
 
   // GPU:
-  double* d_T_;
-  int* d_P_;
-  int* d_Q_;
+  double* d_T_{ nullptr };
+  int* d_P_{ nullptr };
+  int* d_Q_{ nullptr };
 
-  double* d_rvGPU_;
-  double* d_Hcolumn_;
-  double* d_H_col_;
-  void* mv_buffer_; /* SpMV buffer */
+  double* d_rvGPU_{ nullptr };
+  double* d_Hcolumn_{ nullptr };
+  double* d_H_col_{ nullptr };
+  void* mv_buffer_{ nullptr }; /* SpMV buffer */
 
   // CPU:
-  double* h_L_;
-  double* h_H_;
-  double* h_rv_;
+  double* h_L_{ nullptr };
+  double* h_H_{ nullptr };
+  double* h_rv_{ nullptr };
   // for givens rotations
-  double* h_c_;
-  double* h_s_;
+  double* h_c_{ nullptr };
+  double* h_s_{ nullptr };
   // for Hessenberg system
-  double* h_rs_;
+  double* h_rs_{ nullptr };
   // neded in some of the orthogonalization methods
-  double* h_aux_;
+  double* h_aux_{ nullptr };
 
   const double minusone_ = -1.0;
   const double one_ = 1.0;
