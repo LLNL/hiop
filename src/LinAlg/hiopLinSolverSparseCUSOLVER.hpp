@@ -159,6 +159,8 @@ protected:
   double* drhs_;
 
   int factorizationSetupSucc_;
+  bool is_first_solve_;
+  bool is_first_call_;
   /* needed for cuSolverRf */
   int* d_P_;
   int* d_Q_; // permutation matrices

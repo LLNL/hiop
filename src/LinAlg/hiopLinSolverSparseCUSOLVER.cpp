@@ -80,7 +80,9 @@ namespace hiop
     ordering_{ 1 }, 
     fact_{ "klu" }, // default
     refact_{ "glu" }, // default
-    factorizationSetupSucc_{ 0 }
+    factorizationSetupSucc_{ 0 },
+    is_first_solve_{ true },
+    is_first_call_{ true }
   {
     // handles
     cusparseCreate(&handle_);
@@ -257,7 +259,8 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    if(!kRowPtr_) {
+    // if(!kRowPtr_) {
+    if(is_first_call_) {
       this->firstCall();
     } else {
       // update matrix
@@ -271,7 +274,7 @@ namespace hiop
       }
     } // else
 
-    if((Numeric_ == nullptr) && (factorizationSetupSucc_ == 0)) {
+    if(/*(Numeric_ == nullptr) &&*/ (factorizationSetupSucc_ == 0)) {
       Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
       if(Numeric_ == nullptr) {
         nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
@@ -378,7 +381,8 @@ namespace hiop
       }
     } else {
       if(refact_ == "rf") {
-        if(Numeric_ == nullptr) {
+        // if(Numeric_ == nullptr) {
+        if(!is_first_solve_) {
           sp_status_ = cusolverRfSolve(handle_rf_,
                                        d_P_,
                                        d_Q_,
@@ -422,6 +426,7 @@ namespace hiop
           int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
           klu_free_numeric(&Numeric_, &Common_);
           klu_free_symbolic(&Symbolic_, &Common_);
+          is_first_solve_ = false;
         }
       } else {
         nlp_->log->printf(hovError, // catastrophic failure
@@ -492,6 +497,7 @@ namespace hiop
     } else { // for future
       assert(0 && "Only KLU is available for the first factorization.\n");
     }
+    is_first_call_ = false;
   }
 
   void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
