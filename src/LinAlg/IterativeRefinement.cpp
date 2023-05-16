@@ -62,23 +62,24 @@
 #include <sstream>
 #include <string>
 
-#define checkCudaErrors(val) hiopCheckCudaError((val), __FILE__, __LINE__)
+#define checkCudaErrors(val) resolveCheckCudaError((val), __FILE__, __LINE__)
+
+namespace ReSolve {
 
   // Default constructor
-  ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR()
+  IterativeRefinement::IterativeRefinement()
   {}
 
   // Parametrized constructor
-  ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, 
-                                                                               double tol, 
-
-                                                                               int maxit)
+  IterativeRefinement::IterativeRefinement(int restart, 
+                                           double tol,
+                                           int maxit)
     : restart_{restart}, 
       maxit_{maxit},
       tol_{tol}
   {}
 
-  ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
+  IterativeRefinement::~IterativeRefinement()
   {
     cusparseDestroySpMat(mat_A_);
     // free GPU variables that belong to this class and are not shared with CUSOLVER class
@@ -107,14 +108,14 @@
     }
   }
 
-int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, int nnz, int* dia, int* dja, double* da)
-{
-  dia_ = dia;
-  dja_ = dja;
-  da_  = da;
-  n_   = n;
-  nnz_ = nnz;
-  checkCudaErrors(cusparseCreateCsr(&mat_A_, 
+  int IterativeRefinement::setup_system_matrix(int n, int nnz, int* dia, int* dja, double* da)
+  {
+    dia_ = dia;
+    dja_ = dja;
+    da_  = da;
+    n_   = n;
+    nnz_ = nnz;
+    checkCudaErrors(cusparseCreateCsr(&mat_A_, 
                     n, 
                     n, 
                     nnz,
@@ -125,18 +126,18 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
                     CUSPARSE_INDEX_32I,
                     CUSPARSE_INDEX_BASE_ZERO,
                     CUDA_R_64F));
-  return 0;
-}
+    return 0;
+  }
 
-  int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup(cusparseHandle_t cusparse_handle,
-                                                   cublasHandle_t cublas_handle,
-                                                   cusolverRfHandle_t cusolverrf_handle,
-                                                   int n,
-                                                   double* d_T,
-                                                   int* d_P,
-                                                   int* d_Q,
-                                                   double* devx,
-                                                   double* devr)
+  int IterativeRefinement::setup(cusparseHandle_t cusparse_handle,
+                                 cublasHandle_t cublas_handle,
+                                 cusolverRfHandle_t cusolverrf_handle,
+                                 int n,
+                                 double* d_T,
+                                 int* d_P,
+                                 int* d_Q,
+                                 double* devx,
+                                 double* devr)
   {
     cusparse_handle_ = cusparse_handle;
     cublas_handle_ = cublas_handle;
@@ -198,23 +199,23 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
     return 0;
   }
 
-  double ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalResidalNorm()
+  double IterativeRefinement::getFinalResidalNorm()
   {
     return final_residual_norm_;
   }
 
-  double ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::getInitialResidalNorm()
+  double IterativeRefinement::getInitialResidalNorm()
   {
     return initial_residual_norm_;
   }
 
-  int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::getFinalNumberOfIterations()
+  int IterativeRefinement::getFinalNumberOfIterations()
   {
     return fgmres_iters_;
   }
 
 
-  double ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::matrixAInfNrm()
+  double IterativeRefinement::matrixAInfNrm()
   {
     double nrm;
     matrix_row_sums(n_, nnz_, dia_, da_, d_Z_); 
@@ -226,7 +227,7 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
     return nrm;
   }
 
-  double ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::vectorInfNrm(int n, double* d_v)
+  double IterativeRefinement::vectorInfNrm(int n, double* d_v)
   {
     double nrm; 
 
@@ -238,7 +239,7 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
     return nrm;
   }
 
-  void ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::fgmres(double *d_x, double *d_b)
+  void IterativeRefinement::fgmres(double *d_x, double *d_b)
   {
     int outer_flag = 1;
     int notconv = 1; 
@@ -389,7 +390,7 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
   }
 
   //b-Ax
-  void ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::cudaMatvec(double *d_x, double * d_b, std::string option)
+  void IterativeRefinement::cudaMatvec(double *d_x, double * d_b, std::string option)
   {
     cusparseCreateDnVec(&vec_x_, n_, d_x, CUDA_R_64F);
     cusparseCreateDnVec(&vec_Ax_, n_, d_b, CUDA_R_64F);
@@ -422,7 +423,7 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
     cusparseDestroyDnVec(vec_Ax_);
   }
 
-  void ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::GramSchmidt(int i)
+  void IterativeRefinement::GramSchmidt(int i)
   {
     double t;
     const double one = 1.0;
@@ -765,9 +766,9 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-  void ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::hiopCheckCudaError(T result,
-                                                                 const char* const file,
-                                                                 int const line)
+  void IterativeRefinement::resolveCheckCudaError(T result,
+                                                  const char* const file,
+                                                  int const line)
   {
 #ifdef DEBUG
     if(result) {
@@ -780,3 +781,5 @@ int ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR::setup_system_matrix(int n, i
     }
 #endif
   }
+
+} // namespace ReSolve

@@ -71,7 +71,7 @@
 
 namespace ReSolve {
   // Forward declaration of inner IR class
-  class hiopLinSolverSymSparseCUSOLVERInnerIR;
+  class IterativeRefinement;
 }
 
 namespace hiop
@@ -85,15 +85,21 @@ public:
   hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
   virtual ~hiopLinSolverSymSparseCUSOLVER();
 
-  /** Triggers a refactorization of the matrix, if necessary.
+  /** 
+   * @brief Triggers a refactorization of the matrix, if necessary.
    * Overload from base class.
-   * In this case, KLU (SuiteSparse) is used to refactor*/
+   * In this case, KLU (SuiteSparse) is used to refactor
+   */
   virtual int matrixChanged();
 
-  /** solves a linear system.
-   * param 'x' is on entry the right hand side(s) of the system to be solved.
-   * On exit is contains the solution(s).  */
-  virtual bool solve(hiopVector& x_);
+  /** 
+   * @brief Solves a linear system.
+   * 
+   * @param x is on entry the right hand side(s) of the system to be solved.
+   * 
+   * @post On exit `x` is overwritten with the solution(s).
+   */
+   virtual bool solve(hiopVector& x_);
 
   /** Multiple rhs not supported yet */
   virtual bool
@@ -105,13 +111,13 @@ public:
 
 protected:
   //
-  int m_;   // number of rows of the whole matrix
-  int n_;   // number of cols of the whole matrix
-  int nnz_; // number of nonzeros in the matrix
+  int m_;   ///< number of rows of the whole matrix
+  int n_;   ///< number of cols of the whole matrix
+  int nnz_; ///< number of nonzeros in the matrix
 
-  int* kRowPtr_; // row pointer for nonzeros
-  int* jCol_;    // column indexes for nonzeros
-  double* kVal_; // storage for sparse matrix
+  int* kRowPtr_; ///< row pointer for nonzeros
+  int* jCol_;    ///< column indexes for nonzeros
+  double* kVal_; ///< storage for sparse matrix
 
   int* index_covert_CSR2Triplet_;
   int* index_covert_extra_Diag2CSR_;
@@ -168,7 +174,7 @@ protected:
 
   // iterative refinement
 
-  ReSolve::hiopLinSolverSymSparseCUSOLVERInnerIR* ir_;
+  ReSolve::IterativeRefinement* ir_;
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -231,176 +237,28 @@ private:
 } // namespace hiop
 
 
-// namespace ReSolve {
+namespace ReSolve {
 
-// constexpr double ZERO = 0.0;
-// constexpr double EPSILON = 1.0e-18;
-// constexpr double EPSMAC  = 1.0e-16;
+/**
+ * @brief Class to store and operatate on LU data: will be needed in the future
+ * 
+ */
+class hiopLinSolverSymSparseCUSOLVERLU
+{
+public:
+  // constructor
+  hiopLinSolverSymSparseCUSOLVERLU();
+  ~hiopLinSolverSymSparseCUSOLVERLU();
+  void solve();
+  void extractFromKLU();
+  void extractFromRf();
+  // to clear but not free the memory
+  void intermediateCleanup();
 
-// /**
-//  * @brief Iterative refinement class
-//  * 
-//  */
-// class hiopLinSolverSymSparseCUSOLVERInnerIR
-// {
+private:
 
-// public:
-//   hiopLinSolverSymSparseCUSOLVERInnerIR();
-//   hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
-//   ~hiopLinSolverSymSparseCUSOLVERInnerIR();
-//   int setup(cusparseHandle_t cusparse_handle,
-//             cublasHandle_t cublas_handle,
-//             cusolverRfHandle_t cusolverrf_handle,
-//             int n,
-//             double* d_T,
-//             int* d_P,
-//             int* d_Q,
-//             double* devx,
-//             double* devr);
+};
 
-//   int getFinalNumberOfIterations();
-//   double getFinalResidalNorm();
-//   double getInitialResidalNorm();
-//   // this is public on purpose, can be used internally or outside, to compute the residual.
-//   void fgmres(double* d_x, double* d_b);
-//   void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
-
-//   /**
-//    * @brief Set the up system matrix object mat_A_ of type cusparseSpMatDescr_t
-//    * 
-//    * @param n    - size of the matrix
-//    * @param nnz  - number of nonzeros in the matrix
-//    * @param irow - array of row pointers
-//    * @param jcol - array of column indices
-//    * @param val  - array of sparse matrix values
-//    * 
-//    * @return int
-//    * 
-//    * @pre Arrays `irow`, `jcol` and `val` are on the device.
-//    */
-//   int setup_system_matrix(int n, int nnz, int* irow, int* jcol, double* val);
-
-//   // Simple accessors
-//   int& maxit()
-//   {
-//     return maxit_;
-//   }
-
-//   double& tol()
-//   {
-//     return tol_;
-//   }
-
-//   std::string& orth_option()
-//   {
-//     return orth_option_;
-//   }
-
-//   int& restart()
-//   {
-//     return restart_;
-//   }
-
-//   // cusparseSpMatDescr_t& mat_A()
-//   // {
-//   //   return mat_A_;
-//   // }
-
-//   int& conv_cond()
-//   {
-//     return conv_cond_;
-//   }
-
-// private:
-//   // Krylov vectors
-//   double* d_V_{ nullptr };
-//   double* d_Z_{ nullptr };
-//   double final_residual_norm_;
-//   int fgmres_iters_;
-//   double initial_residual_norm_;
-//   int restart_;
-//   int maxit_;
-//   double tol_;
-//   int conv_cond_; // convergence condition, can be 0, 1, 2 for IR
-//   std::string orth_option_;
-//   // the matrix in question
-//   cusparseSpMatDescr_t mat_A_;
-//   int* dia_{ nullptr };
-//   int* dja_{ nullptr };
-//   double* da_{ nullptr };
-//   // needed for matvec
-//   cusparseDnVecDescr_t vec_x_{ nullptr };
-//   cusparseDnVecDescr_t vec_Ax_{ nullptr };
-//   int n_;
-//   int nnz_;
-//   // handles - MUST BE SET AT INIT
-//   cusparseHandle_t cusparse_handle_{ nullptr };
-//   cublasHandle_t cublas_handle_{ nullptr };
-//   cusolverRfHandle_t cusolverrf_handle_{ nullptr };
-//   cusolverSpHandle_t cusolver_handle_{ nullptr };
-//   // aux cariables, avoid multiple allocs at all costs
-
-//   // GPU:
-//   double* d_T_{ nullptr };
-//   int* d_P_{ nullptr };
-//   int* d_Q_{ nullptr };
-
-//   double* d_rvGPU_{ nullptr };
-//   double* d_Hcolumn_{ nullptr };
-//   double* d_H_col_{ nullptr };
-//   void* mv_buffer_{ nullptr }; /* SpMV buffer */
-
-//   // CPU:
-//   double* h_L_{ nullptr };
-//   double* h_H_{ nullptr };
-//   double* h_rv_{ nullptr };
-//   // for givens rotations
-//   double* h_c_{ nullptr };
-//   double* h_s_{ nullptr };
-//   // for Hessenberg system
-//   double* h_rs_{ nullptr };
-//   // neded in some of the orthogonalization methods
-//   double* h_aux_{ nullptr };
-
-//   const double minusone_ = -1.0;
-//   const double one_ = 1.0;
-//   const double zero_ = 0.0;
-//   // private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
-//   void GramSchmidt(int i);
-
-//   // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
-//   void cudaMatvec(double* d_x, double* d_b, std::string option);
-//   //KS: needed for testing -- condider delating later
-//   double matrixAInfNrm();
-//   double vectorInfNrm(int n, double* d_v);
-//   //end of testing
-  
-
-//   template <typename T>
-//   void hiopCheckCudaError(T result, const char* const file, int const line);
-
-// };
-
-// /**
-//  * @brief Class to store and operatate on LU data: will be needed in the future
-//  * 
-//  */
-// class hiopLinSolverSymSparseCUSOLVERLU
-// {
-// public:
-//   // constructor
-//   hiopLinSolverSymSparseCUSOLVERLU();
-//   ~hiopLinSolverSymSparseCUSOLVERLU();
-//   void solve();
-//   void extractFromKLU();
-//   void extractFromRf();
-//   // to clear but not free the memory
-//   void intermediateCleanup();
-
-// private:
-
-// };
-
-// } // namespace ReSolve
+} // namespace ReSolve
 
 #endif
