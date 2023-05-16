@@ -69,13 +69,13 @@ constexpr double EPSMAC  = 1.0e-16;
  * @brief Iterative refinement class
  * 
  */
-class hiopLinSolverSymSparseCUSOLVERInnerIR
+class IterativeRefinement
 {
 
 public:
-  hiopLinSolverSymSparseCUSOLVERInnerIR();
-  hiopLinSolverSymSparseCUSOLVERInnerIR(int restart, double tol, int maxit);
-  ~hiopLinSolverSymSparseCUSOLVERInnerIR();
+  IterativeRefinement();
+  IterativeRefinement(int restart, double tol, int maxit);
+  ~IterativeRefinement();
   int setup(cusparseHandle_t cusparse_handle,
             cublasHandle_t cublas_handle,
             cusolverRfHandle_t cusolverrf_handle,
@@ -129,11 +129,6 @@ public:
     return restart_;
   }
 
-  // cusparseSpMatDescr_t& mat_A()
-  // {
-  //   return mat_A_;
-  // }
-
   int& conv_cond()
   {
     return conv_cond_;
@@ -143,32 +138,37 @@ private:
   // Krylov vectors
   double* d_V_{ nullptr };
   double* d_Z_{ nullptr };
+
   double final_residual_norm_;
-  int fgmres_iters_;
   double initial_residual_norm_;
+  int fgmres_iters_;
+
+  // Solver parameters
   int restart_;
   int maxit_;
   double tol_;
-  int conv_cond_; // convergence condition, can be 0, 1, 2 for IR
+  int conv_cond_; ///< convergence condition, can be 0, 1, 2 for IR
   std::string orth_option_;
-  // the matrix in question
-  cusparseSpMatDescr_t mat_A_;
+
+  // System matrix data
+  int n_;
+  int nnz_;
   int* dia_{ nullptr };
   int* dja_{ nullptr };
   double* da_{ nullptr };
-  // needed for matvec
+  cusparseSpMatDescr_t mat_A_;
+
+  // Matrix-vector product data
   cusparseDnVecDescr_t vec_x_{ nullptr };
   cusparseDnVecDescr_t vec_Ax_{ nullptr };
-  int n_;
-  int nnz_;
-  // handles - MUST BE SET AT INIT
+
+  // CUDA libraries handles - MUST BE SET AT INIT
   cusparseHandle_t cusparse_handle_{ nullptr };
   cublasHandle_t cublas_handle_{ nullptr };
   cusolverRfHandle_t cusolverrf_handle_{ nullptr };
   cusolverSpHandle_t cusolver_handle_{ nullptr };
-  // aux cariables, avoid multiple allocs at all costs
 
-  // GPU:
+  // GPU data (?)
   double* d_T_{ nullptr };
   int* d_P_{ nullptr };
   int* d_Q_{ nullptr };
@@ -176,7 +176,7 @@ private:
   double* d_rvGPU_{ nullptr };
   double* d_Hcolumn_{ nullptr };
   double* d_H_col_{ nullptr };
-  void* mv_buffer_{ nullptr }; /* SpMV buffer */
+  void* mv_buffer_{ nullptr }; ///< SpMV buffer
 
   // CPU:
   double* h_L_{ nullptr };
@@ -193,19 +193,43 @@ private:
   const double minusone_ = -1.0;
   const double one_ = 1.0;
   const double zero_ = 0.0;
-  // private function needed for fgmres: orthogonalize i+1 vector against i vectors already orthogonal
+
+  /**
+   * @brief orthogonalize i+1 vector against i vectors already orthogonal
+   * 
+   * Private function needed for FGMRES.
+   * 
+   * @param[in] i - number of orthogonal vectors
+   */
   void GramSchmidt(int i);
 
-  // matvec black-box: b = b - A*d_x if option is "residual" and b=A*x if option is "matvec"
+  /**
+   * @brief matvec black-box: b = b - A*d_x if option is "residual" and b=A*x 
+   * if option is "matvec"
+   * 
+   * @param d_x 
+   * @param d_b 
+   * @param option
+   * 
+   * @todo Document d_x and d_b; are both of them modified in this function?
+   */
   void cudaMatvec(double* d_x, double* d_b, std::string option);
+ 
   //KS: needed for testing -- condider delating later
   double matrixAInfNrm();
   double vectorInfNrm(int n, double* d_v);
   //end of testing
   
-
+  /**
+   * @brief Check for CUDA errors.
+   * 
+   * @tparam T - type of the result
+   * @param result - result value
+   * @param file   - file name where the error occured
+   * @param line   - line at which the error occured
+   */
   template <typename T>
-  void hiopCheckCudaError(T result, const char* const file, int const line);
+  void resolveCheckCudaError(T result, const char* const file, int const line);
 
 };
 
