@@ -95,6 +95,7 @@ set(hiopLinAlg_PARDISO_SRC
 
 set(hiopLinAlg_CUSOLVER_LU_SRC
   hiopLinSolverSparseCUSOLVER.cpp
+  IterativeRefinement.cpp
 )
 
 set(hiopLinAlg_CUSOLVER_CHOL_SRC
