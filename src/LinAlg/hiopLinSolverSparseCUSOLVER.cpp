@@ -70,19 +70,19 @@ namespace hiop
                                                                  const int& nnz, 
                                                                  hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
-    kRowPtr_{ nullptr }, 
-    jCol_{ nullptr }, 
-    kVal_{ nullptr },
-    index_covert_CSR2Triplet_{ nullptr },
-    index_covert_extra_Diag2CSR_{ nullptr }, 
-    n_{ n },
-    nnz_{ 0 },
-    ordering_{ 1 }, 
-    fact_{ "klu" }, // default
-    refact_{ "glu" }, // default
-    factorizationSetupSucc_{ 0 },
-    is_first_solve_{ true },
-    is_first_call_{ true }
+      kRowPtr_{ nullptr }, 
+      jCol_{ nullptr }, 
+      kVal_{ nullptr },
+      index_covert_CSR2Triplet_{ nullptr },
+      index_covert_extra_Diag2CSR_{ nullptr }, 
+      n_{ n },
+      nnz_{ 0 },
+      ordering_{ 1 }, 
+      fact_{ "klu" }, // default
+      refact_{ "glu" }, // default
+      factorizationSetupSucc_{ 0 },
+      is_first_solve_{ true },
+      is_first_call_{ true }
   {
     // handles
     cusparseCreate(&handle_);
@@ -652,19 +652,19 @@ namespace hiop
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-    void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
-                                                            const char* const file,
-                                                            int const line)
-    {
-      if(result) {
-        nlp_->log->printf(hovError, 
-                          "CUDA error at %s:%d, error# %d\n", 
-                          file, 
-                          line, 
-                          result);
-        assert(false);
-      }
+  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
+                                                          const char* const file,
+                                                          int const line)
+  {
+    if(result) {
+      nlp_->log->printf(hovError, 
+                        "CUDA error at %s:%d, error# %d\n", 
+                        file, 
+                        line, 
+                        result);
+      assert(false);
     }
+  }
 
   int hiopLinSolverSymSparseCUSOLVER::initializeKLU()
   {
@@ -838,21 +838,21 @@ namespace hiop
     double* Ux = new double[nnzU];
 
     int ok = klu_extract(Numeric_, 
-                          Symbolic_, 
-                          Lp, 
-                          Li, 
-                          Lx, 
-                          Up, 
-                          Ui, 
-                          Ux, 
-                          nullptr, 
-                          nullptr, 
-                          nullptr, 
-                          nullptr, 
-                          nullptr,
-                          nullptr,
-                          nullptr,
-                          &Common_);
+                         Symbolic_, 
+                         Lp, 
+                         Li, 
+                         Lx, 
+                         Up, 
+                         Ui, 
+                         Ux, 
+                         nullptr, 
+                         nullptr, 
+                         nullptr, 
+                         nullptr, 
+                         nullptr,
+                         nullptr,
+                         nullptr,
+                         &Common_);
 
     /* CSC */
     int* d_Lp;
@@ -907,20 +907,20 @@ namespace hiop
     size_t bufferSizeU;
 
     cusparseStatus_t csp = cusparseCsr2cscEx2_bufferSize(handle_, 
-                                                          n_, 
-                                                          n_, 
-                                                          nnzL, 
-                                                          d_Lx, 
-                                                          d_Lp, 
-                                                          d_Li, 
-                                                          d_Lx_csr, 
-                                                          d_Lp_csr,
-                                                          d_Li_csr, 
-                                                          CUDA_R_64F, 
-                                                          CUSPARSE_ACTION_NUMERIC,
-                                                          CUSPARSE_INDEX_BASE_ZERO, 
-                                                          CUSPARSE_CSR2CSC_ALG1, 
-                                                          &bufferSizeL);
+                                                         n_, 
+                                                         n_, 
+                                                         nnzL, 
+                                                         d_Lx, 
+                                                         d_Lp, 
+                                                         d_Li, 
+                                                         d_Lx_csr, 
+                                                         d_Lp_csr,
+                                                         d_Li_csr, 
+                                                         CUDA_R_64F, 
+                                                         CUSPARSE_ACTION_NUMERIC,
+                                                         CUSPARSE_INDEX_BASE_ZERO, 
+                                                         CUSPARSE_CSR2CSC_ALG1, 
+                                                         &bufferSizeL);
 
     csp = cusparseCsr2cscEx2_bufferSize(handle_, 
                                         n_, 
@@ -947,36 +947,36 @@ namespace hiop
     /* actual CSC to CSR */
 
     csp = cusparseCsr2cscEx2(handle_, 
-                              n_, 
-                              n_, 
-                              nnzL, 
-                              d_Lx, 
-                              d_Lp, 
-                              d_Li,
-                              d_Lx_csr, 
-                              d_Lp_csr,
-                              d_Li_csr,
-                              CUDA_R_64F,
-                              CUSPARSE_ACTION_NUMERIC,
-                              CUSPARSE_INDEX_BASE_ZERO,
-                              CUSPARSE_CSR2CSC_ALG1,
-                              d_workL);
+                             n_, 
+                             n_, 
+                             nnzL, 
+                             d_Lx, 
+                             d_Lp, 
+                             d_Li,
+                             d_Lx_csr, 
+                             d_Lp_csr,
+                             d_Li_csr,
+                             CUDA_R_64F,
+                             CUSPARSE_ACTION_NUMERIC,
+                             CUSPARSE_INDEX_BASE_ZERO,
+                             CUSPARSE_CSR2CSC_ALG1,
+                             d_workL);
 
     csp = cusparseCsr2cscEx2(handle_,
-                              n_,
-                              n_,
-                              nnzU,
-                              d_Ux, 
-                              d_Up, 
-                              d_Ui, 
-                              d_Ux_csr, 
-                              d_Up_csr, 
-                              d_Ui_csr, 
-                              CUDA_R_64F,
-                              CUSPARSE_ACTION_NUMERIC,
-                              CUSPARSE_INDEX_BASE_ZERO,
-                              CUSPARSE_CSR2CSC_ALG1,
-                              d_workU);
+                             n_,
+                             n_,
+                             nnzU,
+                             d_Ux, 
+                             d_Up, 
+                             d_Ui, 
+                             d_Ux_csr, 
+                             d_Up_csr, 
+                             d_Ui_csr, 
+                             CUDA_R_64F,
+                             CUSPARSE_ACTION_NUMERIC,
+                             CUSPARSE_INDEX_BASE_ZERO,
+                             CUSPARSE_CSR2CSC_ALG1,
+                             d_workU);
 
     (void)csp; // mute unused variable warnings
 
@@ -996,21 +996,21 @@ namespace hiop
     /* actual setup */
 
     sp_status_ = cusolverRfSetupDevice(n_, 
-                                        nnz_,
-                                        dia_,
-                                        dja_,
-                                        da_,
-                                        nnzL,
-                                        d_Lp_csr,
-                                        d_Li_csr,
-                                        d_Lx_csr,
-                                        nnzU,
-                                        d_Up_csr,
-                                        d_Ui_csr,
-                                        d_Ux_csr,
-                                        d_P_,
-                                        d_Q_,
-                                        handle_rf_);
+                                       nnz_,
+                                       dia_,
+                                       dja_,
+                                       da_,
+                                       nnzL,
+                                       d_Lp_csr,
+                                       d_Li_csr,
+                                       d_Lx_csr,
+                                       nnzU,
+                                       d_Up_csr,
+                                       d_Ui_csr,
+                                       d_Ux_csr,
+                                       d_P_,
+                                       d_Q_,
+                                       handle_rf_);
     cudaDeviceSynchronize();
     sp_status_ = cusolverRfAnalyze(handle_rf_);
 
@@ -1047,8 +1047,8 @@ namespace hiop
 
                                                                                int maxit)
     : restart_{restart}, 
-    maxit_{maxit},
-    tol_{tol}
+      maxit_{maxit},
+      tol_{tol}
   {}
 
   hiopLinSolverSymSparseCUSOLVERInnerIR::~hiopLinSolverSymSparseCUSOLVERInnerIR()
