@@ -186,6 +186,44 @@ protected:
    */
   virtual void firstCall();
 
+  /**
+   * @brief Updates matrix values from HiOp object.
+   * 
+   * @note This function maps data from HiOp supplied matrix M_ to data structures
+   * used by the linear solver.
+   */
+  void update_matrix_values();
+
+  /**
+   * @brief Factorize system matrix
+   * 
+   * @return int - factorization status: success=0, failure=-1
+   */
+  int factorize();
+
+  /**
+   * @brief Set the up the refactorization
+   * 
+   */
+  void setup_refactorization();
+
+  /**
+   * @brief Refactorize system matrix
+   * 
+   * @return int 
+   */
+  int refactorize();
+
+  /**
+   * @brief Invokes triangular solver given matrix factors
+   * 
+   * @param dx 
+   * @param drhs 
+   * @param tol 
+   * @return bool 
+   */
+  bool triangular_solve(double* dx, const double* drhs, double tol);
+
   /** Function to compute nnz and set row pointers */
   void compute_nnz();
   /** Function to compute column indices and matrix values arrays */

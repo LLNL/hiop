@@ -260,74 +260,26 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmFactTime.start();
 
-    // if(!kRowPtr_) {
     if(is_first_call_) {
-      this->firstCall();
+      firstCall();
     } else {
-      // update matrix
-      for(int k = 0; k < nnz_; k++) {
-        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
-      }
-      for(int i = 0; i < n_; i++) {
-        if(index_covert_extra_Diag2CSR_[i] != -1)
-          kVal_[index_covert_extra_Diag2CSR_[i]]
-            += M_->M()[M_->numberOfNonzeros() - n_ + i];
-      }
-    } // else
+      update_matrix_values();
+    } 
 
-    if(/*(Numeric_ == nullptr) &&*/ (factorizationSetupSucc_ == 0)) {
-      Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
-      if(Numeric_ == nullptr) {
+    if(factorizationSetupSucc_ == 0) {
+      int retval = factorize();
+      if(retval == -1) {
         nlp_->log->printf(hovWarning, "Numeric klu factorization failed. Regularizing ...\n");
         // This is not a catastrophic failure
         // The matrix is singular so return -1 to regularaize!
         return -1;
       } else { // Numeric was succesfull so now can set up
+        setup_refactorization();
         factorizationSetupSucc_ = 1;
         nlp_->log->printf(hovScalars, "Numeric klu factorization succesful! \n");
-        if(refact_ == "glu") {
-          this->initializeCusolverGLU();
-          this->refactorizationSetupCusolverGLU();
-        } else if(refact_ == "rf") {
-          this->initializeCusolverRf();
-          this->refactorizationSetupCusolverRf();
-          if(use_ir_ == "yes") {
-            this->IRsetup();
-          }
-        } else { // for future -
-          assert(0 && "Only glu and rf refactorizations available.\n");
-        }
       }
-    } else { // Numeric_ != nullptr OR factorizationSetupSucc_ == 1
-      checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-      // re-factor here
-
-      if(refact_ == "glu") {
-        sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
-                                         n_,
-                                         /* A is original matrix */
-                                         nnz_,
-                                         descr_A_,
-                                         da_,
-                                         dia_,
-                                         dja_,
-                                         info_M_);
-        sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
-      } else {
-        if(refact_ == "rf") {
-          sp_status_ = cusolverRfResetValues(n_, 
-                                             nnz_, 
-                                             dia_,
-                                             dja_,
-                                             da_,
-                                             d_P_,
-                                             d_Q_,
-                                             handle_rf_);
-          cudaDeviceSynchronize();
-          sp_status_ = cusolverRfRefactor(handle_rf_);
-        }
-      }
-      // end of factor
+    } else { // factorizationSetupSucc_ == 1
+      refactorize();
     }
     return 0;
   }
@@ -350,91 +302,13 @@ namespace hiop
     // std::cout << "mu in cusolver = " <<  nlp_->mu() << "\n";
     // std::cout << "ir tol         = " <<  ir_tol << "\n";
 
-    hiopVector* rhs = x.new_copy();
+    hiopVector* rhs = x.new_copy(); // TODO: Allocate this as a part of the solver workspace!
     double* dx = x.local_data();
     double* drhs = rhs->local_data();
     checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
-    // solve HERE
-    if(refact_ == "glu") {
-      sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
-                                       n_,
-                                       /* A is original matrix */
-                                       nnz_,
-                                       descr_A_,
-                                       da_,
-                                       dia_,
-                                       dja_,
-                                       devr_,/* right hand side */
-                                       devx_,/* left hand side */
-                                       &ite_refine_succ_,
-                                       &r_nrminf_,
-                                       info_M_,
-                                       d_work_);
+    bool retval = triangular_solve(dx, drhs, ir_tol);
 
-      if(sp_status_ == 0) {
-        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-      } else {
-        nlp_->log->printf(hovError,  // catastrophic failure
-                          "GLU solve failed with status: %d\n", 
-                          sp_status_);
-        return false;
-      }
-    } else {
-      if(refact_ == "rf") {
-        // if(Numeric_ == nullptr) {
-        if(!is_first_solve_) {
-          sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P_,
-                                       d_Q_,
-                                       1,
-                                       d_T_,
-                                       n_,
-                                       devr_,
-                                       n_);
-
-          if(sp_status_ == 0) {
-            // Experimental code for IR
-            if(use_ir_ == "yes") {
-              // Set tolerance based on barrier parameter mu
-              ir_->set_tol(ir_tol);
-              nlp_->log->printf(hovScalars,
-                                "Running iterative refinement with tol %e\n", ir_tol);
-              checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
-              //experimental code 
-
-              //end of experimental code
-              ir_->fgmres(devr_, devx_);             
-
-              nlp_->log->printf(hovScalars, 
-                                "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
-                                ir_->getInitialResidalNorm(), 
-                                ir_->getFinalResidalNorm(), 
-                                ir_->getFinalNumberOfIterations());
-            }
-            // End of Experimental code
-            checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-
-
-          } else {
-            nlp_->log->printf(hovError,  // catastrophic failure
-                              "Rf solve failed with status: %d\n", 
-                              sp_status_);
-            return false;
-          }
-        } else {
-          memcpy(dx, drhs, sizeof(double) * n_);
-          int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
-          klu_free_numeric(&Numeric_, &Common_);
-          klu_free_symbolic(&Symbolic_, &Common_);
-          is_first_solve_ = false;
-        }
-      } else {
-        nlp_->log->printf(hovError, // catastrophic failure
-                          "Unknown refactorization, exiting\n");
-        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
-      }
-    }
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     delete rhs;
     rhs = nullptr;
@@ -489,6 +363,159 @@ namespace hiop
       assert(0 && "Only KLU is available for the first factorization.\n");
     }
     is_first_call_ = false;
+  }
+
+  void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
+  {
+      // update matrix
+      for(int k = 0; k < nnz_; k++) {
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
+      }
+      for(int i = 0; i < n_; i++) {
+        if(index_covert_extra_Diag2CSR_[i] != -1)
+          kVal_[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+      }
+  }
+
+  int hiopLinSolverSymSparseCUSOLVER::factorize()
+  {
+    Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
+    return (Numeric_ == nullptr) ? -1 : 0;
+  }
+
+  void hiopLinSolverSymSparseCUSOLVER::setup_refactorization()
+  {
+    if(refact_ == "glu") {
+      initializeCusolverGLU();
+      refactorizationSetupCusolverGLU();
+    } else if(refact_ == "rf") {
+      initializeCusolverRf();
+      refactorizationSetupCusolverRf();
+      if(use_ir_ == "yes") {
+        IRsetup();
+      }
+    } else { // for future -
+      assert(0 && "Only glu and rf refactorizations available.\n");
+    }
+  }
+
+  int hiopLinSolverSymSparseCUSOLVER::refactorize()
+  {
+    checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    // re-factor here
+
+    if(refact_ == "glu") {
+      sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
+                                        n_,
+                                        /* A is original matrix */
+                                        nnz_,
+                                        descr_A_,
+                                        da_,
+                                        dia_,
+                                        dja_,
+                                        info_M_);
+      sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
+    } else {
+      if(refact_ == "rf") {
+        sp_status_ = cusolverRfResetValues(n_, 
+                                            nnz_, 
+                                            dia_,
+                                            dja_,
+                                            da_,
+                                            d_P_,
+                                            d_Q_,
+                                            handle_rf_);
+        cudaDeviceSynchronize();
+        sp_status_ = cusolverRfRefactor(handle_rf_);
+      }
+    }
+    // end of factor
+    return 0;
+  }
+
+  bool hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, const double* drhs, double tol)
+  {
+    // solve HERE
+    if(refact_ == "glu") {
+      sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
+                                       n_,
+                                       /* A is original matrix */
+                                       nnz_,
+                                       descr_A_,
+                                       da_,
+                                       dia_,
+                                       dja_,
+                                       devr_,/* right hand side */
+                                       devx_,/* left hand side */
+                                       &ite_refine_succ_,
+                                       &r_nrminf_,
+                                       info_M_,
+                                       d_work_);
+
+      if(sp_status_ == 0) {
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      } else {
+        nlp_->log->printf(hovError,  // catastrophic failure
+                          "GLU solve failed with status: %d\n", 
+                          sp_status_);
+        return false;
+      }
+    } else {
+      if(refact_ == "rf") {
+        // if(Numeric_ == nullptr) {
+        if(!is_first_solve_) {
+          sp_status_ = cusolverRfSolve(handle_rf_,
+                                       d_P_,
+                                       d_Q_,
+                                       1,
+                                       d_T_,
+                                       n_,
+                                       devr_,
+                                       n_);
+
+          if(sp_status_ == 0) {
+            // Experimental code for IR
+            if(use_ir_ == "yes") {
+              // Set tolerance based on barrier parameter mu
+              ir_->set_tol(tol);
+              nlp_->log->printf(hovScalars,
+                                "Running iterative refinement with tol %e\n", tol);
+              checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+              //experimental code 
+
+              //end of experimental code
+              ir_->fgmres(devr_, devx_);             
+
+              nlp_->log->printf(hovScalars, 
+                                "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
+                                ir_->getInitialResidalNorm(), 
+                                ir_->getFinalResidalNorm(), 
+                                ir_->getFinalNumberOfIterations());
+            }
+            // End of Experimental code
+            checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+
+
+          } else {
+            nlp_->log->printf(hovError,  // catastrophic failure
+                              "Rf solve failed with status: %d\n", 
+                              sp_status_);
+            return false;
+          }
+        } else {
+          memcpy(dx, drhs, sizeof(double) * n_);
+          int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
+          klu_free_numeric(&Numeric_, &Common_);
+          klu_free_symbolic(&Symbolic_, &Common_);
+          is_first_solve_ = false;
+        }
+      } else {
+        nlp_->log->printf(hovError, // catastrophic failure
+                          "Unknown refactorization, exiting\n");
+        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
+      }
+    }
+    return true;
   }
 
   void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
