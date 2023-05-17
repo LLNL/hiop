@@ -195,6 +195,13 @@ protected:
   void update_matrix_values();
 
   /**
+   * @brief Set up factorization of the first linear system.
+   * 
+   * @return int 
+   */
+  int setup_factorization();
+
+  /**
    * @brief Factorize system matrix
    * 
    * @return int - factorization status: success=0, failure=-1
@@ -276,6 +283,61 @@ private:
 
 
 namespace ReSolve {
+
+
+class MatrixCsr
+{
+public:
+  MatrixCsr();
+  ~MatrixCsr();
+  void allocate_size(int n);
+  void allocate_nnz(int nnz);
+
+  int* get_irows()
+  {
+    return irows_;
+  }
+
+  int* get_jcols()
+  {
+    return jcols_;
+  }
+
+  double* get_vals()
+  {
+    return vals_;
+  }
+
+  int* get_irows_host()
+  {
+    return irows_host_;
+  }
+
+  int* get_jcols_host()
+  {
+    return jcols_host_;
+  }
+
+  double* get_vals_host()
+  {
+    return vals_host_;
+  }
+
+  void update_from_host_mirror();
+  void copy_to_host_mirror();
+
+private:
+  int n_{ 0 };
+  int nnz_{ 0 };
+
+  int* irows_{ nullptr };
+  int* jcols_{ nullptr };
+  double* vals_{ nullptr};
+
+  int* irows_host_{ nullptr };
+  int* jcols_host_{ nullptr };
+  double* vals_host_{ nullptr};
+};  
 
 /**
  * @brief Class to store and operatate on LU data: will be needed in the future
