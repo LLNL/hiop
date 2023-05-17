@@ -72,6 +72,7 @@
 namespace ReSolve {
   // Forward declaration of inner IR class
   class IterativeRefinement;
+  class MatrixCsr;
 }
 
 namespace hiop
@@ -110,14 +111,12 @@ public:
   }
 
 protected:
+  ReSolve::MatrixCsr* mat_A_csr_;
+
   //
   int m_;   ///< number of rows of the whole matrix
   int n_;   ///< number of cols of the whole matrix
   int nnz_; ///< number of nonzeros in the matrix
-
-  int* kRowPtr_; ///< row pointer for nonzeros
-  int* jCol_;    ///< column indexes for nonzeros
-  double* kVal_; ///< storage for sparse matrix
 
   int* index_covert_CSR2Triplet_;
   int* index_covert_extra_Diag2CSR_;
@@ -157,9 +156,6 @@ protected:
   int* mja_ = nullptr;
 
   /* for GPU data */
-  double* da_;
-  int* dia_;
-  int* dja_;
   double* devx_;
   double* devr_;
   double* drhs_;
@@ -294,6 +290,11 @@ public:
   void allocate_nnz(int nnz);
 
   int* get_irows()
+  {
+    return irows_;
+  }
+
+  const int* get_irows() const
   {
     return irows_;
   }
