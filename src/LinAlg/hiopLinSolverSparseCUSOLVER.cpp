@@ -343,11 +343,29 @@ namespace hiop
       ir_->setup_system_matrix(n_, nnz_, dia_, dja_, da_);
     }
     /*
-     * initialize KLU and cuSolver parameters
+     * initialize matrix factorization
      */
+    setup_factorization();
+    is_first_call_ = false;
+  }
+
+  void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
+  {
+      // update matrix
+      for(int k = 0; k < nnz_; k++) {
+        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
+      }
+      for(int i = 0; i < n_; i++) {
+        if(index_covert_extra_Diag2CSR_[i] != -1)
+          kVal_[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+      }
+  }
+
+  int hiopLinSolverSymSparseCUSOLVER::setup_factorization()
+  {
     if(fact_ == "klu") {
       /* initialize KLU setup parameters, dont factorize yet */
-      this->initializeKLU();
+      initializeKLU();
 
       /*perform KLU but only the symbolic analysis (important)   */
 
@@ -362,19 +380,7 @@ namespace hiop
     } else { // for future
       assert(0 && "Only KLU is available for the first factorization.\n");
     }
-    is_first_call_ = false;
-  }
-
-  void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
-  {
-      // update matrix
-      for(int k = 0; k < nnz_; k++) {
-        kVal_[k] = M_->M()[index_covert_CSR2Triplet_[k]];
-      }
-      for(int i = 0; i < n_; i++) {
-        if(index_covert_extra_Diag2CSR_[i] != -1)
-          kVal_[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
-      }
+    return 0;
   }
 
   int hiopLinSolverSymSparseCUSOLVER::factorize()
@@ -1134,3 +1140,53 @@ namespace hiop
   }
 
 } // namespace hiop
+
+namespace ReSolve {
+  MatrixCsr::MatrixCsr()
+  {
+  }
+
+  MatrixCsr::~MatrixCsr()
+  {
+    if(n_ == 0)
+      return;
+
+    cudaFree(irows_);
+    cudaFree(jcols_);
+    cudaFree(vals_);
+
+    delete [] irows_host_;
+    delete [] jcols_host_;
+    delete [] vals_host_ ;
+  }
+
+  void MatrixCsr::allocate_size(int n)
+  {
+    n_ = n;
+    (cudaMalloc(&irows_, n_ * sizeof(int)));
+    irows_host_ = new int[n_];
+  }
+
+  void MatrixCsr::allocate_nnz(int nnz)
+  {
+    nnz_ = nnz;
+    (cudaMalloc(&jcols_, nnz_ * sizeof(int)));
+    (cudaMalloc(&vals_,  nnz_ * sizeof(int)));
+    irows_host_ = new int[nnz_];
+    irows_host_ = new int[nnz_];
+  }
+
+  void MatrixCsr::update_from_host_mirror()
+  {
+    (cudaMemcpy(irows_, irows_host_, sizeof(int)    * (n_+1), cudaMemcpyHostToDevice));
+    (cudaMemcpy(jcols_, jcols_host_, sizeof(int)    * nnz_,   cudaMemcpyHostToDevice));
+    (cudaMemcpy(vals_,  vals_host_,  sizeof(double) * nnz_,   cudaMemcpyHostToDevice));
+  }
+
+  void MatrixCsr::copy_to_host_mirror()
+  {
+    (cudaMemcpy(irows_host_, irows_, sizeof(int)    * (n_+1), cudaMemcpyDeviceToHost));
+    (cudaMemcpy(jcols_host_, jcols_, sizeof(int)    * nnz_,   cudaMemcpyDeviceToHost));
+    (cudaMemcpy(vals_host_,  vals_,  sizeof(double) * nnz_,   cudaMemcpyDeviceToHost));
+  }
+}
