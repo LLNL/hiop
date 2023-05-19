@@ -83,6 +83,8 @@ namespace hiop
       is_first_call_{ true }
   {
     mat_A_csr_ = new ReSolve::MatrixCsr();
+    solver_    = new ReSolve::RefactorizationSolver(n);
+    std::cout << "n: " << solver_->n_ << ", nnz: " << solver_->nnz_ << "\n";
 
     // handles
     cusparseCreate(&handle_);
@@ -1147,51 +1149,5 @@ namespace hiop
 } // namespace hiop
 
 namespace ReSolve {
-  MatrixCsr::MatrixCsr()
-  {
-  }
 
-  MatrixCsr::~MatrixCsr()
-  {
-    if(n_ == 0)
-      return;
-
-    cudaFree(irows_);
-    cudaFree(jcols_);
-    cudaFree(vals_);
-
-    delete [] irows_host_;
-    delete [] jcols_host_;
-    delete [] vals_host_ ;
-  }
-
-  void MatrixCsr::allocate_size(int n)
-  {
-    n_ = n;
-    (cudaMalloc(&irows_, (n_+1) * sizeof(int)));
-    irows_host_ = new int[n_+1]{0};
-  }
-
-  void MatrixCsr::allocate_nnz(int nnz)
-  {
-    nnz_ = nnz;
-    (cudaMalloc(&jcols_, nnz_ * sizeof(int)));
-    (cudaMalloc(&vals_,  nnz_ * sizeof(double)));
-    jcols_host_ = new int[nnz_]{0};
-    vals_host_  = new double[nnz_]{0};
-  }
-
-  void MatrixCsr::update_from_host_mirror()
-  {
-    (cudaMemcpy(irows_, irows_host_, sizeof(int)    * (n_+1), cudaMemcpyHostToDevice));
-    (cudaMemcpy(jcols_, jcols_host_, sizeof(int)    * nnz_,   cudaMemcpyHostToDevice));
-    (cudaMemcpy(vals_,  vals_host_,  sizeof(double) * nnz_,   cudaMemcpyHostToDevice));
-  }
-
-  void MatrixCsr::copy_to_host_mirror()
-  {
-    (cudaMemcpy(irows_host_, irows_, sizeof(int)    * (n_+1), cudaMemcpyDeviceToHost));
-    (cudaMemcpy(jcols_host_, jcols_, sizeof(int)    * nnz_,   cudaMemcpyDeviceToHost));
-    (cudaMemcpy(vals_host_,  vals_,  sizeof(double) * nnz_,   cudaMemcpyDeviceToHost));
-  }
 }
