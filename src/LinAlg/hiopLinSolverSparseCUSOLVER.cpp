@@ -82,9 +82,8 @@ namespace hiop
       is_first_solve_{ true },
       is_first_call_{ true }
   {
-    mat_A_csr_ = new ReSolve::MatrixCsr();
     solver_    = new ReSolve::RefactorizationSolver(n);
-    std::cout << "n: " << solver_->n_ << ", nnz: " << solver_->nnz_ << "\n";
+    // std::cout << "n: " << solver_->n_ << ", nnz: " << solver_->nnz_ << "\n";
 
     // handles
     cusparseCreate(&handle_);
@@ -205,7 +204,7 @@ namespace hiop
 
   hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
   {
-    delete mat_A_csr_;
+    // delete mat_A_csr_;
 
     // Delete CSR <--> triplet mappings
     delete[] index_covert_CSR2Triplet_;
@@ -316,13 +315,13 @@ namespace hiop
     // Transfer triplet to CSR form
     // Allocate row pointers and compute number of nonzeros.
     // kRowPtr_ = new int[n_ + 1]{ 0 };
-    mat_A_csr_->allocate_size(n_);
+    solver_->mat_A_csr_->allocate_size(n_);
     compute_nnz();
 
     // Allocate column indices and matrix values
     // kVal_ = new double[nnz_]{ 0.0 };
     // jCol_ = new int[nnz_]{ 0 };
-    mat_A_csr_->allocate_nnz(nnz_);
+    solver_->mat_A_csr_->allocate_nnz(nnz_);
     // Set column indices and matrix values.
     set_csr_indices_values();
 
@@ -330,11 +329,11 @@ namespace hiop
     checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
 
     // Copy matrix to device
-    mat_A_csr_->update_from_host_mirror();
+    solver_->mat_A_csr_->update_from_host_mirror();
 
     if(use_ir_ == "yes") {
       // ir_->setup_system_matrix(n_, nnz_, dia_, dja_, da_);
-      ir_->setup_system_matrix(n_, nnz_, mat_A_csr_->get_irows(), mat_A_csr_->get_jcols(), mat_A_csr_->get_vals());
+      ir_->setup_system_matrix(n_, nnz_, solver_->mat_A_csr_->get_irows(), solver_->mat_A_csr_->get_jcols(), solver_->mat_A_csr_->get_vals());
     }
     /*
      * initialize matrix factorization
@@ -345,7 +344,7 @@ namespace hiop
 
   void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
   {
-    double* vals = mat_A_csr_->get_vals_host();
+    double* vals = solver_->mat_A_csr_->get_vals_host();
     // update matrix
     for(int k = 0; k < nnz_; k++) {
       vals[k] = M_->M()[index_covert_CSR2Triplet_[k]];
@@ -359,8 +358,8 @@ namespace hiop
 
   int hiopLinSolverSymSparseCUSOLVER::setup_factorization()
   {
-    int* row_ptr = mat_A_csr_->get_irows_host();
-    int* col_idx = mat_A_csr_->get_jcols_host();
+    int* row_ptr = solver_->mat_A_csr_->get_irows_host();
+    int* col_idx = solver_->mat_A_csr_->get_jcols_host();
 
     if(fact_ == "klu") {
       /* initialize KLU setup parameters, dont factorize yet */
@@ -385,7 +384,7 @@ namespace hiop
   int hiopLinSolverSymSparseCUSOLVER::factorize()
   {
     // Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
-    Numeric_ = klu_factor(mat_A_csr_->get_irows_host(), mat_A_csr_->get_jcols_host(), mat_A_csr_->get_vals_host(), Symbolic_, &Common_);
+    Numeric_ = klu_factor(solver_->mat_A_csr_->get_irows_host(), solver_->mat_A_csr_->get_jcols_host(), solver_->mat_A_csr_->get_vals_host(), Symbolic_, &Common_);
     return (Numeric_ == nullptr) ? -1 : 0;
   }
 
@@ -409,7 +408,7 @@ namespace hiop
   int hiopLinSolverSymSparseCUSOLVER::refactorize()
   {
     // checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(mat_A_csr_->get_vals(), mat_A_csr_->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(solver_->mat_A_csr_->get_vals(), solver_->mat_A_csr_->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
     // re-factor here
 
     if(refact_ == "glu") {
@@ -418,18 +417,18 @@ namespace hiop
                                         /* A is original matrix */
                                         nnz_,
                                         descr_A_,
-                                        mat_A_csr_->get_vals(),  //da_,
-                                        mat_A_csr_->get_irows(), //dia_,
-                                        mat_A_csr_->get_jcols(), //dja_,
+                                        solver_->mat_A_csr_->get_vals(),  //da_,
+                                        solver_->mat_A_csr_->get_irows(), //dia_,
+                                        solver_->mat_A_csr_->get_jcols(), //dja_,
                                         info_M_);
       sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
     } else {
       if(refact_ == "rf") {
         sp_status_ = cusolverRfResetValues(n_, 
                                             nnz_, 
-                                            mat_A_csr_->get_irows(), //dia_,
-                                            mat_A_csr_->get_jcols(), //dja_,
-                                            mat_A_csr_->get_vals(),  //da_,
+                                            solver_->mat_A_csr_->get_irows(), //dia_,
+                                            solver_->mat_A_csr_->get_jcols(), //dja_,
+                                            solver_->mat_A_csr_->get_vals(),  //da_,
                                             d_P_,
                                             d_Q_,
                                             handle_rf_);
@@ -450,9 +449,9 @@ namespace hiop
                                        /* A is original matrix */
                                        nnz_,
                                        descr_A_,
-                                       mat_A_csr_->get_vals(),  //da_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
+                                       solver_->mat_A_csr_->get_vals(),  //da_,
+                                       solver_->mat_A_csr_->get_irows(), //dia_,
+                                       solver_->mat_A_csr_->get_jcols(), //dja_,
                                        devr_,/* right hand side */
                                        devx_,/* left hand side */
                                        &ite_refine_succ_,
@@ -529,7 +528,7 @@ namespace hiop
     //
     // compute nnz in each row
     //
-    int* row_ptr = mat_A_csr_->get_irows_host();
+    int* row_ptr = solver_->mat_A_csr_->get_irows_host();
 
     // off-diagonal part
     row_ptr[0] = 0;
@@ -557,9 +556,9 @@ namespace hiop
     //
     // set correct col index and value
     //
-    const int* row_ptr = mat_A_csr_->get_irows_host();
-    int*       col_idx = mat_A_csr_->get_jcols_host();
-    double*    vals    = mat_A_csr_->get_vals_host();
+    const int* row_ptr = solver_->mat_A_csr_->get_irows_host();
+    int*       col_idx = solver_->mat_A_csr_->get_jcols_host();
+    double*    vals    = solver_->mat_A_csr_->get_vals_host();
 
     index_covert_CSR2Triplet_    = new int[nnz_];
     index_covert_extra_Diag2CSR_ = new int[n_];
@@ -809,8 +808,8 @@ namespace hiop
                                      n_,
                                      nnz_, 
                                      descr_A_, 
-                                     mat_A_csr_->get_irows_host(), //kRowPtr_,
-                                     mat_A_csr_->get_jcols_host(), //jCol_, 
+                                     solver_->mat_A_csr_->get_irows_host(), //kRowPtr_,
+                                     solver_->mat_A_csr_->get_jcols_host(), //jCol_, 
                                      Numeric_->Pnum, /* base-0 */
                                      Symbolic_->Q,   /* base-0 */
                                      nnzM,           /* nnzM */
@@ -835,9 +834,9 @@ namespace hiop
                                      /* A is original matrix */
                                      nnz_, 
                                      descr_A_, 
-                                     mat_A_csr_->get_vals(),  //da_, 
-                                     mat_A_csr_->get_irows(), //dia_, 
-                                     mat_A_csr_->get_jcols(), //dja_, 
+                                     solver_->mat_A_csr_->get_vals(),  //da_, 
+                                     solver_->mat_A_csr_->get_irows(), //dia_, 
+                                     solver_->mat_A_csr_->get_jcols(), //dja_, 
                                      info_M_);
 
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
@@ -1027,9 +1026,9 @@ namespace hiop
 
     sp_status_ = cusolverRfSetupDevice(n_, 
                                        nnz_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
-                                       mat_A_csr_->get_vals(),  //da_,
+                                       solver_->mat_A_csr_->get_irows(), //dia_,
+                                       solver_->mat_A_csr_->get_jcols(), //dja_,
+                                       solver_->mat_A_csr_->get_vals(),  //da_,
                                        nnzL,
                                        d_Lp_csr,
                                        d_Li_csr,

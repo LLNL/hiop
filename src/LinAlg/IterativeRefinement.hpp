@@ -328,6 +328,9 @@ private:
   int n_{ 0 };   ///< Size of the linear system
   int nnz_{ 0 }; ///< Number of nonzeros in the system's matrix
 
+  MatrixCsr* mat_A_csr_; ///< System matrix in nonsymmetric CSR format
+
+
   /**
    * @brief Check for CUDA errors.
    * 

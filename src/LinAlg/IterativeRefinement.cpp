@@ -857,18 +857,18 @@ namespace ReSolve {
 
   RefactorizationSolver::RefactorizationSolver()
   {
-    
+    mat_A_csr_ = new MatrixCsr();
   }
 
   RefactorizationSolver::RefactorizationSolver(int n)
     : n_(n)
   {
-    
+    mat_A_csr_ = new MatrixCsr();    
   }
 
   RefactorizationSolver::~RefactorizationSolver()
   {
-    
+    delete mat_A_csr_;    
   }
 
 
