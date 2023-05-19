@@ -73,6 +73,7 @@ namespace ReSolve {
   // Forward declaration of inner IR class
   class IterativeRefinement;
   class MatrixCsr;
+  class RefactorizationSolver;
 }
 
 namespace hiop
@@ -112,6 +113,7 @@ public:
 
 protected:
   ReSolve::MatrixCsr* mat_A_csr_;
+  ReSolve::RefactorizationSolver* solver_;
 
   //
   int m_;   ///< number of rows of the whole matrix
@@ -281,84 +283,6 @@ private:
 namespace ReSolve {
 
 
-class MatrixCsr
-{
-public:
-  MatrixCsr();
-  ~MatrixCsr();
-  void allocate_size(int n);
-  void allocate_nnz(int nnz);
-
-  int* get_irows()
-  {
-    return irows_;
-  }
-
-  const int* get_irows() const
-  {
-    return irows_;
-  }
-
-  int* get_jcols()
-  {
-    return jcols_;
-  }
-
-  double* get_vals()
-  {
-    return vals_;
-  }
-
-  int* get_irows_host()
-  {
-    return irows_host_;
-  }
-
-  int* get_jcols_host()
-  {
-    return jcols_host_;
-  }
-
-  double* get_vals_host()
-  {
-    return vals_host_;
-  }
-
-  void update_from_host_mirror();
-  void copy_to_host_mirror();
-
-private:
-  int n_{ 0 };
-  int nnz_{ 0 };
-
-  int* irows_{ nullptr };
-  int* jcols_{ nullptr };
-  double* vals_{ nullptr};
-
-  int* irows_host_{ nullptr };
-  int* jcols_host_{ nullptr };
-  double* vals_host_{ nullptr};
-};  
-
-/**
- * @brief Class to store and operatate on LU data: will be needed in the future
- * 
- */
-class hiopLinSolverSymSparseCUSOLVERLU
-{
-public:
-  // constructor
-  hiopLinSolverSymSparseCUSOLVERLU();
-  ~hiopLinSolverSymSparseCUSOLVERLU();
-  void solve();
-  void extractFromKLU();
-  void extractFromRf();
-  // to clear but not free the memory
-  void intermediateCleanup();
-
-private:
-
-};
 
 } // namespace ReSolve
 
