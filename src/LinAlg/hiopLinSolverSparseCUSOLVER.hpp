@@ -112,7 +112,6 @@ public:
   }
 
 protected:
-  ReSolve::MatrixCsr* mat_A_csr_;
   ReSolve::RefactorizationSolver* solver_;
 
   //
