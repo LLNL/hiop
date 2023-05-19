@@ -135,30 +135,30 @@ namespace hiop
     use_ir_ = "no";
     if(maxit_test > 0){
       use_ir_ = "yes";
-      ir_ = new ReSolve::IterativeRefinement();
-      ir_->maxit() = maxit_test;
+      solver_->enable_iterative_refinement(); // ir_ = new ReSolve::IterativeRefinement();
+      solver_->ir_->maxit() = maxit_test;
     } 
     if(use_ir_ == "yes") {
       if((refact_ == "rf")) {
 
-        ir_->restart() =  nlp_->options->GetInteger("ir_inner_restart");
+        solver_->ir_->restart() =  nlp_->options->GetInteger("ir_inner_restart");
 
-        if ((ir_->restart() <0) || (ir_->restart() >100)){
+        if ((solver_->ir_->restart() <0) || (solver_->ir_->restart() >100)){
           nlp_->log->printf(hovWarning, 
                             "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            ir_->restart());
-          ir_->restart() = 20;
+                            solver_->ir_->restart());
+          solver_->ir_->restart() = 20;
         }
 
 
-        ir_->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
-        if ((ir_->tol() <0) || (ir_->tol() >1)){
+        solver_->ir_->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
+        if ((solver_->ir_->tol() <0) || (solver_->ir_->tol() >1)){
           nlp_->log->printf(hovWarning, 
                             "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            ir_->tol());
-          ir_->tol() = 1e-12;
+                            solver_->ir_->tol());
+          solver_->ir_->tol() = 1e-12;
         }
-        ir_->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        solver_->ir_->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
          * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
@@ -178,20 +178,20 @@ namespace hiop
          * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
          * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephen's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
          */ 
-        if(ir_->orth_option() != "mgs" && ir_->orth_option() != "cgs2" && ir_->orth_option() != "mgs_two_synch" && ir_->orth_option() != "mgs_pm") {
+        if(solver_->ir_->orth_option() != "mgs" && solver_->ir_->orth_option() != "cgs2" && solver_->ir_->orth_option() != "mgs_two_synch" && solver_->ir_->orth_option() != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
                             "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
                             use_ir_.c_str());
-          ir_->orth_option() = "mgs";
+          solver_->ir_->orth_option() = "mgs";
         }
 
-        ir_->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
+        solver_->ir_->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
 
-        if ((ir_->conv_cond() <0) || (ir_->conv_cond() >2)){
+        if ((solver_->ir_->conv_cond() <0) || (solver_->ir_->conv_cond() >2)){
           nlp_->log->printf(hovWarning, 
                             "Wrong IR convergence condition: %d. Use int value: 0, 1 or 2. Setting default (0)  ...\n",
-                            ir_->conv_cond());
-          ir_->conv_cond() = 0;
+                            solver_->ir_->conv_cond());
+          solver_->ir_->conv_cond() = 0;
         }
 
       } else {
@@ -237,12 +237,12 @@ namespace hiop
     delete [] mia_;
     delete [] mja_;
 
-    // Experimental code: delete IR
-    if(use_ir_ == "yes") {
-      // destroy IR object
-      delete ir_;
-    }
-    // End of experimetnal code
+    // // Experimental code: delete IR
+    // if(use_ir_ == "yes") {
+    //   // destroy IR object
+    //   delete solver_->ir_;
+    // }
+    // // End of experimetnal code
   }
 
   int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
@@ -333,7 +333,8 @@ namespace hiop
 
     if(use_ir_ == "yes") {
       // ir_->setup_system_matrix(n_, nnz_, dia_, dja_, da_);
-      ir_->setup_system_matrix(n_, nnz_, solver_->mat_A_csr_->get_irows(), solver_->mat_A_csr_->get_jcols(), solver_->mat_A_csr_->get_vals());
+      // solver_->ir_->setup_system_matrix(n_, nnz_, solver_->mat_A_csr_->get_irows(), solver_->mat_A_csr_->get_jcols(), solver_->mat_A_csr_->get_vals());
+      solver_->setup_iterative_refinement_matrix(n_, nnz_);
     }
     /*
      * initialize matrix factorization
@@ -397,8 +398,7 @@ namespace hiop
       initializeCusolverRf();
       refactorizationSetupCusolverRf();
       if(use_ir_ == "yes") {
-        IRsetup();
-        // std::cout << "IR is set up successfully ...\n";
+        solver_->configure_iterative_refinement(handle_, handle_cublas_, handle_rf_, n_, d_T_, d_P_, d_Q_, devx_, devr_);
       }
     } else { // for future -
       assert(0 && "Only glu and rf refactorizations available.\n");
@@ -484,18 +484,18 @@ namespace hiop
             // Experimental code for IR
             if(use_ir_ == "yes") {
               // Set tolerance based on barrier parameter mu
-              ir_->set_tol(tol);
+              solver_->ir_->set_tol(tol);
               nlp_->log->printf(hovScalars,
                                 "Running iterative refinement with tol %e\n", tol);
               checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
-              ir_->fgmres(devr_, devx_);
+              solver_->ir_->fgmres(devr_, devx_);
 
               nlp_->log->printf(hovScalars, 
                                 "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
-                                ir_->getInitialResidalNorm(), 
-                                ir_->getFinalResidalNorm(), 
-                                ir_->getFinalNumberOfIterations());
+                                solver_->ir_->getInitialResidalNorm(), 
+                                solver_->ir_->getFinalResidalNorm(), 
+                                solver_->ir_->getFinalNumberOfIterations());
             }
             // End of Experimental code
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
@@ -1055,12 +1055,12 @@ namespace hiop
     return 0;
   }
 
-  // Experimental: setup the iterative refinement
-  void hiopLinSolverSymSparseCUSOLVER::IRsetup()
-  {
-    ir_->setup(handle_, handle_cublas_, handle_rf_, n_, d_T_, d_P_, d_Q_, devx_, devr_);
-  }
-  // Experimental code ends here
+  // // Experimental: setup the iterative refinement
+  // void hiopLinSolverSymSparseCUSOLVER::IRsetup()
+  // {
+  //   solver_->ir_->setup(handle_, handle_cublas_, handle_rf_, n_, d_T_, d_P_, d_Q_, devx_, devr_);
+  // }
+  // // Experimental code ends here
 
 
   hiopLinSolverSymSparseCUSOLVERGPU::hiopLinSolverSymSparseCUSOLVERGPU(const int& n, 
