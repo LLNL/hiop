@@ -171,7 +171,7 @@ protected:
 
   // iterative refinement
 
-  ReSolve::IterativeRefinement* ir_;
+  // ReSolve::IterativeRefinement* ir_;
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -251,7 +251,7 @@ protected:
   int refactorizationSetupCusolverGLU();
   int refactorizationSetupCusolverRf();
 
-  void IRsetup();
+  // void IRsetup();
 };
 
 class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER

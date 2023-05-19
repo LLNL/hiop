@@ -868,10 +868,35 @@ namespace ReSolve {
 
   RefactorizationSolver::~RefactorizationSolver()
   {
-    delete mat_A_csr_;    
+    delete mat_A_csr_;
+    if(iterative_refinement_enabled_)
+      delete ir_;
   }
 
+  void RefactorizationSolver::enable_iterative_refinement()
+  {
+    ir_ = new IterativeRefinement();
+    if(ir_ != nullptr)
+      iterative_refinement_enabled_ = true;
+  }
 
+  void RefactorizationSolver::setup_iterative_refinement_matrix(int n, int nnz)
+  {
+    ir_->setup_system_matrix(n, nnz, mat_A_csr_->get_irows(), mat_A_csr_->get_jcols(), mat_A_csr_->get_vals());
+  }
+
+  void RefactorizationSolver::configure_iterative_refinement(cusparseHandle_t   cusparse_handle,
+                                                             cublasHandle_t     cublas_handle,
+                                                             cusolverRfHandle_t cusolverrf_handle,
+                                                             int n,
+                                                             double* d_T,
+                                                             int* d_P,
+                                                             int* d_Q,
+                                                             double* devx,
+                                                             double* devr)
+  {
+    ir_->setup(cusparse_handle, cublas_handle, cusolverrf_handle, n, d_T, d_P, d_Q, devx, devr);
+  }
 
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now

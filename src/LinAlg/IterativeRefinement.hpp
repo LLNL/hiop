@@ -323,12 +323,25 @@ public:
   RefactorizationSolver(int n);
   ~RefactorizationSolver();
 
-
+  void enable_iterative_refinement();
+  void setup_iterative_refinement_matrix(int n, int nnz);
+  void configure_iterative_refinement(cusparseHandle_t   cusparse_handle,
+                                      cublasHandle_t     cublas_handle,
+                                      cusolverRfHandle_t cusolverrf_handle,
+                                      int n,
+                                      double* d_T,
+                                      int* d_P,
+                                      int* d_Q,
+                                      double* devx,
+                                      double* devr);
 private:
   int n_{ 0 };   ///< Size of the linear system
   int nnz_{ 0 }; ///< Number of nonzeros in the system's matrix
 
-  MatrixCsr* mat_A_csr_; ///< System matrix in nonsymmetric CSR format
+  MatrixCsr* mat_A_csr_{ nullptr };    ///< System matrix in nonsymmetric CSR format
+  IterativeRefinement* ir_{ nullptr }; ///< Iterative refinement class
+
+  bool iterative_refinement_enabled_{ false };
 
 
   /**
