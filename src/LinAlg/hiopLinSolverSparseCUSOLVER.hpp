@@ -60,8 +60,6 @@
 #include "hiopMatrixSparseTriplet.hpp"
 #include <unordered_map>
 
-#include "hiop_cusolver_defs.hpp"
-#include "klu.h"
 /** implements the linear solver class using nvidia_ cuSolver (GLU
  * refactorization)
  *
@@ -114,7 +112,9 @@ public:
 protected:
   ReSolve::RefactorizationSolver* solver_;
 
-  //
+  /* Right-hand side vector */
+  double* rhs_;
+
   int m_;   ///< number of rows of the whole matrix
   int n_;   ///< number of cols of the whole matrix
   int nnz_; ///< number of nonzeros in the matrix
@@ -122,56 +122,10 @@ protected:
   int* index_covert_CSR2Triplet_;
   int* index_covert_extra_Diag2CSR_;
 
-  /** options **/
-
-  int ordering_;
-  std::string fact_;
-  std::string refact_;
-  std::string use_ir_;
-
-  /** needed for cuSolver **/
-
-  cusolverStatus_t sp_status_;
-  cusparseHandle_t handle_ = 0;
-  cusolverSpHandle_t handle_cusolver_ = nullptr;
-  cublasHandle_t handle_cublas_;
-
-  cusparseMatDescr_t descr_A_;
-  cusparseMatDescr_t descr_M_;
-  csrluInfoHost_t info_lu_ = nullptr;
-  csrgluInfo_t info_M_ = nullptr;
-
-  cusolverRfHandle_t handle_rf_ = nullptr;
-  size_t buffer_size_;
-  size_t size_M_;
-  double* d_work_;
-  int ite_refine_succ_ = 0;
-  double r_nrminf_;
-
-  // KLU stuff
-  int klu_status_;
-  klu_common Common_;
-  klu_symbolic* Symbolic_ = nullptr;
-  klu_numeric* Numeric_ = nullptr;
-  /*pieces of M */
-  int* mia_ = nullptr;
-  int* mja_ = nullptr;
-
-  /* Right-hand side vector */
-  double* rhs_;
-
-  /* for GPU data */
-  double* devx_;
-  double* devr_;
-  // double* drhs_;
-
+  // Algorithm control flags
   int factorizationSetupSucc_;
-  bool is_first_solve_;
+  // bool is_first_solve_;
   bool is_first_call_;
-  /* needed for cuSolverRf */
-  int* d_P_;
-  int* d_Q_; // permutation matrices
-  double* d_T_;
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -191,54 +145,10 @@ protected:
    */
   void update_matrix_values();
 
-  /**
-   * @brief Set up factorization of the first linear system.
-   * 
-   * @return int 
-   */
-  int setup_factorization();
-
-  /**
-   * @brief Factorize system matrix
-   * 
-   * @return int - factorization status: success=0, failure=-1
-   */
-  int factorize();
-
-  /**
-   * @brief Set the up the refactorization
-   * 
-   */
-  void setup_refactorization();
-
-  /**
-   * @brief Refactorize system matrix
-   * 
-   * @return int 
-   */
-  int refactorize();
-
-  /**
-   * @brief Invokes triangular solver given matrix factors
-   * 
-   * @param dx 
-   * @param tol 
-   * @return bool 
-   */
-  bool triangular_solve(double* dx, double tol);
-
   /** Function to compute nnz and set row pointers */
   void compute_nnz();
   /** Function to compute column indices and matrix values arrays */
   void set_csr_indices_values();
-
-  int createM(const int n, 
-              const int nnzL, 
-              const int* Lp, 
-              const int* Li, 
-              const int nnzU, 
-              const int* Up, 
-              const int* Ui);
 
   template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
   /* private functions needed for refactorization setup, no need to make them public */
