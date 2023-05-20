@@ -82,7 +82,8 @@ namespace hiop
       is_first_solve_{ true },
       is_first_call_{ true }
   {
-    solver_    = new ReSolve::RefactorizationSolver(n);
+    solver_ = new ReSolve::RefactorizationSolver(n);
+    rhs_    = new double[n]{ 0 };
     // std::cout << "n: " << solver_->n_ << ", nnz: " << solver_->nnz_ << "\n";
 
     // handles
@@ -204,7 +205,8 @@ namespace hiop
 
   hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
   {
-    // delete mat_A_csr_;
+    delete solver_;
+    delete [] rhs_;
 
     // Delete CSR <--> triplet mappings
     delete[] index_covert_CSR2Triplet_;
@@ -236,13 +238,6 @@ namespace hiop
     klu_free_numeric(&Numeric_, &Common_);
     delete [] mia_;
     delete [] mja_;
-
-    // // Experimental code: delete IR
-    // if(use_ir_ == "yes") {
-    //   // destroy IR object
-    //   delete solver_->ir_;
-    // }
-    // // End of experimetnal code
   }
 
   int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
@@ -294,16 +289,13 @@ namespace hiop
     // std::cout << "mu in cusolver = " <<  nlp_->mu() << "\n";
     // std::cout << "ir tol         = " <<  ir_tol << "\n";
 
-    hiopVector* rhs = x.new_copy(); // TODO: Allocate this as a part of the solver workspace!
     double* dx = x.local_data();
-    double* drhs = rhs->local_data();
-    checkCudaErrors(cudaMemcpy(devr_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    memcpy(rhs_, dx, n_*sizeof(double));
+    checkCudaErrors(cudaMemcpy(devr_, rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
-    bool retval = triangular_solve(dx, drhs, ir_tol);
+    bool retval = triangular_solve(dx, ir_tol);
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    delete rhs;
-    rhs = nullptr;
     return 1;
   }
 
@@ -440,7 +432,8 @@ namespace hiop
     return 0;
   }
 
-  bool hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, const double* drhs, double tol)
+  // bool hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, const double* drhs, double tol)
+  bool hiopLinSolverSymSparseCUSOLVER::triangular_solve(double* dx, double tol)
   {
     // solve HERE
     if(refact_ == "glu") {
@@ -487,7 +480,7 @@ namespace hiop
               solver_->ir_->set_tol(tol);
               nlp_->log->printf(hovScalars,
                                 "Running iterative refinement with tol %e\n", tol);
-              checkCudaErrors(cudaMemcpy(devx_, drhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+              checkCudaErrors(cudaMemcpy(devx_, rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
               solver_->ir_->fgmres(devr_, devx_);
 
@@ -508,7 +501,7 @@ namespace hiop
             return false;
           }
         } else {
-          memcpy(dx, drhs, sizeof(double) * n_);
+          memcpy(dx, rhs_, sizeof(double) * n_);
           int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
           klu_free_numeric(&Numeric_, &Common_);
           klu_free_symbolic(&Symbolic_, &Common_);

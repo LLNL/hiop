@@ -136,7 +136,8 @@ protected:
   cusolverSpHandle_t handle_cusolver_ = nullptr;
   cublasHandle_t handle_cublas_;
 
-  cusparseMatDescr_t descr_A_, descr_M_;
+  cusparseMatDescr_t descr_A_;
+  cusparseMatDescr_t descr_M_;
   csrluInfoHost_t info_lu_ = nullptr;
   csrgluInfo_t info_M_ = nullptr;
 
@@ -156,10 +157,13 @@ protected:
   int* mia_ = nullptr;
   int* mja_ = nullptr;
 
+  /* Right-hand side vector */
+  double* rhs_;
+
   /* for GPU data */
   double* devx_;
   double* devr_;
-  double* drhs_;
+  // double* drhs_;
 
   int factorizationSetupSucc_;
   bool is_first_solve_;
@@ -168,10 +172,6 @@ protected:
   int* d_P_;
   int* d_Q_; // permutation matrices
   double* d_T_;
-
-  // iterative refinement
-
-  // ReSolve::IterativeRefinement* ir_;
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -222,11 +222,10 @@ protected:
    * @brief Invokes triangular solver given matrix factors
    * 
    * @param dx 
-   * @param drhs 
    * @param tol 
    * @return bool 
    */
-  bool triangular_solve(double* dx, const double* drhs, double tol);
+  bool triangular_solve(double* dx, double tol);
 
   /** Function to compute nnz and set row pointers */
   void compute_nnz();
@@ -250,8 +249,6 @@ protected:
 
   int refactorizationSetupCusolverGLU();
   int refactorizationSetupCusolverRf();
-
-  // void IRsetup();
 };
 
 class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER
