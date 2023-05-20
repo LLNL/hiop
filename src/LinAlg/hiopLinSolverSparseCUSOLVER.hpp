@@ -124,7 +124,6 @@ protected:
 
   // Algorithm control flags
   int factorizationSetupSucc_;
-  // bool is_first_solve_;
   bool is_first_call_;
 
   /* private function: creates a cuSolver data structure from KLU data
@@ -151,14 +150,6 @@ protected:
   void set_csr_indices_values();
 
   template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
-  /* private functions needed for refactorization setup, no need to make them public */
-
-  int initializeKLU();
-  int initializeCusolverGLU();
-  int initializeCusolverRf();
-
-  int refactorizationSetupCusolverGLU();
-  int refactorizationSetupCusolverRf();
 };
 
 class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER

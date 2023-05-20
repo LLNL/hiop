@@ -195,6 +195,7 @@ private:
   // neded in some of the orthogonalization methods
   double* h_aux_{ nullptr };
 
+  // TODO: Something needs to be done with this :)
   const double minusone_ = -1.0;
   const double one_ = 1.0;
   const double zero_ = 0.0;

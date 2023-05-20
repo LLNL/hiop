@@ -74,11 +74,7 @@ namespace hiop
       index_covert_extra_Diag2CSR_{ nullptr }, 
       n_{ n },
       nnz_{ 0 },
-      // ordering_{ 1 }, 
-      // fact_{ "klu" }, // default
-      // refact_{ "glu" }, // default
       factorizationSetupSucc_{ 0 },
-      // is_first_solve_{ true },
       is_first_call_{ true }
   {
     solver_ = new ReSolve::RefactorizationSolver(n);
@@ -139,7 +135,7 @@ namespace hiop
     use_ir = "no";
     if(maxit_test > 0){
       use_ir = "yes";
-      solver_->enable_iterative_refinement(); // ir_ = new ReSolve::IterativeRefinement();
+      solver_->enable_iterative_refinement();
       solver_->ir_->maxit() = maxit_test;
     } 
     if(use_ir == "yes") {
@@ -272,6 +268,10 @@ namespace hiop
     checkCudaErrors(cudaMemcpy(solver_->devr_, rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     bool retval = solver_->triangular_solve(dx, rhs_, ir_tol);
+    if(!retval) {
+      nlp_->log->printf(hovError,  // catastrophic failure
+                        "ReSolve triangular solver failed\n");
+    }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     return 1;
@@ -283,20 +283,19 @@ namespace hiop
     assert(n_ > 0);
 
     // Transfer triplet to CSR form
+
     // Allocate row pointers and compute number of nonzeros.
-    // kRowPtr_ = new int[n_ + 1]{ 0 };
     solver_->mat_A_csr_->allocate_size(n_);
     compute_nnz();
     solver_->set_nnz(nnz_);
-    std::cout << "nnz: " << nnz_ << "\n";
 
     // Allocate column indices and matrix values
-    // kVal_ = new double[nnz_]{ 0.0 };
-    // jCol_ = new int[nnz_]{ 0 };
     solver_->mat_A_csr_->allocate_nnz(nnz_);
+
     // Set column indices and matrix values.
     set_csr_indices_values();
 
+    // TODO: These vectors are copied to device, but are thier elements set anywhere?
     checkCudaErrors(cudaMalloc(&(solver_->devx_), n_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&(solver_->devr_), n_ * sizeof(double)));
 
@@ -309,7 +308,11 @@ namespace hiop
     /*
      * initialize matrix factorization
      */
-    solver_->setup_factorization();
+    if(solver_->setup_factorization() < 0) {
+      nlp_->log->printf(hovError,  // catastrophic failure
+                        "Symbolic factorization failed!\n");
+      return;
+    };
     is_first_call_ = false;
   }
 
@@ -324,7 +327,6 @@ namespace hiop
       if(index_covert_extra_Diag2CSR_[i] != -1)
         vals[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
     }
-    // std::cout << "Updated matrix values ...\n";
   }
 
 

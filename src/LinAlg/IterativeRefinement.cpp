@@ -932,11 +932,13 @@ namespace ReSolve {
       iterative_refinement_enabled_ = true;
   }
 
+  // TODO: Refactor to only pass mat_A_csr_ to setup_system_matrix; n and nnz can be read from mat_A_csr_
   void RefactorizationSolver::setup_iterative_refinement_matrix(int n, int nnz)
   {
     ir_->setup_system_matrix(n, nnz, mat_A_csr_->get_irows(), mat_A_csr_->get_jcols(), mat_A_csr_->get_vals());
   }
 
+  // TODO: Can this function be merged with setup_iterative_refinement_matrix ?
   void RefactorizationSolver::configure_iterative_refinement(cusparseHandle_t   cusparse_handle,
                                                              cublasHandle_t     cublas_handle,
                                                              cusolverRfHandle_t cusolverrf_handle,
@@ -961,14 +963,12 @@ namespace ReSolve {
       initializeKLU();
 
       /*perform KLU but only the symbolic analysis (important)   */
-
       klu_free_symbolic(&Symbolic_, &Common_);
       klu_free_numeric(&Numeric_, &Common_);
       Symbolic_ = klu_analyze(n_, row_ptr, col_idx, &Common_);
 
       if(Symbolic_ == nullptr) {
-        // nlp_->log->printf(hovError,  // catastrophic failure
-        //                   "Symbolic factorization failed!\n");
+        return -1;
       }
     } else { // for future
       assert(0 && "Only KLU is available for the first factorization.\n");
@@ -978,7 +978,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::factorize()
   {
-    // Numeric_ = klu_factor(kRowPtr_, jCol_, kVal_, Symbolic_, &Common_);
     Numeric_ = klu_factor(mat_A_csr_->get_irows_host(), mat_A_csr_->get_jcols_host(), mat_A_csr_->get_vals_host(), Symbolic_, &Common_);
     return (Numeric_ == nullptr) ? -1 : 0;
   }
@@ -1001,9 +1000,8 @@ namespace ReSolve {
 
   int RefactorizationSolver::refactorize()
   {
-    // checkCudaErrors(cudaMemcpy(da_, kVal_, sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+    // TODO: This memcpy should not be in this function.
     checkCudaErrors(cudaMemcpy(mat_A_csr_->get_vals(), mat_A_csr_->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-    // re-factor here
 
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
@@ -1030,13 +1028,11 @@ namespace ReSolve {
         sp_status_ = cusolverRfRefactor(handle_rf_);
       }
     }
-    // end of factor
     return 0;
   }
 
   bool RefactorizationSolver::triangular_solve(double* dx, const double* rhs, double tol)
   {
-    // solve HERE
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
                                        n_,
@@ -1056,15 +1052,12 @@ namespace ReSolve {
       if(sp_status_ == 0) {
         checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       } else {
-        // nlp_->log->printf(hovError,  // catastrophic failure
-        //                   "GLU solve failed with status: %d\n", 
-        //                   sp_status_);
+        // TODO: Implement ReSolve logging system to output these messages
         std::cout << "GLU solve failed with status: " << sp_status_ << "\n";
         return false;
       }
     } else {
       if(refact_ == "rf") {
-        // if(Numeric_ == nullptr) {
         if(!is_first_solve_) {
           sp_status_ = cusolverRfSolve(handle_rf_,
                                        d_P_,
@@ -1076,30 +1069,27 @@ namespace ReSolve {
                                        n_);
 
           if(sp_status_ == 0) {
-            // Experimental code for IR
             if(use_ir_ == "yes") {
               // Set tolerance based on barrier parameter mu
               ir_->set_tol(tol);
+              // TODO: Implement ReSolve logging system to output these messages
               // nlp_->log->printf(hovScalars,
               //                   "Running iterative refinement with tol %e\n", tol);
               checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
               ir_->fgmres(devr_, devx_);
-
+              // TODO: Implement ReSolve logging system to output these messages
               // nlp_->log->printf(hovScalars, 
               //                   "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
               //                   ir_->getInitialResidalNorm(), 
               //                   ir_->getFinalResidalNorm(), 
               //                   ir_->getFinalNumberOfIterations());
             }
-            // End of Experimental code
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
 
 
           } else {
-            // nlp_->log->printf(hovError,  // catastrophic failure
-            //                   "Rf solve failed with status: %d\n", 
-            //                   sp_status_);
+            // TODO: Implement ReSolve logging system to output these messages
             std::cout << "Rf solve failed with status: " << sp_status_ << "\n";
             return false;
           }
@@ -1111,8 +1101,7 @@ namespace ReSolve {
           is_first_solve_ = false;
         }
       } else {
-        // nlp_->log->printf(hovError, // catastrophic failure
-        //                   "Unknown refactorization, exiting\n");
+        // TODO: Implement ReSolve logging system to output these messages
         std::cout << "Unknown refactorization, exiting\n";
         assert(false && "Only GLU and cuSolverRf are available refactorizations.");
       }
@@ -1122,12 +1111,12 @@ namespace ReSolve {
 
   // helper private function needed for format conversion
   int RefactorizationSolver::createM(const int n, 
-                                              const int /* nnzL */,
-                                              const int* Lp, 
-                                              const int* Li,
-                                              const int /* nnzU */, 
-                                              const int* Up,
-                                              const int* Ui)
+                                     const int /* nnzL */,
+                                     const int* Lp, 
+                                     const int* Li,
+                                     const int /* nnzU */, 
+                                     const int* Up,
+                                     const int* Ui)
   {
     int row;
     for(int i = 0; i < n; ++i) {
@@ -1174,7 +1163,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::initializeKLU()
   {
-    // KLU
     klu_defaults(&Common_);
 
     // TODO: consider making this a part of setup options so that user can
@@ -1196,7 +1184,7 @@ namespace ReSolve {
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
 
     // info (data structure where factorization is stored)
-    //this is done in the constructor - however, this function might be called more than once
+    // this is done in the constructor - however, this function might be called more than once
     cusolverSpDestroyGluInfo(info_M_);
     cusolverSpCreateGluInfo(&info_M_);
 
@@ -1229,7 +1217,6 @@ namespace ReSolve {
     return 0;
   }
 
-
   // call if both the matrix and the nnz structure changed or if convergence is
   // poor while using refactorization.
   int RefactorizationSolver::refactorizationSetupCusolverGLU()
@@ -1249,7 +1236,7 @@ namespace ReSolve {
     mja_ = new int[nnzM]{0};
     int* Lp = new int[n_ + 1];
     int* Li = new int[nnzL];
-    // we cant use nullptr instrad od Lx and Ux because it causes SEG FAULT. It
+    // we can't use nullptr instead od Lx and Ux because it causes SEG FAULT. It
     // seems like a waste of memory though.
 
     double* Lx = new double[nnzL];
@@ -1324,8 +1311,7 @@ namespace ReSolve {
     return 0;
   }
 
-  int
-  RefactorizationSolver::refactorizationSetupCusolverRf()
+  int RefactorizationSolver::refactorizationSetupCusolverRf()
   {
     // for now this ONLY WORKS if preceeded by KLU. Might be worth decoupling
     // later
