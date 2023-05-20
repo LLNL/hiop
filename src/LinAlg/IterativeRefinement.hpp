@@ -56,6 +56,7 @@
 
 #pragma once
 
+#include "klu.h"
 #include "hiop_cusolver_defs.hpp"
 #include <string>
 
@@ -334,6 +335,54 @@ public:
                                       int* d_Q,
                                       double* devx,
                                       double* devr);
+
+  /**
+   * @brief Set the number of nonzeros in system matrix.
+   * 
+   * @param nnz 
+   */
+  void set_nnz(int nnz)
+  {
+    nnz_ = nnz;
+  }
+
+  /**
+   * @brief Set up factorization of the first linear system.
+   * 
+   * @return int 
+   */
+  int setup_factorization();
+
+  /**
+   * @brief Factorize system matrix
+   * 
+   * @return int - factorization status: success=0, failure=-1
+   */
+  int factorize();
+
+  /**
+   * @brief Set the up the refactorization
+   * 
+   */
+  void setup_refactorization();
+
+  /**
+   * @brief Refactorize system matrix
+   * 
+   * @return int 
+   */
+  int refactorize();
+
+  /**
+   * @brief Invokes triangular solver given matrix factors
+   * 
+   * @param dx 
+   * @param tol 
+   * @return bool 
+   */
+  bool triangular_solve(double* dx, const double* rhs, double tol);
+
+
 private:
   int n_{ 0 };   ///< Size of the linear system
   int nnz_{ 0 }; ///< Number of nonzeros in the system's matrix
@@ -341,7 +390,80 @@ private:
   MatrixCsr* mat_A_csr_{ nullptr };    ///< System matrix in nonsymmetric CSR format
   IterativeRefinement* ir_{ nullptr }; ///< Iterative refinement class
 
-  bool iterative_refinement_enabled_{ false };
+  bool cusolver_glu_enabled_{ false };         ///< cusolverGLU on/off flag
+  bool cusolver_rf_enabled_{ false };          ///< cusolverRf on/off flag
+  bool iterative_refinement_enabled_{ false }; ///< Iterative refinement on/off flag
+  bool is_first_solve_{ true };                ///< If it is first call to triangular solver
+
+  // Options
+  int ordering_{ -1 };
+  std::string fact_;
+  std::string refact_;
+  std::string use_ir_;
+
+  /** needed for cuSolver **/
+
+  cusolverStatus_t sp_status_;
+  cusparseHandle_t handle_ = 0;
+  cusolverSpHandle_t handle_cusolver_ = nullptr;
+  cublasHandle_t handle_cublas_;
+
+  cusparseMatDescr_t descr_A_;
+  cusparseMatDescr_t descr_M_;
+  csrluInfoHost_t info_lu_ = nullptr;
+  csrgluInfo_t info_M_ = nullptr;
+
+  cusolverRfHandle_t handle_rf_ = nullptr;
+  size_t buffer_size_;
+  size_t size_M_;
+  double* d_work_;
+  int ite_refine_succ_ = 0;
+  double r_nrminf_;
+
+  // KLU stuff
+  int klu_status_;
+  klu_common Common_;
+  klu_symbolic* Symbolic_ = nullptr;
+  klu_numeric* Numeric_ = nullptr;
+  /*pieces of M */
+  int* mia_ = nullptr;
+  int* mja_ = nullptr;
+
+  /* for GPU data */
+  double* devx_;
+  double* devr_;
+
+  /* needed for cuSolverRf */
+  int* d_P_;
+  int* d_Q_; // permutation matrices
+  double* d_T_;
+
+  /**
+   * @brief Function that computes M = (L-I) + U
+   * 
+   * @param n 
+   * @param nnzL 
+   * @param Lp 
+   * @param Li 
+   * @param nnzU 
+   * @param Up 
+   * @param Ui 
+   * @return int 
+   */
+  int createM(const int n, 
+              const int nnzL, 
+              const int* Lp, 
+              const int* Li, 
+              const int nnzU, 
+              const int* Up, 
+              const int* Ui);
+
+  int initializeKLU();
+  int initializeCusolverGLU();
+  int initializeCusolverRf();
+
+  int refactorizationSetupCusolverGLU();
+  int refactorizationSetupCusolverRf();
 
 
   /**
