@@ -189,7 +189,7 @@ protected:
   hiopPrecondKKTOpr *prec_opr_;
 
   /// Temporary vector to be used in the iterative refinement solve;
-  hiopCompoundVector* ir_sol_;
+//  hiopCompoundVector* ir_sol_;
 
   /// iterative refinement from BiCGStab solver
   hiopBiCGStabSolver* bicgIR_;
@@ -660,32 +660,9 @@ private:
    *  TODO: revisit this function after we implement compound vector
    */
   bool combine_res_to_build_vec(hiopVector& vec);
-
-  hiopVector* dx_;
-  hiopVector* dd_;
-  hiopVector* dyc_;
-  hiopVector* dyd_;
-  hiopVector* dsxl_;
-  hiopVector* dsxu_;
-  hiopVector* dsdl_;
-  hiopVector* dsdu_;
-  hiopVector* dzl_;
-  hiopVector* dzu_;
-  hiopVector* dvl_;
-  hiopVector* dvu_;
-  
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryc_;
-  hiopVector* yryd_;
-  hiopVector* yrsxl_;
-  hiopVector* yrsxu_;
-  hiopVector* yrsdl_;
-  hiopVector* yrsdu_;
-  hiopVector* yrzl_;
-  hiopVector* yrzu_;
-  hiopVector* yrvl_;
-  hiopVector* yrvu_;
+ 
+  hiopCompoundVector* dir_cv_;
+  hiopCompoundVector* res_cv_;
 };
 
 /** 
@@ -734,34 +711,8 @@ protected:
    */
   virtual bool combine_dir_to_build_vec(hiopVector& vec);
 
-  hiopVector* dx_;
-  hiopVector* dd_;
-  hiopVector* dyc_;
-  hiopVector* dyd_;
-  hiopVector* dsxl_;
-  hiopVector* dsxu_;
-  hiopVector* dsdl_;
-  hiopVector* dsdu_;
-  hiopVector* dzl_;
-  hiopVector* dzu_;
-  hiopVector* dvl_;
-  hiopVector* dvu_;
-  
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryc_;
-  hiopVector* yryd_;
-  hiopVector* yrsxl_;
-  hiopVector* yrsxu_;
-  hiopVector* yrsdl_;
-  hiopVector* yrsdu_;
-  hiopVector* yrzl_;
-  hiopVector* yrzu_;
-  hiopVector* yrvl_;
-  hiopVector* yrvu_;
-  
-  hiopCompoundVector dir_ir;
-  hiopCompoundVector res_ir;
+  hiopCompoundVector* dir_cv_;
+  hiopCompoundVector* res_cv_;
 };
 
 };

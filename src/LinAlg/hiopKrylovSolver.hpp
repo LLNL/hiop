@@ -60,6 +60,8 @@
 #include "hiopMatrixDense.hpp"
 #include "hiopVector.hpp"
 #include "hiopCompoundVector.hpp"
+#include "hiopIterate.hpp"
+#include "hiopResidual.hpp"
 
 #include "hiop_blasdefs.hpp"
 
@@ -79,7 +81,6 @@ class hiopKrylovSolver
 {
 public:
   hiopKrylovSolver(int n,
-                   const std::string& mem_space,
                    hiopLinearOperator* A_opr,
                    hiopLinearOperator* Mleft_opr = nullptr,
                    hiopLinearOperator* Mright_opr = nullptr,
@@ -90,7 +91,7 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).
    */
-  virtual bool solve(hiopVector& x) = 0;
+  virtual bool solve(hiopIterate* xsol, const hiopResidual* bresid) = 0;
 
   /// Set the iterate to a constant value
   virtual void set_x0(double xval);
@@ -152,6 +153,7 @@ protected:
 
   /// Vector used to save the initial value
   hiopVector* x0_;
+  hiopCompoundVector* b_;
 };
 
 /** 
@@ -162,7 +164,6 @@ class hiopPCGSolver : public hiopKrylovSolver
 public:
   /** initialization constructor */
   hiopPCGSolver(int n,
-                const std::string& mem_space,
                 hiopLinearOperator* A_opr,
                 hiopLinearOperator* Mleft_opr = nullptr,
                 hiopLinearOperator* Mright_opr = nullptr,
@@ -173,7 +174,8 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).
    */
-  virtual bool solve(hiopVector& x);
+  virtual bool solve(hiopIterate* xsol, const hiopResidual* bresid);
+  virtual bool solve(hiopVector* b);
 
 protected:
   hiopVector* xmin_;
@@ -192,7 +194,6 @@ class hiopBiCGStabSolver : public hiopKrylovSolver
 public:
   /** initialization constructor */
   hiopBiCGStabSolver(int n,
-                     const std::string& mem_space,
                      hiopLinearOperator* A_opr,
                      hiopLinearOperator* Mleft_opr = nullptr,
                      hiopLinearOperator* Mright_opr = nullptr,
@@ -203,7 +204,8 @@ public:
    * param 'x' is on entry the right hand side(s) of the system to be solved. On
    * exit is contains the solution(s).
    */
-  virtual bool solve(hiopVector& x);
+  virtual bool solve(hiopIterate* xsol, const hiopResidual* bresid);
+  virtual bool solve(hiopVector* b);
 
 protected:
   hiopVector* xmin_;

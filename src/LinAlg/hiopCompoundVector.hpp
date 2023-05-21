@@ -75,6 +75,7 @@ class hiopCompoundVector : public hiopVector
 public:
   hiopCompoundVector(bool own_vectors = false);
   hiopCompoundVector(const hiopIterate* dir);
+  hiopCompoundVector(const hiopResidual* resid);
 
   ~hiopCompoundVector();
 
@@ -315,6 +316,7 @@ public:
   virtual bool is_equal(const hiopVector& vec) const;
 
   void copy_from_resid(const hiopResidual* resid);
+  void copy_from_iterate(const hiopIterate* it);
 
 private:  
   std::vector<hiopVector*> vectors_;

@@ -67,14 +67,13 @@ hiopResidual::hiopResidual(hiopNlpFormulation* nlp_)
   rdu = rd->new_copy();
 
   ryc = nlp->alloc_dual_eq_vec();
+  ryc->setToZero();
   ryd = rd->alloc_clone();
 
-  rszl = rx->alloc_clone();
-  rszl->setToZero();
+  rszl = rx->new_copy();
   rszu = rszl->new_copy();
 
-  rsvl = rd->alloc_clone();
-  rsvl->setToZero();
+  rsvl = rd->new_copy();
   rsvu = rsvl->new_copy();
 
   nrmInf_nlp_optim = nrmInf_nlp_feasib = nrmInf_nlp_complem = 1e6;

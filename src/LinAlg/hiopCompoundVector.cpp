@@ -119,7 +119,7 @@ hiopCompoundVector::hiopCompoundVector(const hiopIterate* dir)
   vectors_.push_back(dir->sxl);
 
   //hiopVector* sxu = dir->sxu->alloc_clone();
-  n_ += dir->sxl->get_size();
+  n_ += dir->sxu->get_size();
   vectors_.push_back(dir->sxu);
 
   //hiopVector* sdl = dir->sdl->alloc_clone();
@@ -127,7 +127,7 @@ hiopCompoundVector::hiopCompoundVector(const hiopIterate* dir)
   vectors_.push_back(dir->sdl);
 
   //hiopVector* sdu = dir->sdu->alloc_clone();
-  n_ += dir->sdl->get_size();
+  n_ += dir->sdu->get_size();
   vectors_.push_back(dir->sdu);
 
   //hiopVector* zl = dir->zl->alloc_clone();
@@ -145,6 +145,60 @@ hiopCompoundVector::hiopCompoundVector(const hiopIterate* dir)
   //hiopVector* vu = dir->vu->alloc_clone();
   n_ += dir->vu->get_size();
   vectors_.push_back(dir->vu);
+}
+
+hiopCompoundVector::hiopCompoundVector(const hiopResidual* resid)
+{
+  n_ = 0;
+  own_vectors_ = false;
+
+  //hiopVector* x = resid->rx->alloc_clone();
+  n_ += resid->rx->get_size();
+  vectors_.push_back(resid->rx);
+
+  //hiopVector* d = resid->rd->alloc_clone();
+  n_ += resid->rd->get_size();
+  vectors_.push_back(resid->rd);
+
+  //hiopVector* yc = resid->ryc->alloc_clone();
+  n_ += resid->ryc->get_size();
+  vectors_.push_back(resid->ryc);
+
+  //hiopVector* yd = resid->ryd->alloc_clone();
+  n_ += resid->ryd->get_size();
+  vectors_.push_back(resid->ryd);
+
+  //hiopVector* sxl = resid->rxl->alloc_clone();
+  n_ += resid->rxl->get_size();
+  vectors_.push_back(resid->rxl);
+
+  //hiopVector* sxu = resid->rxu->alloc_clone();
+  n_ += resid->rxu->get_size();
+  vectors_.push_back(resid->rxu);
+
+  //hiopVector* sdl = resid->rdl->alloc_clone();
+  n_ += resid->rdl->get_size();
+  vectors_.push_back(resid->rdl);
+
+  //hiopVector* sdu = resid->rdu->alloc_clone();
+  n_ += resid->rdu->get_size();
+  vectors_.push_back(resid->rdu);
+
+  //hiopVector* zl = resid->rszl->alloc_clone();
+  n_ += resid->rszl->get_size();
+  vectors_.push_back(resid->rszl);
+
+  //hiopVector* zu = resid->rszu->alloc_clone();
+  n_ += resid->rszu->get_size();
+  vectors_.push_back(resid->rszu);
+
+  //hiopVector* vl = resid->rsvl->alloc_clone();
+  n_ += resid->rsvl->get_size();
+  vectors_.push_back(resid->rsvl);
+
+  //hiopVector* vu = resid->rsvu->alloc_clone();
+  n_ += resid->rsvu->get_size();
+  vectors_.push_back(resid->rsvu);
 }
 
 hiopVector* hiopCompoundVector::alloc_clone() const
@@ -178,6 +232,21 @@ void hiopCompoundVector::copy_from_resid(const hiopResidual* resid)
   vectors_[11]->copyFrom(*(resid->rsvu));
 }
 
+void hiopCompoundVector::copy_from_iterate(const hiopIterate* it)
+{
+  vectors_[0]->copyFrom(*(it->x));
+  vectors_[1]->copyFrom(*(it->d));
+  vectors_[2]->copyFrom(*(it->yc));
+  vectors_[3]->copyFrom(*(it->yd));
+  vectors_[4]->copyFrom(*(it->sxl));
+  vectors_[5]->copyFrom(*(it->sxu));
+  vectors_[6]->copyFrom(*(it->sdl));
+  vectors_[7]->copyFrom(*(it->sdu));
+  vectors_[8]->copyFrom(*(it->zl));
+  vectors_[9]->copyFrom(*(it->zu));
+  vectors_[10]->copyFrom(*(it->vl));
+  vectors_[11]->copyFrom(*(it->vu));
+}
 
 void hiopCompoundVector::setToZero()
 {
