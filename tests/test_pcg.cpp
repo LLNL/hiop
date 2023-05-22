@@ -209,9 +209,9 @@ int main(int argc, char **argv)
     hiopMatVecOpr* A_opr = new hiopMatVecOpr(A_mat);
     hiopMatVecOpr* Minv_opr = new hiopMatVecOpr(Minv_mat);
     
-    hiopPCGSolver pcg_solver(N_local, mem_space, A_opr, Minv_opr, nullptr, nullptr);
+    hiopPCGSolver pcg_solver(N_local, A_opr, Minv_opr, nullptr, nullptr);
     
-    bool is_solved = pcg_solver.solve(*rhs);
+    bool is_solved = pcg_solver.solve(rhs);
 
     std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
 
