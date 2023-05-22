@@ -54,6 +54,8 @@
 
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #include "IterativeRefinement.hpp"
+#include "RefactorizationSolver.hpp"
+#include "MatrixCsr.hpp"
 
 #include "hiop_blasdefs.hpp"
 #include "KrylovSolverKernels.h"
@@ -95,8 +97,8 @@ namespace hiop
                         ord.c_str());
       ordering = 1;
     }
-    solver_->ordering_ = ordering;
-    std::cout << "Ordering: " << solver_->ordering_ << "\n";
+    solver_->ordering() = ordering;
+    std::cout << "Ordering: " << solver_->ordering() << "\n";
 
     // Select factorization
     std::string fact;
@@ -107,8 +109,8 @@ namespace hiop
                         fact.c_str());
       fact = "klu";
     }
-    solver_->fact_ = fact;
-    std::cout << "Factorization: " << solver_->fact_ << "\n";
+    solver_->fact() = fact;
+    std::cout << "Factorization: " << solver_->fact() << "\n";
 
     // Select refactorization
     std::string refact;
@@ -119,8 +121,8 @@ namespace hiop
                         refact.c_str());
       refact = "glu";
     }
-    solver_->refact_ = refact;
-    std::cout << "Refactorization: " << solver_->refact_ << "\n";
+    solver_->refact() = refact;
+    std::cout << "Refactorization: " << solver_->refact() << "\n";
 
     // by default, dont use iterative refinement
     std::string use_ir;
@@ -136,29 +138,29 @@ namespace hiop
     if(maxit_test > 0){
       use_ir = "yes";
       solver_->enable_iterative_refinement();
-      solver_->ir_->maxit() = maxit_test;
+      solver_->ir()->maxit() = maxit_test;
     } 
     if(use_ir == "yes") {
       if((refact == "rf")) {
 
-        solver_->ir_->restart() =  nlp_->options->GetInteger("ir_inner_restart");
+        solver_->ir()->restart() =  nlp_->options->GetInteger("ir_inner_restart");
 
-        if ((solver_->ir_->restart() <0) || (solver_->ir_->restart() >100)){
+        if ((solver_->ir()->restart() <0) || (solver_->ir()->restart() >100)){
           nlp_->log->printf(hovWarning, 
                             "Wrong restart value: %d. Use int restart value between 1 and 100. Setting default (20)  ...\n",
-                            solver_->ir_->restart());
-          solver_->ir_->restart() = 20;
+                            solver_->ir()->restart());
+          solver_->ir()->restart() = 20;
         }
 
 
-        solver_->ir_->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
-        if ((solver_->ir_->tol() <0) || (solver_->ir_->tol() >1)){
+        solver_->ir()->tol()  = nlp_->options->GetNumeric("ir_inner_tol");
+        if ((solver_->ir()->tol() <0) || (solver_->ir()->tol() >1)){
           nlp_->log->printf(hovWarning, 
                             "Wrong tol value: %e. Use double tol value between 0 and 1. Setting default (1e-12)  ...\n",
-                            solver_->ir_->tol());
-          solver_->ir_->tol() = 1e-12;
+                            solver_->ir()->tol());
+          solver_->ir()->tol() = 1e-12;
         }
-        solver_->ir_->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        solver_->ir()->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
          * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
@@ -178,20 +180,20 @@ namespace hiop
          * the inverse of a triangular matrix. It requires two (very small) triangular solves and two sychroniztions (if the norm is NOT delayed). It also guarantees 
          * that the vectors are orthogonal to the machine epsilon, as in cgs2. Since Stephen's paper is named "post modern GMRES", we call this Gram-Schmidt scheme "mgs_pm".
          */ 
-        if(solver_->ir_->orth_option() != "mgs" && solver_->ir_->orth_option() != "cgs2" && solver_->ir_->orth_option() != "mgs_two_synch" && solver_->ir_->orth_option() != "mgs_pm") {
+        if(solver_->ir()->orth_option() != "mgs" && solver_->ir()->orth_option() != "cgs2" && solver_->ir()->orth_option() != "mgs_two_synch" && solver_->ir()->orth_option() != "mgs_pm") {
           nlp_->log->printf(hovWarning, 
                             "mgs option : %s is wrong. Use 'mgs', 'cgs2', 'mgs_two_synch' or 'mgs_pm'. Switching to default (mgs) ...\n",
                             use_ir.c_str());
-          solver_->ir_->orth_option() = "mgs";
+          solver_->ir()->orth_option() = "mgs";
         }
 
-        solver_->ir_->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
+        solver_->ir()->conv_cond() =  nlp_->options->GetInteger("ir_inner_conv_cond");
 
-        if ((solver_->ir_->conv_cond() <0) || (solver_->ir_->conv_cond() >2)){
+        if ((solver_->ir()->conv_cond() <0) || (solver_->ir()->conv_cond() >2)){
           nlp_->log->printf(hovWarning, 
                             "Wrong IR convergence condition: %d. Use int value: 0, 1 or 2. Setting default (0)  ...\n",
-                            solver_->ir_->conv_cond());
-          solver_->ir_->conv_cond() = 0;
+                            solver_->ir()->conv_cond());
+          solver_->ir()->conv_cond() = 0;
         }
 
       } else {
@@ -200,8 +202,8 @@ namespace hiop
         use_ir = "no";
       }
     }
-    solver_->use_ir_ = use_ir;
-    std::cout << "Use IR: " << solver_->use_ir_ << "\n";
+    solver_->use_ir() = use_ir;
+    std::cout << "Use IR: " << solver_->use_ir() << "\n";
   } // constructor
 
   hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
@@ -265,7 +267,7 @@ namespace hiop
 
     double* dx = x.local_data();
     memcpy(rhs_, dx, n_*sizeof(double));
-    checkCudaErrors(cudaMemcpy(solver_->devr_, rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(solver_->devr(), rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
     bool retval = solver_->triangular_solve(dx, rhs_, ir_tol);
     if(!retval) {
@@ -285,24 +287,20 @@ namespace hiop
     // Transfer triplet to CSR form
 
     // Allocate row pointers and compute number of nonzeros.
-    solver_->mat_A_csr_->allocate_size(n_);
+    solver_->mat_A_csr()->allocate_size(n_);
     compute_nnz();
     solver_->set_nnz(nnz_);
 
     // Allocate column indices and matrix values
-    solver_->mat_A_csr_->allocate_nnz(nnz_);
+    solver_->mat_A_csr()->allocate_nnz(nnz_);
 
     // Set column indices and matrix values.
     set_csr_indices_values();
 
-    // TODO: These vectors are copied to device, but are thier elements set anywhere?
-    checkCudaErrors(cudaMalloc(&(solver_->devx_), n_ * sizeof(double)));
-    checkCudaErrors(cudaMalloc(&(solver_->devr_), n_ * sizeof(double)));
-
     // Copy matrix to device
-    solver_->mat_A_csr_->update_from_host_mirror();
+    solver_->mat_A_csr()->update_from_host_mirror();
 
-    if(solver_->use_ir_ == "yes") {
+    if(solver_->use_ir() == "yes") {
       solver_->setup_iterative_refinement_matrix(n_, nnz_);
     }
     /*
@@ -318,7 +316,7 @@ namespace hiop
 
   void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
   {
-    double* vals = solver_->mat_A_csr_->get_vals_host();
+    double* vals = solver_->mat_A_csr()->get_vals_host();
     // update matrix
     for(int k = 0; k < nnz_; k++) {
       vals[k] = M_->M()[index_covert_CSR2Triplet_[k]];
@@ -335,7 +333,7 @@ namespace hiop
     //
     // compute nnz in each row
     //
-    int* row_ptr = solver_->mat_A_csr_->get_irows_host();
+    int* row_ptr = solver_->mat_A_csr()->get_irows_host();
 
     // off-diagonal part
     row_ptr[0] = 0;
@@ -363,9 +361,9 @@ namespace hiop
     //
     // set correct col index and value
     //
-    const int* row_ptr = solver_->mat_A_csr_->get_irows_host();
-    int*       col_idx = solver_->mat_A_csr_->get_jcols_host();
-    double*    vals    = solver_->mat_A_csr_->get_vals_host();
+    const int* row_ptr = solver_->mat_A_csr()->get_irows_host();
+    int*       col_idx = solver_->mat_A_csr()->get_jcols_host();
+    double*    vals    = solver_->mat_A_csr()->get_vals_host();
 
     index_covert_CSR2Triplet_    = new int[nnz_];
     index_covert_extra_Diag2CSR_ = new int[n_];
