@@ -1,10 +1,10 @@
-#include "NlpDenseConsExLido.hpp"
+#include "NlpDenseConsEx4.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
 #include <cstdio>
 
-DenseConsExLido::DenseConsExLido()
+DenseConsEx4::DenseConsEx4()
   : unconstrained_(false),
     n_vars_(2),
     n_cons_(4),
@@ -37,20 +37,20 @@ DenseConsExLido::DenseConsExLido()
     i++;
   }
 }
-DenseConsExLido::~DenseConsExLido()
+DenseConsEx4::~DenseConsEx4()
 {
   delete[] col_partition_;
 }
 
 
-bool DenseConsExLido::get_prob_sizes(size_type& n, size_type& m)
+bool DenseConsEx4::get_prob_sizes(size_type& n, size_type& m)
 { 
   n = n_vars_;
   m = n_cons_;
   return true;
 }
 
-bool DenseConsExLido::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
+bool DenseConsEx4::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   index_type i_local;
   for(index_type i = col_partition_[my_rank]; i < col_partition_[my_rank+1]; i++) {
@@ -70,7 +70,7 @@ bool DenseConsExLido::get_vars_info(const size_type& n, double *xlow, double* xu
   }
   return true;
 }
-bool DenseConsExLido::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
+bool DenseConsEx4::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons_);
   if(!unconstrained_) {
@@ -92,7 +92,7 @@ bool DenseConsExLido::get_cons_info(const size_type& m, double* clow, double* cu
   }
   return true;
 }
-bool DenseConsExLido::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
+bool DenseConsEx4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   size_type n_local = col_partition_[my_rank+1] - col_partition_[my_rank];
   obj_value = 0.;
@@ -119,7 +119,7 @@ bool DenseConsExLido::eval_f(const size_type& n, const double* x, bool new_x, do
   return true;
 }
 
-bool DenseConsExLido::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
+bool DenseConsEx4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   index_type i_local;
   for(index_type i = col_partition_[my_rank]; i < col_partition_[my_rank+1]; i++) {
@@ -139,7 +139,7 @@ bool DenseConsExLido::eval_grad_f(const size_type& n, const double* x, bool new_
 }
 
 /* Four constraints no matter how large n is */
-bool DenseConsExLido::eval_cons(const size_type& n,
+bool DenseConsEx4::eval_cons(const size_type& n,
                              const size_type& m,
                              const size_type& num_cons,
                              const index_type* idx_cons,
@@ -230,7 +230,7 @@ bool DenseConsExLido::eval_cons(const size_type& n,
 
 
 
-bool DenseConsExLido::eval_Jac_cons(const size_type& n,
+bool DenseConsEx4::eval_Jac_cons(const size_type& n,
                                  const size_type& m,
                                  const size_type& num_cons,
                                  const index_type* idx_cons,  
@@ -285,7 +285,7 @@ bool DenseConsExLido::eval_Jac_cons(const size_type& n,
 
 }
 
-bool DenseConsExLido::get_vecdistrib_info(size_type global_n, index_type* cols)
+bool DenseConsEx4::get_vecdistrib_info(size_type global_n, index_type* cols)
 {
   if(global_n==n_vars_) {
     for(int i=0; i<=comm_size; i++) {
@@ -298,7 +298,7 @@ bool DenseConsExLido::get_vecdistrib_info(size_type global_n, index_type* cols)
 }
 
 
-bool DenseConsExLido::get_starting_point(const size_type& global_n, double* x0)
+bool DenseConsEx4::get_starting_point(const size_type& global_n, double* x0)
 {
   assert(global_n==n_vars_); 
   size_type n_local = col_partition_[my_rank+1]-col_partition_[my_rank];

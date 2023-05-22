@@ -2,7 +2,7 @@ set(hiopSparseEx_INTERFACE_HEADERS
   NlpSparseEx1.hpp
   NlpSparseEx2.hpp
   NlpSparseEx3.hpp
-  NlpSparseExLido.hpp
+  NlpSparseEx4.hpp
   )
 
 add_executable(NlpSparseEx1.exe NlpSparseEx1.cpp NlpSparseEx1Driver.cpp)
@@ -14,8 +14,8 @@ target_link_libraries(NlpSparseEx2.exe HiOp::HiOp)
 add_executable(NlpSparseEx3.exe NlpSparseEx3.cpp NlpSparseEx3Driver.cpp)
 target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
 
-add_executable(NlpSparseExLido.exe NlpSparseExLido.cpp NlpSparseExLidoDriver.cpp)
-target_link_libraries(NlpSparseExLido.exe HiOp::HiOp)
+add_executable(NlpSparseEx4.exe NlpSparseEx4.cpp NlpSparseEx4Driver.cpp)
+target_link_libraries(NlpSparseEx4.exe HiOp::HiOp)
 
 if(HIOP_USE_RAJA)
   if(HIOP_USE_GPU AND HIOP_USE_CUDA)

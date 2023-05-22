@@ -1,5 +1,5 @@
-#ifndef HIOP_EXAMPLE_DENSE_EXLIDO
-#define  HIOP_EXAMPLE_DENSE_EXLIDO
+#ifndef HIOP_EXAMPLE_DENSE_EX4
+#define  HIOP_EXAMPLE_DENSE_EX4
 
 #include "hiopInterface.hpp"
 
@@ -15,7 +15,7 @@
 using size_type = hiop::size_type;
 using index_type = hiop::index_type;
 
-/* Test problem from a Lido example
+/* Test problem from a tiny concave example
  *  min   -3*x*x-2*y*y
  *  s.t.
  *   y - 0.06*x*x >= 
@@ -25,11 +25,11 @@ using index_type = hiop::index_type;
  *   0 <= x <= 11
  *   0 <= y <= 11
  */
-class DenseConsExLido : public hiop::hiopInterfaceDenseConstraints
+class DenseConsEx4 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
-  DenseConsExLido();
-  virtual ~DenseConsExLido();
+  DenseConsEx4();
+  virtual ~DenseConsEx4();
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);

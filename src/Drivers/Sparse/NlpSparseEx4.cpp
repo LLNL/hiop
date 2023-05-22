@@ -1,10 +1,10 @@
-#include "NlpSparseExLido.hpp"
+#include "NlpSparseEx4.hpp"
 
 #include <cmath>
 #include <cstring> //for memcpy
 #include <cstdio>
 
-/* Test problem from a Lido example
+/* Test problem from a tiny concave example
  *  min   -3*x*x-2*y*y
  *  s.t.
  *   y >= 0.06*x*x
@@ -14,24 +14,24 @@
  *   0 <= x <= 11
  *   0 <= y <= 11
  */
-SparseExLido::SparseExLido(double scal_input)
+SparseEx4::SparseEx4(double scal_input)
   : n_vars(2), n_cons{4}, scal{scal_input}
 {
   assert(n_vars == 2);
   assert(n_cons == 4);
 }
 
-SparseExLido::~SparseExLido()
+SparseEx4::~SparseEx4()
 {}
 
-bool SparseExLido::get_prob_sizes(size_type& n, size_type& m)
+bool SparseEx4::get_prob_sizes(size_type& n, size_type& m)
 {
   n = n_vars;
   m = n_cons;
   return true;
 }
 
-bool SparseExLido::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
+bool SparseEx4::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
   assert(n==n_vars);
   xlow[0] = 0.;
@@ -43,7 +43,7 @@ bool SparseExLido::get_vars_info(const size_type& n, double *xlow, double* xupp,
   return true;
 }
 
-bool SparseExLido::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
+bool SparseEx4::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons);
   clow[0] = 0.0;
@@ -65,7 +65,7 @@ bool SparseExLido::get_cons_info(const size_type& m, double* clow, double* cupp,
   return true;
 }
 
-bool SparseExLido::get_sparse_blocks_info(size_type& nx,
+bool SparseEx4::get_sparse_blocks_info(size_type& nx,
                                  size_type& nnz_sparse_Jaceq,
                                  size_type& nnz_sparse_Jacineq,
                                  size_type& nnz_sparse_Hess_Lagr)
@@ -77,7 +77,7 @@ bool SparseExLido::get_sparse_blocks_info(size_type& nx,
     return true;
 }
 
-bool SparseExLido::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
+bool SparseEx4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   assert(n==n_vars);
   obj_value = 0.;
@@ -86,7 +86,7 @@ bool SparseExLido::eval_f(const size_type& n, const double* x, bool new_x, doubl
   return true;
 }
 
-bool SparseExLido::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
+bool SparseEx4::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
   assert(n==n_vars);
   gradf[0] = -6.*x[0];
@@ -94,7 +94,7 @@ bool SparseExLido::eval_grad_f(const size_type& n, const double* x, bool new_x, 
   return true;
 }
 
-bool SparseExLido::eval_cons(const size_type& n,
+bool SparseEx4::eval_cons(const size_type& n,
                     const size_type& m,
                     const size_type& num_cons,
                     const index_type* idx_cons,
@@ -105,7 +105,7 @@ bool SparseExLido::eval_cons(const size_type& n,
 }
 
 /* Four constraints no matter how large n is */
-bool SparseExLido::eval_cons(const size_type& n,
+bool SparseEx4::eval_cons(const size_type& n,
                     const size_type& m,
                     const double* x,
                     bool new_x,
@@ -136,7 +136,7 @@ bool SparseExLido::eval_cons(const size_type& n,
   return true;
 }
 
-bool SparseExLido::eval_Jac_cons(const size_type& n, const size_type& m,
+bool SparseEx4::eval_Jac_cons(const size_type& n, const size_type& m,
                         const size_type& num_cons, const index_type* idx_cons,
                         const double* x, bool new_x,
                         const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS)
@@ -144,7 +144,7 @@ bool SparseExLido::eval_Jac_cons(const size_type& n, const size_type& m,
   return false;
 }
 
-bool SparseExLido::eval_Jac_cons(const size_type& n, const size_type& m,
+bool SparseEx4::eval_Jac_cons(const size_type& n, const size_type& m,
                         const double* x, bool new_x,
                         const size_type& nnzJacS, index_type* iJacS, index_type* jJacS, double* MJacS)
 {
@@ -200,7 +200,7 @@ bool SparseExLido::eval_Jac_cons(const size_type& n, const size_type& m,
     return true;
 }
 
-bool SparseExLido::eval_Hess_Lagr(const size_type& n, const size_type& m,
+bool SparseEx4::eval_Hess_Lagr(const size_type& n, const size_type& m,
                          const double* x, bool new_x, const double& obj_factor,
                          const double* lambda, bool new_lambda,
                          const size_type& nnzHSS, index_type* iHSS, index_type* jHSS, double* MHSS)
@@ -222,7 +222,7 @@ bool SparseExLido::eval_Hess_Lagr(const size_type& n, const size_type& m,
     return true;
 }
 
-bool SparseExLido::get_starting_point(const size_type& n, double* x0)
+bool SparseEx4::get_starting_point(const size_type& n, double* x0)
 {
   assert(n==n_vars);
   for(auto i=0; i<n; i++)

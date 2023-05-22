@@ -1,4 +1,4 @@
-#include "NlpSparseExLido.hpp"
+#include "NlpSparseEx4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  SparseExLido nlp_interface(scal);
+  SparseEx4 nlp_interface(scal);
   hiopNlpSparse nlp(nlp_interface); 
   nlp.options->SetStringValue("Hessian", "analytical_exact");
   

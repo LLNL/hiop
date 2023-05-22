@@ -1,5 +1,5 @@
-#ifndef HIOP_EXAMPLE_SPARSE_EXLIDO
-#define  HIOP_EXAMPLE_SPARSE_EXLIDO
+#ifndef HIOP_EXAMPLE_SPARSE_EX4
+#define  HIOP_EXAMPLE_SPARSE_EX4
 
 #include "hiopInterface.hpp"
 
@@ -8,7 +8,7 @@
 using size_type = hiop::size_type;
 using index_type = hiop::index_type;
 
-/* Test problem from a Lido example
+/* Test problem from a tiny concave example
  *  min   -3*x*x-2*y*y
  *  s.t.
  *   y - 0.06*x*x >= 0.0
@@ -18,11 +18,11 @@ using index_type = hiop::index_type;
  *   0 <= x <= 11
  *   0 <= y <= 11
  */
-class SparseExLido : public hiop::hiopInterfaceSparse
+class SparseEx4 : public hiop::hiopInterfaceSparse
 {
 public:
-  SparseExLido(double scal_in);
-  virtual ~SparseExLido();
+  SparseEx4(double scal_in);
+  virtual ~SparseEx4();
 
   virtual bool get_prob_sizes(size_type& n, size_type& m);
   virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);

@@ -1,4 +1,4 @@
-#include "NlpDenseConsExLido.hpp"
+#include "NlpDenseConsEx4.hpp"
 #include "hiopNlpFormulation.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
   bool unconstrained;
   size_type n;
 
-  DenseConsExLido nlp_interface;
+  DenseConsEx4 nlp_interface;
   //if(rank==0) printf("interface created\n");
   hiopNlpDenseConstraints nlp(nlp_interface);
   //if(rank==0) printf("nlp formulation created\n");

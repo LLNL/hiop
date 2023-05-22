@@ -2,7 +2,7 @@ set(hiopDenseEx_INTERFACE_HEADERS
   NlpDenseConsEx1.hpp
   NlpDenseConsEx2.hpp
   NlpDenseConsEx3.hpp
-  NlpDenseConsExLido.hpp
+  NlpDenseConsEx4.hpp
   )
 
 add_executable(NlpDenseConsEx1.exe NlpDenseConsEx1.cpp NlpDenseConsEx1Driver.cpp)
@@ -14,8 +14,8 @@ target_link_libraries(NlpDenseConsEx2.exe HiOp::HiOp)
 add_executable(NlpDenseConsEx3.exe NlpDenseConsEx3Driver.cpp)
 target_link_libraries(NlpDenseConsEx3.exe HiOp::HiOp)
 
-add_executable(NlpDenseConsExLido.exe NlpDenseConsExLido.cpp NlpDenseConsExLidoDriver.cpp)
-target_link_libraries(NlpDenseConsExLido.exe HiOp::HiOp)
+add_executable(NlpDenseConsEx4.exe NlpDenseConsEx4.cpp NlpDenseConsEx4Driver.cpp)
+target_link_libraries(NlpDenseConsEx4.exe HiOp::HiOp)
 
 if(HIOP_BUILD_FORTRAN_EXAMPLE)
   add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
