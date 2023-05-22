@@ -53,9 +53,9 @@
  */
 
 #include "hiopLinSolverSparseCUSOLVER.hpp"
-#include "IterativeRefinement.hpp"
-#include "RefactorizationSolver.hpp"
-#include "MatrixCsr.hpp"
+#include <IterativeRefinement.hpp>
+#include <RefactorizationSolver.hpp>
+#include <MatrixCsr.hpp>
 
 #include "hiop_blasdefs.hpp"
 #include "KrylovSolverKernels.h"
@@ -244,6 +244,8 @@ namespace hiop
     } else { // factorizationSetupSucc_ == 1
       solver_->refactorize();
     }
+
+    nlp_->runStats.linsolv.tmFactTime.stop();
     return 0;
   }
 

@@ -177,10 +177,4 @@ private:
 } // namespace hiop
 
 
-namespace ReSolve {
-
-
-
-} // namespace ReSolve
-
 #endif
