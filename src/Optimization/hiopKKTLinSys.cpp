@@ -340,13 +340,10 @@ bool hiopKKTLinSysCurvCheck::factorize()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-      if(nlp_->options->GetString("regularization_method")=="scalar") {
-        nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e (ic %d)\n",
-                          delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0], num_refactorization);  
-      } else {
-        nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e (ic %d)\n",
-                          delta_wx_->twonorm(), delta_cc_->twonorm(), num_refactorization); 
-      }
+    if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
+      nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e (ic %d)\n",
+                        delta_wx_->infnorm(), delta_cc_->infnorm(), num_refactorization); 
+    }
 
     // the update of the linear system, including IC perturbations
     this->build_kkt_matrix(*perturb_calc_);
@@ -397,12 +394,9 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
 #ifdef HIOP_DEEPCHECKS
     assert(perturb_calc_->check_consistency() && "something went wrong with IC");
 #endif
-  if(nlp_->options->GetString("regularization_method")=="scalar") {
-    nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n",
-                      delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
-  } else {
-    nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e \n",
-                      delta_wx_->twonorm(), delta_cc_->twonorm());
+  if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
+    nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e \n",
+                      delta_wx_->infnorm(), delta_cc_->infnorm()); 
   }
 
   // the update of the linear system, including IC perturbations
@@ -431,11 +425,9 @@ bool hiopKKTLinSysCurvCheck::factorize_inertia_free()
       assert(1==continue_re_fact);
     }
 
-    if(nlp_->options->GetString("regularization_method")=="scalar") {
-      nlp_->log->printf(hovScalars, "linsys: delta_w=%12.5e delta_c=%12.5e \n", delta_wx_->local_data_host_const()[0], delta_cc_->local_data_host_const()[0]);  
-    }  else {
-        nlp_->log->printf(hovScalars, "linsys: norm2(delta_w)=%12.5e norm2(delta_c)=%12.5e \n",
-                          delta_wx_->twonorm(), delta_cc_->twonorm());
+    if(hovScalars <= nlp_->options->GetInteger("verbosity_level")) {
+      nlp_->log->printf(hovScalars, "linsys: norminf(delta_w)=%12.5e norminf(delta_c)=%12.5e \n",
+                        delta_wx_->infnorm(), delta_cc_->infnorm()); 
     }
 
     // the update of the linear system, including IC perturbations
