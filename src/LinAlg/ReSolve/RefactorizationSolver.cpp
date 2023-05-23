@@ -108,9 +108,9 @@ namespace ReSolve {
 
   RefactorizationSolver::~RefactorizationSolver()
   {
-    delete mat_A_csr_;
     if(iterative_refinement_enabled_)
       delete ir_;
+    delete mat_A_csr_;
 
     // Delete workspaces and handles
     cudaFree(d_work_);

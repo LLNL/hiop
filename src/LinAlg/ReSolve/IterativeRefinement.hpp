@@ -113,7 +113,7 @@ private:
   int* dia_{ nullptr };
   int* dja_{ nullptr };
   double* da_{ nullptr };
-  cusparseSpMatDescr_t mat_A_;
+  cusparseSpMatDescr_t mat_A_{ nullptr };
 
   // Matrix-vector product data
   cusparseDnVecDescr_t vec_x_{ nullptr };
