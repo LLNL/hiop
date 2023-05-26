@@ -267,63 +267,63 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       nlp->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
       nlp->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
 #endif
-      if(sTy>s_nrm2*y_nrm2*std::numeric_limits<double>::epsilon()) { //sTy far away from zero
+      if(sTy>s_nrm2*y_nrm2*sqrt(std::numeric_limits<double>::epsilon())) { //sTy far away from zero
 
-	if(l_max>0) {
-	  //compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
-	  hiopVector& YTs = new_l_vec1(l_curr);
-	  Yt->timesVec(0.0, YTs, 1.0, s_new);
-	  //update representation
-	  if(l_curr<l_max) {
-	    //just grow/augment the matrices
-	    St->appendRow(s_new);
-	    Yt->appendRow(y_new);
-	    growL(l_curr, l_max, YTs);
-	    growD(l_curr, l_max, sTy);
-	    l_curr++;
-	  } else {
-	    //shift
-	    St->shiftRows(-1);
-	    Yt->shiftRows(-1);
-	    St->replaceRow(l_max-1, s_new);
-	    Yt->replaceRow(l_max-1, y_new);
-	    updateL(YTs,sTy);
-	    updateD(sTy);
-	    l_curr=l_max;
-	  }
-	} //end of l_max>0
+        if(l_max>0) {
+          //compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
+          hiopVector& YTs = new_l_vec1(l_curr);
+          Yt->timesVec(0.0, YTs, 1.0, s_new);
+          //update representation
+          if(l_curr<l_max) {
+            //just grow/augment the matrices
+            St->appendRow(s_new);
+            Yt->appendRow(y_new);
+            growL(l_curr, l_max, YTs);
+            growD(l_curr, l_max, sTy);
+            l_curr++;
+          } else {
+            //shift
+            St->shiftRows(-1);
+            Yt->shiftRows(-1);
+            St->replaceRow(l_max-1, s_new);
+            Yt->replaceRow(l_max-1, y_new);
+            updateL(YTs,sTy);
+            updateD(sTy);
+            l_curr=l_max;
+          }
+        } //end of l_max>0
 #ifdef HIOP_DEEPCHECKS
-	nlp->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
-	nlp->log->write("L", *L, hovMatrices);
-	nlp->log->write("D", *D, hovMatrices);
-	nlp->log->printf(hovMatrices, "\n");
+        nlp->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
+        nlp->log->write("L", *L, hovMatrices);
+        nlp->log->write("D", *D, hovMatrices);
+        nlp->log->printf(hovMatrices, "\n");
 #endif
-	//update B0 (i.e., sigma)
-	switch (sigma_update_strategy ) {
-	case SIGMA_STRATEGY1:
-	  sigma=sTy/(s_nrm2*s_nrm2);
-	  break;
-	case SIGMA_STRATEGY2:
-	  sigma=y_nrm2*y_nrm2/sTy;
-	  break;
-	case SIGMA_STRATEGY3:
-	  sigma=sqrt(s_nrm2*s_nrm2 / y_nrm2 / y_nrm2);
-	  break;
-	case SIGMA_STRATEGY4:
-	  sigma=0.5*(sTy/(s_nrm2*s_nrm2)+y_nrm2*y_nrm2/sTy);
-	  break;
-	case SIGMA_CONSTANT:
-	  sigma=sigma0;
-	  break;
-	default:
-	  assert(false && "Option value for sigma_update_strategy was not recognized.");
-	  break;
-	} // else of the switch
-	//safe guard it
-	sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
-	nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma);
+        //update B0 (i.e., sigma)
+        switch (sigma_update_strategy ) {
+        case SIGMA_STRATEGY1:
+          sigma=sTy/(s_nrm2*s_nrm2);
+          break;
+        case SIGMA_STRATEGY2:
+          sigma=y_nrm2*y_nrm2/sTy;
+          break;
+        case SIGMA_STRATEGY3:
+          sigma=sqrt(s_nrm2*s_nrm2 / y_nrm2 / y_nrm2);
+          break;
+        case SIGMA_STRATEGY4:
+          sigma=0.5*(sTy/(s_nrm2*s_nrm2)+y_nrm2*y_nrm2/sTy);
+          break;
+        case SIGMA_CONSTANT:
+          sigma=sigma0;
+          break;
+        default:
+          assert(false && "Option value for sigma_update_strategy was not recognized.");
+          break;
+        } // else of the switch
+        //safe guard it
+        sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
+        nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma);
       } else { //sTy is too small or negative -> skip
-	 nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
+        nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
       }
     } else {// norm of s_new is too small -> skip
       nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);

@@ -1314,6 +1314,18 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("duals_update_type", "linear");
     }
+  } else {
+    size_type ir_outer_maxit = GetInteger("ir_outer_maxit");
+    if( 0 != ir_outer_maxit) {
+      //warn only if these are defined by the user (option file or via SetXXX methods)
+      if(is_user_defined("ir_outer_maxit")) {
+        log_printf(hovWarning,
+                   "The option 'ir_outer_maxit=%d' is not valid with 'Hessian=quasinewton_approx'. "
+                   "Will use 'ir_outer_maxit=0'.\n",
+                   ir_outer_maxit);
+      }
+      set_val("ir_outer_maxit", 0);
+    }
   }
 
   //

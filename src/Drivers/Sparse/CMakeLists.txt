@@ -1,3 +1,10 @@
+set(hiopSparseEx_INTERFACE_HEADERS
+  NlpSparseEx1.hpp
+  NlpSparseEx2.hpp
+  NlpSparseEx3.hpp
+  NlpSparseEx4.hpp
+  )
+
 add_executable(NlpSparseEx1.exe NlpSparseEx1.cpp NlpSparseEx1Driver.cpp)
 target_link_libraries(NlpSparseEx1.exe HiOp::HiOp)
 
@@ -6,6 +13,9 @@ target_link_libraries(NlpSparseEx2.exe HiOp::HiOp)
 
 add_executable(NlpSparseEx3.exe NlpSparseEx3.cpp NlpSparseEx3Driver.cpp)
 target_link_libraries(NlpSparseEx3.exe HiOp::HiOp)
+
+add_executable(NlpSparseEx4.exe NlpSparseEx4.cpp NlpSparseEx4Driver.cpp)
+target_link_libraries(NlpSparseEx4.exe HiOp::HiOp)
 
 if(HIOP_USE_RAJA)
   if(HIOP_USE_GPU AND HIOP_USE_CUDA)
@@ -18,6 +28,7 @@ if(HIOP_USE_RAJA)
     add_executable(NlpSparseRajaEx2.exe  NlpSparseRajaEx2Driver.cpp  NlpSparseRajaEx2.cpp)
     target_link_libraries(NlpSparseRajaEx2.exe HiOp::HiOp)
     install(TARGETS NlpSparseRajaEx2.exe DESTINATION bin)
+    list(APPEND hiopSparseEx_INTERFACE_HEADERS NlpSparseRajaEx2.hpp)
   endif()
 endif()
 
@@ -31,6 +42,11 @@ if(HIOP_BUILD_SHARED)
     target_link_libraries(NlpSparseHS071.exe HiOp::HiOp)
   endif()
 endif()
+
+install(
+  FILES ${hiopSparseEx_INTERFACE_HEADERS}
+  DESTINATION include
+  )
 
 ##########################################################
 # CMake Tests

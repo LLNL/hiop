@@ -215,6 +215,21 @@ protected:
   virtual void reInitializeNlpObjects();
   virtual void reload_options();
 
+  /// @brief Decides and creates regularization objects based on user options and NLP formulation.
+  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p,
+                                                        hiopNlpFormulation* nlp,
+                                                        hiopKKTLinSys* kkt);
+
+  virtual bool compute_search_direction(hiopKKTLinSys* kkt,
+                                        bool& linsol_safe_mode_on,
+                                        const bool linsol_forcequick,
+                                        const int iter_num);
+
+  virtual bool compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
+                                                     bool& linsol_safe_mode_on,
+                                                     const bool linsol_forcequick,
+                                                     const int iter_num);
+
 protected:
   /* Helper method containing all the allocations done by the base algorithm class.
    *
@@ -310,6 +325,9 @@ protected:
   
   /* Flag to tell if this is a FR problem */
   bool within_FR_;
+
+  hiopPDPerturbation* pd_perturb_;
+  hiopFactAcceptor* fact_acceptor_;
 };
 
 class hiopAlgFilterIPMQuasiNewton : public hiopAlgFilterIPMBase
@@ -323,7 +341,6 @@ private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
 private:
   hiopNlpDenseConstraints* nlpdc;
-  hiopPDPerturbation* pd_perturb_;
 private:
   hiopAlgFilterIPMQuasiNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMQuasiNewton(const hiopAlgFilterIPMQuasiNewton& ) : hiopAlgFilterIPMBase(NULL){};
@@ -378,27 +395,9 @@ protected:
                                             double& theta_mu,
                                             double& kappa_mu,
                                             bool& switched);
-  
-  /// @brief Decides and creates regularization objects based on user options and NLP formulation.
-  virtual hiopFactAcceptor* decideAndCreateFactAcceptor(hiopPDPerturbation* p,
-                                                        hiopNlpFormulation* nlp,
-                                                        hiopKKTLinSys* kkt);
-
-  virtual bool compute_search_direction(hiopKKTLinSys* kkt,
-                                        bool& linsol_safe_mode_on,
-                                        const bool linsol_forcequick,
-                                        const int iter_num);
-
-  virtual bool compute_search_direction_inertia_free(hiopKKTLinSys* kkt,
-                                                     bool& linsol_safe_mode_on,
-                                                     const bool linsol_forcequick,
-                                                     const int iter_num);
 
   /// Overridden method from base class that does some preprocessing specific to Newton solver
   void reload_options();
-protected:
-  hiopPDPerturbation* pd_perturb_;
-  hiopFactAcceptor* fact_acceptor_;
 private:
   hiopAlgFilterIPMNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMNewton(const hiopAlgFilterIPMNewton& ) : hiopAlgFilterIPMBase(NULL){};
