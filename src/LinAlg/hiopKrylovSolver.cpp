@@ -140,7 +140,7 @@ namespace hiop {
 bool hiopPCGSolver::solve(hiopIterate* xsol, const hiopResidual* bresid)
 {
   if(nullptr == b_) {
-    b_ = new hiopCompoundVector(xsol);
+    b_ = new hiopVectorCompoundPD(xsol);
   }
   b_->copy_from_resid(bresid);
 
@@ -389,7 +389,7 @@ bool hiopPCGSolver::solve(hiopVector* b)
 bool hiopBiCGStabSolver::solve(hiopIterate* xsol, const hiopResidual* bresid)
 {
   if(nullptr == b_) {
-    b_ = new hiopCompoundVector(xsol);
+    b_ = new hiopVectorCompoundPD(xsol);
   }
   b_->copy_from_resid(bresid);
 

@@ -70,20 +70,27 @@
 namespace hiop
 {
 
-class hiopCompoundVector : public hiopVector
+/**
+ * @brief A vector that consists of different type of hiopVector.
+ * 
+ * @note all the functions that requires hiopVectorIntCompoundPD are not used in the current hiop implementation
+ */
+
+class hiopVectorCompoundPD : public hiopVector
 {
 public:
-  hiopCompoundVector(bool own_vectors = false);
-  hiopCompoundVector(const hiopIterate* dir);
-  hiopCompoundVector(const hiopResidual* resid);
+  hiopVectorCompoundPD(bool own_vectors = false);
+  hiopVectorCompoundPD(const hiopIterate* dir);
+  hiopVectorCompoundPD(const hiopResidual* resid);
 
-  ~hiopCompoundVector();
+  ~hiopVectorCompoundPD();
 
   void addVector(hiopVector *v);
 
   hiopVector& getVector(index_type index) const;
 
-  size_type size() const;
+  /* @brief return the number of parts in this compound vector */
+  size_type get_num_parts() const;
 
   virtual void setToZero();
   virtual void setToConstant( double c );
@@ -294,7 +301,7 @@ public:
   virtual void print(FILE* file=nullptr, const char* message=nullptr,int max_elems=-1, int rank=-1) const;
 
   /* more accessors */
-  virtual size_type get_local_size() const { assert(0 && "not required."); return 0; }
+  virtual size_type get_local_size() const { return n_; }
   virtual double* local_data() { assert(0 && "not required."); return nullptr; }
   virtual const double* local_data_const() const { assert(0 && "not required."); return nullptr; }
   virtual inline double* local_data_host() { assert(0 && "not required."); return nullptr; }
@@ -320,9 +327,10 @@ public:
 
 private:  
   std::vector<hiopVector*> vectors_;
+  size_type n_parts_;
   bool own_vectors_;
   /// @brief copy constructor, for internal/private use only (it doesn't copy the elements.)
-  hiopCompoundVector(const hiopCompoundVector&);
+  hiopVectorCompoundPD(const hiopVectorCompoundPD&);
 };
 
 }

@@ -110,14 +110,14 @@ void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_to_dev()
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_from_vectorseq(const hiopVectorIntSeq& src)
 {
-  assert(sz_ == src.size());
+  assert(sz_ == src.get_local_size());
   exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
 }
 
 template<class MEMBACKEND, class RAJAEXECPOL>
 void hiopVectorIntRaja<MEMBACKEND, RAJAEXECPOL>::copy_to_vectorseq(hiopVectorIntSeq& dest) const
 {
-  assert(sz_ == dest.size());
+  assert(sz_ == dest.get_local_size());
   dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
 }
 

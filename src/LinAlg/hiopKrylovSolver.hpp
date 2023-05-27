@@ -59,7 +59,7 @@
 #include "hiopMatrix.hpp"
 #include "hiopMatrixDense.hpp"
 #include "hiopVector.hpp"
-#include "hiopCompoundVector.hpp"
+#include "hiopVectorCompoundPD.hpp"
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 
@@ -153,7 +153,7 @@ protected:
 
   /// Vector used to save the initial value
   hiopVector* x0_;
-  hiopCompoundVector* b_;
+  hiopVectorCompoundPD* b_;
 };
 
 /** 

@@ -47,13 +47,13 @@
 // product endorsement purposes.
 
 /**
- * @file hiopCompoundVectorInt.cpp
+ * @file hiopVectorIntCompoundPD.cpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 
-#include "hiopCompoundVectorInt.hpp"
+#include "hiopVectorIntCompoundPD.hpp"
 #include "MemBackendCppImpl.hpp"
 
 #include <cstring> //for memcpy
@@ -61,51 +61,56 @@
 namespace hiop
 {
 
-hiopCompoundVectorInt::hiopCompoundVectorInt() 
-  : hiopVectorInt(0)
+hiopVectorIntCompoundPD::hiopVectorIntCompoundPD() 
+  : hiopVectorInt(0),
+    n_parts_(0)
 {
 }
 
-hiopCompoundVectorInt::~hiopCompoundVectorInt()
+hiopVectorIntCompoundPD::~hiopVectorIntCompoundPD()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     delete vectors_[i];
     vectors_[i] = nullptr;
   }
   vectors_.clear();
+  n_parts_ = 0;
 }
   
-void hiopCompoundVectorInt::set_to_zero()
+void hiopVectorIntCompoundPD::set_to_zero()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->set_to_zero();
   }
 }
 
-void hiopCompoundVectorInt::set_to_constant(const index_type c)
+void hiopVectorIntCompoundPD::set_to_constant(const index_type c)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->set_to_constant(c);
   }
 }
 
-void hiopCompoundVectorInt::addVector(hiopVectorInt *v) 
+void hiopVectorIntCompoundPD::addVector(hiopVectorInt *v) 
 {
   vectors_.push_back(v);
-  sz_ += v->size();
+  sz_ += v->get_local_size();
+  n_parts_++;
 }
 
-hiopVectorInt& hiopCompoundVectorInt::getVector(index_type index) const
+hiopVectorInt& hiopVectorIntCompoundPD::getVector(index_type index) const
 {
   return *(vectors_[index]);
 }
 
-size_type hiopCompoundVectorInt::size() const
+size_type hiopVectorIntCompoundPD::get_local_size() const
 {
-  return vectors_.size();
+  return sz_;
 }
 
-
-
+size_type hiopVectorIntCompoundPD::get_num_parts() const
+{
+  return n_parts_;
+}
 
 } // namespace hiop

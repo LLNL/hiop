@@ -49,7 +49,7 @@
 #pragma once
 
 /**
- * @file hiopCompoundVectorInt.hpp
+ * @file hiopVectorIntCompoundPD.hpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
@@ -63,18 +63,26 @@
 namespace hiop
 {
 
-class hiopCompoundVectorInt : public hiopVectorInt
+/**
+ * @brief A vector that consists of different type of hiopVectorInt.
+ * 
+ * @note this class is not used in the current hiop implementation
+ */
+class hiopVectorIntCompoundPD : public hiopVectorInt
 {
 public:
-  hiopCompoundVectorInt();
+  hiopVectorIntCompoundPD();
 
-  ~hiopCompoundVectorInt();
+  ~hiopVectorIntCompoundPD();
 
   void addVector(hiopVectorInt *v);
 
   hiopVectorInt& getVector(index_type index) const;
 
-  size_type size() const;
+  size_type get_local_size() const;
+  
+  /* @brief return the number of parts in this compound vector */
+  size_type get_num_parts() const;
 
   virtual void copy_to_dev() {}
   virtual void copy_from_dev() {}
@@ -112,6 +120,7 @@ public:
 
 private:
   std::vector<hiopVectorInt*> vectors_;
+  size_type n_parts_;
 
 };
 

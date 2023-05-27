@@ -197,7 +197,7 @@ void hiopVectorPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt&
   const hiopVectorIntSeq& indexes = dynamic_cast<const hiopVectorIntSeq&>(index_in_src);
   const hiopVectorPar& v = dynamic_cast<const hiopVectorPar&>(vv);
 
-  assert(indexes.size() == n_local_);
+  assert(indexes.get_local_size() == n_local_);
   
   const index_type* index_arr = indexes.local_data_const();
   size_type nv = v.get_local_size();
@@ -213,7 +213,7 @@ void hiopVectorPar::copy_from_indexes(const double* vv, const hiopVectorInt& ind
   if(vv) {
     const hiopVectorIntSeq& indexes = dynamic_cast<const hiopVectorIntSeq&>(index_in_src);
     const index_type* index_arr = indexes.local_data_const();
-    assert(indexes.size() == n_local_);
+    assert(indexes.get_local_size() == n_local_);
     for(int i=0; i<n_local_; i++) {
       this->data_[i] = vv[index_arr[i]];
     }
@@ -320,9 +320,9 @@ void hiopVectorPar::copy_from_two_vec_w_pattern(const hiopVector& c,
   const double* d_arr = d.local_data_const();
   double* arr = local_data();
   const int c_size = c.get_size();
-  assert( c_size == c_map.size() );
+  assert( c_size == c_map.get_local_size() );
   const int d_size = d.get_size();
-  assert( d_size == d_map.size() );
+  assert( d_size == d_map.get_local_size() );
   assert( c_size + d_size == n_local_);
 
   //concatanate multipliers -> copy into whole lambda array 
@@ -348,9 +348,9 @@ void hiopVectorPar::copy_to_two_vec_w_pattern(hiopVector& c,
   double* d_arr = d.local_data();
   const double* arr = local_data_const();
   const int c_size = c.get_size();
-  assert( c_size == c_map.size() );
+  assert( c_size == c_map.get_local_size() );
   const int d_size = d.get_size();
-  assert( d_size == d_map.size() );
+  assert( d_size == d_map.get_local_size() );
   assert( c_size + d_size == n_local_);
 
   //concatanate multipliers -> copy into whole lambda array 
@@ -651,13 +651,13 @@ void hiopVectorPar::axpy(double alpha, const hiopVector& x, const hiopVectorInt&
   const hiopVectorPar& xx = dynamic_cast<const hiopVectorPar&>(x);
   const hiopVectorIntSeq& idxs = dynamic_cast<const hiopVectorIntSeq&>(i);
 
-  assert(x.get_local_size() == idxs.size());
-  assert(n_local_ >= idxs.size());
+  assert(x.get_local_size() == idxs.get_local_size());
+  assert(n_local_ >= idxs.get_local_size());
 
   const double* xd = xx.local_data_const();
   const index_type* id = idxs.local_data_const();
   
-  for(index_type j=0; j<idxs.size(); ++j) {
+  for(index_type j=0; j<idxs.get_local_size(); ++j) {
     assert(id[j]<n_local_);
     data_[id[j]] += alpha*xd[j];
   }

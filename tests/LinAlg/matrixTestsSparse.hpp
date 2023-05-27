@@ -965,7 +965,7 @@ public:
     A.setToConstant(A_val);
     B.setToConstant(B_val);
 
-    for(int i=0; i<select.size(); i++) {
+    for(int i=0; i<select.get_local_size(); i++) {
       setLocalElement(&select, i, 2*i);
     }
 

@@ -71,7 +71,7 @@ public:
   hiopVectorInt(size_type sz) : sz_(sz) { }
   virtual ~hiopVectorInt() { }
 
-  virtual size_type size() const
+  virtual size_type get_local_size() const
   {
     return sz_;
   }

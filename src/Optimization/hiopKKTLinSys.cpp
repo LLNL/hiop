@@ -1596,8 +1596,8 @@ hiopMatVecKKTFullOpr::hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt,
   dir_ = new hiopIterate(kkt_->nlp_);
 
   // set compound vector pointed to dir_/resid_
-  dir_cv_ = new hiopCompoundVector(dir_);
-  res_cv_ = new hiopCompoundVector(resid_);
+  dir_cv_ = new hiopVectorCompoundPD(dir_);
+  res_cv_ = new hiopVectorCompoundPD(resid_);
 }
 
 bool hiopMatVecKKTFullOpr::split_vec_to_build_it(const hiopVector& x)
@@ -1647,10 +1647,10 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& yvec, const hiopVector& xvec)
   delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
   delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
 
-  hiopCompoundVector& y = dynamic_cast<hiopCompoundVector&>(yvec);
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(xvec);
+  hiopVectorCompoundPD& y = dynamic_cast<hiopVectorCompoundPD&>(yvec);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(xvec);
 
-  assert(x.size()==y.size() && x.size() == 12);
+  assert(x.get_num_parts()==y.get_num_parts() && x.get_num_parts() == 12);
 
   hiopVector* dx_ = &(x.getVector(0));
   hiopVector* dd_ = &(x.getVector(1));
@@ -1766,8 +1766,8 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& yvec, const hiopVector& xvec)
  */
 bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& yvec, const hiopVector& xvec)
 {
-  hiopCompoundVector& y = dynamic_cast<hiopCompoundVector&>(yvec);
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(xvec);
+  hiopVectorCompoundPD& y = dynamic_cast<hiopVectorCompoundPD&>(yvec);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(xvec);
 
   // full KKT is not symmetric!
   const hiopMatrix* Jac_c = kkt_->Jac_c_;
@@ -1786,7 +1786,7 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& yvec, const hiopVector& x
   delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
   delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
 
-  assert(x.size()==y.size() && x.size() == 12);
+  assert(x.get_num_parts()==y.get_num_parts() && x.get_num_parts() == 12);
 
   hiopVector* dx_ = &(x.getVector(0));
   hiopVector* dd_ = &(x.getVector(1));
@@ -1896,8 +1896,8 @@ hiopPrecondKKTOpr::hiopPrecondKKTOpr(hiopKKTLinSys* kkt,
   dir_ = new hiopIterate(kkt_->nlp_);
 
   // set compound vector pointed to dir_/resid_
-  dir_cv_ = new hiopCompoundVector(dir_);
-  res_cv_ = new hiopCompoundVector(resid_);
+  dir_cv_ = new hiopVectorCompoundPD(dir_);
+  res_cv_ = new hiopVectorCompoundPD(resid_);
 }
 
 bool hiopPrecondKKTOpr::split_vec_to_build_res(const hiopVector& vec)

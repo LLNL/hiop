@@ -323,7 +323,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const hiopVector& vv, const hio
   const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL> &>(index_in_src);
   const auto& v = dynamic_cast<const hiopVectorRaja<MEM, POL> &>(vv);
 
-  assert(indexes.size() == n_local_);
+  assert(indexes.get_local_size() == n_local_);
   
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
@@ -348,7 +348,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const double* vv, const hiopVec
   }
 
   const auto& indexes = dynamic_cast<const hiopVectorIntRaja<MEM, POL> &>(index_in_src);
-  assert(indexes.size() == n_local_);
+  assert(indexes.get_local_size() == n_local_);
   index_type* id = const_cast<index_type*>(indexes.local_data_const());
   double* dd = data_dev_;
   
@@ -606,7 +606,7 @@ void hiopVectorRaja<MEM, POL>::copy_from_two_vec_w_pattern(const hiopVector& c,
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
-  assert(n_local_ == ix1.size() + ix2.size());
+  assert(n_local_ == ix1.get_local_size() + ix2.get_local_size());
 #endif
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
@@ -658,7 +658,7 @@ void hiopVectorRaja<MEM, POL>::copy_to_two_vec_w_pattern(hiopVector& c,
 
 #ifdef HIOP_DEEPCHECKS
   assert(n1_local + n2_local == n_local_);
-  assert(n_local_ == ix1.size() + ix2.size());
+  assert(n_local_ == ix1.get_local_size() + ix2.get_local_size());
 #endif
   double*   dd = data_dev_;
   double*  vd1 = v1.data_dev_;
@@ -1209,9 +1209,9 @@ void hiopVectorRaja<MEM, POL>::axpy(double alpha, const hiopVector& xvec, const 
   const auto& x = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(xvec);
   const auto& idxs = dynamic_cast<const hiopVectorIntRaja<MEM, POL>&>(i);
 
-  assert(x.get_size()==i.size());
-  assert(x.get_local_size()==i.size());
-  assert(i.size()<=n_local_);
+  assert(x.get_size()==i.get_local_size());
+  assert(x.get_local_size()==i.get_local_size());
+  assert(i.get_local_size()<=n_local_);
   
   double* dd = data_dev_;
   double* xd = const_cast<double*>(x.data_dev_);

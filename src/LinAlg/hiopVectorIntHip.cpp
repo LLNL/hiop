@@ -89,14 +89,14 @@ void hiopVectorIntHip::copy_from(const index_type* v_local)
 
 void hiopVectorIntHip::copy_from_vectorseq(const hiopVectorIntSeq& src)
 {
-  assert(src.size() == sz_);
+  assert(src.get_local_size() == sz_);
   auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
   assert(b);
 }
 
 void hiopVectorIntHip::copy_to_vectorseq(hiopVectorIntSeq& dest) const
 {
-  assert(dest.size() == sz_);
+  assert(dest.get_local_size() == sz_);
   auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
   assert(b);
 }

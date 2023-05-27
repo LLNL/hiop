@@ -46,14 +46,14 @@
 // product endorsement purposes.
 
 /**
- * @file hiopCompoundVector.cpp
+ * @file hiopVectorCompoundPD.cpp
  *
  * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 
-#include "hiopCompoundVector.hpp"
-#include "hiopCompoundVectorInt.hpp"
+#include "hiopVectorCompoundPD.hpp"
+#include "hiopVectorIntCompoundPD.hpp"
 #include "hiopCppStdUtils.hpp"
 
 #include <cmath>
@@ -66,34 +66,37 @@
 
 namespace hiop
 {
-hiopCompoundVector::hiopCompoundVector(bool own_vectors)
-: own_vectors_{own_vectors}
+hiopVectorCompoundPD::hiopVectorCompoundPD(bool own_vectors)
+: own_vectors_{own_vectors},
+  n_parts_{0}
 {
   n_ = 0;
 }
 
-hiopCompoundVector::~hiopCompoundVector()
+hiopVectorCompoundPD::~hiopVectorCompoundPD()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(own_vectors_) {
       delete vectors_[i];
     }
     vectors_[i] = nullptr;
   }
   vectors_.clear();
+  n_parts_ = 0;
 }
 
-hiopCompoundVector::hiopCompoundVector(const hiopCompoundVector& v)
+hiopVectorCompoundPD::hiopVectorCompoundPD(const hiopVectorCompoundPD& v)
 {
   n_ = v.n_;
   own_vectors_ = true;
-  for(index_type i = 0; i < v.vectors_.size(); i++) {
+  n_parts_ = v.get_num_parts();
+  for(index_type i = 0; i < v.get_num_parts(); i++) {
     hiopVector* v_component = v.vectors_[i]->alloc_clone();
     vectors_.push_back(v_component);
   }
 }
 
-hiopCompoundVector::hiopCompoundVector(const hiopIterate* dir)
+hiopVectorCompoundPD::hiopVectorCompoundPD(const hiopIterate* dir)
 {
   n_ = 0;
   own_vectors_ = false;
@@ -145,9 +148,11 @@ hiopCompoundVector::hiopCompoundVector(const hiopIterate* dir)
   //hiopVector* vu = dir->vu->alloc_clone();
   n_ += dir->vu->get_size();
   vectors_.push_back(dir->vu);
+
+  n_parts_ = 12;
 }
 
-hiopCompoundVector::hiopCompoundVector(const hiopResidual* resid)
+hiopVectorCompoundPD::hiopVectorCompoundPD(const hiopResidual* resid)
 {
   n_ = 0;
   own_vectors_ = false;
@@ -199,24 +204,26 @@ hiopCompoundVector::hiopCompoundVector(const hiopResidual* resid)
   //hiopVector* vu = resid->rsvu->alloc_clone();
   n_ += resid->rsvu->get_size();
   vectors_.push_back(resid->rsvu);
+
+  n_parts_ = 12;
 }
 
-hiopVector* hiopCompoundVector::alloc_clone() const
+hiopVector* hiopVectorCompoundPD::alloc_clone() const
 {
-  hiopVector* v = new hiopCompoundVector(*this);
+  hiopVector* v = new hiopVectorCompoundPD(*this);
   assert(v);
   return v;
 }
 
-hiopVector* hiopCompoundVector::new_copy () const
+hiopVector* hiopVectorCompoundPD::new_copy () const
 {
-  hiopVector* v = new hiopCompoundVector(*this);
+  hiopVector* v = new hiopVectorCompoundPD(*this);
   assert(v);
   v->copyFrom(*this);
   return v;
 }
 
-void hiopCompoundVector::copy_from_resid(const hiopResidual* resid)
+void hiopVectorCompoundPD::copy_from_resid(const hiopResidual* resid)
 {
   vectors_[0]->copyFrom(*(resid->rx));
   vectors_[1]->copyFrom(*(resid->rd));
@@ -232,7 +239,7 @@ void hiopCompoundVector::copy_from_resid(const hiopResidual* resid)
   vectors_[11]->copyFrom(*(resid->rsvu));
 }
 
-void hiopCompoundVector::copy_from_iterate(const hiopIterate* it)
+void hiopVectorCompoundPD::copy_from_iterate(const hiopIterate* it)
 {
   vectors_[0]->copyFrom(*(it->x));
   vectors_[1]->copyFrom(*(it->d));
@@ -248,127 +255,127 @@ void hiopCompoundVector::copy_from_iterate(const hiopIterate* it)
   vectors_[11]->copyFrom(*(it->vu));
 }
 
-void hiopCompoundVector::setToZero()
+void hiopVectorCompoundPD::setToZero()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->setToZero();
   }
 }
 
-void hiopCompoundVector::setToConstant(double c)
+void hiopVectorCompoundPD::setToConstant(double c)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->setToConstant(c);
   }
 }
 
-void hiopCompoundVector::set_to_random_uniform(double minv, double maxv)
+void hiopVectorCompoundPD::set_to_random_uniform(double minv, double maxv)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->set_to_random_uniform(minv, maxv);
   }
 }
 
-void hiopCompoundVector::setToConstant_w_patternSelect(double c, const hiopVector& select)
+void hiopVectorCompoundPD::setToConstant_w_patternSelect(double c, const hiopVector& select)
 {
-  const hiopCompoundVector& s = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == s.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& s = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == s.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->setToConstant_w_patternSelect(c, s.getVector(i));
   }
 }
 
-void hiopCompoundVector::copyFrom(const hiopVector& v_in )
+void hiopVectorCompoundPD::copyFrom(const hiopVector& v_in )
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_in);
-  assert(this->size() == v.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_in);
+  assert(this->get_num_parts() == v.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->copyFrom(v.getVector(i));
   }
 }
 
-void hiopCompoundVector::copy_from_vectorpar(const hiopVectorPar& v)
+void hiopVectorCompoundPD::copy_from_vectorpar(const hiopVectorPar& v)
 {
   assert(0 && "TODO: change this method to copy_from_host? host-device memory transfer for each component.");
 }
 
-void hiopCompoundVector::copy_to_vectorpar(hiopVectorPar& vdest) const
+void hiopVectorCompoundPD::copy_to_vectorpar(hiopVectorPar& vdest) const
 {
   assert(0 && "TODO: change this method to copy_to_host? host-device memory transfer for each component.");
 }
 
-void hiopCompoundVector::copyFrom(const double* v_local_data )
+void hiopVectorCompoundPD::copyFrom(const double* v_local_data )
 {
   assert(0 && "not required.");
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopCompoundVector::copy_from_w_pattern(const hiopVector& vv, const hiopVector& select)
+void hiopVectorCompoundPD::copy_from_w_pattern(const hiopVector& vv, const hiopVector& select)
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(vv);
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(vv);
 
   assert(n_ == ix.n_);
   assert(n_ == v.n_);
   
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->copy_from_w_pattern(v.getVector(i), ix.getVector(i));
   }
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopCompoundVector::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
+void hiopVectorCompoundPD::copy_from_indexes(const hiopVector& vv, const hiopVectorInt& index_in_src)
 {
-  const hiopCompoundVectorInt& ix = dynamic_cast<const hiopCompoundVectorInt&>(index_in_src);
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(vv);
+  const hiopVectorIntCompoundPD& ix = dynamic_cast<const hiopVectorIntCompoundPD&>(index_in_src);
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(vv);
 
-  assert(ix.size() == this->size());
-  assert(v.size() == this->size());
+  assert(ix.get_num_parts() == this->get_num_parts());
+  assert(v.get_num_parts() == this->get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->copy_from_indexes(v.getVector(i), ix.getVector(i));
   }
 }
 
 /// @brief Copy from vec the elements specified by the indices in index_in_src
-void hiopCompoundVector::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
+void hiopVectorCompoundPD::copy_from_indexes(const double* vv, const hiopVectorInt& index_in_src)
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyFromStarting(int start_index_in_this, const double* v, int nv)
+void hiopVectorCompoundPD::copyFromStarting(int start_index_in_this, const double* v, int nv)
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
+void hiopVectorCompoundPD::copyFromStarting(int start_index/*_in_src*/,const hiopVector& v_)
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
+void hiopVectorCompoundPD::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::startingAtCopyFromStartingAt(int start_idx_dest, 
+void hiopVectorCompoundPD::startingAtCopyFromStartingAt(int start_idx_dest, 
                                                       const hiopVector& v_in, 
                                                       int start_idx_src)
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyToStarting(int start_index, hiopVector& v_) const
+void hiopVectorCompoundPD::copyToStarting(int start_index, hiopVector& v_) const
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyToStarting(hiopVector& vec, int start_index_in_dest) const
+void hiopVectorCompoundPD::copyToStarting(hiopVector& vec, int start_index_in_dest) const
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyToStartingAt_w_pattern(hiopVector& v_,
+void hiopVectorCompoundPD::copyToStartingAt_w_pattern(hiopVector& v_,
                                                index_type start_index/*_in_dest*/,
                                                const hiopVector& select) const
 {
@@ -381,7 +388,7 @@ void hiopCompoundVector::copyToStartingAt_w_pattern(hiopVector& v_,
 *  @pre the size of `this` = the size of `c` + the size of `d`.
 *  @pre `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopCompoundVector::copy_from_two_vec_w_pattern(const hiopVector& c, 
+void hiopVectorCompoundPD::copy_from_two_vec_w_pattern(const hiopVector& c, 
                                                 const hiopVectorInt& c_map, 
                                                 const hiopVector& d, 
                                                 const hiopVectorInt& d_map)
@@ -394,7 +401,7 @@ void hiopCompoundVector::copy_from_two_vec_w_pattern(const hiopVector& c,
 *  @pre the size of `this` = the size of `c` + the size of `d`.
 *  @pre `c_map` \Union `d_map` = {0, ..., size_of_this_vec-1}
 */
-void hiopCompoundVector::copy_to_two_vec_w_pattern(hiopVector& c, 
+void hiopVectorCompoundPD::copy_to_two_vec_w_pattern(hiopVector& c, 
                                               const hiopVectorInt& c_map, 
                                               hiopVector& d, 
                                               const hiopVectorInt& d_map) const
@@ -405,7 +412,7 @@ void hiopCompoundVector::copy_to_two_vec_w_pattern(hiopVector& c,
 /* copy 'this' (source) starting at 'start_idx_in_src' to 'dest' starting at index 'int start_idx_dest' 
  * If num_elems>=0, 'num_elems' will be copied; if num_elems<0, elements will be copied till the end of
  * either source ('this') or destination ('dest') is reached */
-void hiopCompoundVector::
+void hiopVectorCompoundPD::
 startingAtCopyToStartingAt(index_type start_idx_in_src,
                            hiopVector& dest_,
                            index_type start_idx_dest,
@@ -414,7 +421,7 @@ startingAtCopyToStartingAt(index_type start_idx_in_src,
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
+void hiopVectorCompoundPD::startingAtCopyToStartingAt_w_pattern(index_type start_idx_in_src,
                                                          hiopVector& dest_,
                                                          index_type start_idx_dest,
                                                          const hiopVector& selec_dest,
@@ -423,16 +430,16 @@ void hiopCompoundVector::startingAtCopyToStartingAt_w_pattern(index_type start_i
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::copyTo(double* dest) const
+void hiopVectorCompoundPD::copyTo(double* dest) const
 {
   assert(0 && "not required.");
 }
 
-double hiopCompoundVector::twonorm() const 
+double hiopVectorCompoundPD::twonorm() const 
 {
   double nrm = 0.;
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     double arg = vectors_[i]->twonorm();
     nrm += arg*arg;
   }
@@ -440,341 +447,341 @@ double hiopCompoundVector::twonorm() const
   return nrm;
 }
 
-double hiopCompoundVector::dotProductWith(const hiopVector& v_) const
+double hiopVectorCompoundPD::dotProductWith(const hiopVector& v_) const
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  assert(this->size() == v.size());
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  assert(this->get_num_parts() == v.get_num_parts());
 
   double dotprod = 0.;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     dotprod += vectors_[i]->dotProductWith(v.getVector(i));
   }
 
   return dotprod;
 }
 
-double hiopCompoundVector::infnorm() const
+double hiopVectorCompoundPD::infnorm() const
 {
   double nrm = 0.;
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     double arg = vectors_[i]->infnorm();
     nrm = (nrm>arg)?nrm:arg;
   }
   return nrm;
 }
 
-double hiopCompoundVector::infnorm_local() const
+double hiopVectorCompoundPD::infnorm_local() const
 {
   double nrm = 0.;
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     double arg = vectors_[i]->infnorm_local();
     nrm = (nrm>arg)?nrm:arg;
   }
   return nrm;
 }
 
-double hiopCompoundVector::onenorm() const
+double hiopVectorCompoundPD::onenorm() const
 {
   double nrm = 0.;
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     nrm += vectors_[i]->onenorm();
   }
   return nrm;
 }
 
-double hiopCompoundVector::onenorm_local() const
+double hiopVectorCompoundPD::onenorm_local() const
 {
   double nrm = 0.;
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     nrm += vectors_[i]->onenorm_local();
   }
   return nrm;
 }
 
-void hiopCompoundVector::componentMult(const hiopVector& v_)
+void hiopVectorCompoundPD::componentMult(const hiopVector& v_)
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  assert(this->size() == v.size());
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  assert(this->get_num_parts() == v.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->componentMult(v.getVector(i));
   }
 }
 
-void hiopCompoundVector::componentDiv(const hiopVector& v_)
+void hiopVectorCompoundPD::componentDiv(const hiopVector& v_)
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  assert(this->size() == v.size());
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  assert(this->get_num_parts() == v.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->componentDiv(v.getVector(i));
   }
 }
 
-void hiopCompoundVector::componentDiv_w_selectPattern( const hiopVector& v_, const hiopVector& ix_)
+void hiopVectorCompoundPD::componentDiv_w_selectPattern( const hiopVector& v_, const hiopVector& ix_)
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  const hiopCompoundVector& ix= dynamic_cast<const hiopCompoundVector&>(ix_);
-  assert(this->size() == v.size());
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  const hiopVectorCompoundPD& ix= dynamic_cast<const hiopVectorCompoundPD&>(ix_);
+  assert(this->get_num_parts() == v.get_num_parts());
+  assert(this->get_num_parts() == ix.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->componentDiv_w_selectPattern(v.getVector(i), ix.getVector(i));
   }
 }
 
-void hiopCompoundVector::component_min(const double constant)
+void hiopVectorCompoundPD::component_min(const double constant)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_min(constant);
   }
 }
 
-void hiopCompoundVector::component_min(const hiopVector& v_)
+void hiopVectorCompoundPD::component_min(const hiopVector& v_)
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  assert(this->size() == v.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  assert(this->get_num_parts() == v.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_min(v.getVector(i));
   }
 }
 
-void hiopCompoundVector::component_max(const double constant)
+void hiopVectorCompoundPD::component_max(const double constant)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_max(constant);
   }
 }
 
-void hiopCompoundVector::component_max(const hiopVector& v_)
+void hiopVectorCompoundPD::component_max(const hiopVector& v_)
 {
-  const hiopCompoundVector& v = dynamic_cast<const hiopCompoundVector&>(v_);
-  assert(this->size() == v.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& v = dynamic_cast<const hiopVectorCompoundPD&>(v_);
+  assert(this->get_num_parts() == v.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_max(v.getVector(i));
   }
 }
 
-void hiopCompoundVector::component_abs()
+void hiopVectorCompoundPD::component_abs()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_abs();
   }
 }
 
-void hiopCompoundVector::component_sgn()
+void hiopVectorCompoundPD::component_sgn()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_sgn();
   }
 }
 
-void hiopCompoundVector::component_sqrt()
+void hiopVectorCompoundPD::component_sqrt()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->component_sqrt();
   }
 }
 
-void hiopCompoundVector::scale(double num)
+void hiopVectorCompoundPD::scale(double num)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->scale(num);
   }
 }
 
-void hiopCompoundVector::axpy(double alpha, const hiopVector& x_in)
+void hiopVectorCompoundPD::axpy(double alpha, const hiopVector& x_in)
 {
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(x_in);
-  assert(this->size() == x.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(x_in);
+  assert(this->get_num_parts() == x.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axpy(alpha, x.getVector(i));
   }
 }
 
 /// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
-void hiopCompoundVector::axpy(double alpha, const hiopVector& x_in, const hiopVectorInt& select)
+void hiopVectorCompoundPD::axpy(double alpha, const hiopVector& x_in, const hiopVectorInt& select)
 {
-  const hiopCompoundVectorInt& ix = dynamic_cast<const hiopCompoundVectorInt&>(select);
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(x_in);
-  assert(this->size() == x.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorIntCompoundPD& ix = dynamic_cast<const hiopVectorIntCompoundPD&>(select);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(x_in);
+  assert(this->get_num_parts() == x.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axpy(alpha, x.getVector(i), ix.getVector(i));
   }
 }
 
 /// @brief Performs axpy, this += alpha*x, for selected entries
-void hiopCompoundVector::axpy_w_pattern(double alpha, const hiopVector& x_in, const hiopVector& select)
+void hiopVectorCompoundPD::axpy_w_pattern(double alpha, const hiopVector& x_in, const hiopVector& select)
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(x_in);
-  assert(this->size() == x.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(x_in);
+  assert(this->get_num_parts() == x.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axpy_w_pattern(alpha, x.getVector(i), ix.getVector(i));
   }
 }
 
-void hiopCompoundVector::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
+void hiopVectorCompoundPD::axzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
 {
-  const hiopCompoundVector& vx = dynamic_cast<const hiopCompoundVector&>(x_);
-  const hiopCompoundVector& vz = dynamic_cast<const hiopCompoundVector&>(z_);
-  assert(this->size() == vx.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& vx = dynamic_cast<const hiopVectorCompoundPD&>(x_);
+  const hiopVectorCompoundPD& vz = dynamic_cast<const hiopVectorCompoundPD&>(z_);
+  assert(this->get_num_parts() == vx.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axzpy(alpha, vx.getVector(i), vz.getVector(i));
   }
 }
 
-void hiopCompoundVector::axdzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
+void hiopVectorCompoundPD::axdzpy(double alpha, const hiopVector& x_, const hiopVector& z_)
 {
   if(alpha==0.) return;
-  const hiopCompoundVector& vx = dynamic_cast<const hiopCompoundVector&>(x_);
-  const hiopCompoundVector& vz = dynamic_cast<const hiopCompoundVector&>(z_);
-  assert(this->size() == vx.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& vx = dynamic_cast<const hiopVectorCompoundPD&>(x_);
+  const hiopVectorCompoundPD& vz = dynamic_cast<const hiopVectorCompoundPD&>(z_);
+  assert(this->get_num_parts() == vx.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axdzpy(alpha, vx.getVector(i), vz.getVector(i));
   }
 }
 
-void hiopCompoundVector::axdzpy_w_pattern(double alpha, const hiopVector& x_, const hiopVector& z_, const hiopVector& select)
+void hiopVectorCompoundPD::axdzpy_w_pattern(double alpha, const hiopVector& x_, const hiopVector& z_, const hiopVector& select)
 {
-  const hiopCompoundVector& vx = dynamic_cast<const hiopCompoundVector&>(x_);
-  const hiopCompoundVector& vz = dynamic_cast<const hiopCompoundVector&>(z_);
-  const hiopCompoundVector& sel= dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == vx.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& vx = dynamic_cast<const hiopVectorCompoundPD&>(x_);
+  const hiopVectorCompoundPD& vz = dynamic_cast<const hiopVectorCompoundPD&>(z_);
+  const hiopVectorCompoundPD& sel= dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == vx.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->axdzpy_w_pattern(alpha, vx.getVector(i), vz.getVector(i), sel.getVector(i));
   }
 }
 
-void hiopCompoundVector::addConstant(double c)
+void hiopVectorCompoundPD::addConstant(double c)
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->addConstant(c);
   }
 }
 
-void  hiopCompoundVector::addConstant_w_patternSelect(double c, const hiopVector& ix_)
+void  hiopVectorCompoundPD::addConstant_w_patternSelect(double c, const hiopVector& ix_)
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(ix_);
-  assert(this->size() == ix.size());
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(ix_);
+  assert(this->get_num_parts() == ix.get_num_parts());
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->addConstant_w_patternSelect(c, ix.getVector(i));
   }
 }
 
-double hiopCompoundVector::min() const
+double hiopVectorCompoundPD::min() const
 {
   double ret_val = std::numeric_limits<double>::max();
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     double arg = vectors_[i]->min();
     ret_val = (ret_val<arg)?ret_val:arg;
   }
   return ret_val;
 }
 
-double hiopCompoundVector::min_w_pattern(const hiopVector& select) const
+double hiopVectorCompoundPD::min_w_pattern(const hiopVector& select) const
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());
   
   double ret_val = std::numeric_limits<double>::max();
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     double arg = vectors_[i]->min_w_pattern(ix.getVector(i));
     ret_val = (ret_val<arg)?ret_val:arg;
   }
   return ret_val;
 }
 
-void hiopCompoundVector::min( double& m, int& index ) const
+void hiopVectorCompoundPD::min( double& m, int& index ) const
 {
   assert(false && "not implemented");
 }
 
-void hiopCompoundVector::negate()
+void hiopVectorCompoundPD::negate()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->negate();
   }
 }
 
-void hiopCompoundVector::invert()
+void hiopVectorCompoundPD::invert()
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->invert();
   }
 }
 
 // uses Kahan's summation algorithm to reduce numerical error
-double hiopCompoundVector::logBarrier_local(const hiopVector& select) const 
+double hiopVectorCompoundPD::logBarrier_local(const hiopVector& select) const 
 {
   double sum = 0.0;
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());  
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());  
+  for(index_type i = 0; i < n_parts_; i++) {
     sum += vectors_[i]->logBarrier_local(ix.getVector(i));
   }
   return sum;
 }
 
-double hiopCompoundVector::sum_local() const 
+double hiopVectorCompoundPD::sum_local() const 
 {
   double sum = 0.0;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     sum += vectors_[i]->sum_local();
   }
   return sum;
 }
 
 /* adds the gradient of the log barrier, namely this=this+alpha*1/select(x) */
-void hiopCompoundVector::addLogBarrierGrad(double alpha, const hiopVector& vx, const hiopVector& select)
+void hiopVectorCompoundPD::addLogBarrierGrad(double alpha, const hiopVector& vx, const hiopVector& select)
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());  
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());  
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->addLogBarrierGrad(alpha, x.getVector(i), ix.getVector(i));
   }
 }
 
-double hiopCompoundVector::linearDampingTerm_local(const hiopVector& ixleft, 
+double hiopVectorCompoundPD::linearDampingTerm_local(const hiopVector& ixleft, 
                                                    const hiopVector& ixright, 
                                                    const double& mu, 
                                                    const double& kappa_d) const
 {
-  const hiopCompoundVector& ixl = dynamic_cast<const hiopCompoundVector&>(ixleft);
-  const hiopCompoundVector& ixr = dynamic_cast<const hiopCompoundVector&>(ixright);
-  assert(this->size() == ixl.size());
-  assert(this->size() == ixr.size());
+  const hiopVectorCompoundPD& ixl = dynamic_cast<const hiopVectorCompoundPD&>(ixleft);
+  const hiopVectorCompoundPD& ixr = dynamic_cast<const hiopVectorCompoundPD&>(ixright);
+  assert(this->get_num_parts() == ixl.get_num_parts());
+  assert(this->get_num_parts() == ixr.get_num_parts());
   double term=0.0;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
      term += vectors_[i]->linearDampingTerm_local(ixl.getVector(i), ixr.getVector(i), mu, kappa_d);
   }
   return term;
 }
 
-void hiopCompoundVector::addLinearDampingTerm(const hiopVector& ixleft,
+void hiopVectorCompoundPD::addLinearDampingTerm(const hiopVector& ixleft,
                                               const hiopVector& ixright,
                                               const double& alpha,
                                               const double& ct)
 {
-  const hiopCompoundVector& ixl = dynamic_cast<const hiopCompoundVector&>(ixleft);
-  const hiopCompoundVector& ixr = dynamic_cast<const hiopCompoundVector&>(ixright);
-  assert(this->size() == ixl.size());
-  assert(this->size() == ixr.size());
+  const hiopVectorCompoundPD& ixl = dynamic_cast<const hiopVectorCompoundPD&>(ixleft);
+  const hiopVectorCompoundPD& ixr = dynamic_cast<const hiopVectorCompoundPD&>(ixright);
+  assert(this->get_num_parts() == ixl.get_num_parts());
+  assert(this->get_num_parts() == ixr.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
      vectors_[i]->addLinearDampingTerm(ixl.getVector(i), ixr.getVector(i), alpha, ct);
   }
 }
 
-int hiopCompoundVector::allPositive()
+int hiopVectorCompoundPD::allPositive()
 {
   int allPos=true;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(!vectors_[i]->allPositive()) {
       allPos = false;
       break;
@@ -783,36 +790,36 @@ int hiopCompoundVector::allPositive()
   return allPos;
 }
 
-bool hiopCompoundVector::projectIntoBounds_local(const hiopVector& xl_,
+bool hiopVectorCompoundPD::projectIntoBounds_local(const hiopVector& xl_,
                                                  const hiopVector& ixl_, 
                                                  const hiopVector& xu_,
                                                  const hiopVector& ixu_,
                                                  double kappa1,
                                                  double kappa2)
 {
-  const hiopCompoundVector&  xl = dynamic_cast<const hiopCompoundVector&>(xl_);
-  const hiopCompoundVector& ixl = dynamic_cast<const hiopCompoundVector&>(ixl_);
-  const hiopCompoundVector&  xu = dynamic_cast<const hiopCompoundVector&>(xu_);
-  const hiopCompoundVector& ixu = dynamic_cast<const hiopCompoundVector&>(ixu_);
-  assert(this->size() ==  xl.size());
-  assert(this->size() == ixl.size());
-  assert(this->size() ==  xu.size());
-  assert(this->size() == ixu.size());
+  const hiopVectorCompoundPD&  xl = dynamic_cast<const hiopVectorCompoundPD&>(xl_);
+  const hiopVectorCompoundPD& ixl = dynamic_cast<const hiopVectorCompoundPD&>(ixl_);
+  const hiopVectorCompoundPD&  xu = dynamic_cast<const hiopVectorCompoundPD&>(xu_);
+  const hiopVectorCompoundPD& ixu = dynamic_cast<const hiopVectorCompoundPD&>(ixu_);
+  assert(this->get_num_parts() ==  xl.get_num_parts());
+  assert(this->get_num_parts() == ixl.get_num_parts());
+  assert(this->get_num_parts() ==  xu.get_num_parts());
+  assert(this->get_num_parts() == ixu.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->projectIntoBounds_local(xl.getVector(i),ixl.getVector(i),xu.getVector(i),ixu.getVector(i),kappa1,kappa2);
   }
   return true;
 }
 
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
-double hiopCompoundVector::fractionToTheBdry_local(const hiopVector& dx, const double& tau) const 
+double hiopVectorCompoundPD::fractionToTheBdry_local(const hiopVector& dx, const double& tau) const 
 {
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(dx);
-  assert(this->size() == x.size());
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(dx);
+  assert(this->get_num_parts() == x.get_num_parts());
   
   double alpha=1.0, aux;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     aux = vectors_[i]->fractionToTheBdry_local(x.getVector(i), tau);
     if(aux<alpha) {
       alpha = aux;
@@ -822,16 +829,16 @@ double hiopCompoundVector::fractionToTheBdry_local(const hiopVector& dx, const d
 }
 
 /* max{a\in(0,1]| x+ad >=(1-tau)x} */
-double hiopCompoundVector::
+double hiopVectorCompoundPD::
 fractionToTheBdry_w_pattern_local(const hiopVector& dx, const double& tau, const hiopVector& select) const 
 {
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(dx);
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == x.size());
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(dx);
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == x.get_num_parts());
+  assert(this->get_num_parts() == ix.get_num_parts());
   
   double alpha=1.0, aux;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     aux = vectors_[i]->fractionToTheBdry_w_pattern_local(x.getVector(i), tau, ix.getVector(i));
     if(aux<alpha) {
       alpha = aux;
@@ -840,23 +847,23 @@ fractionToTheBdry_w_pattern_local(const hiopVector& dx, const double& tau, const
   return alpha;
 }
 
-void hiopCompoundVector::selectPattern(const hiopVector& select)
+void hiopVectorCompoundPD::selectPattern(const hiopVector& select)
 {
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->selectPattern(ix.getVector(i));
   }
 }
 
-bool hiopCompoundVector::matchesPattern(const hiopVector& select)
+bool hiopVectorCompoundPD::matchesPattern(const hiopVector& select)
 {
   int bmatches=true;
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(!vectors_[i]->matchesPattern(ix.getVector(i))) {
       bmatches = false;
       break;
@@ -865,13 +872,13 @@ bool hiopCompoundVector::matchesPattern(const hiopVector& select)
   return bmatches;
 }
 
-int hiopCompoundVector::allPositive_w_patternSelect(const hiopVector& select)
+int hiopVectorCompoundPD::allPositive_w_patternSelect(const hiopVector& select)
 {
   int allPos=1; 
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == ix.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(!vectors_[i]->allPositive_w_patternSelect(ix.getVector(i))) {
       allPos = false;
       break;
@@ -880,25 +887,25 @@ int hiopCompoundVector::allPositive_w_patternSelect(const hiopVector& select)
   return allPos;
 }
 
-void hiopCompoundVector::adjustDuals_plh(const hiopVector& x_,
+void hiopVectorCompoundPD::adjustDuals_plh(const hiopVector& x_,
                                          const hiopVector& select,
                                          const double& mu,
                                          const double& kappa)
 {
-  const hiopCompoundVector& x = dynamic_cast<const hiopCompoundVector&>(x_);
-  const hiopCompoundVector& ix = dynamic_cast<const hiopCompoundVector&>(select);
-  assert(this->size() == x.size());
-  assert(this->size() == ix.size());
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(x_);
+  const hiopVectorCompoundPD& ix = dynamic_cast<const hiopVectorCompoundPD&>(select);
+  assert(this->get_num_parts() == x.get_num_parts());
+  assert(this->get_num_parts() == ix.get_num_parts());
 
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     vectors_[i]->adjustDuals_plh(x.getVector(i), ix.getVector(i), mu, kappa);
   }
 }
 
-bool hiopCompoundVector::is_zero() const
+bool hiopVectorCompoundPD::is_zero() const
 {
   int all_zero = true;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(!vectors_[i]->is_zero()) {
       all_zero = false;
       break;
@@ -907,9 +914,9 @@ bool hiopCompoundVector::is_zero() const
   return all_zero;
 }
 
-bool hiopCompoundVector::isnan_local() const
+bool hiopVectorCompoundPD::isnan_local() const
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(vectors_[i]->isnan_local()) {
       return true;
     }
@@ -917,9 +924,9 @@ bool hiopCompoundVector::isnan_local() const
   return false;
 }
 
-bool hiopCompoundVector::isinf_local() const
+bool hiopVectorCompoundPD::isinf_local() const
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(vectors_[i]->isinf_local()) {
       return true;
     }
@@ -927,9 +934,9 @@ bool hiopCompoundVector::isinf_local() const
   return false;
 }
 
-bool hiopCompoundVector::isfinite_local() const
+bool hiopVectorCompoundPD::isfinite_local() const
 {
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     if(false == vectors_[i]->isfinite_local()) {
       return false;
     }
@@ -937,7 +944,7 @@ bool hiopCompoundVector::isfinite_local() const
   return true;
 }
 
-void hiopCompoundVector::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+void hiopVectorCompoundPD::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
 {
   int myrank_=0, numranks=1; 
   MPI_Comm comm_ = MPI_COMM_SELF;
@@ -953,34 +960,34 @@ void hiopCompoundVector::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr
   }
 #endif
   if(myrank_==rank || rank==-1) {
-    for(index_type i = 0; i < vectors_.size(); i++) {
-      fprintf(file, "compound vector of size %d, printing %d-th vector \n", this->size(), i);
+    for(index_type i = 0; i < n_parts_; i++) {
+      fprintf(file, "Compound vector with %d parts. Printing %d-th part \n", n_parts_, i);
       vectors_[i]->print(file, msg, max_elems, rank);
     }
   }
 }
 
 
-size_type hiopCompoundVector::numOfElemsLessThan(const double &val) const
+size_type hiopVectorCompoundPD::numOfElemsLessThan(const double &val) const
 {
   size_type ret_num = 0;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     ret_num += vectors_[i]->numOfElemsLessThan(val);
   }
   return ret_num;
 }
 
-size_type hiopCompoundVector::numOfElemsAbsLessThan(const double &val) const
+size_type hiopVectorCompoundPD::numOfElemsAbsLessThan(const double &val) const
 {
   size_type ret_num = 0;
-  for(index_type i = 0; i < vectors_.size(); i++) {
+  for(index_type i = 0; i < n_parts_; i++) {
     ret_num += vectors_[i]->numOfElemsAbsLessThan(val);
   }
 
   return ret_num;
 }
 
-void hiopCompoundVector::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+void hiopVectorCompoundPD::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                            const int start, 
                                            const int end, 
                                            const hiopInterfaceBase::NonlinearityType*  arr_src,
@@ -989,7 +996,7 @@ void hiopCompoundVector::set_array_from_to(hiopInterfaceBase::NonlinearityType* 
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
+void hiopVectorCompoundPD::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr, 
                                            const int start, 
                                            const int end, 
                                            const hiopInterfaceBase::NonlinearityType  arr_src) const
@@ -997,25 +1004,25 @@ void hiopCompoundVector::set_array_from_to(hiopInterfaceBase::NonlinearityType* 
   assert(0 && "not required.");
 }
 
-bool hiopCompoundVector::is_equal(const hiopVector& vec) const
+bool hiopVectorCompoundPD::is_equal(const hiopVector& vec) const
 {
   assert(0 && "not required.");
 }
 
-void hiopCompoundVector::addVector(hiopVector *v) 
+void hiopVectorCompoundPD::addVector(hiopVector *v) 
 {
   vectors_.push_back(v);
   n_ += v->get_size();
 }
 
-hiopVector& hiopCompoundVector::getVector(index_type index) const
+hiopVector& hiopVectorCompoundPD::getVector(index_type index) const
 {
   return *(vectors_[index]);
 }
 
-size_type hiopCompoundVector::size() const
+size_type hiopVectorCompoundPD::get_num_parts() const
 {
-  return vectors_.size();
+  return n_parts_;
 }
 
 };

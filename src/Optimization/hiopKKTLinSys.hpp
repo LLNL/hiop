@@ -56,7 +56,7 @@
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
 #include "hiopKrylovSolver.hpp"
-#include "hiopCompoundVector.hpp"
+#include "hiopVectorCompoundPD.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -187,9 +187,6 @@ protected:
 
   /// Preconditioner operator that solves with the given (usually compressed) KKT system
   hiopPrecondKKTOpr *prec_opr_;
-
-  /// Temporary vector to be used in the iterative refinement solve;
-//  hiopCompoundVector* ir_sol_;
 
   /// iterative refinement from BiCGStab solver
   hiopBiCGStabSolver* bicgIR_;
@@ -661,8 +658,8 @@ private:
    */
   bool combine_res_to_build_vec(hiopVector& vec);
  
-  hiopCompoundVector* dir_cv_;
-  hiopCompoundVector* res_cv_;
+  hiopVectorCompoundPD* dir_cv_;
+  hiopVectorCompoundPD* res_cv_;
 };
 
 /** 
@@ -711,8 +708,8 @@ protected:
    */
   virtual bool combine_dir_to_build_vec(hiopVector& vec);
 
-  hiopCompoundVector* dir_cv_;
-  hiopCompoundVector* res_cv_;
+  hiopVectorCompoundPD* dir_cv_;
+  hiopVectorCompoundPD* res_cv_;
 };
 
 };

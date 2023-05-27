@@ -827,14 +827,14 @@ public:
     const real_type dst_val = one;
     const real_type src_val = two;
     const local_ordinal_type num_rows_to_copy = getNumLocRows(&dst);
-    assert(num_rows_to_copy == rows_idxs.size());
+    assert(num_rows_to_copy == rows_idxs.get_local_size());
     assert(num_rows_to_copy <= src.m());
 
     // Test copying continuous rows from matrix
     dst.setToConstant(dst_val);
     src.setToConstant(src_val);
 
-    hiopVectorIntSeq rows_idxs_host(rows_idxs.size());
+    hiopVectorIntSeq rows_idxs_host(rows_idxs.get_local_size());
     index_type* rows_idxs_arr = rows_idxs_host.local_data();
     for (index_type i = 0; i < num_rows_to_copy; ++i) {
       rows_idxs_arr[i] = i;
