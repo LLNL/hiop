@@ -19,7 +19,7 @@ static bool parse_arguments(int argc,
                             bool& self_check,
                             bool& inertia_free,
                             bool& use_cusolver,
-                            bool& use_cusolver_lu,
+                            bool& use_resolve,
                             bool& use_ginkgo,
                             bool& use_ginkgo_cuda,
                             bool& use_ginkgo_hip)
@@ -28,7 +28,7 @@ static bool parse_arguments(int argc,
   n = 3;
   inertia_free = false;
   use_cusolver = false;
-  use_cusolver_lu = false;
+  use_resolve = false;
   use_ginkgo = false;
   use_ginkgo_cuda = false;
   use_ginkgo_cuda = false;
@@ -146,7 +146,7 @@ static bool parse_arguments(int argc,
 // Use cuSOLVER's LU factorization, if it was configured
 #ifdef HIOP_USE_CUSOLVER_LU
   if(use_cusolver) {
-    use_cusolver_lu = true;
+    use_resolve = true;
   }
 #endif
 
@@ -216,11 +216,11 @@ int main(int argc, char **argv)
   size_type n = 50;
   bool inertia_free = false;
   bool use_cusolver = false;
-  bool use_cusolver_lu = false;
+  bool use_resolve = false;
   bool use_ginkgo = false;
   bool use_ginkgo_cuda = false;
   bool use_ginkgo_hip = false;
-  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_cusolver_lu, use_ginkgo, use_ginkgo_cuda, use_ginkgo_hip)) { 
+  if(!parse_arguments(argc, argv, n, selfCheck, inertia_free, use_cusolver, use_resolve, use_ginkgo, use_ginkgo_cuda, use_ginkgo_hip)) { 
     usage(argv[0]);
 #ifdef HIOP_USE_MPI
     MPI_Finalize();

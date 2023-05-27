@@ -78,12 +78,12 @@ namespace hiop
 {
 
 
-class hiopLinSolverSymSparseCUSOLVER : public hiopLinSolverSymSparse
+class hiopLinSolverSymSparseReSolve : public hiopLinSolverSymSparse
 {
 public:
   // constructor
-  hiopLinSolverSymSparseCUSOLVER(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSymSparseCUSOLVER();
+  hiopLinSolverSymSparseReSolve(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseReSolve();
 
   /** 
    * @brief Triggers a refactorization of the matrix, if necessary.
@@ -152,11 +152,11 @@ protected:
   template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 };
 
-class hiopLinSolverSymSparseCUSOLVERGPU : public hiopLinSolverSymSparseCUSOLVER
+class hiopLinSolverSymSparseReSolveGPU : public hiopLinSolverSymSparseReSolve
 {
 public:  
-  hiopLinSolverSymSparseCUSOLVERGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSymSparseCUSOLVERGPU();
+  hiopLinSolverSymSparseReSolveGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+  virtual ~hiopLinSolverSymSparseReSolveGPU();
 
   virtual int matrixChanged();
   virtual bool solve(hiopVector& x_);

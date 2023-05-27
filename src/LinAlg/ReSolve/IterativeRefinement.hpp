@@ -12,10 +12,6 @@
 #include "hiop_cusolver_defs.hpp"
 #include <string>
 
-namespace hiop{
-  class hiopLinSolverSymSparseCUSOLVER;
-}
-
 namespace ReSolve {
 
 constexpr double ZERO = 0.0;

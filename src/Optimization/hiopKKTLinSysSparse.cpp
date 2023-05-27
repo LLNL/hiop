@@ -333,9 +333,9 @@ namespace hiop
         assert(compute_mode != "gpu" &&
                "KKT_SPARSE_XYcYd linsys: GPU compute mode not supported at this time.");
 
-        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "cusolver-lu") {
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "resolve") {
 #if defined(HIOP_USE_CUSOLVER_LU)
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           linsol_actual = "CUSOLVER-LU";
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
@@ -692,10 +692,10 @@ namespace hiop
 
         //our first choice is cuSolver on hybrid compute mode
         assert(nullptr == linSys_);
-        if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
+        if(linear_solver == "resolve" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER_LU)
           actual_lin_solver = "CUSOLVER-LU";
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
@@ -705,7 +705,7 @@ namespace hiop
             return nullptr;
           }
 #endif
-        } //end cusolver-lu
+        } //end resolve
 
         if(nullptr == linSys_ && (linear_solver == "strumpack" || linear_solver == "auto")) {
 #if defined(HIOP_USE_STRUMPACK)
@@ -764,9 +764,9 @@ namespace hiop
  //       assert(false == safe_mode_);
         assert(nullptr == linSys_);
         
-        if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
+        if(linear_solver == "resolve" || linear_solver == "auto") {
 #if defined(HIOP_USE_CUSOLVER_LU)        
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
                             "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
                             n,
@@ -780,7 +780,7 @@ namespace hiop
             return nullptr;
           }
 #endif
-        } //end cusolver-lu
+        } //end resolve
       } // end of compute mode gpu
     }
     assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");

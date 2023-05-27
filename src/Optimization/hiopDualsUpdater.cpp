@@ -444,7 +444,7 @@ instantiate_linear_solver(const char* linsol_opt,
       
 #ifdef HIOP_USE_CUSOLVER_LU 
       if(compute_mode == "gpu") {
-        assert((linear_solver == "cusolver-lu" || linear_solver == "auto") &&
+        assert((linear_solver == "resolve" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
                "options processing");
       }
@@ -456,10 +456,10 @@ instantiate_linear_solver(const char* linsol_opt,
         return false;
       }
       // This is our first choice on the device.
-      if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
+      if(linear_solver == "resolve" || linear_solver == "auto") {
         ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: CUSOLVER-LU size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;
-        lin_sys_ = new hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp_);
+        lin_sys_ = new hiopLinSolverSymSparseReSolve(n, nnz, nlp_);
       }
 #else // of #ifdef HIOP_USE_CUSOLVER_LU 
       //under compute mode gpu, at this point we don't have a sparse linear solver 

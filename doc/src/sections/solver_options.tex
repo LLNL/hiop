@@ -232,18 +232,18 @@ $(\mu-\mu_{target}) / (\mu_{init}-\mu_{target}) * ({bound\_relax\_perturb\_initi
 
 \subsubsection{Solving internal linear systems}
 
-\noindent \textbf{duals\_init\_linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the least-square problem in dual initialization (see \textbf{duals\_init}). Possible values are `auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
+\noindent \textbf{duals\_init\_linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the least-square problem in dual initialization (see \textbf{duals\_init}). Possible values are `auto'', ``ma57'', ``pardiso'', ``resolve'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
 \medskip
 
-\noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``cusolver-lu'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
+\noindent \textbf{linear\_solver\_sparse}: string option specifying the sparse linear solver used to solve the sparse KKT system. Possible values are ``auto'', ``ma57'', ``pardiso'', ``resolve'', ``strumpack'' or ``ginkgo''. Default value: is ``auto''.
 \medskip
 
-\warningcp{When KKTLinsys is `full' (unsymmetric)}: only cusolver-lu, strumpack, and pardiso are available (and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse').
+\warningcp{When KKTLinsys is `full' (unsymmetric)}: only resolve, strumpack, and pardiso are available (and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse').
 
 \warningcp{For KKTLinsys `xycyd' and `xdycyd'  (symmetric indefinite)}: 
 \begin{itemize}
   \item `cpu' compute mode: ma57, pardiso, strumpack, and ginko are available and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
-  \item `hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
+  \item `hybrid' compute mode: resolve, strumpack, ma57, and pardiso and will be selected in this order under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'.
   \item `gpu' compute mode: not supported with the above values for `KKTLinsys'.
   \item For KKTLinsys `condensed' and `normal' (symmetric positive definite system): under `cpu' compute mode only ma57 is supported (not efficient, use only for debugging); `hybrid' compute mode, cusolve-chol is supported and will be selected under `auto' or incompatible/unsupported value for `linear\_solver\_sparse'; `gpu' compute mode: work in progress.
 \end{itemize}

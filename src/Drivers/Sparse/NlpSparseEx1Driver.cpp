@@ -220,8 +220,8 @@ int main(int argc, char **argv)
   if(use_cusolver) {
     nlp.options->SetStringValue("duals_init", "zero");
     nlp.options->SetStringValue("linsol_mode", "speculative");
-    nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
-    nlp.options->SetStringValue("cusolver_lu_refactorization", "rf");
+    nlp.options->SetStringValue("linear_solver_sparse", "resolve");
+    nlp.options->SetStringValue("resolve_refactorization", "rf");
     nlp.options->SetIntegerValue("ir_inner_maxit", 100);
     nlp.options->SetNumericValue("ir_inner_tol", 1e-16);
     nlp.options->SetIntegerValue("ir_inner_restart", 20);

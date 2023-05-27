@@ -68,7 +68,7 @@
 
 namespace hiop
 {
-  hiopLinSolverSymSparseCUSOLVER::hiopLinSolverSymSparseCUSOLVER(const int& n, 
+  hiopLinSolverSymSparseReSolve::hiopLinSolverSymSparseReSolve(const int& n, 
                                                                  const int& nnz, 
                                                                  hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
@@ -102,7 +102,7 @@ namespace hiop
 
     // Select factorization
     std::string fact;
-    fact = nlp_->options->GetString("cusolver_lu_factorization");
+    fact = nlp_->options->GetString("resolve_factorization");
     if(fact != "klu") {
       nlp_->log->printf(hovWarning,
                         "Factorization %s not compatible with cuSOLVER LU, using default ...\n",
@@ -114,7 +114,7 @@ namespace hiop
 
     // Select refactorization
     std::string refact;
-    refact = nlp_->options->GetString("cusolver_lu_refactorization");
+    refact = nlp_->options->GetString("resolve_refactorization");
     if(refact != "glu" && refact != "rf") {
       nlp_->log->printf(hovWarning, 
                         "Refactorization %s not compatible with cuSOLVER LU, using default ...\n",
@@ -206,7 +206,7 @@ namespace hiop
     std::cout << "Use IR: " << solver_->use_ir() << "\n";
   } // constructor
 
-  hiopLinSolverSymSparseCUSOLVER::~hiopLinSolverSymSparseCUSOLVER()
+  hiopLinSolverSymSparseReSolve::~hiopLinSolverSymSparseReSolve()
   {
     delete solver_;
     delete [] rhs_;
@@ -216,7 +216,7 @@ namespace hiop
     delete[] index_covert_extra_Diag2CSR_;
   }
 
-  int hiopLinSolverSymSparseCUSOLVER::matrixChanged()
+  int hiopLinSolverSymSparseReSolve::matrixChanged()
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
@@ -249,7 +249,7 @@ namespace hiop
     return 0;
   }
 
-  bool hiopLinSolverSymSparseCUSOLVER::solve(hiopVector& x)
+  bool hiopLinSolverSymSparseReSolve::solve(hiopVector& x)
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
@@ -281,7 +281,7 @@ namespace hiop
     return 1;
   }
 
-  void hiopLinSolverSymSparseCUSOLVER::firstCall()
+  void hiopLinSolverSymSparseReSolve::firstCall()
   {
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
@@ -316,7 +316,7 @@ namespace hiop
     is_first_call_ = false;
   }
 
-  void hiopLinSolverSymSparseCUSOLVER::update_matrix_values()
+  void hiopLinSolverSymSparseReSolve::update_matrix_values()
   {
     double* vals = solver_->mat_A_csr()->get_vals_host();
     // update matrix
@@ -330,7 +330,7 @@ namespace hiop
   }
 
 
-  void hiopLinSolverSymSparseCUSOLVER::compute_nnz()
+  void hiopLinSolverSymSparseReSolve::compute_nnz()
   {
     //
     // compute nnz in each row
@@ -358,7 +358,7 @@ namespace hiop
     assert(nnz_ == row_ptr[n_]);
   }
 
-  void hiopLinSolverSymSparseCUSOLVER::set_csr_indices_values()
+  void hiopLinSolverSymSparseReSolve::set_csr_indices_values()
   {
     //
     // set correct col index and value
@@ -436,7 +436,7 @@ namespace hiop
   // Error checking utility for CUDA
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
-  void hiopLinSolverSymSparseCUSOLVER::hiopCheckCudaError(T result,
+  void hiopLinSolverSymSparseReSolve::hiopCheckCudaError(T result,
                                                           const char* const file,
                                                           int const line)
   {
@@ -452,10 +452,10 @@ namespace hiop
 
 
 
-  hiopLinSolverSymSparseCUSOLVERGPU::hiopLinSolverSymSparseCUSOLVERGPU(const int& n, 
+  hiopLinSolverSymSparseReSolveGPU::hiopLinSolverSymSparseReSolveGPU(const int& n, 
                                                                        const int& nnz, 
                                                                        hiopNlpFormulation* nlp)
-    : hiopLinSolverSymSparseCUSOLVER(n, nnz, nlp), 
+    : hiopLinSolverSymSparseReSolve(n, nnz, nlp), 
       rhs_host_{nullptr},
       M_host_{nullptr}
   {
@@ -463,13 +463,13 @@ namespace hiop
     M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
   }
   
-  hiopLinSolverSymSparseCUSOLVERGPU::~hiopLinSolverSymSparseCUSOLVERGPU()
+  hiopLinSolverSymSparseReSolveGPU::~hiopLinSolverSymSparseReSolveGPU()
   {
     delete rhs_host_;
     delete M_host_;
   }
 
-  int hiopLinSolverSymSparseCUSOLVERGPU::matrixChanged()
+  int hiopLinSolverSymSparseReSolveGPU::matrixChanged()
   {
     size_type nnz = M_->numberOfNonzeros();
     double* mval_dev = M_->M();
@@ -495,7 +495,7 @@ namespace hiop
     M_ = M_host_;
     M_host_ = swap_ptr;
     
-    int vret = hiopLinSolverSymSparseCUSOLVER::matrixChanged();
+    int vret = hiopLinSolverSymSparseReSolve::matrixChanged();
 
     swap_ptr = M_;
     M_ = M_host_;
@@ -504,7 +504,7 @@ namespace hiop
     return vret;
   }
   
-  bool hiopLinSolverSymSparseCUSOLVERGPU::solve(hiopVector& x)
+  bool hiopLinSolverSymSparseReSolveGPU::solve(hiopVector& x)
   {
     double* mval_dev = x.local_data();
     double* mval_host= rhs_host_->local_data();
@@ -519,7 +519,7 @@ namespace hiop
     M_ = M_host_;
     M_host_ = swap_ptr;
 
-    bool bret = hiopLinSolverSymSparseCUSOLVER::solve(*rhs_host_);
+    bool bret = hiopLinSolverSymSparseReSolve::solve(*rhs_host_);
 
     swap_ptr = M_;
     M_ = M_host_;
