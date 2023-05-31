@@ -214,6 +214,19 @@ int get_starting_point(const hiop_size_type n, double* x0, void* user_data_) {
 }
 
 int main(int argc, char **argv) {
+  int rank=0;
+#ifdef HIOP_USE_MPI
+  MPI_Init(&argc, &argv);
+  int comm_size;
+  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
+  //int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
+  if(comm_size != 1) {
+    printf("[error] driver detected more than one rank but the driver should be run "
+           "in serial only; will exit\n");
+    MPI_Finalize();
+    return 1;
+  }
+#endif
 
   hiop_size_type n = 500;
   hiop_size_type m = 499;
@@ -296,5 +309,8 @@ int main(int argc, char **argv) {
   free(clow);
   free(cupp);
 
+#ifdef HIOP_USE_MPI
+  MPI_Finalize();
+#endif
   return 0;
 }

@@ -55,6 +55,6 @@ if(HIOP_WITH_VALGRIND_TESTS)
 endif()
 
 if(HIOP_BUILD_FORTRAN_EXAMPLE)
-  add_test(NAME NlpDenseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
+  add_test(NAME NlpDenseFinterface COMMAND "$<TARGET_FILE:NlpDenseConsFEx1.exe>")
 endif()
 

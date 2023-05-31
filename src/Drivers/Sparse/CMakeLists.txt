@@ -88,10 +88,10 @@ if(HIOP_USE_RAJA AND HIOP_USE_GPU AND HIOP_USE_CUDA)
 endif()
 
 add_test(NAME NlpSparse3_1 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx3.exe>" "500" "-selfcheck")
-if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU)
+if(HIOP_BUILD_SHARED AND NOT HIOP_USE_GPU )
   add_test(NAME NlpSparseCinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseCEx1.exe>")
   if(HIOP_BUILD_FORTRAN_EXAMPLE)
-    add_test(NAME NlpSparseFinterface COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseFEx1.exe>")
+    add_test(NAME NlpSparseFinterface COMMAND "$<TARGET_FILE:NlpSparseFEx1.exe>")
   endif()
 endif()
 
