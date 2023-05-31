@@ -7,8 +7,38 @@
 
 using namespace hiop;
 
-static bool self_check(size_type n, double obj_value);
-static bool self_check_uncon(size_type n, double obj_value);
+static bool self_check(double obj_value);
+
+static bool parse_arguments(int argc, char **argv, bool& self_check)
+{
+  self_check = false;
+  switch(argc) {
+  case 1:
+    //no arguments
+    return true;
+    break;
+  case 2: //1 arguments
+    {
+      if(std::string(argv[1]) == "-selfcheck") {
+        self_check = true;
+      }
+    }
+    break;
+  default: 
+    return false; //2 or more arguments
+  }
+
+  return true;
+};
+
+static void usage(const char* exeName)
+{
+  printf("hiOp driver %s that solves a tiny concave problem.\n", exeName);
+  printf("Usage: \n");
+  printf("  '$ %s -selfcheck'\n", exeName);
+  printf("Arguments:\n");
+  printf("  '-selfcheck': compares the optimal objective with a previously saved value. [optional]\n");
+}
 
 int main(int argc, char **argv)
 {
@@ -20,8 +50,11 @@ int main(int argc, char **argv)
   //if(0==rank) printf("Support for MPI is enabled\n");
 #endif
   bool selfCheck;
-  bool unconstrained;
-  size_type n;
+
+  if(!parse_arguments(argc, argv, selfCheck)) { 
+    usage(argv[0]); 
+    return 1;
+  }
 
   DenseConsEx4 nlp_interface;
   //if(rank==0) printf("interface created\n");
@@ -44,14 +77,8 @@ int main(int argc, char **argv)
 
   //this is used for "regression" testing when the driver is called with -selfcheck
   if(selfCheck) {
-    if(!unconstrained) {
-      if(!self_check(n, obj_value)) {
+    if(!self_check(obj_value)) {
         return -1;
-      }
-    } else {
-      if(!self_check_uncon(n, obj_value)) {
-        return -1;
-      }  
     }
   } else {
     if(rank==0) {
@@ -67,62 +94,17 @@ int main(int argc, char **argv)
 }
 
 
-static bool self_check(size_type n, double objval)
+static bool self_check(double objval)
 {
-#define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const size_type n_saved[] = {500, 5000, 50000}; 
-  const double objval_saved[] = {1.56251020819349e-02, 1.56251019995139e-02, 1.56251028980352e-02};
+  const double objval_saved = -3.32231409044575e+02;
 
 #define relerr 1e-6
-  bool found=false;
-  for(int it=0; it<num_n_saved; it++) {
-    if(n_saved[it]==n) {
-      found=true;
-      if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-        printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n", 
-               objval, -(int)log10(relerr), objval_saved[it], n);
-        return false;
-      } else {
-        printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
-      }
-      break;
-    }
-  }
-
-  if(!found) {
-    printf("selfcheck: driver does not have the objective for n=%d saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
+  if(fabs( (objval_saved-objval)/(1+objval_saved)) > relerr) {
+    printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e).\n", 
+           objval, -(int)log10(relerr), objval_saved);
     return false;
+  } else {
+    printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
   }
-
-  return true;
-}
-
-static bool self_check_uncon(size_type n, double objval)
-{
-#define num_n_saved 3 //keep this is sync with n_saved and objval_saved
-  const size_type n_saved[] = {500, 5000, 50000}; 
-  const double objval_saved[] = {1.56250004019985e-02, 1.56250035348275e-02, 1.56250304912460e-02};
-
-#define relerr 1e-6
-  bool found=false;
-  for(int it=0; it<num_n_saved; it++) {
-    if(n_saved[it]==n) {
-      found=true;
-      if(fabs( (objval_saved[it]-objval)/(1+objval_saved[it])) > relerr) {
-        printf("selfcheck failure. Objective (%18.12e) does not agree (%d digits) with the saved value (%18.12e) for n=%d.\n", 
-               objval, -(int)log10(relerr), objval_saved[it], n);
-        return false;
-      } else {
-        printf("selfcheck success (%d digits)\n",  -(int)log10(relerr));
-      }
-      break;
-    }
-  }
-
-  if(!found) {
-    printf("selfcheck: driver does not have the objective for n=%d saved. BTW, obj=%18.12e was obtained for this n.\n", n, objval);
-    return false;
-  }
-
   return true;
 }

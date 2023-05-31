@@ -30,6 +30,8 @@ static bool parse_arguments(int argc, char **argv, size_type& n, bool& self_chec
     {
       if(std::string(argv[2]) == "-unconstrained") {
         no_con = true;
+      } else if(std::string(argv[2]) == "-selfcheck") {
+        self_check = true;
       }
     }
   case 2: //1 argument
