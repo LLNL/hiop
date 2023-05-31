@@ -1,5 +1,6 @@
 // Copyright (c) 2017, Lawrence Livermore National Security, LLC.
 // Produced at the Lawrence Livermore National Laboratory (LLNL).
+// Written by Cosmin G. Petra, petra1@llnl.gov.
 // LLNL-CODE-742473. All rights reserved.
 //
 // This file is part of HiOp. For details, see https://github.com/LLNL/hiop. HiOp 
@@ -48,60 +49,62 @@
 #pragma once
 
 /**
- * @file hiopVectorInt.hpp
+ * @file hiopVectorIntCompoundPD.hpp
  *
- * @author Asher Mancinelli <asher.mancinelli@pnnl.gov>, PNNL
+ * @author Nai-Yuan Chiang <chiang7@llnl.gov>, LLNL
  *
  */
 
-#include "hiop_defs.hpp"
+#include "hiopVectorInt.hpp"
+#include <cassert>
+
+#include <vector>
 
 namespace hiop
 {
 
-// "forward" definitions
-class hiopVectorIntSeq;
-  
-class hiopVectorInt
+/**
+ * @brief A vector that consists of different type of hiopVectorInt.
+ * 
+ * @note this class is not used in the current hiop implementation
+ */
+class hiopVectorIntCompoundPD : public hiopVectorInt
 {
-protected:
-  size_type sz_;
-
 public:
-  hiopVectorInt(size_type sz) : sz_(sz) { }
-  virtual ~hiopVectorInt() { }
+  hiopVectorIntCompoundPD();
 
-  virtual size_type get_local_size() const
-  {
-    return sz_;
-  }
+  ~hiopVectorIntCompoundPD();
 
-  virtual index_type* local_data() = 0;
-  virtual const index_type* local_data_const() const = 0;
-  virtual index_type* local_data_host() = 0;
-  virtual const index_type* local_data_host_const() const = 0;
- 
-  virtual void copy_from(const index_type* v_local) = 0;
+  void addVector(hiopVectorInt *v);
 
-  /** Copy array content of `hiopVectorIntSeq` into `this`. Host-device 
-   * communication occurs when `this` is a device vector.
-   *
-   * @pre Sizes must match.
-   */
-  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src) = 0;
+  hiopVectorInt& getVector(index_type index) const;
 
-  /** Copy array content of `this` into `hiopVectorIntSeq`. Host-device 
-   * communication occurs when `this` is a device vector.
-   *
-   * @pre Sizes must match.
-   */
-  virtual void copy_to_vectorseq(hiopVectorIntSeq& dest) const = 0;
+  size_type get_local_size() const;
+  
+  /* @brief return the number of parts in this compound vector */
+  size_type get_num_parts() const;
+
+  virtual void copy_to_dev() {}
+  virtual void copy_from_dev() {}
+
+  virtual index_type* local_data() { assert(0 && "not required."); return nullptr; }
+
+  virtual const index_type* local_data_const() const { assert(0 && "not required."); return nullptr; }
+
+  virtual inline index_type* local_data_host() { assert(0 && "not required."); return nullptr;  }
+
+  virtual inline const index_type* local_data_host_const() const { assert(0 && "not required."); return nullptr; }
+  
+  virtual void copy_from(const index_type* v_local) { assert(0 && "not required."); }
+
+  virtual void copy_from_vectorseq(const hiopVectorIntSeq& src) { assert(0 && "not required."); }
+  virtual void copy_to_vectorseq(hiopVectorIntSeq& src) const { assert(0 && "not required."); }
   
   /// @brief Set all elements to zero.
-  virtual void set_to_zero() = 0;
+  virtual void set_to_zero();
 
   /// @brief Set all elements  to  c
-  virtual void set_to_constant( const index_type c ) = 0;
+  virtual void set_to_constant(const index_type c);
 
   /**
    * @brief Set the vector entries to be a linear space of starting at i0 containing evenly 
@@ -113,7 +116,12 @@ public:
    * @param di the increment for subsequent entries in the vector
    *
    */ 
-  virtual void linspace(const index_type& i0, const index_type& di) = 0;
+  virtual void linspace(const index_type& i0, const index_type& di) {assert(0 && "not required.");}
+
+private:
+  std::vector<hiopVectorInt*> vectors_;
+  size_type n_parts_;
+
 };
 
 } // namespace hiop

@@ -76,7 +76,7 @@ public:
   virtual bool vectorSize(hiop::hiopVectorInt& x, const int size) const
   {
     int fail = 0;
-    if (x.size() != size)
+    if (x.get_local_size() != size)
       fail++;
     printMessage(fail, __func__);
     return fail;
@@ -89,9 +89,9 @@ public:
   virtual bool vectorSetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;
-    const int idx = x.size()/2;
+    const int idx = x.get_local_size()/2;
     const int x_val = 1;
-    for(int i=0; i<x.size(); i++) {
+    for(int i=0; i<x.get_local_size(); i++) {
       setLocalElement(&x, i, 0);
     }
     setLocalElement(&x, idx, x_val);
@@ -110,9 +110,9 @@ public:
   virtual bool vectorGetElement(hiop::hiopVectorInt& x) const
   {
     int fail = 0;
-    const int idx = x.size()/2;
+    const int idx = x.get_local_size()/2;
     const int x_val = 1;
-    for(int i=0; i<x.size(); i++)
+    for(int i=0; i<x.get_local_size(); i++)
       setLocalElement(&x, i, 0);
     setLocalElement(&x, idx, x_val);
 
@@ -130,7 +130,7 @@ public:
     x.set_to_constant(1);
     x.linspace(0, 2);
 
-    for(int i=0; i<x.size(); i++) {
+    for(int i=0; i<x.get_local_size(); i++) {
       if(getLocalElement(&x, i) != 2*i) {
         ++fail;
       }
@@ -142,7 +142,7 @@ public:
   virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
   {
     int fail = 0;
-    const int idx = x.size()/2;
+    const int idx = x.get_local_size()/2;
     const int x_val = 1;
     const int y_val = 1;
 
@@ -151,7 +151,7 @@ public:
     
     x.copy_from(y.local_data_const());
 
-    for(int i=0; i<x.size(); i++) {
+    for(int i=0; i<x.get_local_size(); i++) {
       if (x.local_data_host_const()[i] != y_val) {
         fail++;
       }

@@ -221,8 +221,8 @@ public:
   bool vector_copy_from_indexes(hiop::hiopVector& v, hiop::hiopVector& from, hiop::hiopVectorInt& idxs)
   {
     local_ordinal_type N = getLocalSize(&v);
-    assert(v.get_size() == idxs.size());
-    assert(N == idxs.size()); 
+    assert(v.get_size() == idxs.get_local_size());
+    assert(N == idxs.get_local_size()); 
     assert(N <= getLocalSize(&from));
 
     //copy indexes 0, 1, 2, ..., N (copy first N entries of from)
@@ -503,8 +503,8 @@ public:
     const local_ordinal_type cd_size = getLocalSize(&cd);
     const local_ordinal_type c_size = getLocalSize(&c);
     const local_ordinal_type d_size = getLocalSize(&d);
-    const local_ordinal_type c_map_size = c_map.size();
-    const local_ordinal_type d_map_size = d_map.size();
+    const local_ordinal_type c_map_size = c_map.get_local_size();
+    const local_ordinal_type d_map_size = d_map.get_local_size();
 
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
@@ -548,8 +548,8 @@ public:
     const local_ordinal_type c_size = getLocalSize(&c);
     const local_ordinal_type d_size = getLocalSize(&d);
 
-    const local_ordinal_type c_map_size = c_map.size();
-    const local_ordinal_type d_map_size = d_map.size();
+    const local_ordinal_type c_map_size = c_map.get_local_size();
+    const local_ordinal_type d_map_size = d_map.get_local_size();
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
     assert(c_size + d_size == cd_size && "size doesn't match");

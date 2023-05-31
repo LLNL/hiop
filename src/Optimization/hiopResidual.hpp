@@ -200,6 +200,7 @@ private:
   friend class hiopKKTLinSysNormalEquation;
   friend class hiopKKTLinSysLowRank;
   friend class hiopKKTLinSys;
+  friend class hiopVectorCompoundPD;
 };
 
 }

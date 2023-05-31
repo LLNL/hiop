@@ -56,6 +56,7 @@
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
 #include "hiopKrylovSolver.hpp"
+#include "hiopVectorCompoundPD.hpp"
 
 #include "hiopCppStdUtils.hpp"
 
@@ -186,10 +187,6 @@ protected:
 
   /// Preconditioner operator that solves with the given (usually compressed) KKT system
   hiopPrecondKKTOpr *prec_opr_;
-
-  /// Temporary vector to be used in the iterative refinement solve;
-  hiopVector* ir_rhs_;
-  hiopVector* ir_x0_;
 
   /// iterative refinement from BiCGStab solver
   hiopBiCGStabSolver* bicgIR_;
@@ -618,7 +615,7 @@ protected:
 class hiopMatVecKKTFullOpr : public hiopLinearOperator
 {
 public:
-  hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+  hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, const hiopIterate* iter);
 
   virtual ~hiopMatVecKKTFullOpr()
   {
@@ -660,32 +657,9 @@ private:
    *  TODO: revisit this function after we implement compound vector
    */
   bool combine_res_to_build_vec(hiopVector& vec);
-
-  hiopVector* dx_;
-  hiopVector* dd_;
-  hiopVector* dyc_;
-  hiopVector* dyd_;
-  hiopVector* dsxl_;
-  hiopVector* dsxu_;
-  hiopVector* dsdl_;
-  hiopVector* dsdu_;
-  hiopVector* dzl_;
-  hiopVector* dzu_;
-  hiopVector* dvl_;
-  hiopVector* dvu_;
-  
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryc_;
-  hiopVector* yryd_;
-  hiopVector* yrsxl_;
-  hiopVector* yrsxu_;
-  hiopVector* yrsdl_;
-  hiopVector* yrsdu_;
-  hiopVector* yrzl_;
-  hiopVector* yrzu_;
-  hiopVector* yrvl_;
-  hiopVector* yrvu_;
+ 
+  hiopVectorCompoundPD* dir_cv_;
+  hiopVectorCompoundPD* res_cv_;
 };
 
 /** 
@@ -694,7 +668,7 @@ private:
 class hiopPrecondKKTOpr : public hiopLinearOperator
 {
 public:
-  hiopPrecondKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter, const hiopResidual* resid, const hiopIterate* dir);
+  hiopPrecondKKTOpr(hiopKKTLinSys* kkt, const hiopIterate* iter);
 
   virtual ~hiopPrecondKKTOpr()
   {
@@ -734,31 +708,8 @@ protected:
    */
   virtual bool combine_dir_to_build_vec(hiopVector& vec);
 
-  hiopVector* dx_;
-  hiopVector* dd_;
-  hiopVector* dyc_;
-  hiopVector* dyd_;
-  hiopVector* dsxl_;
-  hiopVector* dsxu_;
-  hiopVector* dsdl_;
-  hiopVector* dsdu_;
-  hiopVector* dzl_;
-  hiopVector* dzu_;
-  hiopVector* dvl_;
-  hiopVector* dvu_;
-  
-  hiopVector* yrx_;
-  hiopVector* yrd_;
-  hiopVector* yryc_;
-  hiopVector* yryd_;
-  hiopVector* yrsxl_;
-  hiopVector* yrsxu_;
-  hiopVector* yrsdl_;
-  hiopVector* yrsdu_;
-  hiopVector* yrzl_;
-  hiopVector* yrzu_;
-  hiopVector* yrvl_;
-  hiopVector* yrvu_;
+  hiopVectorCompoundPD* dir_cv_;
+  hiopVectorCompoundPD* res_cv_;
 };
 
 };

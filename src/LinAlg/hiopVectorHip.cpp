@@ -236,7 +236,7 @@ void hiopVectorHip::copy_from_starting_at(const double* v, int start_index_in_v,
 /// @brief Copy from src the elements specified by the indices in index_in_src. 
 void hiopVectorHip::copy_from_indexes(const hiopVector& src, const hiopVectorInt& index_in_src) 
 {
-  assert(index_in_src.size() == n_local_);
+  assert(index_in_src.get_local_size() == n_local_);
 
   int* id = const_cast<int*>(index_in_src.local_data_const());
   double* dd = data_;
@@ -248,7 +248,7 @@ void hiopVectorHip::copy_from_indexes(const hiopVector& src, const hiopVectorInt
 /// @brief Copy from src the elements specified by the indices in index_in_src. 
 void hiopVectorHip::copy_from_indexes(const double* src, const hiopVectorInt& index_in_src)
 {
-  assert(index_in_src.size() == n_local_);
+  assert(index_in_src.get_local_size() == n_local_);
   
   hiop::hip::copy_from_index_kernel(n_local_, data_, src, index_in_src.local_data_const());
 }
@@ -356,8 +356,8 @@ void hiopVectorHip::copy_from_two_vec_w_pattern(const hiopVector& c,
   const int c_size = c.get_size();
   const int d_size = d.get_size();
 
-  assert( c_size == c_map.size() );
-  assert( d_size == d_map.size() );
+  assert( c_size == c_map.get_local_size() );
+  assert( d_size == d_map.get_local_size() );
   assert( c_size + d_size == n_local_);
 
   hiop::hip::copy_src_to_mapped_dest_kernel(c_size, c.local_data_const(), local_data(), c_map.local_data_const());
@@ -373,8 +373,8 @@ void hiopVectorHip::copy_to_two_vec_w_pattern(hiopVector& c,
   const int c_size = c.get_size();
   const int d_size = d.get_size();
 
-  assert( c_size == c_map.size() );
-  assert( d_size == d_map.size() );
+  assert( c_size == c_map.get_local_size() );
+  assert( d_size == d_map.get_local_size() );
   assert( c_size + d_size == n_local_);
 
   hiop::hip::copy_mapped_src_to_dest_kernel(c_size, local_data_const(), c.local_data(), c_map.local_data_const());
@@ -585,9 +585,9 @@ void hiopVectorHip::axpy_w_pattern(double alpha, const hiopVector& xvec, const h
 /// @brief Performs axpy, this += alpha*x, on the indexes in this specified by i.
 void hiopVectorHip::axpy(double alpha, const hiopVector& xvec, const hiopVectorInt& i)
 {
-  assert(xvec.get_size()==i.size());
-  assert(xvec.get_local_size()==i.size());
-  assert(i.size()<=n_local_);
+  assert(xvec.get_size()==i.get_local_size());
+  assert(xvec.get_local_size()==i.get_local_size());
+  assert(i.get_local_size()<=n_local_);
   
   double* yd = data_;
   const double* xd = const_cast<const double*>(xvec.local_data_const());

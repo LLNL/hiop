@@ -67,8 +67,6 @@ hiopKKTLinSys::hiopKKTLinSys(hiopNlpFormulation* nlp)
     safe_mode_(true),
     kkt_opr_(nullptr),
     prec_opr_(nullptr),
-    ir_rhs_(nullptr),
-    ir_x0_(nullptr),
     bicgIR_(nullptr),
     delta_wx_(nullptr),
     delta_wd_(nullptr),
@@ -84,8 +82,6 @@ hiopKKTLinSys::~hiopKKTLinSys()
 {
   delete kkt_opr_;
   delete prec_opr_;
-  delete ir_rhs_;
-  delete ir_x0_;
   delete bicgIR_;
 }
 
@@ -938,52 +934,20 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
    ***********************************************************************/
 
   if(nullptr == kkt_opr_) {
-    kkt_opr_ = new hiopMatVecKKTFullOpr(this, iter_, resid, dir);
-    prec_opr_ = new hiopPrecondKKTOpr(this, iter_, resid, dir);
-    ir_rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
-    ir_x0_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), dim_rhs);
-    bicgIR_ = new hiopBiCGStabSolver(dim_rhs, nlp_->options->GetString("mem_space"), kkt_opr_, prec_opr_);
+    kkt_opr_ = new hiopMatVecKKTFullOpr(this, iter_);
+    prec_opr_ = new hiopPrecondKKTOpr(this, iter_);
+    bicgIR_ = new hiopBiCGStabSolver(dim_rhs, kkt_opr_, prec_opr_);
   }
 
   // need to reset the pointer to the current iter, since the outer loop keeps swtiching between curr_iter and trial_iter
   kkt_opr_->reset_curr_iter(iter_);
-
-  // form the rhs for the sparse linSys  
-  nlp_->runStats.kkt.tmSolveRhsManip.start();
-  resid->rx->copyToStarting(*ir_rhs_,   0);
-  resid->rd->copyToStarting(*ir_rhs_,   nx);
-  resid->ryc->copyToStarting(*ir_rhs_,  nx+nd);
-  resid->ryd->copyToStarting(*ir_rhs_,  nx+nd+nyc);
-  resid->rxl->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd);
-  resid->rxu->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx);
-  resid->rdl->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx+nx);
-  resid->rdu->copyToStarting(*ir_rhs_,  nx+nd+nyc+nyd+nx+nx+nd);
-  resid->rszl->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd);
-  resid->rszu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
-  resid->rsvl->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
-  resid->rsvu->copyToStarting(*ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
-  nlp_->runStats.kkt.tmSolveRhsManip.stop();
   
   double tol = std::min(mu_*nlp_->options->GetNumeric("ir_outer_tol_factor"), nlp_->options->GetNumeric("ir_outer_tol_min"));
   bicgIR_->set_max_num_iter(nlp_->options->GetInteger("ir_outer_maxit"));
   bicgIR_->set_tol(tol);
   bicgIR_->set_x0(0.0);
 
-  bool bret = bicgIR_->solve(*ir_rhs_);
-
-  // assemble dir from ir solution  
-  dir->x->startingAtCopyFromStartingAt(0,   *ir_rhs_, 0);
-  dir->d->startingAtCopyFromStartingAt(0,   *ir_rhs_, nx);
-  dir->yc->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd);
-  dir->yd->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc);
-  dir->sxl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd);
-  dir->sxu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx);
-  dir->sdl->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx);
-  dir->sdu->startingAtCopyFromStartingAt(0, *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd);
-  dir->zl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd);
-  dir->zu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx);
-  dir->vl->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx);
-  dir->vu->startingAtCopyFromStartingAt(0,  *ir_rhs_, nx+nd+nyc+nyd+nx+nx+nd+nd+nx+nx+nd);
+  bool bret = bicgIR_->solve(dir, resid);
 
   nlp_->runStats.kkt.nIterRefinInner += bicgIR_->get_sol_num_iter();
   nlp_->runStats.kkt.tmSolveInner.stop();
@@ -1005,9 +969,9 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
 #ifdef HIOP_DEEPCHECKS
 double hiopKKTLinSysCompressedXDYcYd::
 errorCompressedLinsys(const hiopVector& rx, const hiopVector& rd,
-		      const hiopVector& ryc, const hiopVector& ryd,
-		      const hiopVector& dx, const hiopVector& dd,
-		      const hiopVector& dyc, const hiopVector& dyd)
+                      const hiopVector& ryc, const hiopVector& ryd,
+                      const hiopVector& dx, const hiopVector& dd,
+                      const hiopVector& dyc, const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "hiopKKTLinSysDenseXDYcYd::errorCompressedLinsys residuals norm:\n");
   assert(perturb_calc_);
@@ -1572,7 +1536,7 @@ bool hiopKKTLinSysFull::update(const hiopIterate* iter,
   grad_f_ = dynamic_cast<const hiopVectorPar*>(grad_f);
   Jac_c_ = Jac_c; 
   Jac_d_ = Jac_d;
-  Hess_=Hess;
+  Hess_ = Hess;
   nlp_->runStats.linsolv.reset();
   nlp_->runStats.tmSolverInternal.start();
 
@@ -1614,9 +1578,7 @@ bool hiopKKTLinSysFull::computeDirections(const hiopResidual* resid,
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 hiopMatVecKKTFullOpr::hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt, 
-                               const hiopIterate* iter,
-                               const hiopResidual* resid,
-                               const hiopIterate* dir)
+                                           const hiopIterate* iter)
     : kkt_(kkt),
       iter_(iter),
       resid_(nullptr),
@@ -1624,96 +1586,19 @@ hiopMatVecKKTFullOpr::hiopMatVecKKTFullOpr(hiopKKTLinSys* kkt,
 {
   resid_ = new hiopResidual(kkt_->nlp_);
   dir_ = new hiopIterate(kkt_->nlp_);
-  dx_ = dir_->get_x(); 
-  dx_->setToZero();
-  dd_ = dir_->get_d();
-  dd_->setToZero();
-  dyc_ = dir_->get_yc();
-  dyc_->setToZero();
-  dyd_ = dir_->get_yd();
-  dyd_->setToZero();
-  dsxl_ = dir_->get_sxl();
-  dsxl_->setToZero();
-  dsxu_ = dir_->get_sxu();
-  dsxu_->setToZero();
-  dsdl_ = dir_->get_sdl();
-  dsdl_->setToZero();
-  dsdu_ = dir_->get_sdu();
-  dsdu_->setToZero();
-  dzl_ = dir_->get_zl();
-  dzl_->setToZero();
-  dzu_ = dir_->get_zu();
-  dzu_->setToZero();
-  dvl_ = dir_->get_vl();
-  dvl_->setToZero();
-  dvu_ = dir_->get_vu();
-  dvu_->setToZero();
 
-  yrx_ = resid_->get_rx();
-  yrx_->setToZero();
-  yrd_ = resid_->get_rd();
-  yrd_->setToZero();
-  yryc_ = resid_->get_ryc();
-  yryc_->setToZero();
-  yryd_ = resid_->get_ryd();
-  yryd_->setToZero();
-  yrsxl_ = resid_->get_rxl();
-  yrsxl_->setToZero();
-  yrsxu_ = resid_->get_rxu();
-  yrsxu_->setToZero();
-  yrsdl_ = resid_->get_rdl();
-  yrsdl_->setToZero();
-  yrsdu_ = resid_->get_rdu();
-  yrsdu_->setToZero();
-  yrzl_ = resid_->get_rszl();
-  yrzl_->setToZero();
-  yrzu_ = resid_->get_rszu();
-  yrzu_->setToZero();
-  yrvl_ = resid_->get_rsvl();
-  yrvl_->setToZero();
-  yrvu_ = resid_->get_rsvu();
-  yrvu_->setToZero();
+  // set compound vector pointed to dir_/resid_
+  dir_cv_ = new hiopVectorCompoundPD(dir_);
+  res_cv_ = new hiopVectorCompoundPD(resid_);
 }
 
 bool hiopMatVecKKTFullOpr::split_vec_to_build_it(const hiopVector& x)
 {
-  size_type nx = dx_->get_size();
-  size_type neq = dyc_->get_size();
-  size_type nineq = dyd_->get_size();
-
-  dx_->startingAtCopyFromStartingAt(0,   x, 0);
-  dd_->startingAtCopyFromStartingAt(0,   x, nx);
-  dyc_->startingAtCopyFromStartingAt(0,  x, nx+nineq);
-  dyd_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq);
-  dsxl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq);
-  dsxu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx);
-  dsdl_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx);
-  dsdu_->startingAtCopyFromStartingAt(0, x, nx+nineq+neq+nineq+nx+nx+nineq);
-  dzl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  dzu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  dvl_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  dvu_->startingAtCopyFromStartingAt(0,  x, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
   return true;
 }
 
 bool hiopMatVecKKTFullOpr::combine_res_to_build_vec(hiopVector& y)
 {
-  size_type nx = dx_->get_size();
-  size_type neq = dyc_->get_size();
-  size_type nineq = dyd_->get_size();
-
-  yrx_->copyToStarting(   y, 0);
-  yrd_->copyToStarting(   y, nx);
-  yryc_->copyToStarting(  y, nx+nineq);
-  yryd_->copyToStarting(  y, nx+nineq+neq);
-  yrsxl_->copyToStarting( y, nx+nineq+neq+nineq);
-  yrsxu_->copyToStarting( y, nx+nineq+neq+nineq+nx);
-  yrsdl_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx);
-  yrsdu_->copyToStarting( y, nx+nineq+neq+nineq+nx+nx+nineq);
-  yrzl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  yrzu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  yrvl_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  yrvu_->copyToStarting(  y, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
   return true;
 }
 
@@ -1736,7 +1621,7 @@ bool hiopMatVecKKTFullOpr::combine_res_to_build_vec(hiopVector& y)
  *
  * this method computes y = KKT * x
  */
-bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
+bool hiopMatVecKKTFullOpr::times_vec(hiopVector& yvec, const hiopVector& xvec)
 {
   const hiopMatrix* Jac_c = kkt_->Jac_c_;
   const hiopMatrix* Jac_d = kkt_->Jac_d_;
@@ -1753,8 +1638,37 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   delta_wd = kkt_->perturb_calc_->get_curr_delta_wd();
   delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
   delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
+
+  hiopVectorCompoundPD& y = dynamic_cast<hiopVectorCompoundPD&>(yvec);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(xvec);
+
+  assert(x.get_num_parts()==y.get_num_parts() && x.get_num_parts() == 12);
+
+  hiopVector* dx_ = &(x.getVector(0));
+  hiopVector* dd_ = &(x.getVector(1));
+  hiopVector* dyc_ = &(x.getVector(2));
+  hiopVector* dyd_ = &(x.getVector(3));
+  hiopVector* dsxl_= &(x.getVector(4));
+  hiopVector* dsxu_ = &(x.getVector(5));
+  hiopVector* dsdl_ = &(x.getVector(6));
+  hiopVector* dsdu_ = &(x.getVector(7));
+  hiopVector* dzl_ = &(x.getVector(8));
+  hiopVector* dzu_ = &(x.getVector(9));
+  hiopVector* dvl_ = &(x.getVector(10));
+  hiopVector* dvu_ = &(x.getVector(11));
   
-  bool bret = split_vec_to_build_it(x);
+  hiopVector* yrx_ = &(y.getVector(0));
+  hiopVector* yrd_ = &(y.getVector(1));
+  hiopVector* yryc_ = &(y.getVector(2));
+  hiopVector* yryd_ = &(y.getVector(3));
+  hiopVector* yrsxl_ = &(y.getVector(4));
+  hiopVector* yrsxu_ = &(y.getVector(5));
+  hiopVector* yrsdl_ = &(y.getVector(6));
+  hiopVector* yrsdu_ = &(y.getVector(7));
+  hiopVector* yrzl_ = &(y.getVector(8));
+  hiopVector* yrzu_ = &(y.getVector(9));
+  hiopVector* yrvl_ = &(y.getVector(10));
+  hiopVector* yrvu_ = &(y.getVector(11));
 
   //rx = H*dx + delta_wx*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
   Hess->timesVec(0.0, *yrx_, +1.0, *dx_);
@@ -1800,27 +1714,26 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
   yrsdu_->axpy( 1.0, *dd_);
   yrsdu_->selectPattern(kkt_->nlp_->get_idu());
 
-  // Sxl dzxl + Zxl dsxl
+  // rszl = Sxl dzxl + Zxl dsxl
   yrzl_->setToZero();
   yrzl_->axzpy(1.0,*iter_->get_sxl(), *dzl_);
   yrzl_->axzpy(1.0,*iter_->get_zl(), *dsxl_);
 
-  // Sxu dzxu + Zxu dsxu
+  // rszu = Sxu dzxu + Zxu dsxu
   yrzu_->setToZero();
   yrzu_->axzpy(1.0,*iter_->get_sxu(),*dzu_);
   yrzu_->axzpy(1.0,*iter_->get_zu(), *dsxu_);
 
-  // Sdl dzdl + Zdl dsdl
+  // rsvl = Sdl dzdl + Zdl dsdl
   yrvl_->setToZero();
   yrvl_->axzpy(1.0,*iter_->get_sdl(), *dvl_);
   yrvl_->axzpy(1.0,*iter_->get_vl(), *dsdl_);
 
-  // Sdu dzdu + Zdu dsdu
+  // rszu = Sdu dzdu + Zdu dsdu
   yrvu_->setToZero();
   yrvu_->axzpy(1.0,*iter_->get_sdu(),*dvu_);
   yrvu_->axzpy(1.0,*iter_->get_vu(), *dsdu_);
 
-  bret = combine_res_to_build_vec(y);
   return true;
 }
 
@@ -1843,8 +1756,11 @@ bool hiopMatVecKKTFullOpr::times_vec(hiopVector& y, const hiopVector& x)
  *
  * this method computes y = KKT' * x
  */
-bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
+bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& yvec, const hiopVector& xvec)
 {
+  hiopVectorCompoundPD& y = dynamic_cast<hiopVectorCompoundPD&>(yvec);
+  const hiopVectorCompoundPD& x = dynamic_cast<const hiopVectorCompoundPD&>(xvec);
+
   // full KKT is not symmetric!
   const hiopMatrix* Jac_c = kkt_->Jac_c_;
   const hiopMatrix* Jac_d = kkt_->Jac_d_;
@@ -1862,7 +1778,33 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   delta_cc = kkt_->perturb_calc_->get_curr_delta_cc();
   delta_cd = kkt_->perturb_calc_->get_curr_delta_cd();
 
-  bool bret = split_vec_to_build_it(x);
+  assert(x.get_num_parts()==y.get_num_parts() && x.get_num_parts() == 12);
+
+  hiopVector* dx_ = &(x.getVector(0));
+  hiopVector* dd_ = &(x.getVector(1));
+  hiopVector* dyc_ = &(x.getVector(2));
+  hiopVector* dyd_ = &(x.getVector(3));
+  hiopVector* dsxl_= &(x.getVector(4));
+  hiopVector* dsxu_ = &(x.getVector(5));
+  hiopVector* dsdl_ = &(x.getVector(6));
+  hiopVector* dsdu_ = &(x.getVector(7));
+  hiopVector* dzl_ = &(x.getVector(8));
+  hiopVector* dzu_ = &(x.getVector(9));
+  hiopVector* dvl_ = &(x.getVector(10));
+  hiopVector* dvu_ = &(x.getVector(11));
+  
+  hiopVector* yrx_ = &(y.getVector(0));
+  hiopVector* yrd_ = &(y.getVector(1));
+  hiopVector* yryc_ = &(y.getVector(2));
+  hiopVector* yryd_ = &(y.getVector(3));
+  hiopVector* yrsxl_ = &(y.getVector(4));
+  hiopVector* yrsxu_ = &(y.getVector(5));
+  hiopVector* yrsdl_ = &(y.getVector(6));
+  hiopVector* yrsdu_ = &(y.getVector(7));
+  hiopVector* yrzl_ = &(y.getVector(8));
+  hiopVector* yrzu_ = &(y.getVector(9));
+  hiopVector* yrvl_ = &(y.getVector(10));
+  hiopVector* yrvu_ = &(y.getVector(11));
 
   //rx = H*dx + delta_wx_*I*dx + Jc'*dyc + Jd'*dyd - dzl + dzu
   Hess->timesVec(0.0, *yrx_, +1.0, *dx_);
@@ -1894,40 +1836,39 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
   yrsxl_->axzpy(1.0,*iter_->get_sxl(), *dsxl_);
   yrsxl_->selectPattern(kkt_->nlp_->get_ixl());
   
-  //RXU = dx + Sxu dsxu
+  //RXU = dx + Sxu*dsxu
   yrsxu_->copyFrom(*dx_);
   yrsxu_->axzpy(1.0,*iter_->get_sxu(), *dsxu_);
   yrsxu_->selectPattern(kkt_->nlp_->get_ixu());
 
-  //RDL = -dd + Sdl dsdl
+  //RDL = -dd + Sdl*dsdl
   yrsdl_->setToZero();
   yrsdl_->axpy( -1.0, *dd_);
   yrsdl_->axzpy(1.0,*iter_->get_sdl(), *dsdl_);
   yrsdl_->selectPattern(kkt_->nlp_->get_idl());
 
-  //RDU = dd + Sdu dsdu
+  //RDU = dd + Sdu*dsdu
   yrsdu_->setToZero();
   yrsdu_->axpy( 1.0, *dd_);
   yrsdu_->axzpy(1.0,*iter_->get_sdu(), *dsdu_);
   yrsdu_->selectPattern(kkt_->nlp_->get_idu());
 
-  // dzxl + Zxl dsxl
+  // rszl = dzxl + Zxl*dsxl
   yrzl_->copyFrom(*dzl_);
   yrzl_->axzpy(1.0,*iter_->get_zl(), *dsxl_);
 
-  // dzxu + Zxu dsxu
+  // rszu = dzxu + Zxu*dsxu
   yrzu_->copyFrom(*dzu_);
   yrzu_->axzpy(1.0,*iter_->get_zu(), *dsxu_);
 
-  // dzdl + Zdl dsdl
+  // rsvl = dzdl + Zdl dsdl
   yrvl_->copyFrom(*dvl_);
   yrvl_->axzpy(1.0,*iter_->get_vl(), *dsdl_);
 
-  // dzdu + Zdu dsdu
+  // rszu = dzdu + Zdu dsdu
   yrvu_->copyFrom(*dvu_);
   yrvu_->axzpy(1.0,*iter_->get_vu(), *dsdu_);
 
-  bret = combine_res_to_build_vec(y);
   return true;
 }
 
@@ -1937,9 +1878,7 @@ bool hiopMatVecKKTFullOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 hiopPrecondKKTOpr::hiopPrecondKKTOpr(hiopKKTLinSys* kkt, 
-                               const hiopIterate* iter,
-                               const hiopResidual* resid,
-                               const hiopIterate* dir)
+                                     const hiopIterate* iter)
   : kkt_(kkt),
     iter_(iter),
     resid_(nullptr),
@@ -1948,109 +1887,29 @@ hiopPrecondKKTOpr::hiopPrecondKKTOpr(hiopKKTLinSys* kkt,
   resid_ = new hiopResidual(kkt_->nlp_);
   dir_ = new hiopIterate(kkt_->nlp_);
 
-  dx_ = dir_->get_x();
-  dx_->setToZero();
-  dd_ = dir_->get_d();
-  dd_->setToZero();
-  dyc_ = dir_->get_yc();
-  dyc_->setToZero();
-  dyd_ = dir_->get_yd();
-  dyd_->setToZero();
-  dsxl_ = dir_->get_sxl();
-  dsxl_->setToZero();
-  dsxu_ = dir_->get_sxu();
-  dsxu_->setToZero();
-  dsdl_ = dir_->get_sdl();
-  dsdl_->setToZero();
-  dsdu_ = dir_->get_sdu();
-  dsdu_->setToZero();
-  dzl_ = dir_->get_zl();
-  dzl_->setToZero();
-  dzu_ = dir_->get_zu();
-  dzu_->setToZero();
-  dvl_ = dir_->get_vl();
-  dvl_->setToZero();
-  dvu_ = dir_->get_vu();
-  dvu_->setToZero();
-
-  yrx_ = resid_->get_rx();
-  yrx_->setToZero();
-  yrd_ = resid_->get_rd();
-  yrd_->setToZero();
-  yryc_ = resid_->get_ryc();
-  yryc_->setToZero();
-  yryd_ = resid_->get_ryd();
-  yryd_->setToZero();
-  yrsxl_ = resid_->get_rxl();
-  yrsxl_->setToZero();
-  yrsxu_ = resid_->get_rxu();
-  yrsxu_->setToZero();
-  yrsdl_ = resid_->get_rdl();
-  yrsdl_->setToZero();
-  yrsdu_ = resid_->get_rdu();
-  yrsdu_->setToZero();
-  yrzl_ = resid_->get_rszl();
-  yrzl_->setToZero();
-  yrzu_ = resid_->get_rszu();
-  yrzu_->setToZero();
-  yrvl_ = resid_->get_rsvl();
-  yrvl_->setToZero();
-  yrvu_ = resid_->get_rsvu();
-  yrvu_->setToZero();
+  // set compound vector pointed to dir_/resid_
+  dir_cv_ = new hiopVectorCompoundPD(dir_);
+  res_cv_ = new hiopVectorCompoundPD(resid_);
 }
 
 bool hiopPrecondKKTOpr::split_vec_to_build_res(const hiopVector& vec)
 {
-  size_type nx = dx_->get_size();
-  size_type neq = dyc_->get_size();
-  size_type nineq = dyd_->get_size();
-  assert(vec.get_local_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
-
-  yrx_->startingAtCopyFromStartingAt(0,   vec, 0);
-  yrd_->startingAtCopyFromStartingAt(0,   vec, nx);
-  yryc_->startingAtCopyFromStartingAt(0,  vec, nx+nineq);
-  yryd_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq);
-  yrsxl_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq);
-  yrsxu_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx);
-  yrsdl_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx+nx);
-  yrsdu_->startingAtCopyFromStartingAt(0, vec, nx+nineq+neq+nineq+nx+nx+nineq);
-  yrzl_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  yrzu_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  yrvl_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  yrvu_->startingAtCopyFromStartingAt(0,  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
   return true;
 }
 
 bool hiopPrecondKKTOpr::combine_dir_to_build_vec(hiopVector& vec)
 {
-  size_type nx = dx_->get_size();
-  size_type neq = dyc_->get_size();
-  size_type nineq = dyd_->get_size();
-  assert(vec.get_local_size() == nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq+nineq);
-
-  dx_->copyToStarting(   vec, 0);
-  dd_->copyToStarting(   vec, nx);
-  dyc_->copyToStarting(  vec, nx+nineq);
-  dyd_->copyToStarting(  vec, nx+nineq+neq);
-  dsxl_->copyToStarting( vec, nx+nineq+neq+nineq);
-  dsxu_->copyToStarting( vec, nx+nineq+neq+nineq+nx);
-  dsdl_->copyToStarting( vec, nx+nineq+neq+nineq+nx+nx);
-  dsdu_->copyToStarting( vec, nx+nineq+neq+nineq+nx+nx+nineq);
-  dzl_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq);
-  dzu_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx);
-  dvl_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx);
-  dvu_->copyToStarting(  vec, nx+nineq+neq+nineq+nx+nx+nineq+nineq+nx+nx+nineq);
   return true;
 }
 
 bool hiopPrecondKKTOpr::times_vec(hiopVector& y, const hiopVector& x)
 {
-  bool bret;
-  bret = split_vec_to_build_res(x);
+  res_cv_->copyFrom(x);
 
-  bret = kkt_->computeDirections(resid_, dir_); 
+  bool bret = kkt_->computeDirections(resid_, dir_); 
+  
+  y.copyFrom(*dir_cv_);
 
-  bret = combine_dir_to_build_vec(y);
   return true;
 }
 
