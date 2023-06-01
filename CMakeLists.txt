@@ -109,8 +109,13 @@ if(HIOP_USE_MPI)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
   endif(NOT DEFINED MPI_CXX_COMPILER)
-  include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-  target_link_libraries(hiop_tpl INTERFACE MPI::MPI_CXX)
+  include_directories(${MPI_CXX_ADDITIONAL_INCLUDE_DIRS} ${MPI_CXX_COMPILER_INCLUDE_DIRS} )
+  
+  set(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
+  include_directories(${MPI_Fortran_ADDITIONAL_INCLUDE_DIRS} ${MPI_Fortran_COMPILER_INCLUDE_DIRS} )
+  set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -D HIOP_USE_MPI")
+  
+  target_link_libraries(hiop_tpl INTERFACE MPI::MPI_CXX MPI::MPI_CXX)
   set(HIOP_EXTRA_MPI_FLAGS "" CACHE STRING "Extra arguments to mpiexec when running tests")
 endif(HIOP_USE_MPI)
 
