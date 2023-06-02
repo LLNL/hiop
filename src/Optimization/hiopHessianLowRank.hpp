@@ -109,19 +109,19 @@ public:
   virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
 					       double alpha, const hiopMatrixDense& X);
 #ifdef HIOP_DEEPCHECKS
+  /* same as above but without the Dx term in H */
+  virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
+  virtual void print(FILE* f, hiopOutVerbosity v, const char* msg) const;
+#endif
+
   /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
 
-  /* same as above but without the Dx term in H */
-  virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
   /* code shared by the above two methods*/
-  virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm);
-
-  virtual void print(FILE* f, hiopOutVerbosity v, const char* msg) const;
-#endif
+  virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm = false) const;
 
 protected:
   int l_max; //max memory size
@@ -133,11 +133,9 @@ protected:
   hiopNlpDenseConstraints* nlp;
 private:
   hiopVector* DhInv; //(B0+Dk)^{-1}
-#ifdef HIOP_DEEPCHECKS
-  // needed in timesVec (for residual checking in solveCompressed, only HIOP_DEEPCHECKS mode).
+  // needed in timesVec (for residual checking in solveCompressed.
   // can be recomputed from DhInv decided to store it instead to avoid round-off errors
-  hiopVector* _Dx; 
-#endif
+  hiopVector* _Dx;
   bool matrixChanged;
   //these are matrices from the compact representation; they are updated at each iteration.
   // more exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]
@@ -244,10 +242,8 @@ public:
     assert(false && "not provided because it is not needed");
   }
 
-  void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
-  {
-    assert(false && "not provided because it is not needed");
-  }
+  void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const;
+
   /** y = beta * y + alpha * this^T * x */
   virtual void transTimesVec(double beta,   hiopVector& y,
 			     double alpha,  const hiopVector& x ) const

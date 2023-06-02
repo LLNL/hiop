@@ -42,6 +42,8 @@ add_test(NAME NlpDenseCons2_UN_5K COMMAND  ${RUNCMD} "$<TARGET_FILE:NlpDenseCons
 add_test(NAME NlpDenseCons3_5H    COMMAND  ${RUNCMD} "$<TARGET_FILE:NlpDenseConsEx3.exe>"   "500" "-selfcheck")
 add_test(NAME NlpDenseCons3_5K    COMMAND  ${RUNCMD} "$<TARGET_FILE:NlpDenseConsEx3.exe>"  "5000" "-selfcheck")
 add_test(NAME NlpDenseCons3_50K   COMMAND  ${RUNCMD} "$<TARGET_FILE:NlpDenseConsEx3.exe>" "50000" "-selfcheck")
+add_test(NAME NlpDenseCons4       COMMAND  ${RUNCMD} "$<TARGET_FILE:NlpDenseConsEx4.exe>" "-selfcheck")
+
 if(HIOP_USE_MPI)
   add_test(NAME NlpDenseCons3_50K_mpi COMMAND ${MPICMD} -n 2 "$<TARGET_FILE:NlpDenseConsEx3.exe>" "50000" "-selfcheck")
 endif(HIOP_USE_MPI)

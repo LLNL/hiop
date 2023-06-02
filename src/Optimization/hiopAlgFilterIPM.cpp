@@ -1026,14 +1026,10 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   int use_soc = 0;
   int use_fr = 0;
   int num_adjusted_slacks = 0;
-  int linsol_safe_mode_last_iter_switched_on = 100000;
-  bool linsol_safe_mode_on = "stable"==hiop::tolower(nlp->options->GetString("linsol_mode"));
-  bool linsol_forcequick = "forcequick"==hiop::tolower(nlp->options->GetString("linsol_mode"));
+  bool linsol_safe_mode_on = true; // always use safe mode in the quasi-newton solver
+  bool linsol_forcequick = false;  // always use safe mode in the quasi-newton solver
   bool elastic_mode_on = nlp->options->GetString("elastic_mode")!="none";
   solver_status_ = NlpSolve_Pending;
-
-  // for dense solver, so far we only allow safe mode
-  assert(linsol_safe_mode_on && !linsol_forcequick);
 
   while(true) {
 
@@ -1157,44 +1153,27 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //first update the Hessian and kkt system
     Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
-        if(linsol_safe_mode_on) {
-          nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
-                          hovError);
-          delete kkt;
-          return solver_status_ = Err_Step_Computation;
-        } else {
-          assert(0 && "We only allow safe mode in the dense solver");
-        }
-      } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
+      nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
+                      hovError);
+      delete kkt;
+      return solver_status_ = Err_Step_Computation;
+    } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
 
     auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
     if(fact_acceptor_ic) {
-      bool linsol_safe_mode_on_before = linsol_safe_mode_on;
       //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
       if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
-
-        if(linsol_safe_mode_on_before || linsol_forcequick) {
-          //it fails under safe mode, this is fatal
-          delete kkt;
-          return solver_status_ = Err_Step_Computation;
-        }
-        // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed 
-        continue;
+        delete kkt;
+        return solver_status_ = Err_Step_Computation;
       }
     } else {
       auto* fact_acceptor_dwd = dynamic_cast<hiopFactAcceptorInertiaFreeDWD*> (fact_acceptor_);
       assert(fact_acceptor_dwd);
-      bool linsol_safe_mode_on_before = linsol_safe_mode_on;
       //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
       if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
-        if(linsol_safe_mode_on_before || linsol_forcequick) {
-          //it failed under safe mode
-          delete kkt;
-          return solver_status_ = Err_Step_Computation;
-        }
-        // safe mode was turned on in the above call because kkt->compute_directions_w_IR(...) failed or the number
-        // of inertia corrections reached max number allowed
-        continue;
+        //it failed under safe mode
+        delete kkt;
+        return solver_status_ = Err_Step_Computation;
       }
     }
 
@@ -1241,15 +1220,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       // check the step against the minimum step size, but accept small
       // fractionToTheBdry since these may occur for tight bounds at the first iteration(s)
       if(!iniStep && _alpha_primal<min_ls_step_size) {
-        if(linsol_safe_mode_on) {
-          nlp->log->write("Minimum step size reached. The problem may be locally infeasible or the "
-                          "gradient inaccurate. Will try to restore feasibility.",
-                          hovError);
-          solver_status_ = Steplength_Too_Small;
-        } else {
-          // (silently) take the step if not under safe mode
-          lsStatus = 0;
-        }
+        nlp->log->write("Minimum step size reached. The problem may be locally infeasible or the "
+                        "gradient inaccurate. Will try to restore feasibility.",
+                        hovError);
+        solver_status_ = Steplength_Too_Small;
+
         nlp->runStats.tmSolverInternal.stop();
         break;
       }
@@ -1376,22 +1351,6 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       //small step
       if(linsol_safe_mode_on) {
         assert(0 && "FR is not available in the dense solver. To be implemented." );
-      } else {
-        if(linsol_forcequick) {
-          // take the update, won't switch to safe mode
-        } else {
-          // switch to the safe mode
-          linsol_safe_mode_on = true;
-          //linsol_safe_mode_lastiter = iter_num;
-
-          nlp->log->printf(hovWarning,
-                           "Requesting additional accuracy and stability from the KKT linear system "
-                           "at iteration %d (safe mode ON) [2]\n", iter_num);
-
-          // repeat linear solve (compute_search_direction) in safe mode (meaning additional accuracy
-          // and stability is requested)
-          assert(0 && "Switch between fast/safe mode is not supported in the dense solver. To be implemented." );
-        }
       }
       nlp->runStats.tmSolverInternal.stop();
     } else {
