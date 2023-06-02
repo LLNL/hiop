@@ -68,8 +68,8 @@ struct hiopVersion
       false;
 #endif
 
-  static constexpr bool useCUSOLVERLU =
-#ifdef HIOP_USE_CUSOLVER_LU
+  static constexpr bool useReSolve =
+#ifdef HIOP_USE_RESOLVE
       true;
 #else
       false;
@@ -108,7 +108,7 @@ struct hiopVersion
       << "\nCOINHSL: " << fmt(useCOINHSL)
       << "\nSTRUMPACK: " << fmt(useSTRUMPACK)
       << "\nPARDISO: " << fmt(usePARDISO)
-      << "\nCUSOLVER-LU: " << fmt(useCUSOLVERLU)
+      << "\nReSolve: " << fmt(useReSolve)
       << "\n";
     return ss.str();
   }

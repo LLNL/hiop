@@ -140,9 +140,9 @@ static bool parse_arguments(int argc,
 #endif
 
 // If HiOp is built without CUDA de-select cuSOLVER.
-#ifndef HIOP_USE_CUSOLVER_LU
+#ifndef HIOP_USE_RESOLVE
   if(use_cusolver) {
-    printf("HiOp built without support for cuSOLVER-LU. ");
+    printf("HiOp built without support for ReSolve. ");
     printf("Using default linear solver ...\n");
     use_cusolver = false;
   }

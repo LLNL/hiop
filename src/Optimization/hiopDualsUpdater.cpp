@@ -72,7 +72,7 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
-#ifdef HIOP_USE_CUSOLVER_LU
+#ifdef HIOP_USE_RESOLVE
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
@@ -442,7 +442,7 @@ instantiate_linear_solver(const char* linsol_opt,
       // Under gpu compute_mode, which is work in progress, the initialization should be done only using
       // GPU sparse linear solvers.
       
-#ifdef HIOP_USE_CUSOLVER_LU 
+#ifdef HIOP_USE_RESOLVE 
       if(compute_mode == "gpu") {
         assert((linear_solver == "resolve" || linear_solver == "auto") &&
                "the value for duals_init_linear_solver_sparse is invalid and should have been corrected during "
@@ -450,18 +450,18 @@ instantiate_linear_solver(const char* linsol_opt,
       }
       if(fact_acceptor == "inertia_correction") {
         nlp_->log->printf(hovError,
-                          "LSQ linear solver with CUSOLVER-LU does not support inertia correction. "
+                          "LSQ linear solver with ReSolve does not support inertia correction. "
                           "Please set option 'fact_acceptor' to 'inertia_free'.\n");
         assert(false);
         return false;
       }
       // This is our first choice on the device.
       if(linear_solver == "resolve" || linear_solver == "auto") {
-        ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: CUSOLVER-LU size " << n
+        ss_log << "LSQ linear solver --- KKT_SPARSE_XDYcYd linsys: ReSolve size " << n
                << " cons " << (neq+nineq) << " nnz " << nnz;
         lin_sys_ = new hiopLinSolverSymSparseReSolve(n, nnz, nlp_);
       }
-#else // of #ifdef HIOP_USE_CUSOLVER_LU 
+#else // of #ifdef HIOP_USE_RESOLVE 
       //under compute mode gpu, at this point we don't have a sparse linear solver 
       if(compute_mode == "gpu") {
         if(linear_solver == "auto") {

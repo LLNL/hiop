@@ -89,7 +89,7 @@ cmake_dependent_option(
   HIOP_USE_MAGMA "Use Magma linear algebra" ON "HIOP_USE_GPU" OFF
 )
 cmake_dependent_option(
-  HIOP_USE_CUSOLVER_LU "Build with cuSolver LU support" ON "HIOP_USE_CUDA" OFF
+  HIOP_USE_RESOLVE "Build with cuSolver LU support" ON "HIOP_USE_CUDA" OFF
 )
 
 add_library(hiop_tpl INTERFACE)
@@ -328,12 +328,12 @@ if(HIOP_SPARSE)
     endif()  
   endif(HIOP_USE_STRUMPACK)
 
-  if (HIOP_USE_CUSOLVER_LU)
+  if (HIOP_USE_RESOLVE)
     set(HIOP_KLU_DIR CACHE PATH "Path to KLU directory")
     include(FindKLU)
     if(NOT KLU_LIBRARY)
       message(STATUS "Cannot find KLU, disabling cuSOLVER LU module ...")
-      set(HIOP_USE_CUSOLVER_LU OFF CACHE BOOL "Build without cuSOLVER LU module." FORCE)
+      set(HIOP_USE_RESOLVE OFF CACHE BOOL "Build without cuSOLVER LU module." FORCE)
     else()  
       target_link_libraries(hiop_tpl INTERFACE KLU)
     endif()  
@@ -372,7 +372,7 @@ endif(NOT HIOP_USE_COINHSL AND NOT HIOP_USE_STRUMPACK AND NOT HIOP_USE_PARDISO A
 else(HIOP_SPARSE)
   set(HIOP_USE_COINHSL OFF CACHE BOOL "Build without COINHSL" FORCE)
   set(HIOP_USE_STRUMPACK OFF CACHE BOOL "Build without STRUMPACK" FORCE)
-  set(HIOP_USE_CUSOLVER_LU OFF CACHE BOOL "Build without cuSOLVER LU module" FORCE)
+  set(HIOP_USE_RESOLVE OFF CACHE BOOL "Build without cuSOLVER LU module" FORCE)
   set(HIOP_USE_PARDISO OFF CACHE BOOL "Build without PARDISO" FORCE)
   set(HIOP_USE_GINKGO OFF CACHE BOOL "Build without GINKGO" FORCE)
 endif(HIOP_SPARSE)

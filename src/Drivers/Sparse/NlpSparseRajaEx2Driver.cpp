@@ -144,7 +144,7 @@ static bool parse_arguments(int argc,
 #endif
 
 // Use cuSOLVER's LU factorization, if it was configured
-#ifdef HIOP_USE_CUSOLVER_LU
+#ifdef HIOP_USE_RESOLVE
   if(use_cusolver) {
     use_resolve = true;
   }

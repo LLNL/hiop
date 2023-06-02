@@ -57,7 +57,7 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
-#ifdef HIOP_USE_CUSOLVER_LU
+#ifdef HIOP_USE_RESOLVE
 #include "hiopLinSolverSparseCUSOLVER.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
@@ -334,13 +334,13 @@ namespace hiop
                "KKT_SPARSE_XYcYd linsys: GPU compute mode not supported at this time.");
 
         if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "resolve") {
-#if defined(HIOP_USE_CUSOLVER_LU)
+#if defined(HIOP_USE_RESOLVE)
           linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
-          linsol_actual = "CUSOLVER-LU";
+          linsol_actual = "ReSolve";
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
@@ -693,13 +693,13 @@ namespace hiop
         //our first choice is cuSolver on hybrid compute mode
         assert(nullptr == linSys_);
         if(linear_solver == "resolve" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER_LU)
-          actual_lin_solver = "CUSOLVER-LU";
+#if defined(HIOP_USE_RESOLVE)
+          actual_lin_solver = "ReSolve";
           linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XDYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
@@ -765,16 +765,16 @@ namespace hiop
         assert(nullptr == linSys_);
         
         if(linear_solver == "resolve" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER_LU)        
+#if defined(HIOP_USE_RESOLVE)        
           linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
-                            "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
+                            "KKT_SPARSE_XDYcYd linsys: alloc ReSolve size %d (%d cons) (gpu)\n",
                             n,
                             neq+nineq);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XDYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
