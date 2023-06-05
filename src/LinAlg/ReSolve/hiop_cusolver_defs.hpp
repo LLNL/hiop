@@ -137,13 +137,11 @@ extern "C" {
                       void* workspace);
 
   cusolverStatus_t CUSOLVERAPI 
-    cusolverSpDnrminf(cusolverSpHandle_t handle,
-                      int n,
-                      const double *x,
-                      double* result, /* |x|_inf, host */
-                      void* d_work  /* at least 8192 bytes */
-                     );
-
+  cusolverSpDnrminf(cusolverSpHandle_t handle,
+                    int n,
+                    const double *x,
+                    double* result, /* |x|_inf, host */
+                    void* d_work);  /* at least 8192 bytes */
 
 } // extern "C"
 

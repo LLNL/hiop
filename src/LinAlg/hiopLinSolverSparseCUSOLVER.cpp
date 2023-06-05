@@ -69,8 +69,8 @@
 namespace hiop
 {
   hiopLinSolverSymSparseReSolve::hiopLinSolverSymSparseReSolve(const int& n, 
-                                                                 const int& nnz, 
-                                                                 hiopNlpFormulation* nlp)
+                                                               const int& nnz, 
+                                                               hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
       index_covert_CSR2Triplet_{ nullptr },
       index_covert_extra_Diag2CSR_{ nullptr }, 
@@ -278,7 +278,7 @@ namespace hiop
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
-    return 1;
+    return true;
   }
 
   void hiopLinSolverSymSparseReSolve::firstCall()
@@ -437,8 +437,8 @@ namespace hiop
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
   void hiopLinSolverSymSparseReSolve::hiopCheckCudaError(T result,
-                                                          const char* const file,
-                                                          int const line)
+                                                         const char* const file,
+                                                         int const line)
   {
     if(result) {
       nlp_->log->printf(hovError, 
@@ -453,8 +453,8 @@ namespace hiop
 
 
   hiopLinSolverSymSparseReSolveGPU::hiopLinSolverSymSparseReSolveGPU(const int& n, 
-                                                                       const int& nnz, 
-                                                                       hiopNlpFormulation* nlp)
+                                                                     const int& nnz, 
+                                                                     hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparseReSolve(n, nnz, nlp), 
       rhs_host_{nullptr},
       M_host_{nullptr}
@@ -536,6 +536,3 @@ namespace hiop
 
 } // namespace hiop
 
-namespace ReSolve {
-
-}

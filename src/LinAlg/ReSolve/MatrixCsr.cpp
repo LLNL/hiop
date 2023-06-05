@@ -126,11 +126,6 @@ namespace ReSolve {
   {
     if(result) {
       std::cout << "CUDA error at " << file << ":" << line << " error# " << result << "\n";
-      // fprintf(stdout, 
-      //         "CUDA error at %s:%d, error# %d\n", 
-      //         file, 
-      //         line, 
-      //         result);
       assert(false);
     }
   }

@@ -71,21 +71,6 @@
 
 namespace ReSolve {
 
-  // RefactorizationSolver::RefactorizationSolver()
-  // {
-  //   mat_A_csr_ = new MatrixCsr();
-
-  //   // handles
-  //   cusparseCreate(&handle_);
-  //   cusolverSpCreate(&handle_cusolver_);
-  //   cublasCreate(&handle_cublas_);
-
-  //   // descriptors
-  //   cusparseCreateMatDescr(&descr_A_);
-  //   cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
-  //   cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
-  // }
-
   RefactorizationSolver::RefactorizationSolver(int n)
     : n_(n)
   {
@@ -221,25 +206,25 @@ namespace ReSolve {
 
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
-                                        n_,
-                                        /* A is original matrix */
-                                        nnz_,
-                                        descr_A_,
-                                        mat_A_csr_->get_vals(),  //da_,
-                                        mat_A_csr_->get_irows(), //dia_,
-                                        mat_A_csr_->get_jcols(), //dja_,
-                                        info_M_);
+                                       n_,
+                                       /* A is original matrix */
+                                       nnz_,
+                                       descr_A_,
+                                       mat_A_csr_->get_vals(),  //da_,
+                                       mat_A_csr_->get_irows(), //dia_,
+                                       mat_A_csr_->get_jcols(), //dja_,
+                                       info_M_);
       sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
     } else {
       if(refact_ == "rf") {
         sp_status_ = cusolverRfResetValues(n_, 
-                                            nnz_, 
-                                            mat_A_csr_->get_irows(), //dia_,
-                                            mat_A_csr_->get_jcols(), //dja_,
-                                            mat_A_csr_->get_vals(),  //da_,
-                                            d_P_,
-                                            d_Q_,
-                                            handle_rf_);
+                                           nnz_, 
+                                           mat_A_csr_->get_irows(), //dia_,
+                                           mat_A_csr_->get_jcols(), //dja_,
+                                           mat_A_csr_->get_vals(),  //da_,
+                                           d_P_,
+                                           d_Q_,
+                                           handle_rf_);
         cudaDeviceSynchronize();
         sp_status_ = cusolverRfRefactor(handle_rf_);
       }

@@ -269,6 +269,4 @@ private:
 
 };
 
-
-
 } // namespace ReSolve
