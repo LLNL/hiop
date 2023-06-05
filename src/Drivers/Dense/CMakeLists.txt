@@ -18,7 +18,7 @@ add_executable(NlpDenseConsEx4.exe NlpDenseConsEx4.cpp NlpDenseConsEx4Driver.cpp
 target_link_libraries(NlpDenseConsEx4.exe HiOp::HiOp)
 
 if(HIOP_BUILD_FORTRAN_EXAMPLE)
-  add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.f)
+  add_executable(NlpDenseConsFEx1.exe NlpDenseConsFEx1.F90)
   target_link_libraries(NlpDenseConsFEx1.exe HiOp::HiOp)
 endif()
 

@@ -1,21 +1,29 @@
-C =============================================================================
-C
-C     This example is modified from NlpSparseEx1
-C
-C
-C     min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
-C     s.t.     4*x_1 + 2*x_2                   == 10
-C          5<= 2*x_1         + x_3
-C          1<= 2*x_1               + 0.5*x_i   <= 2*n, for i=4,...,n
-C          x_1 free
-C          0.0 <= x_2
-C          1.5 <= x_3 <= 10
-C          x_i >=0.5, i=4,...,n
-C =============================================================================
+! =============================================================================
+!
+!     This example is modified from NlpSparseEx1
+!
+!
+!     min   sum 1/4* { (x_{i}-1)^4 : i=1,...,n}
+!     s.t.     4*x_1 + 2*x_2                   == 10
+!          5<= 2*x_1         + x_3
+!          1<= 2*x_1               + 0.5*x_i   <= 2*n, for i=4,...,n
+!          x_1 free
+!          0.0 <= x_2
+!          1.5 <= x_3 <= 10
+!          x_i >=0.5, i=4,...,n
+! =============================================================================
 
-      program example1
+program example1
+#ifdef HIOP_USE_MPI
+      USE MPI
+#endif
+
+! =============================================================================
+!                main function
+! =============================================================================
       implicit none
 
+      integer :: ierr, num_procs, rank
       integer     N,     M
       integer     retv
       parameter  (N = 50, M = 49)
@@ -35,9 +43,19 @@ C =============================================================================
       double precision F
       integer I
 
-      external EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC
+      ! Initialize MPI
+#ifdef HIOP_USE_MPI
+      write(*,*) "MPI is available"
+      call MPI_Init(ierr)
+      call MPI_Comm_size(MPI_COMM_WORLD, num_procs, ierr)
+      call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+#else
+      write(*,*) "MPI is not available"
+      rank = 0
+      num_procs = 1
+#endif
 
-C     Set initial point and bounds:
+!     Set initial point and bounds:
       do I = 1, N
         X(I) = 0d0
       enddo
@@ -54,7 +72,7 @@ C     Set initial point and bounds:
         X_U(I) = 1d20
       enddo
 
-C     Set bounds for the constraints
+!     Set bounds for the constraints
       G_L(1) =  1d1
       G_U(1) =  1d1
       G_L(2) =  5d0
@@ -65,15 +83,15 @@ C     Set bounds for the constraints
         G_U(I) = 2d0*N
       enddo
 
-C     create hiop sparse problem
-      HIOPPROBLEM = hiopdenseprob(N, M,X_L, X_U, G_L, G_U, X,
-     1     EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC)
+!     create hiop sparse problem
+      HIOPPROBLEM = hiopdenseprob(N, M,X_L, X_U, G_L, G_U, X, &
+                                  EVAL_F, EVAL_CON, EVAL_GRAD, EVAL_JAC)
       if (HIOPPROBLEM.eq.0) then
          write(*,*) 'Error creating an HIOP Problem handle.'
          stop
       endif
 
-C     hiop solve 
+!     hiop solve 
       call hiopdensesolve(HIOPPROBLEM,OOBJ,X)
 
       write(*,*)
@@ -88,14 +106,21 @@ C     hiop solve
          stop -1
       endif
 
-C     Clean up
+#ifdef HIOP_USE_MPI
+      ! Clean up MPI
+      call MPI_Finalize(ierr)
+#endif
+
+!     Clean up
       call deletehiopdenseprob(HIOPPROBLEM)
       stop
-      end
 
-C =============================================================================
-C                    Computation of objective function
-C =============================================================================
+
+
+contains
+! =============================================================================
+!                    Computation of objective function
+! =============================================================================
       subroutine EVAL_F(N, X, NEW_X, OBJ)
       implicit none
       integer N, NEW_X, I
@@ -107,9 +132,9 @@ C =============================================================================
       return
       end
 
-C =============================================================================
-C                Computation of gradient of objective function
-C =============================================================================
+! =============================================================================
+!                Computation of gradient of objective function
+! =============================================================================
       subroutine EVAL_GRAD(N, X, NEW_X, GRAD)
       implicit none
       integer N, NEW_X, I
@@ -120,9 +145,9 @@ C =============================================================================
       return
       end
 
-C =============================================================================
-C                     Computation of equality constraints
-C =============================================================================
+! =============================================================================
+!                     Computation of equality constraints
+! =============================================================================
       subroutine EVAL_CON(N, M, X, NEW_X, C)
       implicit none
       integer N, NEW_X, M, I
@@ -135,9 +160,9 @@ C =============================================================================
       return
       end
 
-C =============================================================================
-C                Computation of Jacobian of equality constraints
-C =============================================================================
+! =============================================================================
+!                Computation of Jacobian of equality constraints
+! =============================================================================
 
       subroutine EVAL_JAC(N, M, X, NEW_X, A)
       integer N, NEW_X, M, NZ
@@ -149,9 +174,9 @@ C =============================================================================
         A(I) = 0d0
       enddo
 
-C     // constraint 1 body ---> 4*x_1 + 2*x_2 == 10
-C     // constraint 2 body ---> 2*x_1 + x_3
-C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
+!     // constraint 1 body ---> 4*x_1 + 2*x_2 == 10
+!     // constraint 2 body ---> 2*x_1 + x_3
+!     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
       A(1) = 4d0
       A(2) = 2d0
       A(N+1) = 2d0
@@ -166,3 +191,4 @@ C     // constraint 3 body ---> 2*x_1 + 0.5*x_i, for i>=4
       end
 
 
+end program example1
