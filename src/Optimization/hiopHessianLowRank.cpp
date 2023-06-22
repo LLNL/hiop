@@ -194,9 +194,6 @@ hiopHessianLowRank::~hiopHessianLowRank()
   for(auto* it: b) {
     delete it;
   }
-
-  delete yk;
-  delete sk;
 }
 
 
@@ -959,7 +956,12 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     yk->copyFrom(Yt->local_data() + k*n_local);
     sk->copyFrom(St->local_data() + k*n_local);
     double skTyk=yk->dotProductWith(*sk);
-    assert(skTyk>0);
+    
+    if(skTyk < std::numeric_limits<double>::epsilon()) {
+      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_k^T*y_k||=%12.6e too small..."
+                       " set it to machine precision = %12.6e \n", skTyk, std::numeric_limits<double>::epsilon());
+      skTyk = std::numeric_limits<double>::epsilon();
+    }
 
     if(a[k] == nullptr && b[k] == nullptr) {
       b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
