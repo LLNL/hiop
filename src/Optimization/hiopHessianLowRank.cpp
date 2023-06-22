@@ -141,6 +141,9 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   _Vmat = V->alloc_clone();
 #endif
 
+  yk = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+  sk = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+
 }  
 
 hiopHessianLowRank::~hiopHessianLowRank()
@@ -153,6 +156,8 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(L)  delete L;
   if(D)  delete D;
   if(V)  delete V;
+  if(yk) delete yk;
+  if(sk) delete sk;
 #ifdef HIOP_DEEPCHECKS
   delete _Vmat;
 #endif
@@ -181,6 +186,17 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(_2l_vec1) delete _2l_vec1;
   if(_V_ipiv_vec) delete[] _V_ipiv_vec;
   if(_V_work_vec) delete _V_work_vec;
+
+  for(auto* it: a) {
+    delete it;
+  }
+
+  for(auto* it: b) {
+    delete it;
+  }
+
+  delete yk;
+  delete sk;
 }
 
 
@@ -934,10 +950,9 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     nlp->log->write("y_in=", y, hovMatrices);
   }
 
-  hiopVectorPar *yk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-  hiopVectorPar *sk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   //allocate and compute a_k and b_k
-  vector<hiopVector*> a(l_curr), b(l_curr);
+  a.resize(l_curr, nullptr);
+  b.resize(l_curr, nullptr);
   int n_local = Yt->get_local_size_n();
   for(int k=0; k<l_curr; k++) {
     //bk=yk/sqrt(yk'*sk)
@@ -945,11 +960,14 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     sk->copyFrom(St->local_data() + k*n_local);
     double skTyk=yk->dotProductWith(*sk);
     assert(skTyk>0);
-    b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+
+    if(a[k] == nullptr && b[k] == nullptr) {
+      b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+      a[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    }
+    
     b[k]->copyFrom(*yk);
     b[k]->scale(1/sqrt(skTyk));
-
-    a[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
 
     //compute ak by an inner loop
     a[k]->copyFrom(*sk);
@@ -986,13 +1004,6 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     nlp->log->write("y_out=", y, hovMatrices);
   }
 
-  for(vector<hiopVector*>::iterator it=a.begin(); it!=a.end(); ++it) 
-    delete *it;
-  for(vector<hiopVector*>::iterator it=b.begin(); it!=b.end(); ++it) 
-    delete *it;
-
-  delete yk;
-  delete sk;
 }
 
 void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x)
