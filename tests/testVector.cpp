@@ -326,6 +326,9 @@ int runTests(const char* mem_space, MPI_Comm comm)
 
   fail += test.vectorMatchesPattern(*x, *y, rank);
   fail += test.vectorAdjustDuals_plh(*x, *y, *z, *a, rank);
+  fail += test.vector_num_match(*x, *y, rank);
+  fail += test.vector_process_bounds(*x, *y, *z, *a, rank);
+  fail += test.vector_relax_bounds(*x, *y, rank);
 
   if (rank == 0)
   {
@@ -334,7 +337,7 @@ int runTests(const char* mem_space, MPI_Comm comm)
     fail += test.vectorIsfinite(*v);
   }
 
-  // TODO: remove
+  // TODO: remove?
   //fail += test.vector_is_equal(*x, *y, rank);
 
   delete a;

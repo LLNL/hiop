@@ -65,11 +65,11 @@ hiopFixedVarsRemover::
 hiopFixedVarsRemover(hiopNlpFormulation* nlp,
                      const hiopVector& xl,
                      const hiopVector& xu,
-                     const double& fixedVarTol_,
+                     const double& fixed_var_tol,
                      const size_type& numFixedVars,
                      const size_type& numFixedVars_local)
   : hiopNlpTransformation(nlp),
-    n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
+    n_fixed_vars_local(numFixedVars_local), fixed_var_tol_(fixed_var_tol),
     Jacc_fs(NULL), Jacd_fs(NULL),
     fs2rs_idx_map(xl.get_local_size()),
     x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
@@ -158,7 +158,7 @@ bool hiopFixedVarsRemover::setupDecisionVectorPart()
   int it_rs=0; 
   for(int i=0;i<n_fs_local; i++) {
     //if(xl_vec[i]==xu_vec[i]) {
-    if(fabs(xl_vec[i]-xu_vec[i])<= fixedVarTol*fmax(1.,fabs(xu_vec[i]))) {
+    if(fabs(xl_vec[i]-xu_vec[i])<= fixed_var_tol_*fmax(1.,fabs(xu_vec[i]))) {
       fs2rs_idx_map[i]=-1;
     } else {
       fs2rs_idx_map[i]=it_rs;
@@ -278,7 +278,7 @@ void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in,
     for(int j=0; j<fs2rs_idx_map.size(); j++) {  
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx>=0) {
-  	M_rs[i*nrs+rs_idx] = M_fs[i*nfs+j];
+        M_rs[i*nrs+rs_idx] = M_fs[i*nfs+j];
       }
     }
   }
@@ -291,38 +291,19 @@ hiopFixedVarsRelaxer(hiopNlpFormulation* nlp,
                      const size_type& numFixedVars,
                      const size_type& numFixedVars_local)
   : hiopNlpTransformation(nlp),
-    xl_copy(NULL), xu_copy(NULL), n_vars(xl.get_size()), n_vars_local(xl.get_local_size())
+    n_vars(xl.get_size()),
+    n_vars_local(xl.get_local_size())
 {
-  //xl_copy = xl.new_copy(); // no need to copy at this point
-  //xu_copy = xu.new_copy(); // no need to copy at this point
 }
 
 hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
 {
-  if(xl_copy) delete xl_copy;
-  if(xu_copy) delete xu_copy;
 }
 
 void hiopFixedVarsRelaxer::
 relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& xl, hiopVector& xu)
 {
-  double *xla=xl.local_data(), *xua=xu.local_data(), *v;
-  size_type n=xl.get_local_size();
-  double xuabs;
-  for(index_type i=0; i<n; i++) {
-    xuabs = fabs(xua[i]);
-    if(fabs(xua[i]-xla[i])<= fixed_var_tol*fmax(1.,xuabs)) {
-
-      xua[i] += fixed_var_perturb*fmax(1.,xuabs);
-      xla[i] -= fixed_var_perturb*fmax(1.,xuabs);
-      //if(xla[i]==xua[i]) {
-      // this does not apply anymore
-      //if fixed a zero or less,  increase upper bound
-      //if fixed at positive val, decrease lower bound
-      //if(xua[i]<=0.)      xua[i] += fixed_var_perturb*fmax(1.,fabs(xua[i]));
-      //else                xla[i] -= fixed_var_perturb*fmax(1.,fabs(xla[i]));
-    }
-  }
+  xl.relax_bounds_vec(xu, fixed_var_tol, fixed_var_perturb);
 }
 
 hiopBoundsRelaxer::
@@ -332,8 +313,12 @@ hiopBoundsRelaxer(hiopNlpFormulation* nlp,
                   const hiopVector& dl,
                   const hiopVector& du)
   : hiopNlpTransformation(nlp),
-    xl_ori(NULL), xu_ori(NULL), dl_ori(NULL), du_ori(NULL),
-    n_vars(xl.get_size()), n_vars_local(xl.get_local_size()),
+    xl_ori(nullptr),
+    xu_ori(nullptr),
+    dl_ori(nullptr),
+    du_ori(nullptr),
+    n_vars(xl.get_size()),
+    n_vars_local(xl.get_local_size()),
     n_ineq(dl.get_size())
 {
   xl_ori = xl.new_copy();
@@ -344,18 +329,10 @@ hiopBoundsRelaxer(hiopNlpFormulation* nlp,
 
 hiopBoundsRelaxer::~hiopBoundsRelaxer()
 {
-  if(xl_ori) {
-    delete xl_ori;
-  }
-  if(xu_ori) {
-    delete xu_ori;
-  }
-  if(dl_ori) {
-    delete dl_ori;
-  }
-  if(du_ori) {
-    delete du_ori;
-  }
+  delete xl_ori;
+  delete xu_ori;
+  delete dl_ori;
+  delete du_ori;
 }
 
 void hiopBoundsRelaxer::
@@ -425,9 +402,11 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
                                              hiopVectorInt& cons_eq_mapping, 
                                              hiopVectorInt& cons_ineq_mapping)
   : hiopNlpTransformation(nlp),
-    n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
+    n_vars(gradf.get_size()),
+    n_vars_local(gradf.get_local_size()),
     scale_factor_obj(1.),
-    n_eq(c.get_size()), n_ineq(d.get_size())
+    n_eq(c.get_size()),
+    n_ineq(d.get_size())
 {
   scale_factor_obj = max_grad/gradf.infnorm();
   if(scale_factor_obj>1.) {
@@ -463,10 +442,5 @@ hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
   if(scale_factor_d) delete scale_factor_d;
   if(scale_factor_cd) delete scale_factor_cd;
 }
-
-
-
-
-
 
 } //end of namespace

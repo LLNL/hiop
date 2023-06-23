@@ -153,7 +153,7 @@ public:
   hiopFixedVarsRemover(hiopNlpFormulation* nlp,
                        const hiopVector& xl,
                        const hiopVector& xu,
-                       const double& fixedVarTol,
+                       const double& fixed_var_tol,
                        const size_type& numFixedVars,
                        const size_type& numFixedVars_local);
   ~hiopFixedVarsRemover();
@@ -287,7 +287,7 @@ protected:
   size_type n_fixed_vars_local;
   size_type n_fixed_vars;
 
-  double fixedVarTol;
+  double fixed_var_tol_;
 
   size_type n_fs; //full-space n
   size_type n_rs; //reduced-space n
@@ -326,20 +326,20 @@ public:
   virtual ~hiopFixedVarsRelaxer();
 
   /* number of vars in the NLP after the tranformation */
-  inline size_type n_post()  { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
+  inline size_type n_post() {return n_vars;}
   /* number of vars in the NLP to which the tranformation is to be applied */
-  virtual size_type n_pre () { /*assert(xl_copy);*/ return n_vars; } //xl_copy->get_size(); }
+  virtual size_type n_pre() {return n_vars;}
 
-  inline size_type n_post_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
-  inline size_type n_pre_local()  { return n_vars_local; } //xl_copy->get_local_size(); }
+  inline size_type n_post_local() {return n_vars_local;}
+  inline size_type n_pre_local() {return n_vars_local;}
 
   inline bool setup() { return true; }
 
   void relax(const double& fixed_var_tol, const double& fixed_var_perturb, 
 	     hiopVector& xl, hiopVector& xu);
 private:
-  hiopVector*xl_copy, *xu_copy;
-  size_type  n_vars; int n_vars_local;
+  size_type n_vars;
+  size_type n_vars_local;
 };
 
 /** 
@@ -514,10 +514,10 @@ public:
                     const hiopVector& du);
   virtual ~hiopBoundsRelaxer();
 
-  inline size_type n_post()  { /*assert(xl_copy);*/ return n_vars; }
-  virtual size_type n_pre () { /*assert(xl_copy);*/ return n_vars; }
-  inline size_type n_post_local()  { return n_vars_local; }
-  inline size_type n_pre_local()  { return n_vars_local; }
+  inline size_type n_post() {return n_vars;}
+  virtual size_type n_pre() {return n_vars;}
+  inline size_type n_post_local() {return n_vars_local;}
+  inline size_type n_pre_local() {return n_vars_local;}
   inline bool setup() { return true; }
 
   inline hiopVector* apply_to_x(hiopVector& x)

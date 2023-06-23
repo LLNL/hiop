@@ -2050,6 +2050,135 @@ public:
     return reduceReturn(fail, &x);
   }
 
+  /**
+   * @brief Test:
+   * the number of identical elements between x and y, i.e., x[i] == y[i] 
+   */
+  bool vector_num_match(hiop::hiopVector& x, hiop::hiopVector& y, const int rank)
+  {
+    const local_ordinal_type Nx = x.get_size();
+    int fail = 0;
+    x.setToConstant(one);
+    y.setToConstant(one);
+    
+    real_type actual = x.num_match(y);
+    real_type expected = Nx;
+    
+    fail += !isEqual(expected, actual);
+
+    if(rank == 0) {
+      setLocalElement(&x, getLocalSize(&x) - 1, two);
+    }
+    actual = x.num_match(y);
+    expected = Nx - 1;
+    fail += !isEqual(expected, actual);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &x);
+  }
+
+  /**
+   * @brief Test that hiop correctly processes variable bounds
+   * 
+   * @note This is local method only
+   */
+  bool vector_process_bounds(hiop::hiopVector& xl,
+                             hiop::hiopVector& xu,
+                             hiop::hiopVector& ixl,
+                             hiop::hiopVector& ixu,
+                             const int rank = 0)
+  {
+    const local_ordinal_type N = getLocalSize(&xl);
+    assert(N == getLocalSize(&xu));
+    assert(N == getLocalSize(&ixl));
+    assert(N == getLocalSize(&ixu));
+    assert(N >= 3); // only test N>=3
+    int fail = 0;
+ 
+    int n_low = 0;
+    int n_upp = 0;
+    int n_lu = 0;
+    int n_fixed = 0;
+    double fixed_var_tol = 1e-8;
+
+    // xl = [1, .., 1, -inf]
+    xl.setToConstant(one);
+    setLocalElement(&xl, N-1, -one/zero);
+
+    // xl = [inf, 1, 2, .., 2]
+    xu.setToConstant(two);
+    setLocalElement(&xu, 0, one/zero);
+    setLocalElement(&xu, 1, one);
+
+    xl.process_bounds_local(xu, ixl, ixu, n_low, n_upp, n_lu, n_fixed, fixed_var_tol);
+
+    // Check that the last element of rank zero's vector is
+    // zero, and that x_val was added to all other elements
+    fail += verifyAnswer(&ixl,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? 0. : 1.;
+      });
+
+    fail += verifyAnswer(&ixu,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == 0) ? 0. : 1.;
+      });
+    
+    fail += (n_low != N-1);
+    fail += (n_upp != N-1);
+    fail += (n_lu != N-2);
+    fail += (n_fixed != 1);
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &xl);
+  }
+
+  /**
+   * @brief Test that hiop correctly relaxes variable bounds
+   * 
+   * @note This is local method only
+   */
+  bool vector_relax_bounds(hiop::hiopVector& xl,
+                           hiop::hiopVector& xu,
+                           const int rank = 0)
+  {
+    const local_ordinal_type N = getLocalSize(&xl);
+    assert(N == getLocalSize(&xu));
+    int fail = 0;
+
+    double fixed_var_tol = 1e-8;
+    double fixed_var_perturb = 1e-1;
+
+    // xl = [1, .., 1, 2]
+    xl.setToConstant(one);
+    setLocalElement(&xl, N-1, two);
+
+    // xl = [2, .., 2]
+    xu.setToConstant(two);
+
+    xl.relax_bounds_vec(xu, fixed_var_tol, fixed_var_perturb);
+
+    // Check that the last element of rank zero's vector is
+    // zero, and that x_val was added to all other elements
+    fail += verifyAnswer(&xl,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? 1.8 : one;
+      });
+
+    fail += verifyAnswer(&xu,
+      [=] (local_ordinal_type i) -> real_type
+      {
+        return (i == N-1) ? 2.2 : two;
+      });
+
+    printMessage(fail, __func__, rank);
+    return reduceReturn(fail, &xl);
+  }
+
+
   /// Returns element _i_ of vector _x_.
   real_type getLocalElement(hiop::hiopVector* x, local_ordinal_type i)
   {

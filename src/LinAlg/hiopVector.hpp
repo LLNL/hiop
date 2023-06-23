@@ -998,9 +998,57 @@ public:
    * @brief check if `this` vector is identical to `vec`
    *
    * @param[in] vec - vector used to be compared with `this`
-   * @todo: add unit test, or should we remove this function?
+   * @todo: should we remove this function?
    */
   virtual bool is_equal(const hiopVector& vec) const = 0;
+
+  /**
+   * @brief return the numbers of identical elements between two vectors
+   *
+   * @param[in] vec - vector used to be compared with `this`
+   * @post `vec` is not modified
+   */
+  virtual size_type num_match(const hiopVector& vec) const = 0;
+  
+  /**
+   * @brief preprocess bounds in a form supported by the NLP formulation. Returns counts of
+   * the variables with lower, upper, and lower and upper bounds, as well of the fixed 
+   * variables.
+   *
+   * @param[in] this - lower bound of primal variable `x`
+   * @param[in] xu - lower bound of primal variable `x`
+   * @param[in] ixl - index of the variables with lower bounds
+   * @param[in] ixu - index of the variables with upper bounds
+   * @param[out] n_bnds_low - number of variables with lower bounds only
+   * @param[out] n_bnds_upp - number of variables with upper bounds only
+   * @param[out] n_bnds_lu - number of variables with both lower and upper bounds
+   * @param[out] n_fixed_vars - number of fixed variables
+   * @param[in] fixed_var_tol - tolerance used to define fixed variables
+   * 
+   * @pre this is a local method
+   */
+  virtual bool process_bounds_local(const hiopVector& xu,
+                                    hiopVector& ixl,
+                                    hiopVector& ixu,
+                                    size_type& n_bnds_low,
+                                    size_type& n_bnds_upp,
+                                    size_type& n_bnds_lu,
+                                    size_type& n_fixed_vars,
+                                    const double& fixed_var_tol) = 0;
+
+  /**
+   * @brief relax variable bounds
+   *
+   * @param[in] this - lower bound of primal variable `x`
+   * @param[in] xu - lower bound of primal variable `x`
+   * @param[in] fixed_var_tol - tolerance used to define fixed variables
+   * @param[in] fixed_var_perturb - perturbation added to bounds
+   * 
+   * @pre this is a local method
+   */
+  virtual void relax_bounds_vec(hiopVector& xu,
+                                const double& fixed_var_tol,
+                                const double& fixed_var_perturb) = 0;
 
 protected:
   size_type n_; //we assume sequential data
