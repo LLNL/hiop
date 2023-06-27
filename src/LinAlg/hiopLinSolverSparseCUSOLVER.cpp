@@ -81,8 +81,11 @@ namespace hiop
   {
     solver_ = new ReSolve::RefactorizationSolver(n);
     rhs_    = new double[n]{ 0 };
-    // std::cout << "n: " << solver_->n_ << ", nnz: " << solver_->nnz_ << "\n";
 
+    // Set verbosity of ReSolve based on HiOp verbosity
+    if(nlp_->options->GetInteger("verbosity_level") >= 3) {
+      solver_->set_silent_output(false);
+    }
 
     // Select matrix ordering
     int ordering = 1;

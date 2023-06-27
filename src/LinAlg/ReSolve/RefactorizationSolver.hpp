@@ -57,7 +57,7 @@
 #pragma once
 
 #include "klu.h"
-#include "hiop_cusolver_defs.hpp"
+#include "resolve_cusolver_defs.hpp"
 #include <string>
 
 
@@ -136,6 +136,11 @@ public:
     return use_ir_;
   }
 
+  void set_silent_output(bool silent_output)
+  {
+    silent_output_ = silent_output;
+  }
+  
   /**
    * @brief Set up factorization of the first linear system.
    * 
@@ -190,6 +195,7 @@ private:
   std::string fact_;
   std::string refact_;
   std::string use_ir_;
+  bool silent_output_{ true };
 
   /** needed for cuSolver **/
 

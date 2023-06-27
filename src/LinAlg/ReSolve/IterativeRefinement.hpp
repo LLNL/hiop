@@ -9,7 +9,7 @@
 #pragma once
 
 #include "klu.h"
-#include "hiop_cusolver_defs.hpp"
+#include "resolve_cusolver_defs.hpp"
 #include <string>
 
 namespace ReSolve {

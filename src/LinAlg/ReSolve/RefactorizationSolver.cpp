@@ -273,18 +273,17 @@ namespace ReSolve {
             if(use_ir_ == "yes") {
               // Set tolerance based on barrier parameter mu
               ir_->set_tol(tol);
-              // TODO: Implement ReSolve logging system to output these messages
-              // nlp_->log->printf(hovScalars,
-              //                   "Running iterative refinement with tol %e\n", tol);
+
               checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
               ir_->fgmres(devr_, devx_);
-              // TODO: Implement ReSolve logging system to output these messages
-              // nlp_->log->printf(hovScalars, 
-              //                   "\t fgmres: init residual norm  %e final residual norm %e number of iterations %d\n", 
-              //                   ir_->getInitialResidalNorm(), 
-              //                   ir_->getFinalResidalNorm(), 
-              //                   ir_->getFinalNumberOfIterations());
+              if(!silent_output_ && (ir_->getFinalResidalNorm() > tol)) {
+                std::cout << "Running iterative refinement with tol " << tol << "\n";
+                std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
+                          << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
+                          << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
+              }
+
             }
             checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
 
