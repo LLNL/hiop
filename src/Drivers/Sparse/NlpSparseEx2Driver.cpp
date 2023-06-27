@@ -241,7 +241,7 @@ int main(int argc, char **argv)
       nlp.options->SetStringValue("compute_mode", "hybrid");
       nlp.options->SetIntegerValue("ir_outer_maxit", 0);
       nlp.options->SetIntegerValue("ir_inner_conv_cond", 2);
-      nlp.options->SetStringValue("ir_inner_cusolver_gs_scheme", "cgs2");
+      nlp.options->SetStringValue("ir_inner_gs_scheme", "cgs2");
       nlp.options->SetNumericValue("ir_inner_tol", 1e-8);
     }
     if(use_ginkgo) {

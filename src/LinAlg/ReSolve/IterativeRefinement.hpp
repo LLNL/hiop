@@ -42,6 +42,7 @@ public:
   int getFinalNumberOfIterations();
   double getFinalResidalNorm();
   double getInitialResidalNorm();
+  double getBNorm();
   // this is public on purpose, can be used internally or outside, to compute the residual.
   void fgmres(double* d_x, double* d_b);
   void set_tol(double tol) {tol_ = tol;} ///< Set tolerance for the Krylov solver
@@ -94,6 +95,7 @@ private:
 
   double final_residual_norm_;
   double initial_residual_norm_;
+  double bnorm_;
   int fgmres_iters_;
 
   // Solver parameters

@@ -981,7 +981,7 @@ void hiopOptionsNLP::register_options()
                         1e-1,
                         "(F)GMRES tolerance (default is 1e-12). ");
 
-    register_num_option("ir_inner_cusolver_tol_min",
+    register_num_option("ir_inner_tol_min",
                         1e-6,
                         1e-16,
                         1e-1,
@@ -991,7 +991,7 @@ void hiopOptionsNLP::register_options()
                         0,
                         2,
                         "FGMRES convergence check for IR (default is 0) ");
-    register_num_option("ir_inner_cusolver_tol_factor",
+    register_num_option("ir_inner_tol_factor",
                         1e-2,
                         1e-20,
                         1.0,
@@ -1006,7 +1006,7 @@ void hiopOptionsNLP::register_options()
 {
     vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
-    register_str_option("ir_inner_cusolver_gs_scheme",
+    register_str_option("ir_inner_gs_scheme",
                         default_value,
                         range,
                         "Gram-Schmidt orthogonalization version for FMGRES. "

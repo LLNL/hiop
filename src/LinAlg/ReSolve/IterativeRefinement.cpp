@@ -212,6 +212,11 @@ namespace ReSolve {
     return initial_residual_norm_;
   }
 
+  double IterativeRefinement::getBNorm()
+  {
+    return bnorm_;
+  }
+
   int IterativeRefinement::getFinalNumberOfIterations()
   {
     return fgmres_iters_;
@@ -268,6 +273,7 @@ namespace ReSolve {
     //rnorm = ||V_1||
     rnorm = sqrt(rnorm);
     bnorm = sqrt(bnorm);
+    bnorm_ = bnorm;
     while(outer_flag) {
       // check if maybe residual is already small enough?
       if(it == 0) {

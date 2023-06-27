@@ -226,7 +226,7 @@ int main(int argc, char **argv)
     nlp.options->SetNumericValue("ir_inner_tol", 1e-8);
     nlp.options->SetIntegerValue("ir_inner_restart", 20);
     nlp.options->SetIntegerValue("ir_inner_conv_cond", 2);
-    nlp.options->SetStringValue("ir_inner_cusolver_gs_scheme", "cgs2");
+    nlp.options->SetStringValue("ir_inner_gs_scheme", "cgs2");
     nlp.options->SetStringValue("compute_mode", "hybrid");
     // LU solver needs to use inertia free approach
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");

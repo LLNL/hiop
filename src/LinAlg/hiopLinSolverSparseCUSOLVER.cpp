@@ -163,7 +163,7 @@ namespace hiop
                             solver_->ir()->tol());
           solver_->ir()->tol() = 1e-12;
         }
-        solver_->ir()->orth_option() = nlp_->options->GetString("ir_inner_cusolver_gs_scheme");
+        solver_->ir()->orth_option() = nlp_->options->GetString("ir_inner_gs_scheme");
 
         /* 0) "Standard" GMRES and FGMRES (Saad and Schultz, 1986, Saad, 1992) use Modified Gram-Schmidt ("mgs") to keep the Krylov vectors orthogonal. 
          * Modified Gram-Schmidt requires k synchronization (due to inner products) in iteration k and this becomes a scaling bottleneck for 
@@ -261,8 +261,8 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
     // Set IR tolerance to be `factor*mu` and no less than `mintol`
-    double factor = nlp_->options->GetNumeric("ir_inner_cusolver_tol_factor");
-    double mintol = nlp_->options->GetNumeric("ir_inner_cusolver_tol_min");
+    double factor = nlp_->options->GetNumeric("ir_inner_tol_factor");
+    double mintol = nlp_->options->GetNumeric("ir_inner_tol_min");
     double ir_tol = std::min(factor*(nlp_->mu()), mintol);
     nlp_->log->printf(hovScalars,
                       "Barrier parameter mu = %g, IR tolerance set to %g.\n", nlp_->mu(), ir_tol);

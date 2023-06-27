@@ -277,8 +277,10 @@ namespace ReSolve {
               checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
               ir_->fgmres(devr_, devx_);
-              if(!silent_output_ && (ir_->getFinalResidalNorm() > tol)) {
-                std::cout << "Running iterative refinement with tol " << tol << "\n";
+              if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
+                std::cout << "[Warning] Iterative refinement did not converge!\n";
+                std::cout << "\t Iterative refinement tolerance " << tol << "\n";
+                std::cout << "\t Relative solution error        " << ir_->getFinalResidalNorm()/ir_->getBNorm() << "\n";
                 std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
                           << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
                           << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
