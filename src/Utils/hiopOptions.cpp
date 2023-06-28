@@ -860,12 +860,12 @@ void hiopOptionsNLP::register_options()
   // Choose direct linear solver for sparse KKT linearizations
   //
   // Notes:
-  //  - When KKTLinsys is 'full' (unsymmetric), only cusolver-lu, strumpack, and pardiso are available (and will be
+  //  - When KKTLinsys is 'full' (unsymmetric), only resolve, strumpack, and pardiso are available (and will be
   // selected in this order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse').
   //  - For KKTLinsys 'xycyd' and 'xdycyd'  (symmetric indefinite),
   //     - 'cpu' compute mode: ma57, pardiso, strumpack, and ginko are available and will be selected in this
   //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
-  //     - 'hybrid' compute mode: cusolver-lu, strumpack, ma57, and pardiso and will be selected in this
+  //     - 'hybrid' compute mode: resolve, strumpack, ma57, and pardiso and will be selected in this
   //     order under 'auto' or incompatible/unsupported value for 'linear_solver_sparse'
   //     - 'gpu' compute mode: not supported with the above values for 'KKTLinsys'
   // - For KKTLinsys 'condensed' and `normal` (symmetric positive definite system), under
@@ -875,7 +875,7 @@ void hiopOptionsNLP::register_options()
   //     - 'gpu' compute mode: work in progress
 
   {
-    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "cusolver-lu", "ginkgo", "cusolver-chol"};
+    vector<string> range {"auto", "ma57", "pardiso", "strumpack", "resolve", "ginkgo", "cusolver-chol"};
 
     register_str_option("linear_solver_sparse",
                         "auto",
@@ -889,7 +889,7 @@ void hiopOptionsNLP::register_options()
   //  - when GPU mode is on, STRUMPACK is chosen by 'auto' if available
   //  - choosing option ma57 or pardiso with GPU being on, it results in no device being used in the linear solve!
   {
-    vector<string> range {"auto", "ma57", "pardiso", "cusolver-lu", "strumpack", "ginkgo"};
+    vector<string> range {"auto", "ma57", "pardiso", "resolve", "strumpack", "ginkgo"};
 
     register_str_option("duals_init_linear_solver_sparse",
                         "auto",
@@ -948,21 +948,21 @@ void hiopOptionsNLP::register_options()
                         "`amd-ssparse` and `colamd-ssparse` AMD and column AMD from Suite Sparse library. ");
   }
 
-  // cusolver_lu factorization options
+  // resolve factorization options
   {
     vector<std::string> range = {"klu"};
     auto default_value = range[0];
-    register_str_option("cusolver_lu_factorization",
+    register_str_option("resolve_factorization",
                         default_value,
                         range,
                         "So far, only 'klu' option is available. ");
   }
 
-  // cusolver_lu refactorization options
+  // resolve refactorization options
   {
     vector<std::string> range = {"glu", "rf"};
     auto default_value = range[0];
-    register_str_option("cusolver_lu_refactorization",
+    register_str_option("resolve_refactorization",
                         default_value,
                         range,
                         "Numerical refactorization function after sparsity pattern of factors is computed. "
@@ -981,6 +981,22 @@ void hiopOptionsNLP::register_options()
                         1e-1,
                         "(F)GMRES tolerance (default is 1e-12). ");
 
+    register_num_option("ir_inner_tol_min",
+                        1e-6,
+                        1e-16,
+                        1e-1,
+                        "FGMRES minimum tolerance (default is 1e-6). ");
+   register_int_option("ir_inner_conv_cond",
+                        0,
+                        0,
+                        2,
+                        "FGMRES convergence check for IR (default is 0) ");
+    register_num_option("ir_inner_tol_factor",
+                        1e-2,
+                        1e-20,
+                        1.0,
+                        "FGMRES tolerance factor multiplying mu. (default 1e-2)");
+
     register_int_option("ir_inner_maxit",
                         50,
                         0,
@@ -990,7 +1006,7 @@ void hiopOptionsNLP::register_options()
 {
     vector<std::string> range = {"mgs", "cgs2", "mgs_two_synch", "mgs_pm"};
     auto default_value = range[0];
-    register_str_option("ir_inner_cusolver_gs_scheme",
+    register_str_option("ir_inner_gs_scheme",
                         default_value,
                         range,
                         "Gram-Schmidt orthogonalization version for FMGRES. "
@@ -1322,7 +1338,7 @@ void hiopOptionsNLP::ensure_consistence()
   auto kkt_linsys = GetString("KKTLinsys");
   auto sol_sp = GetString("linear_solver_sparse");
   if(kkt_linsys == "full") {
-    if(sol_sp!="cusolver-lu" && sol_sp!="pardiso" && sol_sp!="strumpack" && sol_sp!="auto") {
+    if(sol_sp!="resolve" && sol_sp!="pardiso" && sol_sp!="strumpack" && sol_sp!="auto") {
       if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid with option 'KKTLinsys=full'. "
@@ -1346,7 +1362,7 @@ void hiopOptionsNLP::ensure_consistence()
   }
 
 #ifndef HIOP_USE_CUDA
-  if(sol_sp == "cusolver-lu" || sol_sp == "cusolver-chol") {
+  if(sol_sp == "resolve" || sol_sp == "cusolver-chol") {
     if(is_user_defined("linear_solver_sparse")) {
         log_printf(hovWarning,
                    "The option 'linear_solver_sparse=%s' is not valid without CUDA support enabled."
@@ -1471,7 +1487,7 @@ void hiopOptionsNLP::ensure_consistence()
     }
   }
 
-  // use inertia-free approach if 1) solver is strumpack or cusolver-lu, or 2) if linsys is full
+  // use inertia-free approach if 1) solver is strumpack or resolve, or 2) if linsys is full
   if(GetString("KKTLinsys")=="full") {
     if(GetString("fact_acceptor")=="inertia_correction") {
       if(is_user_defined("fact_acceptor")) {
@@ -1482,7 +1498,7 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("fact_acceptor", "inertia_free");
     }
-  } else if(GetString("linear_solver_sparse") == "strumpack" || GetString("linear_solver_sparse") == "cusolver-lu") {
+  } else if(GetString("linear_solver_sparse") == "strumpack" || GetString("linear_solver_sparse") == "resolve") {
     if(GetString("fact_acceptor")=="inertia_correction") {
       if(is_user_defined("fact_acceptor") && is_user_defined("linear_solver_sparse") ) {
         log_printf(hovWarning,

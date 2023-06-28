@@ -57,8 +57,8 @@
 #ifdef HIOP_USE_PARDISO
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
-#ifdef HIOP_USE_CUSOLVER_LU
-#include "hiopLinSolverSparseCUSOLVER.hpp"
+#ifdef HIOP_USE_RESOLVE
+#include "hiopLinSolverSparseReSolve.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
 #include "hiopLinSolverSparseGinkgo.hpp"
@@ -333,14 +333,14 @@ namespace hiop
         assert(compute_mode != "gpu" &&
                "KKT_SPARSE_XYcYd linsys: GPU compute mode not supported at this time.");
 
-        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "cusolver-lu") {
-#if defined(HIOP_USE_CUSOLVER_LU)
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
-          linsol_actual = "CUSOLVER-LU";
+        if( (nullptr == linSys_ && linear_solver == "auto") || linear_solver == "resolve") {
+#if defined(HIOP_USE_RESOLVE)
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
+          linsol_actual = "ReSolve";
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
@@ -692,20 +692,20 @@ namespace hiop
 
         //our first choice is cuSolver on hybrid compute mode
         assert(nullptr == linSys_);
-        if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER_LU)
-          actual_lin_solver = "CUSOLVER-LU";
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+        if(linear_solver == "resolve" || linear_solver == "auto") {
+#if defined(HIOP_USE_RESOLVE)
+          actual_lin_solver = "ReSolve";
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XDYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
           }
 #endif
-        } //end cusolver-lu
+        } //end resolve
 
         if(nullptr == linSys_ && (linear_solver == "strumpack" || linear_solver == "auto")) {
 #if defined(HIOP_USE_STRUMPACK)
@@ -764,23 +764,23 @@ namespace hiop
  //       assert(false == safe_mode_);
         assert(nullptr == linSys_);
         
-        if(linear_solver == "cusolver-lu" || linear_solver == "auto") {
-#if defined(HIOP_USE_CUSOLVER_LU)        
-          linSys_ = new hiopLinSolverSymSparseCUSOLVERGPU(n, nnz, nlp_);
+        if(linear_solver == "resolve" || linear_solver == "auto") {
+#if defined(HIOP_USE_RESOLVE)        
+          linSys_ = new hiopLinSolverSymSparseReSolveGPU(n, nnz, nlp_);
           nlp_->log->printf(hovScalars,
-                            "KKT_SPARSE_XDYcYd linsys: alloc CUSOLVER-LU size %d (%d cons) (gpu)\n",
+                            "KKT_SPARSE_XDYcYd linsys: alloc ReSolve size %d (%d cons) (gpu)\n",
                             n,
                             neq+nineq);
           auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
           if(fact_acceptor_ic) {
             nlp_->log->printf(hovError,
-                              "KKT_SPARSE_XDYcYd linsys with CUSOLVER-LU does not support inertia correction. "
+                              "KKT_SPARSE_XDYcYd linsys with ReSolve does not support inertia correction. "
                               "Please set option 'fact_acceptor' to 'inertia_free'.\n");
             assert(false);
             return nullptr;
           }
 #endif
-        } //end cusolver-lu
+        } //end resolve
       } // end of compute mode gpu
     }
     assert(linSys_&& "KKT_SPARSE_XDYcYd linsys: cannot instantiate backend linear solver");

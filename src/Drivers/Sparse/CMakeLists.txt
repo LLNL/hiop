@@ -84,7 +84,7 @@ if(HIOP_USE_GINKGO)
 endif(HIOP_USE_GINKGO)
 
 if(HIOP_USE_RAJA AND HIOP_USE_GPU AND HIOP_USE_CUDA)
-  add_test(NAME NlpSparseRaja2_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:NlpSparseRajaEx2.exe> 500 -selfcheck ")
+  add_test(NAME NlpSparseRaja2_1 COMMAND ${RUNCMD} bash -c "$<TARGET_FILE:NlpSparseRajaEx2.exe>" "500" "-cusolver" "-inertiafree" "-selfcheck ")
 endif()
 
 add_test(NAME NlpSparse3_1 COMMAND ${RUNCMD} "$<TARGET_FILE:NlpSparseEx3.exe>" "500" "-selfcheck")

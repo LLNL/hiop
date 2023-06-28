@@ -140,9 +140,9 @@ static bool parse_arguments(int argc,
 #endif
 
 // If HiOp is built without CUDA de-select cuSOLVER.
-#ifndef HIOP_USE_CUSOLVER_LU
+#ifndef HIOP_USE_RESOLVE
   if(use_cusolver) {
-    printf("HiOp built without support for cuSOLVER-LU. ");
+    printf("HiOp built without support for ReSolve. ");
     printf("Using default linear solver ...\n");
     use_cusolver = false;
   }
@@ -220,12 +220,13 @@ int main(int argc, char **argv)
   if(use_cusolver) {
     nlp.options->SetStringValue("duals_init", "zero");
     nlp.options->SetStringValue("linsol_mode", "speculative");
-    nlp.options->SetStringValue("linear_solver_sparse", "cusolver-lu");
-    nlp.options->SetStringValue("cusolver_lu_refactorization", "rf");
+    nlp.options->SetStringValue("linear_solver_sparse", "resolve");
+    nlp.options->SetStringValue("resolve_refactorization", "rf");
     nlp.options->SetIntegerValue("ir_inner_maxit", 100);
-    nlp.options->SetNumericValue("ir_inner_tol", 1e-16);
+    nlp.options->SetNumericValue("ir_inner_tol", 1e-8);
     nlp.options->SetIntegerValue("ir_inner_restart", 20);
-    nlp.options->SetStringValue("ir_inner_cusolver_gs_scheme", "mgs_pm");
+    nlp.options->SetIntegerValue("ir_inner_conv_cond", 2);
+    nlp.options->SetStringValue("ir_inner_gs_scheme", "cgs2");
     nlp.options->SetStringValue("compute_mode", "hybrid");
     // LU solver needs to use inertia free approach
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");

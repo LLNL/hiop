@@ -65,7 +65,7 @@
 
 #include "hiopVector.hpp"
 
-#include "hiop_cusolver_defs.hpp"
+#include <cublas_v2.h>
 
 namespace hiop
 {

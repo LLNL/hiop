@@ -11,7 +11,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSparseGinkgo.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
-  hiopLinSolverSparseCUSOLVER.hpp
+  hiopLinSolverSparseReSolve.hpp
   hiopLinSolverUMFPACKZ.hpp
   hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
@@ -98,7 +98,7 @@ set(hiopLinAlg_PARDISO_SRC
 )
 
 set(hiopLinAlg_CUSOLVER_LU_SRC
-  hiopLinSolverSparseCUSOLVER.cpp
+  hiopLinSolverSparseReSolve.cpp
 )
 
 set(hiopLinAlg_CUSOLVER_CHOL_SRC
@@ -108,9 +108,7 @@ set(hiopLinAlg_CUSOLVER_CHOL_SRC
 set(hiopLinAlg_CUDASPARSEKERNELS_SRC
   MatrixSparseCsrCudaKernels.cu
 )
-set(hiopLinAlg_FGMRESKERNELS_SRC
-  KrylovSolverKernels.cu
-)
+
 set(hiopLinAlg_CUDASPARSE_SRC
   hiopMatrixSparseCsrCuda.cpp
 )
@@ -150,15 +148,14 @@ if(HIOP_SPARSE)
     if(HIOP_USE_PARDISO)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_PARDISO_SRC})
     endif(HIOP_USE_PARDISO)
-    if(HIOP_USE_CUSOLVER_LU)
+    if(HIOP_USE_RESOLVE)
+      add_subdirectory(ReSolve) 
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_LU_SRC})
       set_source_files_properties(${hiopLinAlg_CUSOLVER_LU_SRC} PROPERTIES LANGUAGE CUDA)
-    endif(HIOP_USE_CUSOLVER_LU)
+    endif(HIOP_USE_RESOLVE)
     if(HIOP_USE_CUDA)
       list(APPEND hiopLinAlg_SRC ${hiopLinAlg_CUSOLVER_CHOL_SRC})
       set_source_files_properties(${hiopLinAlg_CUSOLVER_CHOL_SRC} PROPERTIES LANGUAGE CUDA)
-      set_source_files_properties(${hiopLinAlg_FGMRESKERNELS_SRC} PROPERTIES LANGUAGE CUDA)
-      list(APPEND hiopLinAlg_SRC ${hiopLinAlg_FGMRESKERNELS_SRC})
     endif(HIOP_USE_CUDA)
     
     if(HIOP_USE_GINKGO)
@@ -222,4 +219,8 @@ install(
   )
 
 add_library(hiopLinAlg OBJECT ${hiopLinAlg_SRC})
+if(HIOP_USE_RESOLVE)
+   target_link_libraries(hiop_tpl INTERFACE ReSolve)
+   install(TARGETS ReSolve EXPORT hiop-targets)
+endif()
 target_link_libraries(hiopLinAlg PRIVATE hiop_tpl)
