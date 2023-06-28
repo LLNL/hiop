@@ -133,8 +133,8 @@ protected:
   hiopNlpDenseConstraints* nlp;
   mutable std::vector<hiopVector*> a;
   mutable std::vector<hiopVector*> b;
-  hiopVectorPar *yk;
-  hiopVectorPar *sk;
+  hiopVector* yk;
+  hiopVector* sk;
 private:
   hiopVector* DhInv; //(B0+Dk)^{-1}
   // needed in timesVec (for residual checking in solveCompressed.
