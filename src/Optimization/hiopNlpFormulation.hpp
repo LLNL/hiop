@@ -288,9 +288,6 @@ public:
     return num_ranks_;
   }
 #endif
-
-  double mu() const {return mu_copy_;}
-  void set_mu(double mu) {mu_copy_ = mu;}
 protected:
   /* Preprocess bounds in a form supported by the NLP formulation. Returns counts of
    * the variables with lower, upper, and lower and lower bounds, as well of the fixed 
@@ -401,8 +398,6 @@ protected:
   hiopVector* temp_eq_;
   hiopVector* temp_ineq_;
   hiopVector* temp_x_;
-
-  double mu_copy_;
 
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s)

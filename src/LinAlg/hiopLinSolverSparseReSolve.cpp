@@ -260,15 +260,8 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
-    // Set IR tolerance to be `factor*mu` and no less than `mintol`
-    double factor = nlp_->options->GetNumeric("ir_inner_tol_factor");
-    double mintol = nlp_->options->GetNumeric("ir_inner_tol_min");
-    double ir_tol = std::min(factor*(nlp_->mu()), mintol);
-    nlp_->log->printf(hovScalars,
-                      "Barrier parameter mu = %g, IR tolerance set to %g.\n", nlp_->mu(), ir_tol);
-    // // Debugging output
-    // std::cout << "mu in cusolver = " <<  nlp_->mu() << "\n";
-    // std::cout << "ir tol         = " <<  ir_tol << "\n";
+    // Set IR tolerance
+    double ir_tol = nlp_->options->GetNumeric("ir_inner_tol");
 
     double* dx = x.local_data();
     memcpy(rhs_, dx, n_*sizeof(double));

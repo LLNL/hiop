@@ -114,9 +114,6 @@ public:
   inline void set_logbar_mu(double mu)
   {
     mu_ = mu;
-    nlp_->set_mu(mu); // Save copy of mu in NLP so it is accessible by linear solvers
-    // std::cout << "mu = " << mu_ << "\n";
-    // std::cout << "mu = " << nlp_->mu() << "\n";
   }
 
   /**
