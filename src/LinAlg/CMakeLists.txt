@@ -11,7 +11,7 @@ set(hiopLinAlg_INTERFACE_HEADERS
   hiopLinSolverSparseGinkgo.hpp
   hiopLinSolverSparseSTRUMPACK.hpp
   hiopLinSolverSparsePARDISO.hpp
-  hiopLinSolverSparseCUSOLVER.hpp
+  hiopLinSolverSparseReSolve.hpp
   hiopLinSolverUMFPACKZ.hpp
   hiopLinSolverCholCuSparse.hpp
   hiopMatrix.hpp
@@ -98,7 +98,7 @@ set(hiopLinAlg_PARDISO_SRC
 )
 
 set(hiopLinAlg_CUSOLVER_LU_SRC
-  hiopLinSolverSparseCUSOLVER.cpp
+  hiopLinSolverSparseReSolve.cpp
 )
 
 set(hiopLinAlg_CUSOLVER_CHOL_SRC

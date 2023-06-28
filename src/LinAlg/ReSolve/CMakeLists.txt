@@ -1,7 +1,7 @@
 # Build ReSolve library
 
 set(ReSolve_SRC
-  #hiopLinSolverSparseCUSOLVER.cpp
+  #hiopLinSolverSparseReSolve.cpp
   RefactorizationSolver.cpp
   MatrixCsr.cpp
   IterativeRefinement.cpp

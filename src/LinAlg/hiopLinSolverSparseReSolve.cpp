@@ -46,13 +46,13 @@
 // endorsement purposes.
 
 /**
- * @file hiopLinSolverSparseCUSOLVER.cpp
+ * @file hiopLinSolverSparseReSolve.cpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
  *
  */
 
-#include "hiopLinSolverSparseCUSOLVER.hpp"
+#include "hiopLinSolverSparseReSolve.hpp"
 #include <IterativeRefinement.hpp>
 #include <RefactorizationSolver.hpp>
 #include <MatrixCsr.hpp>

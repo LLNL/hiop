@@ -47,7 +47,7 @@
 // endorsement purposes.
 
 /**
- * @file hiopLinSolverSparseCUSOLVER.hpp
+ * @file hiopLinSolverSparseReSolve.hpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
  *

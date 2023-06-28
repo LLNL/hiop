@@ -58,7 +58,7 @@
 #include "hiopLinSolverSparsePARDISO.hpp"
 #endif
 #ifdef HIOP_USE_RESOLVE
-#include "hiopLinSolverSparseCUSOLVER.hpp"
+#include "hiopLinSolverSparseReSolve.hpp"
 #endif
 #ifdef HIOP_USE_GINKGO
 #include "hiopLinSolverSparseGinkgo.hpp"
