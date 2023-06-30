@@ -160,9 +160,9 @@ private:
   //these are matrices from the compact representation; they are updated at each iteration.
   // more exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]
   //                                 [  L'      -D] [Yt   ]                   
-  hiopMatrixDense *St_;
-  hiopMatrixDense *Yt_; //we store the transpose to easily access columns in S and T
-  hiopMatrixDense *L_;     //lower triangular from the compact representation
+  hiopMatrixDense* St_;
+  hiopMatrixDense* Yt_; //we store the transpose to easily access columns in S and T
+  hiopMatrixDense* L_;     //lower triangular from the compact representation
   hiopVector* D_;       //diag 
   //these are matrices from the representation of the inverse
   hiopMatrixDense* V_;    
@@ -175,10 +175,10 @@ private:
   void updateL(const hiopVector& STy, const double& sTy);
   void updateD(const double& sTy);
   //also stored are the iterate, gradient obj, and Jacobians at the previous optimization iteration
-  hiopIterate *it_prev_;
-  hiopVector *grad_f_prev_;
-  hiopMatrixDense *Jac_c_prev_;
-  hiopMatrixDense *Jac_d_prev_;
+  hiopIterate* it_prev_;
+  hiopVector* grad_f_prev_;
+  hiopMatrixDense* Jac_c_prev_;
+  hiopMatrixDense* Jac_d_prev_;
 
   //internal helpers
   void updateInternalBFGSRepresentation();
@@ -213,7 +213,7 @@ private:
   inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(n_vec1_!=nullptr);
+    assert(n_vec1_ != nullptr);
     assert(n_vec1_->get_size()==n);
 #endif
     return *n_vec1_;
@@ -221,19 +221,19 @@ private:
   inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(n_vec2_!=nullptr);
+    assert(n_vec2_ != nullptr);
     assert(n_vec2_->get_size()==n);
 #endif
     return *n_vec2_;
   }
   inline hiopVector& new_2l_vec1(int l) {
-    if(twol_vec1_!=nullptr && twol_vec1_->get_size()==2*l) {
+    if(twol_vec1_ != nullptr && twol_vec1_->get_size() == 2 * l) {
       return *twol_vec1_;
     }
-    if(twol_vec1_!=nullptr) {
+    if(twol_vec1_ != nullptr) {
       delete twol_vec1_;
     }
-    twol_vec1_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), 2*l);
+    twol_vec1_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), 2 * l);
     return *twol_vec1_;
   }
 private:
@@ -474,9 +474,9 @@ private: //internal methods
   void updateD(const double& sTy);
 private:
   hiopVector* H0_;
-  hiopMatrixDense *St_;
-  hiopMatrixDense *Yt_; //we store the transpose to easily access columns in S and T
-  hiopMatrixDense *R_;
+  hiopMatrixDense* St_;
+  hiopMatrixDense* Yt_; //we store the transpose to easily access columns in S and T
+  hiopMatrixDense* R_;
   hiopVector* D_;
 
   int sigma_update_strategy_;
@@ -484,9 +484,10 @@ private:
   double sigma_safe_max_;
 
   //also stored are the iterate, gradient obj, and Jacobians at the previous iterations
-  hiopIterate *it_prev_;
-  hiopVector *grad_f_prev_;
-  hiopMatrixDense *Jac_c_prev_, *Jac_d_prev_;
+  hiopIterate* it_prev_;
+  hiopVector* grad_f_prev_;
+  hiopMatrixDense* Jac_c_prev_;
+  hiopMatrixDense* Jac_d_prev_;
 
   //internals buffers
   double* buff_kxk_; // size = num_constraints^2 
@@ -513,7 +514,7 @@ private:
   inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(n_vec1_!=nullptr);
+    assert(n_vec1_ != nullptr);
     assert(n_vec1_->get_size()==n);
 #endif
     return *n_vec1_;
@@ -521,7 +522,7 @@ private:
   inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(n_vec2_!=nullptr);
+    assert(n_vec2_ != nullptr);
     assert(n_vec2_->get_size()==n);
 #endif
     return *n_vec2_;

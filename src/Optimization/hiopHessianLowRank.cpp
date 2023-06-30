@@ -108,8 +108,8 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp, int max_mem
 #ifdef HIOP_USE_MPI
   buff_kxk_    = new double[nlp->m() * nlp->m()];
   buff_2lxk_   = new double[nlp->m() * 2 * l_max_];
-  buff1_lxlx3_ = new double[3*l_max_ * l_max_];
-  buff2_lxlx3_ = new double[3*l_max_ * l_max_];
+  buff1_lxlx3_ = new double[3 * l_max_ * l_max_];
+  buff2_lxlx3_ = new double[3 * l_max_ * l_max_];
 #else
    //not needed in non-MPI mode
   buff_kxk_  = nullptr;
@@ -452,7 +452,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   B0DhInv.scale(sigma_);
   matTimesDiagTimesMatTrans_local(StB0DhInvYmL, *St_, B0DhInv, *Yt_);
 #ifdef HIOP_USE_MPI
-  memcpy(buff1_lxlx3_+l*l, StB0DhInvYmL.local_data(), buffsize);
+  memcpy(buff1_lxlx3_ + l * l, StB0DhInvYmL.local_data(), buffsize);
 #else
   //substract L
   StB0DhInvYmL.addMatrix(-1.0, *L_);
