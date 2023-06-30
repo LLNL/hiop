@@ -78,7 +78,7 @@ namespace hiop
 hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_mem_len)
   : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_), matrixChanged(false)
 {
-  DhInv = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+  DhInv = nlp->alloc_primal_vec();
   St = nlp->alloc_multivector_primal(0,l_max);
   Yt = St->alloc_clone(); //faster than nlp->alloc_multivector_primal(...);
   //these are local
@@ -141,6 +141,9 @@ hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_me
   _Vmat = V->alloc_clone();
 #endif
 
+  yk = nlp->alloc_primal_vec();
+  sk = nlp->alloc_primal_vec();
+
 }  
 
 hiopHessianLowRank::~hiopHessianLowRank()
@@ -153,6 +156,8 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(L)  delete L;
   if(D)  delete D;
   if(V)  delete V;
+  if(yk) delete yk;
+  if(sk) delete sk;
 #ifdef HIOP_DEEPCHECKS
   delete _Vmat;
 #endif
@@ -181,6 +186,14 @@ hiopHessianLowRank::~hiopHessianLowRank()
   if(_2l_vec1) delete _2l_vec1;
   if(_V_ipiv_vec) delete[] _V_ipiv_vec;
   if(_V_work_vec) delete _V_work_vec;
+
+  for(auto* it: a) {
+    delete it;
+  }
+
+  for(auto* it: b) {
+    delete it;
+  }
 }
 
 
@@ -230,7 +243,6 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 {
   nlp->runStats.tmSolverInternal.start();
 
-  const hiopVectorPar&   grad_f_curr= dynamic_cast<const hiopVectorPar&>(grad_f_curr_);
   const hiopMatrixDense& Jac_c_curr = dynamic_cast<const hiopMatrixDense&>(Jac_c_curr_);
   const hiopMatrixDense& Jac_d_curr = dynamic_cast<const hiopMatrixDense&>(Jac_d_curr_);
 
@@ -242,7 +254,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
 #endif
   //on first call l_curr=-1
   if(l_curr>=0) {
-    size_type n=grad_f_curr.get_size();
+    size_type n=grad_f_curr_.get_size();
     //compute s_new = x_curr-x_prev
     hiopVector& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
     double s_infnorm=s_new.infnorm();
@@ -251,7 +263,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       //compute y_new = \grad J(x_curr,\lambda_curr) - \grad J(x_prev, \lambda_curr) (yes, J(x_prev, \lambda_curr))
       //              = graf_f_curr-grad_f_prev + (Jac_c_curr-Jac_c_prev)yc_curr+ (Jac_d_curr-Jac_c_prev)yd_curr - zl_curr*s_new + zu_curr*s_new
       hiopVector& y_new = new_n_vec2(n);
-      y_new.copyFrom(grad_f_curr); 
+      y_new.copyFrom(grad_f_curr_); 
       y_new.axpy(-1., *_grad_f_prev);
       Jac_c_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yc);
       _Jac_c_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yc); //!opt if nlp->Jac_c_isLinear no need for the multiplications
@@ -328,14 +340,14 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
     }
 
     //save this stuff for next update
-    _it_prev->copyFrom(it_curr);  _grad_f_prev->copyFrom(grad_f_curr); 
+    _it_prev->copyFrom(it_curr);  _grad_f_prev->copyFrom(grad_f_curr_); 
     _Jac_c_prev->copyFrom(Jac_c_curr); _Jac_d_prev->copyFrom(Jac_d_curr);
     nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: storing the iteration info as 'previous'\n", s_infnorm);
 
   } else {
     //this is the first optimization iterate, just save the iterate and exit
     if(NULL==_it_prev)     _it_prev     = it_curr.new_copy();
-    if(NULL==_grad_f_prev) _grad_f_prev = grad_f_curr.new_copy();
+    if(NULL==_grad_f_prev) _grad_f_prev = grad_f_curr_.new_copy();
     if(NULL==_Jac_c_prev)  _Jac_c_prev  = Jac_c_curr.new_copy();
     if(NULL==_Jac_d_prev)  _Jac_d_prev  = Jac_d_curr.new_copy();
 
@@ -443,12 +455,10 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
  * M is is nxn, S,Y are nxl, V is upper triangular 2lx2l, and x is nx1
  * Remember we store Yt=Y^T and St=S^T
  */  
-void hiopHessianLowRank::solve(const hiopVector& rhs_, hiopVector& x_)
+void hiopHessianLowRank::solve(const hiopVector& rhsx, hiopVector& x)
 {
   if(matrixChanged) updateInternalBFGSRepresentation();
 
-  hiopVectorPar& x = dynamic_cast<hiopVectorPar&>(x_);
-  const hiopVectorPar& rhsx = dynamic_cast<const hiopVectorPar&>(rhs_);
   size_type n=St->n(), l=St->m();
 #ifdef HIOP_DEEPCHECKS
   assert(rhsx.get_size()==n);
@@ -696,20 +706,23 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
   
   hiopMatrixDense& sol = rhs; //matrix of solutions
   /// TODO: get rid of these uses of specific hiopVector implementation
-  hiopVectorPar x(rhs.n()); //again, keep in mind rhs is transposed
-  hiopVectorPar r(rhs.n());
+  hiopVector* x = LinearAlgebraFactory::create_vector("DEFAULT", rhs.n()); //again, keep in mind rhs is transposed
+  hiopVector* r = LinearAlgebraFactory::create_vector("DEFAULT", rhs.n());
+
   double resnorm=0.0;
   for(int k=0; k<rhs.m(); k++) {
-    rhs_saved->getRow(k, r);
-    sol.getRow(k,x);
-    double nrmrhs=r.infnorm();//nrmrhs=.0;
-    _Vmat->timesVec(1.0, r, -1.0, x);
-    double nrmres=r.infnorm();
+    rhs_saved->getRow(k, *r);
+    sol.getRow(k,*x);
+    double nrmrhs = r->infnorm();//nrmrhs=.0;
+    _Vmat->timesVec(1.0, *r, -1.0, *x);
+    double nrmres = r->infnorm();
     if(nrmres>1e-8)
       nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large resid norm=%g\n", k, nrmres);
     if(nrmres/(nrmrhs+1)>resnorm) resnorm=nrmres/(nrmrhs+1);
   }
   nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV mult-rhs: rel resid norm=%g\n", resnorm);
+  delete x;
+  delete r;
   delete rhs_saved;
 #endif
 
@@ -934,22 +947,29 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     nlp->log->write("y_in=", y, hovMatrices);
   }
 
-  hiopVectorPar *yk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
-  hiopVectorPar *sk=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
   //allocate and compute a_k and b_k
-  vector<hiopVector*> a(l_curr), b(l_curr);
+  a.resize(l_curr, nullptr);
+  b.resize(l_curr, nullptr);
   int n_local = Yt->get_local_size_n();
   for(int k=0; k<l_curr; k++) {
     //bk=yk/sqrt(yk'*sk)
     yk->copyFrom(Yt->local_data() + k*n_local);
     sk->copyFrom(St->local_data() + k*n_local);
     double skTyk=yk->dotProductWith(*sk);
-    assert(skTyk>0);
-    b[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+    
+    if(skTyk < std::numeric_limits<double>::epsilon()) {
+      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_k^T*y_k||=%12.6e too small..."
+                       " set it to machine precision = %12.6e \n", skTyk, std::numeric_limits<double>::epsilon());
+      skTyk = std::numeric_limits<double>::epsilon();
+    }
+
+    if(a[k] == nullptr && b[k] == nullptr) {
+      b[k] = nlp->alloc_primal_vec();
+      a[k] = nlp->alloc_primal_vec();
+    }
+    
     b[k]->copyFrom(*yk);
     b[k]->scale(1/sqrt(skTyk));
-
-    a[k]=dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
 
     //compute ak by an inner loop
     a[k]->copyFrom(*sk);
@@ -986,13 +1006,6 @@ void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, c
     nlp->log->write("y_out=", y, hovMatrices);
   }
 
-  for(vector<hiopVector*>::iterator it=a.begin(); it!=a.end(); ++it) 
-    delete *it;
-  for(vector<hiopVector*>::iterator it=b.begin(); it!=b.end(); ++it) 
-    delete *it;
-
-  delete yk;
-  delete sk;
 }
 
 void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x)
@@ -1100,7 +1113,7 @@ hiopHessianInvLowRank_obsolette::hiopHessianInvLowRank_obsolette(hiopNlpDenseCon
   const hiopNlpDenseConstraints* nlp = dynamic_cast<const hiopNlpDenseConstraints*>(nlp_);
   //  assert(nlp==NULL && "only NLPs with a small number of constraints are supported by HessianLowRank");
 
-  H0 = dynamic_cast<hiopVectorPar*>(nlp->alloc_primal_vec());
+  H0 = nlp->alloc_primal_vec();
   St = nlp->alloc_multivector_primal(0,l_max);
   Yt = St->alloc_clone(); //faster than nlp->alloc_multivector_primal(...);
   //these are local
@@ -1169,7 +1182,6 @@ bool hiopHessianInvLowRank_obsolette::
 update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
        const hiopMatrix& Jac_c_curr_, const hiopMatrix& Jac_d_curr_)
 {
-  const hiopVectorPar&   grad_f_curr= dynamic_cast<const hiopVectorPar&>(grad_f_curr_);
   const hiopMatrixDense& Jac_c_curr = dynamic_cast<const hiopMatrixDense&>(Jac_c_curr_);
   const hiopMatrixDense& Jac_d_curr = dynamic_cast<const hiopMatrixDense&>(Jac_d_curr_);
 
@@ -1181,7 +1193,7 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 #endif
 
   if(l_curr>0) {
-    size_type n=grad_f_curr.get_size();
+    size_type n=grad_f_curr_.get_size();
     //compute s_new = x_curr-x_prev
     hiopVector& s_new = new_n_vec1(n);  s_new.copyFrom(*it_curr.x); s_new.axpy(-1.,*_it_prev->x);
     double s_infnorm=s_new.infnorm();
@@ -1190,7 +1202,7 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
       //compute y_new = \grad J(x_curr,\lambda_curr) - \grad J(x_prev, \lambda_curr) (yes, J(x_prev, \lambda_curr))
       //              = graf_f_curr-grad_f_prev + (Jac_c_curr-Jac_c_prev)yc_curr+ (Jac_d_curr-Jac_c_prev)yd_curr - zl_curr*s_new + zu_curr*s_new
       hiopVector& y_new = new_n_vec2(n);
-      y_new.copyFrom(grad_f_curr); 
+      y_new.copyFrom(grad_f_curr_); 
       y_new.axpy(-1., *_grad_f_prev);
       Jac_c_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yc);
       _Jac_c_prev->transTimesVec(1.0, y_new,-1.0, *it_curr.yc); //!opt if nlp->Jac_c_isLinear no need for the multiplications
@@ -1259,14 +1271,14 @@ update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
     }
 
     //save this stuff for next update
-    _it_prev->copyFrom(it_curr);  _grad_f_prev->copyFrom(grad_f_curr); 
+    _it_prev->copyFrom(it_curr);  _grad_f_prev->copyFrom(grad_f_curr_); 
     _Jac_c_prev->copyFrom(Jac_c_curr); _Jac_d_prev->copyFrom(Jac_d_curr);
     nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianInvLowRank_obsolette: storing the iteration info as 'previous'\n", s_infnorm);
 
   } else {
     //this is the first optimization iterate, just save the iterate and exit
     if(NULL==_it_prev)     _it_prev     = it_curr.new_copy();
-    if(NULL==_grad_f_prev) _grad_f_prev = grad_f_curr.new_copy();
+    if(NULL==_grad_f_prev) _grad_f_prev = grad_f_curr_.new_copy();
     if(NULL==_Jac_c_prev)  _Jac_c_prev  = Jac_c_curr.new_copy();
     if(NULL==_Jac_d_prev)  _Jac_d_prev  = Jac_d_curr.new_copy();
 
@@ -1298,10 +1310,8 @@ bool hiopHessianInvLowRank_obsolette::updateLogBarrierDiagonal(const hiopVector&
  * M is is nxn, S,Y are nxl, R is upper triangular lxl, and X is nx1
  * Remember we store Yt=Y^T and St=S^T
  */  
-void hiopHessianInvLowRank_obsolette::apply(double beta, hiopVector& y_, double alpha, const hiopVector& x_)
+void hiopHessianInvLowRank_obsolette::apply(double beta, hiopVector& y, double alpha, const hiopVector& x)
 {
-  hiopVectorPar& y = dynamic_cast<hiopVectorPar&>(y_);
-  const hiopVectorPar& x = dynamic_cast<const hiopVectorPar&>(x_);
   size_type n=St->n(), l=St->m();
 #ifdef HIOP_DEEPCHECKS
   assert(y.get_size()==n);

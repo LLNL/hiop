@@ -131,6 +131,10 @@ protected:
   int sigma_update_strategy;
   double sigma_safe_min, sigma_safe_max; //min and max safety thresholds for sigma
   hiopNlpDenseConstraints* nlp;
+  mutable std::vector<hiopVector*> a;
+  mutable std::vector<hiopVector*> b;
+  hiopVector* yk;
+  hiopVector* sk;
 private:
   hiopVector* DhInv; //(B0+Dk)^{-1}
   // needed in timesVec (for residual checking in solveCompressed.
