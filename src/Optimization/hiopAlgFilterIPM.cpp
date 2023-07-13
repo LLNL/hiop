@@ -2681,6 +2681,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
   if(!within_FR_) {
     // try soft FR first
     bool is_soft_fr = solve_soft_feasibility_restoration(kkt);
+    is_soft_fr = false;
     if(is_soft_fr) {
       // variables have already been updated inside the above function
       return true;

@@ -1411,7 +1411,7 @@ hiopFRProbDense::hiopFRProbDense(hiopAlgFilterIPMBase& solver_base)
   m_eq_ = nlp_base_->m_eq();
   m_ineq_ = nlp_base_->m_ineq();
 #ifdef HIOP_USE_MPI
-  vec_distrib_base_ = nlp_base_->vec_distrib_;
+  vec_distrib_base_ = nlp_base_->getVecDistInfo();
 #endif
   n_ = n_x_ + 2*m_eq_ + 2*m_ineq_;
   m_ = m_eq_ + m_ineq_;
@@ -1433,26 +1433,26 @@ hiopFRProbDense::hiopFRProbDense(hiopAlgFilterIPMBase& solver_base)
   comm_size_ = 1;
   rank_ = 0;
 #ifdef HIOP_USE_MPI
-  comm_ = solver_base.comm_;
-  comm_size_ = nlp_base_->num_ranks_;
-  rank_ = nlp_base_->rank_;
+  comm_ = nlp_base_->get_comm();
+  comm_size_ = nlp_base_->get_num_ranks();
+  rank_ = nlp_base_->get_rank();
 #endif
 
   // assign col_partition_
   col_partition_ = new index_type[comm_size_+1];
   col_partition_[0] = 0;
-  col_partition_[comm_] = n_;
+  col_partition_[comm_size_] = n_;
 
 #ifdef HIOP_USE_MPI
-  if(nlp_base_->vec_distrib_) {
-    for(int i = 0; i < comm_size_ + 1; ++i) {
-      col_partition_[i] = nlp_base_->vec_distrib_[i];
+  if(vec_distrib_base_) {
+    for(int i = 0; i < comm_size_; ++i) {
+      col_partition_[i] = nlp_base_->getVecDistInfo()[i];
     }
   }
   if(col_partition_) {
     wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_,
                                                       col_partition_, comm_);
-    Jac_cd_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", m_, n_, col_partition_, comm_, maxrows);
+    Jac_cd_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", m_, n_, col_partition_, comm_);
   } else {
     wrk_primal_ = LinearAlgebraFactory::create_vector(nlp_base_->options->GetString("mem_space"), n_);
     Jac_cd_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", m_, n_);
