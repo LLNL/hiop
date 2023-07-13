@@ -179,9 +179,9 @@ public:
       rhsXYcYd = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
                                                      nx+nyc+nyd);
     }
-    nlp_->log->write("RHS KKT XDycYd rx: ", rx,  hovIteration);
-    nlp_->log->write("RHS KKT XDycYd ryc:", ryc, hovIteration);
-    nlp_->log->write("RHS KKT XDycYd ryd:", ryd, hovIteration);
+    nlp_->log->write("RHS KKT XYcYd rx: ", rx,  hovIteration);
+    nlp_->log->write("RHS KKT XYcYd ryc:", ryc, hovIteration);
+    nlp_->log->write("RHS KKT XYcYd ryd:", ryd, hovIteration);
 
     rx. copyToStarting(*rhsXYcYd, 0);
     ryc.copyToStarting(*rhsXYcYd, nx);

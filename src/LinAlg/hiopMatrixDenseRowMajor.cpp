@@ -69,9 +69,11 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const size_type& m,
   : hiopMatrixDense(m, glob_n, comm)
 {
   int P=0;
+  comm_size_ = 1;
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
+    int ierr = MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
+    ierr = MPI_Comm_size(comm_, &comm_size_); assert(MPI_SUCCESS==ierr);
 #endif
     glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
   } else {
@@ -295,6 +297,55 @@ void hiopMatrixDenseRowMajor::set_Hess_FR(const hiopMatrixDense& Hess, const hio
   double one{1.0};
   copyFrom(Hess);
   addDiagonal(one, add_diag_de);
+}
+
+void hiopMatrixDenseRowMajor::set_Jac_FR(const hiopMatrixDense& Jac_c, const hiopMatrixDense& Jac_d)
+{
+  assert(Jac_c.n() <= this->n() && Jac_d.n() == Jac_c.n());
+  assert(Jac_c.m() + Jac_d.m() == this->m());
+
+  const auto& Jeq = dynamic_cast<const hiopMatrixDenseRowMajor&>(Jac_c);
+  const auto& Jin = dynamic_cast<const hiopMatrixDenseRowMajor&>(Jac_d);
+
+  this->setToZero();
+
+  if(myrank_ < comm_size_ - 1) {
+    assert(Jeq.get_local_size_n() == n_local_ && Jin.get_local_size_n() == Jeq.get_local_size_n());
+    size_type num_row_src = Jeq.m();
+    if(num_row_src > 0) {
+      memcpy(M_[0], Jeq.M_[0], n_local_*num_row_src*sizeof(double));
+    }
+    num_row_src = Jin.m();
+    if(num_row_src > 0) {
+      memcpy(M_[0], Jin.M_[0], n_local_*num_row_src*sizeof(double));
+    }
+  } else {
+    assert(Jeq.get_local_size_n() == Jin.get_local_size_n());
+    assert(Jeq.get_local_size_n() + 2 * Jeq.m() + 2 * Jin.m() == n_local_);
+
+    // Jac for c(x) - p + n
+    size_type num_row_src = Jeq.m();
+    size_type num_col_src = Jeq.get_local_size_n();
+    if(num_row_src > 0) {
+      for(int i = 0; i < num_row_src; ++i) {
+        memcpy(M_[i], Jeq.M_[i], num_col_src * sizeof(double));
+        M_[i * n_local_][i] = -1.0;
+        M_[i * n_local_][num_row_src + i] = 1.0;
+      }
+    }
+
+    // Jac for d(x) - p + n
+    size_type num_row_add = num_row_src;  // num_row_add = Jeq.m();
+    num_row_src = Jin.m();
+    num_col_src = Jin.get_local_size_n();
+    if(num_row_src > 0) {
+      for(int i = 0; i < num_row_src; ++i) {
+        memcpy(M_[i + num_row_add], Jin.M_[i], num_col_src * sizeof(double));
+        M_[i + num_row_add][num_col_src + 2 * num_row_add + i] = -1.0;
+        M_[i + num_row_add][num_col_src + 2 * num_row_add + num_row_src + i] = 1.0;
+      }
+    }
+  }
 }
 
 #ifdef HIOP_DEEPCHECKS

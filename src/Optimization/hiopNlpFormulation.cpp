@@ -229,7 +229,7 @@ bool hiopNlpFormulation::finalizeInitialization()
     vec_distrib_ = nullptr;
   }
 #else
-  xl_   = LinearAlgebraFactory::create_vector(mem_space, n_vars_);
+  xl_ = LinearAlgebraFactory::create_vector(mem_space, n_vars_);
 #endif  
   xu_ = xl_->alloc_clone();
 
