@@ -73,6 +73,7 @@ namespace hiop
     icntl_[16-1] = 0;
 
     cntl_[1-1] = pivot_tol_;     // pivot tolerance
+    cntl_[4-1] = 1.0e-12; //1.0e-12; 
   }
 
   void hiopLinSolverSymSparseMA57::firstCall()
@@ -197,7 +198,7 @@ namespace hiop
 
     int job = 1; // full solve
     int one = 1;
-    icntl_[9-1] = 1; // do one step of iterative refinement
+    //icntl_[9-1] = 1; // do one step of iterative refinement
 
     hiopVector* x = dynamic_cast<hiopVector*>(&x_in);
     assert(x!=nullptr);
