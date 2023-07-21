@@ -1355,8 +1355,18 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     } else if(lsStatus==0) {
       //small step
       if(linsol_safe_mode_on) {
-        assert(0 && "FR is not available in the dense solver. To be implemented." );
-      }
+        // try to do FR
+        use_fr = apply_feasibility_restoration(kkt);
+
+        if(use_fr) {
+          // continue iterations if FR is accepted
+          solver_status_ = NlpSolve_Pending;
+        }
+
+        // exit the linear solve (compute_search_direction) loop
+        nlp->runStats.tmSolverInternal.stop();
+        break;
+      } 
       nlp->runStats.tmSolverInternal.stop();
     } else {
       nlp->runStats.tmSolverInternal.stop();

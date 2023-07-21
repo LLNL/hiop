@@ -1560,15 +1560,12 @@ bool hiopFRProbDense::get_vars_info(const size_type& n, double *xlow, double* xu
 
   // build new upper bound
   wrk_primal_->setToConstant(1e+20);
-  // FIXME; add global methed. now we only have local method
   xu.copyToStarting(*wrk_primal_,0);
   wrk_primal_->copyTo(xupp);
 
-  // FIXME; add global methed. now we only have local method
-  wrk_primal_->set_array_from_to(type, 0, n_x_, var_type, 0);
-
-  // FIXME; add global methed. now we only have local method
-  wrk_primal_->set_array_from_to(type, n_x_, n_, hiopLinear);
+  for(index_type i_local = 0; i_local < xl.get_local_size(); ++i_local) {
+    type[i_local] = hiopNonlinear;
+  }
   
   return true;
 }
@@ -1589,21 +1586,16 @@ bool hiopFRProbDense::get_cons_info(const size_type& m, double* clow, double* cu
 
   // FIXME; add global methed. now we only have local method
   crhs.copyToStarting(*wrk_dual_, 0);
-  // FIXME; add global methed. now we only have local method
   dl.copyToStarting(*wrk_dual_, (int)m_eq_);
   wrk_dual_->copyTo(clow);
 
   // assemble wrk_dual_ = [crhs; du] for upper bounds
-  // FIXME; add global methed. now we only have local method
   du.copyToStarting(*wrk_dual_, (int)m_eq_);
   wrk_dual_->copyTo(cupp);
 
-  // FIXME; add global methed. now we only have local method
-  wrk_dual_->set_array_from_to(type, 0, m_eq_, cons_eq_type, 0);
-
-  // FIXME; add global methed. now we only have local method
-  wrk_dual_->set_array_from_to(type, m_eq_, m_, cons_ineq_type, 0);
-
+  for(index_type i_local = 0; i_local < dl.get_local_size(); ++i_local) {
+    type[i_local] = hiopInterfaceBase::hiopLinear;
+  }
   return true;
 }
 
@@ -1612,6 +1604,7 @@ bool hiopFRProbDense::eval_f(const size_type& n, const double* x, bool new_x, do
   assert(n == n_);
   obj_value = 0.;
 
+  // FIXME; add global methed. now we only have local method, or sync mpi results here
   wrk_primal_->copy_from_starting_at(x, 0, n_); // [x pe ne pi ni]
   wrk_x_->copy_from_starting_at(x, 0, n_x_);    // [x]
   
@@ -1619,12 +1612,17 @@ bool hiopFRProbDense::eval_f(const size_type& n, const double* x, bool new_x, do
   // FIXME; add global methed. now we only have local method, or sync mpi results here
   obj_value += rho_ * (wrk_primal_->sum_local() - wrk_x_->sum_local());
 
+#ifdef HIOP_USE_MPI
+  double obj_global;
+  int ierr = MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
+  obj_value = obj_global;
+#endif
+
   // zeta/2*[DR*(x-x_ref)]^2
   wrk_x_->axpy(-1.0, *x_ref_);
   wrk_x_->componentMult(*DR_);
   double wrk_db = wrk_x_->twonorm();
 
-  // FIXME; add global methed. now we only have local method, or sync mpi results here
   obj_value += 0.5 * zeta_ * wrk_db * wrk_db;
 
   // keep a copy of the original objective value
@@ -1676,22 +1674,18 @@ bool hiopFRProbDense::eval_cons(const size_type& n,
   // FIXME; add global methed. now we only have local method
   wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
   wrk_c_->axpy(-1.0, *wrk_eq_);
-  // FIXME; add global methed. now we only have local method
   wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
   wrk_c_->axpy(1.0, *wrk_eq_);
 
   // compute FR inequality constratint body d-pi+ni
-  // FIXME; add global methed. now we only have local method
   wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
   wrk_d_->axpy(-1.0, *wrk_ineq_);
-  // FIXME; add global methed. now we only have local method
   wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
   wrk_d_->axpy(1.0, *wrk_ineq_);
 
   // assemble the full vector
   // FIXME; add global methed. now we only have local method
   wrk_c_->copyToStarting(*wrk_dual_, 0);
-  // FIXME; add global methed. now we only have local method
   wrk_d_->copyToStarting(*wrk_dual_, m_eq_);
 
   wrk_dual_->copyTo(cons);
@@ -1805,13 +1799,9 @@ bool hiopFRProbDense::get_warmstart_point(const size_type& n,
   */
   // FIXME; add global methed. now we only have local method
   wrk_x_->copyToStarting(*wrk_primal_, 0);
-  // FIXME; add global methed. now we only have local method
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
-  // FIXME; add global methed. now we only have local method
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne
-  // FIXME; add global methed. now we only have local method
   wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);               // pi
-  // FIXME; add global methed. now we only have local method
   wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);  // ni
 
   wrk_primal_->copyTo(x0);
@@ -1834,13 +1824,9 @@ bool hiopFRProbDense::get_warmstart_point(const size_type& n,
   // assemble zl
   // FIXME; add global methed. now we only have local method
   wrk_x_->copyToStarting(*wrk_primal_, 0);
-  // FIXME; add global methed. now we only have local method
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
-  // FIXME; add global methed. now we only have local method
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne
-  // FIXME; add global methed. now we only have local method
   wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);               // pi
-  // FIXME; add global methed. now we only have local method
   wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);  // ni
   wrk_primal_->copyTo(z_bndL0);
 
@@ -1848,7 +1834,6 @@ bool hiopFRProbDense::get_warmstart_point(const size_type& n,
   wrk_primal_->setToZero();
   wrk_x_->copyFrom(*zu);
   wrk_x_->component_min(rho_);
-  // FIXME; add global methed. now we only have local method
   wrk_x_->copyToStarting(*wrk_primal_, 0);
   wrk_primal_->copyTo(z_bndU0);
 
@@ -1896,7 +1881,6 @@ bool hiopFRProbDense::iterate_callback(int iter,
   // evaluate c_body and d_body in base problem
   // FIXME; add global methed. now we only have local method
   wrk_x_->copy_from_starting_at(x, 0, n_x_);
-  // FIXME; add global methed. now we only have local method
   wrk_d_->copy_from_starting_at(s, 0, m_ineq_);
   nlp_base_->eval_c_d(*wrk_x_, true, *wrk_cbody_, *wrk_dbody_);
 
@@ -2011,13 +1995,9 @@ bool hiopFRProbDense::force_update_x(const int n, double* x)
   */
   // FIXME; add global methed. now we only have local method
   wrk_x_->copyToStarting(*wrk_primal_, 0);
-  // FIXME; add global methed. now we only have local method
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);
-  // FIXME; add global methed. now we only have local method
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);
-  // FIXME; add global methed. now we only have local method
   wrk_d_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_);
-  // FIXME; add global methed. now we only have local method
   wrk_ineq_->copyToStarting(*wrk_primal_, n_x_ + 2*m_eq_ + m_ineq_);
 
   wrk_primal_->copyTo(x);
