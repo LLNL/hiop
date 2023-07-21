@@ -69,6 +69,10 @@ int main(int argc, char **argv)
   hiopSolveStatus status = solver.run();
 
   double obj_value = solver.getObjective();
+
+#ifdef HIOP_USE_MPI
+  MPI_Finalize();
+#endif
   
   if(status<0) {
     if(rank==0) printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
@@ -85,10 +89,6 @@ int main(int argc, char **argv)
       printf("Optimal objective: %22.14e. Solver status: %d\n", obj_value, status);
     }
   }
-
-#ifdef HIOP_USE_MPI
-  MPI_Finalize();
-#endif
 
   return 0;
 }

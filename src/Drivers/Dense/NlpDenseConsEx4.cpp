@@ -254,31 +254,51 @@ bool DenseConsEx4::eval_Jac_cons(const size_type& n,
 
     assert(itcon*n_local+n_local <= n_local*num_cons);
 
-    //Jacobian of constraint 1 is all zero
+    //Jacobian of constraint 1
     if(idx_cons[itcon]==0) {
-      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?(-0.12*x[0]):0.;
-      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?1.:0.;
+      for(int i = 0; i < n_local; ++i) {
+        if(idx_local2global(n,i)==0) {
+          Jac[itcon*n_local+i] = -0.12*x[i];
+        } else if (idx_local2global(n,i)==1) {
+          Jac[itcon*n_local+i] = 1.0;
+        }
+      }
       continue;
     }
     
-    //Jacobian of constraint 2 is all ones except the first entry, which is 2
+    //Jacobian of constraint 2
     if(idx_cons[itcon]==1) {
-      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?(0.1*x[0]):0.;
-      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?1.:0.;
+      for(int i = 0; i < n_local; ++i) {
+        if(idx_local2global(n,i)==0) {
+          Jac[itcon*n_local+i] = 0.1*x[i];
+        } else if (idx_local2global(n,i)==1) {
+          Jac[itcon*n_local+i] = 1.0;
+        }
+      }
       continue;
     }
     
     //Jacobian of constraint 3
     if(idx_cons[itcon]==2) {
-      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?0.:0.;
-      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?(2.*x[1]):0.;
+      for(int i = 0; i < n_local; ++i) {
+        if(idx_local2global(n,i)==0) {
+          Jac[itcon*n_local+i] = 0.0;
+        } else if (idx_local2global(n,i)==1) {
+          Jac[itcon*n_local+i] = 2.*x[i];
+        }
+      }
       continue;
     }
     
     //Jacobian of constraint  4
     if(idx_cons[itcon]==3) {
-      Jac[itcon*n_local+0] = idx_local2global(n,0)==0?(2.*x[0]):0.;
-      Jac[itcon*n_local+1] = idx_local2global(n,1)==1?0.:0.;
+      for(int i = 0; i < n_local; ++i) {
+        if(idx_local2global(n,i)==0) {
+          Jac[itcon*n_local+i] = 2.*x[i];
+        } else if (idx_local2global(n,i)==1) {
+          Jac[itcon*n_local+i] = 0.0;
+        }
+      }
     }
   }
   return true;
