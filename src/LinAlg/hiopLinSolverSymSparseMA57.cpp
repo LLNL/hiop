@@ -66,7 +66,7 @@ namespace hiop
                            // 4 use Metis;
                            // 5 automatic choice(MA47 or Metis);
     icntl_[7-1] = 1;       // Pivoting strategy.
-    icntl_[9-1] = 10;       // use one step of iterative refinement
+    icntl_[9-1] = 1;       // use one step of iterative refinement
     icntl_[11-1] = 16;
     icntl_[12-1] = 16;
     icntl_[15-1] = 0;
