@@ -70,6 +70,7 @@ bool DenseConsEx4::get_vars_info(const size_type& n, double *xlow, double* xupp,
   }
   return true;
 }
+
 bool DenseConsEx4::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
   assert(m==n_cons_);
@@ -92,6 +93,7 @@ bool DenseConsEx4::get_cons_info(const size_type& m, double* clow, double* cupp,
   }
   return true;
 }
+
 bool DenseConsEx4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
   size_type n_local = col_partition_[my_rank+1] - col_partition_[my_rank];

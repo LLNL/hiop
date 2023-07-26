@@ -1670,18 +1670,48 @@ bool hiopFRProbDense::eval_cons(const size_type& n,
   // evaluate base case c and d
   nlp_base_->eval_c_d(*wrk_x_, new_x, *wrk_c_, *wrk_d_);
 
+#ifdef HIOP_USE_MPI
+  // p and n are only located in the last rank
   // compute FR equality constratint body c-pe+ne
-  // FIXME; add global methed. now we only have local method
-  wrk_eq_->copy_from_starting_at(x, pe_st_, m_eq_);     //pe
-  wrk_c_->axpy(-1.0, *wrk_eq_);
-  wrk_eq_->copy_from_starting_at(x, ne_st_, m_eq_);     //ne
-  wrk_c_->axpy(1.0, *wrk_eq_);
+  if(m_eq_ > 0) {
+    if(rank_ == comm_size_-1) {
+      wrk_eq_->copy_from_starting_at(x+pe_st_-col_partition_[rank_], 0, m_eq_);     //pe
+      wrk_c_->axpy(-1.0, *wrk_eq_);
+      wrk_eq_->copy_from_starting_at(x+ne_st_-col_partition_[rank_], 0, m_eq_);     //ne
+      wrk_c_->axpy(1.0, *wrk_eq_);
+    }
+    int ierr = MPI_Bcast(wrk_c_->local_data(), m_eq_, MPI_DOUBLE, comm_size_-1, comm_); 
+    assert(ierr==MPI_SUCCESS);
+  }
 
-  // compute FR inequality constratint body d-pi+ni
-  wrk_ineq_->copy_from_starting_at(x, pi_st_, m_ineq_); //pi
-  wrk_d_->axpy(-1.0, *wrk_ineq_);
-  wrk_ineq_->copy_from_starting_at(x, ni_st_, m_ineq_); //ni
-  wrk_d_->axpy(1.0, *wrk_ineq_);
+  // compute FR equality constratint body d-pi+ni
+  if(m_ineq_ > 0) {
+    if(rank_ == comm_size_-1) {
+      wrk_ineq_->copy_from_starting_at(x+pi_st_-col_partition_[rank_], 0, m_ineq_); //pi
+      wrk_d_->axpy(-1.0, *wrk_ineq_);
+      wrk_ineq_->copy_from_starting_at(x+ni_st_-col_partition_[rank_], 0, m_ineq_); //ni
+      wrk_d_->axpy(1.0, *wrk_ineq_);
+    }
+    int ierr = MPI_Bcast(wrk_d_->local_data(), m_ineq_, MPI_DOUBLE, comm_size_-1, comm_); 
+    assert(ierr==MPI_SUCCESS);
+  }
+#else
+  // compute FR equality constratint body c-pe+ne
+  if(m_eq_ > 0) {
+    wrk_eq_->copy_from_starting_at(x+pe_st_, 0, m_eq_);     //pe
+    wrk_c_->axpy(-1.0, *wrk_eq_);
+    wrk_eq_->copy_from_starting_at(x+ne_st_, 0, m_eq_);     //ne
+    wrk_c_->axpy(1.0, *wrk_eq_);
+  }
+
+  // compute FR equality constratint body d-pi+ni
+  if(m_ineq_ > 0) {
+    wrk_ineq_->copy_from_starting_at(x+pi_st_, 0, m_ineq_); //pi
+    wrk_d_->axpy(-1.0, *wrk_ineq_);
+    wrk_ineq_->copy_from_starting_at(x+ni_st_, 0, m_ineq_); //ni
+    wrk_d_->axpy(1.0, *wrk_ineq_);
+  }
+#endif
 
   // assemble the full vector
   // FIXME; add global methed. now we only have local method
@@ -1708,15 +1738,14 @@ bool hiopFRProbDense::eval_Jac_cons(const size_type& n,
   assert(Jac_c && Jac_d);
 
   // extend Jac to the p and n parts
-  if(Jac != nullptr) {
-    // get x for the original problem
-    // FIXME; add global methed. now we only have local method
-     wrk_x_->copy_from_starting_at(x, 0, n_x_);
+  assert(Jac != nullptr);
+  // get x for the original problem
+  // FIXME; add global methed. now we only have local method
+  wrk_x_->copy_from_starting_at(x, 0, n_x_);
 
-    // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
-    nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d); 
-  }
-
+  // get Jac_c and Jac_d for the x part --- use original Jac_c/Jac_d as buffers
+  nlp_base_->eval_Jac_c_d(*wrk_x_, new_x, *Jac_c, *Jac_d); 
+  
   // FIXME add set_Jac_FR in hiopMatrixDense
   Jac_cd_->set_Jac_FR(*Jac_c, *Jac_d);
   
@@ -1798,6 +1827,7 @@ bool hiopFRProbDense::get_warmstart_point(const size_type& n,
   * assemble x0
   */
   // FIXME; add global methed. now we only have local method
+  wrk_primal_->setToConstant(0.0);
   wrk_x_->copyToStarting(*wrk_primal_, 0);
   wrk_c_->copyToStarting(*wrk_primal_, n_x_);                         // pe
   wrk_eq_->copyToStarting(*wrk_primal_, n_x_ + m_eq_);                // ne

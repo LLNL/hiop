@@ -238,16 +238,16 @@ void hiopVectorPar::copyFromStarting(int start_index/*_in_src*/,const hiopVector
 
 void hiopVectorPar::copy_from_starting_at(const double* v, int start_index_in_global_v, int global_nv)
 {
-  exec_space_.copy(data_, v+start_index_in_global_v, global_nv);
-  return;
+//  exec_space_.copy(data_, v+start_index_in_global_v, global_nv);
+//  return;
 
   if(n_local_ > 0) {
     if(global_nv == n_local_ && n_local_ == n_) {
       exec_space_.copy(data_, v+start_index_in_global_v, global_nv);
     } else {
       if( glob_il_ <= start_index_in_global_v + global_nv && glob_iu_ >= start_index_in_global_v ) {
-        int local_start_idx = (glob_il_>start_index_in_global_v)?0:start_index_in_global_v-glob_il_;
-        int local_end_idx = (glob_iu_<start_index_in_global_v+global_nv)?glob_iu_-glob_il_:start_index_in_global_v-glob_il_; 
+        int local_start_idx = (glob_il_>=start_index_in_global_v)?0:start_index_in_global_v-glob_il_;
+        int local_end_idx = (glob_iu_<=start_index_in_global_v+global_nv)?glob_iu_-glob_il_:start_index_in_global_v-glob_il_; 
         exec_space_.copy(data_, v+local_start_idx, local_end_idx-local_start_idx);
       }
     }
@@ -291,19 +291,24 @@ void hiopVectorPar::copyToStarting(int start_index, hiopVector& v_) const
   assert(start_index+v.n_local_ <= n_local_);
   v.exec_space_.copy(v.data_, data_+start_index, v.n_local_, exec_space_);
 }
-/* Copy 'this' to v starting at start_index in 'v'. */
-void hiopVectorPar::copyToStarting(hiopVector& vec, int start_index_in_dest) const
+/* Copy 'this' to dest starting at start_index in 'dest'. */
+void hiopVectorPar::copyToStarting(hiopVector& dest, int start_global_index_in_dest) const
 {
-  hiopVectorPar& v = dynamic_cast<hiopVectorPar&>(vec);
-  v.exec_space_.copy(v.data_+start_index_in_dest, data_, n_local_, exec_space_); 
-  return;
-#ifdef HIOP_DEEPCHECKS
-  assert(n_local_ <= v.n_local_);
-#endif
+  hiopVectorPar& v = dynamic_cast<hiopVectorPar&>(dest);
+//  v.exec_space_.copy(v.data_+start_global_index_in_dest, data_, n_local_, exec_space_); 
+//  return;
+  assert(start_global_index_in_dest + this->get_size() <= v.get_size());
+
   if(n_local_ > 0) {
-    if( v.glob_il_ <= start_index_in_dest && start_index_in_dest <= v.glob_iu_) {
-      assert(start_index_in_dest + n_local_ <= v.n_local_);
-      v.exec_space_.copy(v.data_+start_index_in_dest, data_, n_local_, exec_space_); 
+    size_type start_local_index_in_dest = 0;
+    if(v.glob_il_ <= start_global_index_in_dest && start_global_index_in_dest < v.glob_iu_) {
+      start_local_index_in_dest = start_global_index_in_dest - v.glob_il_;
+    } else if(start_global_index_in_dest >= v.glob_iu_) {
+      start_local_index_in_dest = -1;
+    }
+    if( start_local_index_in_dest >= 0) {
+      assert(n_local_ + start_local_index_in_dest <= v.n_local_);
+      v.exec_space_.copy(v.data_+start_local_index_in_dest, data_, n_local_, exec_space_); 
     }
   }
 }
