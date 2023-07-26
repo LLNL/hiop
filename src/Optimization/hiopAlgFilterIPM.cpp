@@ -558,7 +558,7 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
     const double target_mu = nlp->options->GetNumeric("tolerance");
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
-    double bound_relax_perturb;
+    double bound_relax_perturb = bound_relax_perturb_init;
     
     if(nlp->options->GetString("elastic_bound_strategy")=="mu_scaled") {
       bound_relax_perturb = 0.995*mu_new;
@@ -2905,7 +2905,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
   double kkt_err_trial;
   double alpha_primal_soft;
   double alpha_dual_soft;
-  double infeas_nrm_soft;
+  double infeas_nrm_soft=0;     // to avoid uninitialized use below
 
   bool bret = false;
 
