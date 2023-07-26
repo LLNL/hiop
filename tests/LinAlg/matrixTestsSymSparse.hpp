@@ -226,8 +226,6 @@ public:
     const local_ordinal_type A_N_loc = A.n();
     const local_ordinal_type B_M = B.m();
     
-    const auto num_elems = diag.get_size();
-  
     const auto B_val = one;
     const auto W_val = zero;
     const auto D_val = two;
@@ -245,9 +243,6 @@ public:
     A.addUpperTriangleToSymDenseMatrixUpperTriangle(start_diag, alpha, W);
     
     // get sparsity pattern
-    const auto* iRow = getRowIndices(&A);
-    const auto* jCol = getColumnIndices(&A);
-    auto nnz = A.numberOfNonzeros();
     const auto* iRowB = getRowIndices(&B);
     const auto* jColB = getColumnIndices(&B);
     auto nnzB = B.numberOfNonzeros();
@@ -310,7 +305,7 @@ private:
   // linearly scans an unsorted array
   static bool find_unsorted_pair(int valA, int valB, const int* arrA, const int* arrB, size_t arrslen)
   {
-    for (int i = 0; i < arrslen; i++)
+    for (int i = 0; i < static_cast<int>(arrslen); i++)
     {
       if (arrA[i] == valA && arrB[i] == valB)
       {

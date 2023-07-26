@@ -886,7 +886,8 @@ hiopMatrixDense& hiopHessianLowRank::new_kxl_mat1(int k, int l)
 hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St)
 {
   //S1 is X*some_diag*S  (kxl). Here St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
-  size_type k=X.m(), n=St.n(), l=St.m();
+  size_type k=X.m(), l=St.m();
+  [[maybe_unused]] const size_type n=St.n();
 #ifdef HIOP_DEEPCHECKS
   assert(n==X.n());
   if(_S1!=NULL) 
@@ -902,7 +903,8 @@ hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiop
 hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiopMatrixDense& Yt)
 {
   //Y1 is X*somediag*Y (kxl). Here Yt=Y^T is lxn,  X is kxn
-  size_type k=X.m(), n=Yt.n(), l=Yt.m();
+  size_type k=X.m(), l=Yt.m();
+  [[maybe_unused]] size_type n=Yt.n(); 
 #ifdef HIOP_DEEPCHECKS
   assert(X.n()==n);
   if(_Y1!=NULL) assert(_Y1->m()==k);
@@ -1032,7 +1034,7 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    const hiopVector& d)
 {
   size_type k=W.m();
-  size_type n=X.n();
+  [[maybe_unused]] const size_type n=X.n();
   size_t n_local=X.get_local_size_n();
 
   assert(X.m()==k);
@@ -1052,7 +1054,7 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
   for(int i=0; i<k; i++) {
     //xi=Xdata[i];
     xi=Xdata+i*n_local;
-    for(size_t j=i; j<k; j++) {
+    for(int j=i; j<k; j++) {
       //xj=Xdata[j];
       xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
@@ -1448,7 +1450,7 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    const hiopVector& d)
 {
   size_type k=W.m();
-  size_type n=X.n();
+  [[maybe_unused]] const size_type n=X.n();
   size_t n_local=X.get_local_size_n();
 
   assert(X.m()==k);
@@ -1467,7 +1469,7 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
   for(int i=0; i<k; i++) {
     //xi=Xdata[i];
     xi=Xdata+i*n_local;
-    for(size_t j=i; j<k; j++) {
+    for(int j=i; j<k; j++) {
       //xj=Xdata[j];
       xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
@@ -1666,8 +1668,9 @@ void hiopHessianInvLowRank_obsolette::updateD(const double& sTy)
 hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& St, const hiopMatrixDense& X)
 {
   //S1 is St*X^T (lxk), where St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
-  size_type k=X.m(), n=St.n(), l=St.m();
+  size_type k=X.m(), l=St.m();
 #ifdef HIOP_DEEPCHECKS
+  const size_type n=St.n();
   assert(n==X.n());
   if(_S1!=NULL) 
     assert(_S1->n()==k);
@@ -1682,8 +1685,9 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& 
 hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_Y1(const hiopMatrixDense& Yt, const hiopMatrixDense& X)
 {
   //Y1 is Yt*H0*X^T = Y^T*H0*X^T, where Y^T is lxn, H0 is diag nxn, X is kxn
-  size_type k=X.m(), n=Yt.n(), l=Yt.m();
+  size_type k=X.m(), l=Yt.m();
 #ifdef HIOP_DEEPCHECKS
+  const size_type n=Yt.n(); 
   assert(X.n()==n);
   if(_Y1!=NULL) assert(_Y1->n()==k);
 #endif

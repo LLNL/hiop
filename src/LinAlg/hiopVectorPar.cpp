@@ -183,7 +183,6 @@ void hiopVectorPar::copy_from_w_pattern(const hiopVector& vv, const hiopVector& 
   const double* ix_vec = ix.data_;
   const double* v_vec = v.data_;
   
-  size_type nv = v.get_local_size();
   for(index_type i=0; i<n_local_; i++) {
     if(ix_vec[i] == 1.) {
       data_[i] = v_vec[i];    

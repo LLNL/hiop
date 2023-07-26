@@ -500,7 +500,6 @@ void hiopMatrixDenseRowMajor::timesMat(double beta, hiopMatrix& W_, double alpha
   timesMat_local(beta,W_,alpha,X_);
 #else
   auto& W = dynamic_cast<hiopMatrixDenseRowMajor&>(W_);
-  double* WM=W.local_data();
   const auto& X =  dynamic_cast<const hiopMatrixDenseRowMajor&>(X_);
   
   assert(W.m()==this->m());
@@ -709,7 +708,6 @@ void hiopMatrixDenseRowMajor::addSubDiagonal(int start_on_dest_diag,
   num_elems = std::min(num_elems, m_local_-start_on_dest_diag);
 
   const double* dd=d.local_data_const();
-  const int nend = start_on_dest_diag+num_elems;
   for(int i=0; i<num_elems; i++)
     M_[i+start_on_dest_diag][i+start_on_dest_diag] += alpha*dd[start_on_src_vec+i];
 }
@@ -826,7 +824,6 @@ void hiopMatrixDenseRowMajor::row_max_abs_value(hiopVector &ret_vec)
 
 void hiopMatrixDenseRowMajor::scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
-  char norm='M';
   int one=1;
   double scal;
   

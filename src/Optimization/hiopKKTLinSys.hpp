@@ -250,8 +250,8 @@ public:
   hiopKKTLinSysCompressed(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCurvCheck(nlp),
       Dx_(nullptr),
-      rx_tilde_(nullptr),
       Dd_(nullptr),
+      rx_tilde_(nullptr),
       x_wrk_(nullptr),
       d_wrk_(nullptr)
   {

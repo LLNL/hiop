@@ -142,7 +142,6 @@ public:
   virtual bool vector_copy_from(hiop::hiopVectorInt& x, hiop::hiopVectorInt& y) const
   {
     int fail = 0;
-    const int idx = x.get_local_size()/2;
     const int x_val = 1;
     const int y_val = 1;
 

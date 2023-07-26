@@ -21,7 +21,6 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   int nonZerosUsed = 0;
 
   size_type m = A->m();
-  size_type n = A->n();
 
   for (auto i = 0; i < m; i++)
   {
@@ -170,7 +169,7 @@ int main(int argc, char **argv)
 
     hiopBiCGStabSolver bicgstab_solver(N_local, A_opr, Minv_opr, nullptr, nullptr);
 
-    bool is_solved = bicgstab_solver.solve(rhs);
+    [[maybe_unused]] bool is_solved = bicgstab_solver.solve(rhs);
 
     std::cout << mem_space << ": " << bicgstab_solver.get_convergence_info() << std::endl;
 

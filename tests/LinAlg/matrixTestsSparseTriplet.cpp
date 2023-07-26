@@ -193,7 +193,6 @@ int MatrixTestsSparseTriplet::verifyAnswer(hiop::hiopMatrix* A, local_ordinal_ty
   if(A == nullptr)
     return 1;
   auto mat = dynamic_cast<hiop::hiopMatrixSparseTriplet*>(A);
-  const local_ordinal_type nnz = mat->numberOfNonzeros();
   const real_type* values = mat->M();
   int fail = 0;
   for (local_ordinal_type i=nnz_st; i<nnz_ed; i++)

@@ -226,8 +226,6 @@ public:
       const int rank=0)
   {
     const local_ordinal_type nnz = A.numberOfNonzeros();
-    const local_ordinal_type* iRow = getRowIndices(&A);
-    const local_ordinal_type* jCol = getColumnIndices(&A);
     auto val = getMatrixData(&A);
     
     const local_ordinal_type last_row_idx = A.m()-1;
@@ -259,11 +257,8 @@ public:
       hiop::hiopVector& x,
       const int rank=0)
   {
-    const local_ordinal_type nnz = A.numberOfNonzeros();
-    const local_ordinal_type* iRow = getRowIndices(&A);
-    const local_ordinal_type* jCol = getColumnIndices(&A);
-    auto val = getMatrixData(&A);
-    
+    [[maybe_unused]] const auto val = getMatrixData(&A);
+
     const real_type A_val = two;
     const real_type x_val = three;
     int fail = 0;
@@ -906,7 +901,6 @@ public:
       hiop::hiopMatrixSparse& A,
       const int rank=0)
   {
-    const local_ordinal_type N_loc = W.get_local_size_n();
     const local_ordinal_type A_M = A.m();
     const local_ordinal_type A_N = A.n();
     assert(W.m() == W.n());
@@ -946,14 +940,6 @@ public:
   /// @brief Copies rows from another sparse matrix into this one, according to the patten `select`. ith row of A = select[i]_th row of B 
   int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, hiop::hiopVectorInt& select)
   {
-    const local_ordinal_type* A_iRow = getRowIndices(&A);
-    const local_ordinal_type* A_jCol = getColumnIndices(&A);
-    const local_ordinal_type A_nnz = A.numberOfNonzeros();
-
-    const local_ordinal_type* B_iRow = getRowIndices(&B);
-    const local_ordinal_type* B_jCol = getColumnIndices(&B);
-    const local_ordinal_type B_nnz = B.numberOfNonzeros();
-
     int n_A_rows = A.m();
     int n_B_rows = B.m();    
     assert(A.n() == B.n());
@@ -1030,11 +1016,8 @@ public:
                            local_ordinal_type B_nnz_st)
   {
     const local_ordinal_type* A_iRow = getRowIndices(&A);
-    const local_ordinal_type* A_jCol = getColumnIndices(&A);
     const local_ordinal_type A_nnz = A.numberOfNonzeros();
 
-    const local_ordinal_type* B_iRow = getRowIndices(&B);
-    const local_ordinal_type* B_jCol = getColumnIndices(&B);
     const local_ordinal_type B_nnz = B.numberOfNonzeros();
 
     local_ordinal_type nnz_A_need_to_copy{0};
@@ -1066,7 +1049,7 @@ public:
 
     B.copyRowsBlockFrom(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);
 
-    auto val = getMatrixData(&B);
+    [[maybe_unused]] const auto val = getMatrixData(&B);
 
     fail += verifyAnswer(&B,0,B_nnz_st,B_val);
     fail += verifyAnswer(&B,B_nnz_st,B_nnz_st+nnz_A_need_to_copy,A_val);
@@ -1124,8 +1107,6 @@ public:
     const auto* B_iRow = getRowIndices(&B);
     const auto* B_jCol = getColumnIndices(&B);
     auto B_nnz = B.numberOfNonzeros();
-    const auto B_m = B.m();
-    const auto B_n = B.n();
   
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
@@ -1203,8 +1184,6 @@ public:
     const auto* B_iRow = getRowIndices(&B);
     const auto* B_jCol = getColumnIndices(&B);
     auto B_nnz = B.numberOfNonzeros();
-    const auto B_m = B.m();
-    const auto B_n = B.n();
   
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
@@ -1625,10 +1604,6 @@ public:
     // copy to a dense matrix
     A.copy_to(W);
 
-    const local_ordinal_type* iRow = getRowIndices(&A);
-    const local_ordinal_type* jCol = getColumnIndices(&A);
-    const local_ordinal_type nnz = A.numberOfNonzeros();
-
     fail += verifyAnswer(&W,
       [=] (local_ordinal_type i, local_ordinal_type j) -> real_type
       {
@@ -1708,7 +1683,7 @@ private:
   // linearly scans an unsorted array
   static bool find_unsorted_pair(int valA, int valB, const int* arrA, const int* arrB, size_t arrslen)
   {
-    for (int i = 0; i < arrslen; i++)
+    for (int i = 0; i < static_cast<int>(arrslen); i++)
     {
       if (arrA[i] == valA && arrB[i] == valB)
       {
@@ -1721,7 +1696,7 @@ private:
   // linearly scans an unsorted array within range [nnz_st, nnz_ed)
   static bool find_unsorted_pair(int valA, int valB, const int* arrA, const int* arrB, size_t idx_st, size_t idx_ed)
   {
-    for (int i = idx_st; i < idx_ed; i++)
+    for (int i = idx_st; i < static_cast<int>(idx_ed); i++)
     {
       if (arrA[i] == valA && arrB[i] == valB)
       {

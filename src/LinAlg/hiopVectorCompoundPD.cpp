@@ -67,8 +67,8 @@
 namespace hiop
 {
 hiopVectorCompoundPD::hiopVectorCompoundPD(bool own_vectors)
-: own_vectors_{own_vectors},
-  n_parts_{0}
+: n_parts_{0},
+  own_vectors_{own_vectors}
 {
   n_ = 0;
 }

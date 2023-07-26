@@ -317,7 +317,6 @@ void hiopMatrixSparseCSRSeq::row_max_abs_value(hiopVector &ret_vec)
 
   hiopVectorPar& yy = dynamic_cast<hiopVectorPar&>(ret_vec);
   yy.setToZero();
-  double* y_data = yy.local_data();
 
   assert(false && "not yet implemented");
 }
@@ -326,8 +325,6 @@ void hiopMatrixSparseCSRSeq::scale_row(hiopVector &vec_scal, const bool inv_scal
 {
   assert(vec_scal.get_local_size() == nrows_);
 
-  hiopVectorPar& vscal = dynamic_cast<hiopVectorPar&>(vec_scal);  
-  double* vd = vscal.local_data();
   assert(false && "not yet implemented");
 }
 
@@ -658,15 +655,12 @@ void hiopMatrixSparseCSRSeq::times_mat_symbolic(hiopMatrixSparseCSR& M_in,
   auto& Y = dynamic_cast<const hiopMatrixSparseCSRSeq&>(Y_in);
   const index_type* irowptrY = Y.i_row();
   const index_type* jcolindY = Y.j_col();
-  const double* valuesY = Y.M();
   
   const index_type* irowptrX = irowptr_;
   const index_type* jcolindX = jcolind_;
-  const double* valuesX = values_;
 
   index_type* irowptrM = M.i_row();
   index_type* jcolindM = M.j_col();
-  double* valuesM = M.M();
   
   const index_type m = this->m();
   const index_type n = Y.n();
@@ -903,7 +897,6 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparse
 
   const index_type* Mirow = M.i_row();
   const index_type* Mjcol = M.j_col();
-  const double* Mvalues  = M.M();
 
   assert(nullptr == row_starts_);
   row_starts_ = new index_type[nrows_];
@@ -932,7 +925,7 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparse
     }
     //here row_starts_(==w) contains the row starts
   }
-  assert(irowptr_[nrows_] = nnz_);
+  assert(irowptr_[nrows_] == nnz_);
 
   //populate jcolind_
   for(index_type it=0; it<nnz_; ++it) {
@@ -1035,7 +1028,6 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparse
 
   const index_type* Mirow = M.i_row();
   const index_type* Mjcol = M.j_col();
-  const double* Mvalues  = M.M();
 
   assert(nullptr == row_starts_);
   row_starts_ = new index_type[nrows_];
@@ -1064,7 +1056,7 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_symbolic(const hiopMatrixSparse
     }
     //here row_starts_(==w) contains the row starts
   }
-  assert(irowptr_[nrows_] = nnz_);
+  assert(irowptr_[nrows_] == nnz_);
 
   //iterate over nonzeros of M to populate jcolind_ and update row_starts_
   for(index_type i=0; i<ncols_; ++i) {
@@ -1169,8 +1161,6 @@ void hiopMatrixSparseCSRSeq::form_diag_from_symbolic(const hiopVector& D)
   assert(irowptr_);
   assert(jcolind_);
   assert(values_);
-
-  const double* da = D.local_data_const();
 
   for(index_type i=0; i<m; i++) {
     irowptr_[i] = i;

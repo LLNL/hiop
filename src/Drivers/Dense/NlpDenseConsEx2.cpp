@@ -5,10 +5,10 @@
 #include <cstdio>
 
 DenseConsEx2::DenseConsEx2(int n, bool unconstrained)
-  : unconstrained_(unconstrained),
-    n_vars_(n),
+  : n_vars_(n),
     n_cons_(4),
-    comm(MPI_COMM_WORLD)
+    comm(MPI_COMM_WORLD),
+    unconstrained_(unconstrained)
 {
   comm_size = 1;
   my_rank = 0; 
