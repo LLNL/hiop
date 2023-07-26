@@ -1204,7 +1204,7 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
    * Note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part containts additional 
    * diagonal elements.
   */
-  int n_diag_val=0;
+  [[maybe_unused]] int n_diag_val=0;
   std::unordered_map<int,int> extra_diag_nnz_map_temp;
   int *diag_defined = new int[n];
 
@@ -1256,7 +1256,8 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
       diag_defined[i] = -1;
     }
 
-    int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
+    [[maybe_unused]] int total_nnz_tmp{0};
+    int nnz_tmp{0}, rowID_tmp, colID_tmp;
     for(int k=0;k<n;k++){
         index_convert_extra_Diag2CSR_temp[k]=-1;
         index_convert_extra_Diag2CSR[k]=-1;

@@ -106,23 +106,29 @@ DiscretizedFunction::DiscretizedFunction(Ex1Meshing1D* meshing)
 }
 
 // u'*v = u'*M*v, where u is 'this'
-double DiscretizedFunction::dotProductWith( const DiscretizedFunction& v_ ) const
+double DiscretizedFunction::dotProductWith( const hiopVector& v_ ) const
 {
-  assert(v_._mesh->matches(this->_mesh));
-  double* M=_mesh->_mass->local_data();
-  double* u= this->data_;
-  double* v= v_.data_;
+  auto discretizedFunction(dynamic_cast<const DiscretizedFunction*>(&v_));
+  if (discretizedFunction) {
+    assert(discretizedFunction->_mesh->matches(this->_mesh));
+    double* M=_mesh->_mass->local_data();
+    double* u= this->data_;
+    double* v= discretizedFunction->data_;
   
-  double dot=0.;
-  for(int i=0; i<get_local_size(); i++)
-    dot += u[i]*M[i]*v[i];
+    double dot=0.;
+    for(int i=0; i<get_local_size(); i++)
+      dot += u[i]*M[i]*v[i];
  
  #ifdef HIOP_USE_MPI
-  double dotprodG;
-  int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
-  dot=dotprodG;
+    double dotprodG;
+    int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+    dot=dotprodG;
 #endif
-  return dot;
+    return dot;
+  }
+  else {
+    return hiopVectorPar::dotProductWith(v_);
+  }
 }
 
 // computes integral of 'this', that is sum (this[elem]*m[elem])

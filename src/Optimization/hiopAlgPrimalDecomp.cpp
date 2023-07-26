@@ -205,10 +205,10 @@ HessianApprox(hiopInterfacePriDecProblem* priDecProb,
 
 hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(const int& n,
-              hiopInterfacePriDecProblem* priDecProb,
+              [[maybe_unused]] hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-    : priDecProb_(priDecProb), options_(options_pridec), comm_world_(comm_world)
+    : options_(options_pridec), comm_world_(comm_world)
 {
   n_=n;
   fkm1 = 1e20;

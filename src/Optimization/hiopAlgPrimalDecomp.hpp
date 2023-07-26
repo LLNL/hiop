@@ -379,7 +379,6 @@ public:
     hiopVector* skm1;  /// xk-xkm1 
     hiopVector* ykm1;   /// gk-gkm1
     size_t ver_ = 2; //output level for HessianApprox class, being phased out.
-    hiopInterfacePriDecProblem* priDecProb_;
     hiopOptions* options_;  /// options is given by on pridec options.
     hiopLogger* log_;
     MPI_Comm comm_world_;
@@ -439,9 +438,6 @@ private:
   double alpha_min_ = 1e-5;  
   double alpha_max_ = 1e6;  
   
-  /// real decrease over expected decrease ratio
-  double rhok_ = 0.;
-
 protected:
   hiopOptions* options_;
   hiopLogger* log_;
