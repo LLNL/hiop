@@ -93,7 +93,7 @@ namespace hiop
     keep_ = new int[lkeep_]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
 
     iwork_ = new int[5 * n_];
-    dwork_ = new double[n_];
+    dwork_ = new double[4 * n_]; // needs to be 4*n_ when using iterative refinement
     
     MA57AD( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
         
@@ -196,7 +196,7 @@ namespace hiop
 
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
-    int job = 1; // full solve
+    int job = 2; // full solve = 1, iterative solve 0 or 2
     int one = 1;
     //icntl_[9-1] = 1; // do one step of iterative refinement
 

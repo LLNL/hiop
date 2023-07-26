@@ -221,6 +221,7 @@ int main(int argc, char **argv)
   bool rankdefic_Jac_ineq = true;
   double scal_neg_obj = 0.1;
 
+  inertia_free = true;
   //first test
   {
     SparseEx2 nlp_interface(n, convex_obj, rankdefic_Jac_eq, rankdefic_Jac_ineq, scal_neg_obj);

@@ -179,6 +179,7 @@ int main(int argc, char **argv)
   nlp.options->SetStringValue("compute_mode", "cpu");
   nlp.options->SetStringValue("KKTLinsys", "xdycyd");
   nlp.options->SetNumericValue("mu0", 0.1);
+  nlp.options->SetStringValue("fact_acceptor", "inertia_free");
 
   hiopAlgFilterIPMNewton solver(&nlp);
   hiopSolveStatus status = solver.run();
