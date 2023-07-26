@@ -96,7 +96,6 @@ public:
       dwork = LinearAlgebraFactory::create_vector("DEFAULT", lwork);
     }
 
-    bool rank_deficient=false;
     //
     // factorization
     //

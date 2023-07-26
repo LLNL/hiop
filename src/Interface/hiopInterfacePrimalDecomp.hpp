@@ -142,7 +142,7 @@ public:
                             const hiopVector& x0,
                             const std::string& mem_space);
 
-    ~RecourseApproxEvaluator();
+    virtual ~RecourseApproxEvaluator();
 
     bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
  

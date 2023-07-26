@@ -134,7 +134,6 @@ public:
     int fail = verifyAnswer(&dst, src_val);
 
     // test copying src a raw buffer
-    const size_t buf_len = getNumLocRows(&src) * getNumLocCols(&src);
     const real_type* src_buf = getLocalDataConst(&src);
     dst.setToZero();
 
@@ -158,7 +157,6 @@ public:
     dst.setToZero();
 
     // test copying src a raw buffer
-    const size_t buf_len = getNumLocRows(&dst) * getNumLocCols(&dst);
     real_type* dst_buf = getLocalData(&dst);
     dst.setToZero();
 
@@ -944,10 +942,6 @@ public:
     assert(src.n() == dst.n() && "Src mat must be equal to dst mat");
     assert(src.m() == dst.m() && "Src mat must be equal to dst mat");
     assert(src.m() == diag.get_size() && "Wrong vec size");
-    const local_ordinal_type dst_m = getNumLocRows(&dst);
-    const local_ordinal_type dst_n = getNumLocCols(&dst);
-    const local_ordinal_type src_m = getNumLocRows(&src);
-    const local_ordinal_type src_n = getNumLocCols(&src);
 
     const real_type src_val = one;
     const real_type diag_val = two;

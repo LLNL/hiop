@@ -59,9 +59,9 @@ namespace hiop
   hiopKKTLinSysCompressedMDSXYcYd::hiopKKTLinSysCompressedMDSXYcYd(hiopNlpFormulation* nlp)
     : hiopKKTLinSysCompressedXYcYd(nlp), 
       rhs_(NULL), _buff_xs_(NULL),
-      Hxs_(NULL), HessMDS_(NULL), Jac_cMDS_(NULL), Jac_dMDS_(NULL),
-      write_linsys_counter_(-1), csr_writer_(nlp),
-      Hxs_wrk_(nullptr)
+      Hxs_(NULL), Hxs_wrk_(nullptr),
+      HessMDS_(NULL), Jac_cMDS_(NULL), Jac_dMDS_(NULL),
+      write_linsys_counter_(-1), csr_writer_(nlp)
   {
     nlpMDS_ = dynamic_cast<hiopNlpMDS*>(nlp_);
     assert(nlpMDS_);
@@ -77,8 +77,8 @@ namespace hiop
 
    int hiopKKTLinSysCompressedMDSXYcYd::factorizeWithCurvCheck()
   {
-    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
-    int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
+    [[maybe_unused]] int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
+    [[maybe_unused]] int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
     //factorization
     int n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
@@ -164,7 +164,7 @@ namespace hiop
     //
     //factorization + inertia correction if needed
     //
-    bool retval = factorize();
+    [[maybe_unused]] const bool retval = factorize();
     
     nlp_->runStats.tmSolverInternal.stop();
     return true;
@@ -182,7 +182,8 @@ namespace hiop
     delta_cc_ = perturb_calc_->get_curr_delta_cc();
     delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
-    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
+    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de();
+    [[maybe_unused]] const int nx = HessMDS_->n();
     int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
 
     hiopMatrixDense& Msys = linSys->sysMatrix();
@@ -407,7 +408,7 @@ namespace hiop
   hiopLinSolverSymDense* hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
   {
 
-    bool switched_linsolvers = false;
+   [[maybe_unused]] bool switched_linsolvers = false;
 #ifdef HIOP_USE_MAGMA 
     if(safe_mode_) {
       hiopLinSolverSymDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverSymDenseMagmaBuKa*>(linSys_);

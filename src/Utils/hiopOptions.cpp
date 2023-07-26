@@ -397,7 +397,7 @@ bool hiopOptions::set_val(const char* name, const char* value_in)
       transform(value.begin(), value.end(), value.begin(), ::tolower);
       //see if it is in the range (of supported values)
       bool inrange=false;
-      for(int it=0; it<option->range.size() && !inrange; it++) {
+      for(int it=0; it<static_cast<int>(option->range.size()) && !inrange; it++) {
         inrange = (option->range[it]==value);
       }
 
@@ -442,14 +442,14 @@ bool hiopOptions::SetStringValue (const char* name,  const char* value, const bo
       transform(strValue.begin(), strValue.end(), strValue.begin(), ::tolower);
       //see if it is in the range (of supported values)
       bool inrange=false;
-      for(int it=0; it<option->range.size() && !inrange; it++) {
+      for(int it=0; it<static_cast<int>(option->range.size()) && !inrange; it++) {
         inrange = (option->range[it]==strValue);
       }
       
       //empty range means the option can take any value and no range check is needed
       if(!inrange && !option->range.empty()) {
         stringstream ssRange; ssRange << " ";
-        for(int it=0; it<option->range.size(); it++) {
+        for(int it=0; it<static_cast<int>(option->range.size()); it++) {
           ssRange << option->range[it] << " ";
         }
         
@@ -536,7 +536,7 @@ void hiopOptions::OptionStr::print(FILE* f, bool short_ver) const
   } else {
     if(!short_ver) {
       stringstream ssRange; ssRange << " ";
-      for(int i=0; i<range.size(); i++) {
+      for(int i=0; i<static_cast<int>(range.size()); i++) {
         ssRange << range[i] << " ";
       }
       fprintf(f, "%s \t# (string) one of [%s] [%s]", val.c_str(), ssRange.str().c_str(), descr.c_str());

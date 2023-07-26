@@ -26,23 +26,7 @@ public:
    * this class based on HiOp option file or HiOp user-supplied runtime options.
    */
   hiopPDPerturbation()
-    : delta_w_min_bar_(1e-20),
-      delta_w_max_bar_(1e+40),
-      delta_w_0_bar_(1e-4),
-      kappa_w_minus_(1./3),
-      kappa_w_plus_bar_(100.),
-      kappa_w_plus_(8.),
-      delta_c_bar_(1e-8),
-      kappa_c_(0.25),
-      hess_degenerate_(dtNotEstablished),
-      jac_degenerate_(dtNotEstablished),
-      num_degen_iters_(0),
-      num_degen_max_iters_(3),
-      deltas_test_type_(dttNoTest),
-      mu_(1e-8),
-      max_uniform_ratio_{1.0},
-      min_uniform_ratio_{0.9},
-      delta_wx_curr_(nullptr),
+    : delta_wx_curr_(nullptr),
       delta_wd_curr_(nullptr),
       delta_cc_curr_(nullptr),
       delta_cd_curr_(nullptr),
@@ -50,7 +34,6 @@ public:
       delta_wd_last_(nullptr),
       delta_cc_last_(nullptr),
       delta_cd_last_(nullptr),
-      nlp_(nullptr),
       delta_wx_curr_db_{0.},
       delta_wd_curr_db_{0.},
       delta_cc_curr_db_{0.},
@@ -58,7 +41,24 @@ public:
       delta_wx_last_db_{0.},
       delta_wd_last_db_{0.},
       delta_cc_last_db_{0.},
-      delta_cd_last_db_{0.}
+      delta_cd_last_db_{0.},
+      delta_w_min_bar_(1e-20),
+      delta_w_max_bar_(1e+40),
+      delta_w_0_bar_(1e-4),
+      kappa_w_minus_(1./3),
+      kappa_w_plus_bar_(100.),
+      kappa_w_plus_(8.),
+      delta_c_bar_(1e-8),
+      kappa_c_(0.25),
+      min_uniform_ratio_{0.9},
+      max_uniform_ratio_{1.0},
+      hess_degenerate_(dtNotEstablished),
+      jac_degenerate_(dtNotEstablished),
+      num_degen_iters_(0),
+      num_degen_max_iters_(3),
+      deltas_test_type_(dttNoTest),
+      mu_(1e-8),
+      nlp_(nullptr)
   {
   }
 

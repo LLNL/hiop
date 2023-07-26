@@ -172,7 +172,7 @@ public:
   // Returns the solution.
   void get_solution(double* x) const 
   {
-    for(int i=0; i<n_; i++)
+    for(int i=0; i<static_cast<int>(n_); i++)
       x[i] = sol_[i];
   }
   double get_objective() {return obj_;}

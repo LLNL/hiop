@@ -22,7 +22,7 @@ namespace hiop
   public:
     // masterrank=-1 means all ranks save
     hiopCSR_IO(hiopNlpFormulation* nlp, int masterrank=0)
-      : _nlp(nlp), _master_rank(masterrank), _f(NULL), m(-1), last_counter(-1)
+      : _f(NULL), _nlp(nlp), _master_rank(masterrank), m(-1), last_counter(-1)
     {
     }
 
@@ -179,9 +179,6 @@ namespace hiop
         return;
       }
 
-      //count nnz
-      int nnz=Msys.numberOfNonzeros();
-      
       int csr_nnz;
       int *csr_kRowPtr{nullptr}, *csr_jCol{nullptr}, *index_covert_CSR2Triplet{nullptr}, *index_covert_extra_Diag2CSR{nullptr};
       double *csr_kVal{nullptr};
@@ -189,8 +186,14 @@ namespace hiop
       
       Msys.convert_to_csr_arrays(csr_nnz, &csr_kRowPtr, &csr_jCol, &csr_kVal, &index_covert_CSR2Triplet, &index_covert_extra_Diag2CSR, extra_diag_nnz_map);
       
-      if(index_covert_CSR2Triplet) delete [] index_covert_CSR2Triplet; index_covert_CSR2Triplet = nullptr;
-      if(index_covert_extra_Diag2CSR) delete [] index_covert_extra_Diag2CSR; index_covert_extra_Diag2CSR = nullptr;
+      if(index_covert_CSR2Triplet) {
+        delete [] index_covert_CSR2Triplet;
+        index_covert_CSR2Triplet = nullptr;
+      }
+      if(index_covert_extra_Diag2CSR) {
+        delete [] index_covert_extra_Diag2CSR;
+        index_covert_extra_Diag2CSR = nullptr;
+      }
       
       //start writing -> indexes are starting at 1
       fprintf(f, "%d\n%d\n%d\n%d\n%d\n", m, nx, meq, mineq, csr_nnz);
@@ -216,9 +219,9 @@ namespace hiop
       
       fclose(f);
       
-      if(csr_kRowPtr) delete [] csr_kRowPtr; csr_kRowPtr = nullptr;
-      if(csr_jCol) delete [] csr_jCol; csr_jCol = nullptr;
-      if(csr_kVal) delete [] csr_kVal; csr_kVal = nullptr;
+      if(csr_kRowPtr) { delete [] csr_kRowPtr; csr_kRowPtr = nullptr; }
+      if(csr_jCol) { delete [] csr_jCol; csr_jCol = nullptr; }
+      if(csr_kVal) { delete [] csr_kVal; csr_kVal = nullptr; }
       
     }
   
