@@ -92,7 +92,7 @@ namespace hiop
     keep_ = new int[lkeep_]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
 
     iwork_ = new int[5 * n_];
-    if(icntl_[9-1] > 1 and icntl_[10-1] > 1 ) {
+    if(icntl_[9-1] > 1 && icntl_[10-1] > 1 ) {
       dwork_ = new double[4*n_];
     } else if(icntl_[9-1] > 1) {
       dwork_ = new double[3*n_];
