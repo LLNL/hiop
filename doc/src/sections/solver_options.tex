@@ -404,6 +404,15 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 \noindent \textbf{scaling\_max\_grad}: the user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value: $100$.
 \medskip
 
+\noindent \textbf{scaling_max_obj_grad}: if a positive value is given, the objective of user's NLP will be scaled so that the inf-norm of its gradient is equal to the given value. This value overwrites the value given by ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
+\medskip
+
+\noindent \textbf{scaling_max_con_grad}: if a positive value is given, each constraint of user's NLP will be scaled so that the inf-norm of its gradient is equal to the given value. This value overwrites the value given by ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
+\medskip
+
+\noindent \textbf{scaling\_min\_grad}: If a positive value is given, it is used as the lower bound for the scaling factors. This option has a priority, i.e., the final scaling factor computed must greater or equal to this value, even thought it may violate the values given in ``scaling\_max\_grad'', ``scaling\_max\_obj\_grad'' and ``scaling\_max\_con\_grad''. Double values in $[0, 10^{20}]$. Default value: $10^{-8}$.
+\medskip
+
 \noindent \textbf{eq\_relax\_factor}: perturbation of the equalities to allow posing them as inequalities. This factor is relative to the maximum between the magnitude of the equalities rhs and 1.0. Used only by `hiopNlpSparseIneq' formulation class. Double values in $[10^{-15}, 1]$. Default value: $10^{-8}$.
 \medskip
 
