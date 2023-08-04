@@ -773,7 +773,7 @@ void hiopOptionsNLP::register_options()
                         1e+20,
                         "If a positive value is given, the objective of user's NLP will be scaled so that the "
                         "inf-norm of its gradient is equal to the value of this option. This option takes "
-                        "precedence over scaling_max_grad.")
+                        "precedence over scaling_max_grad.");
 
     register_num_option("scaling_max_con_grad",
                         0.0,
