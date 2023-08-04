@@ -771,26 +771,24 @@ void hiopOptionsNLP::register_options()
                         0.0,
                         0.0,
                         1e+20,
-                        "If a positive value is given, the objective of user's NLP will be scaled "
-                        "so that the inf-norm of its gradient is equal to the given value. This value "
-                        "overwrites the value given by scaling_max_grad.");
+                        "If a positive value is given, the objective of user's NLP will be scaled so that the "
+                        "inf-norm of its gradient is equal to the value of this option. This option takes "
+                        "precedence over scaling_max_grad.")
 
     register_num_option("scaling_max_con_grad",
                         0.0,
                         0.0,
                         1e+20,
-                        "If a positive value is given, the constraints of user's NLP will be scaled "
-                        "so that the inf-norm of its gradient is equal to the given value. This value "
-                        "overwrites the value given by scaling_max_grad.");
+                        "If a positive value is given, each constraint of user's NLP will be scaled so that the "
+                        "inf-norm of its gradient is equal to the value of this option. This option takes "
+                        "precedence over scaling_max_grad.");
 
     register_num_option("scaling_min_grad",
                         1e-8,
                         0.0,
                         1e+20,
-                        "If a positive value is given, it is used as the lower bound for the scaling factors. "
-                        "This option has a priority, i.e., the final scaling factor computed must greater or "
-                        "equal to this value, even thought it may violate the values given in scaling_max_grad, "
-                        "scaling_max_obj_grad and scaling_max_con_grad");
+                        "a positive value for this option will be used as a lower bound for (and will overwrite) "
+                        "the scaling factors computed as instructed by options scaling_max_grad, scaling_max_obj_grad and scaling_max_con_grad.");
   }
 
   // outer iterative refinement

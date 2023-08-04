@@ -404,13 +404,13 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 \noindent \textbf{scaling\_max\_grad}: the user's NLP will be rescaled if the inf-norm of the gradient at the starting point is larger than the value of this option. After rescaling, the inf-norm of the gradient will equal the value of this option. Double values in $[10^{-20}, 10^{20}]$. Default value: $100$.
 \medskip
 
-\noindent \textbf{scaling_max_obj_grad}: if a positive value is given, the objective of user's NLP will be scaled so that the inf-norm of its gradient is equal to the value of this option. This option takes precedence over ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
+\noindent \textbf{scaling\_max\_obj\_grad}: if a positive value is given, the objective of user's NLP will be scaled so that the inf-norm of its gradient is equal to the value of this option. This option takes precedence over ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
 \medskip
 
-\noindent \textbf{scaling_max_con_grad}: if a positive value is given, each constraint of user's NLP will be scaled so that the inf-norm of its gradient is equal to the value of this. This option takes precedence over ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
+\noindent \textbf{scaling\_max\_con\_grad}: if a positive value is given, each constraint of user's NLP will be scaled so that the inf-norm of its gradient is equal to the value of this. This option takes precedence over ``scaling\_max\_grad''. Double values in $[0, 10^{20}]$. Default value: $0$.
 \medskip
 
-\noindent \textbf{scaling\_min\_grad}: A positive value for this option will be used as a lower bound for (and will overwrite) the scaling factors computed as instructed by options ``scaling\_max\_grad'', ``scaling\_max\_obj\_grad'' and ``scaling\_max\_con\_grad''. Double values in $[0, 10^{20}]$. Default value: $10^{-8}$.
+\noindent \textbf{scaling\_min\_grad}: a positive value for this option will be used as a lower bound for (and will overwrite) the scaling factors computed as instructed by options ``scaling\_max\_grad'', ``scaling\_max\_obj\_grad'' and ``scaling\_max\_con\_grad''. Double values in $[0, 10^{20}]$. Default value: $10^{-8}$.
 \medskip
 
 \noindent \textbf{eq\_relax\_factor}: perturbation of the equalities to allow posing them as inequalities. This factor is relative to the maximum between the magnitude of the equalities rhs and 1.0. Used only by `hiopNlpSparseIneq' formulation class. Double values in $[10^{-15}, 1]$. Default value: $10^{-8}$.

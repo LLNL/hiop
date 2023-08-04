@@ -444,7 +444,7 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
       scale_factor_obj = max_obj_grad / gradf.infnorm();
     }
   }
-  if(scale_factor_obj < min_grad) {
+  if(min_grad > 0.0 && scale_factor_obj < min_grad) {
     scale_factor_obj = min_grad;
   }
   
@@ -491,8 +491,10 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
     scale_factor_c->setToConstant(max_con_grad / scale_factor_c->infnorm());
     scale_factor_d->setToConstant(max_con_grad / scale_factor_d->infnorm());
   }
-  scale_factor_c->component_max(min_grad);
-  scale_factor_d->component_max(min_grad);
+  if(min_grad > 0.0) {
+    scale_factor_c->component_max(min_grad);
+    scale_factor_d->component_max(min_grad);
+  }
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
