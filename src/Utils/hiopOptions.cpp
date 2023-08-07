@@ -766,6 +766,29 @@ void hiopOptionsNLP::register_options()
                         1e+20,
                         "The user's NLP will be rescaled if the inf-norm of the gradient at the starting point is "
                         "larger than the value of this option (default 100)");
+
+    register_num_option("scaling_max_obj_grad",
+                        0.0,
+                        0.0,
+                        1e+20,
+                        "If a positive value is given, the objective of user's NLP will be scaled so that the "
+                        "inf-norm of its gradient is equal to the value of this option. This option takes "
+                        "precedence over scaling_max_grad.");
+
+    register_num_option("scaling_max_con_grad",
+                        0.0,
+                        0.0,
+                        1e+20,
+                        "If a positive value is given, each constraint of user's NLP will be scaled so that the "
+                        "inf-norm of its gradient is equal to the value of this option. This option takes "
+                        "precedence over scaling_max_grad.");
+
+    register_num_option("scaling_min_grad",
+                        1e-8,
+                        0.0,
+                        1e+20,
+                        "a positive value for this option will be used as a lower bound for (and will overwrite) "
+                        "the scaling factors computed as instructed by options scaling_max_grad, scaling_max_obj_grad and scaling_max_con_grad.");
   }
 
   // outer iterative refinement

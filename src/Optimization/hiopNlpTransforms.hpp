@@ -352,7 +352,6 @@ class hiopNLPObjGradScaling : public hiopNlpTransformation
 {
 public:
   hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
-                        const double& max_grad, 
                         hiopVector& c, 
                         hiopVector& d, 
                         hiopVector& gradf,

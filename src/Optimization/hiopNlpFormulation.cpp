@@ -681,23 +681,32 @@ bool hiopNlpFormulation::apply_scaling(hiopVector& c, hiopVector& d, hiopVector&
   }
   
   const double max_grad = options->GetNumeric("scaling_max_grad");
+  const double max_obj_grad = options->GetNumeric("scaling_max_obj_grad");
+  const double max_con_grad = options->GetNumeric("scaling_max_con_grad");
+  double obj_grad_target = max_grad;
+  double con_grad_target = max_grad;
+  if(max_obj_grad > 0) {
+    obj_grad_target = max_obj_grad;
+  }
+  if(max_con_grad > 0) {
+    con_grad_target = max_con_grad;
+  }
 
-  if(gradf.infnorm() < max_grad &&
-     Jac_c.max_abs_value() < max_grad &&
-     Jac_d.max_abs_value() < max_grad)
+  if(gradf.infnorm() < obj_grad_target       &&
+     Jac_c.max_abs_value() < con_grad_target &&
+     Jac_d.max_abs_value() < con_grad_target)
   {
     return false;
   }
   
   nlp_scaling_ = new hiopNLPObjGradScaling(this,
-                                          max_grad,
-                                          c,
-                                          d,
-                                          gradf,
-                                          Jac_c,
-                                          Jac_d,
-                                          *cons_eq_mapping_,
-                                          *cons_ineq_mapping_);
+                                           c,
+                                           d,
+                                           gradf,
+                                           Jac_c,
+                                           Jac_d,
+                                           *cons_eq_mapping_,
+                                           *cons_ineq_mapping_);
   
   c_rhs_ = nlp_scaling_->apply_to_cons_eq(*c_rhs_, n_cons_eq_);
   dl_ = nlp_scaling_->apply_to_cons_ineq(*dl_, n_cons_ineq_);

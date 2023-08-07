@@ -416,7 +416,6 @@ relax_from_ori(const double& bound_relax_perturb, hiopVector& xl, hiopVector& xu
 * For class hiopNLPObjGradScaling
 */
 hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
-                                             const double& max_grad, 
                                              hiopVector& c, 
                                              hiopVector& d, 
                                              hiopVector& gradf,
@@ -429,9 +428,24 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
     scale_factor_obj(1.),
     n_eq(c.get_size()), n_ineq(d.get_size())
 {
-  scale_factor_obj = max_grad/gradf.infnorm();
-  if(scale_factor_obj>1.) {
-    scale_factor_obj=1.;
+  const double max_grad = nlp_->options->GetNumeric("scaling_max_grad");
+  const double min_grad = nlp_->options->GetNumeric("scaling_min_grad");
+  const double max_obj_grad = nlp_->options->GetNumeric("scaling_max_obj_grad");
+  const double max_con_grad = nlp_->options->GetNumeric("scaling_max_con_grad");
+
+  const double gradf_infnorm = gradf.infnorm();  
+  scale_factor_obj = 1.;
+  if(max_obj_grad == 0.) {
+    if(gradf_infnorm > max_grad) {
+      scale_factor_obj = max_grad / gradf.infnorm();
+    }
+  } else {
+    if(gradf_infnorm > 0.) {
+      scale_factor_obj = max_obj_grad / gradf.infnorm();
+    }
+  }
+  if(min_grad > 0.0 && scale_factor_obj < min_grad) {
+    scale_factor_obj = min_grad;
   }
   
   scale_factor_c = c.new_copy();
@@ -455,6 +469,32 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
 
   scale_factor_cd->copy_from_two_vec_w_pattern(*scale_factor_c, cons_eq_mapping, *scale_factor_d, cons_ineq_mapping);
 
+  Jac_c.row_max_abs_value(*scale_factor_c);
+  Jac_d.row_max_abs_value(*scale_factor_d);
+  if(max_con_grad == 0.) {
+    if(scale_factor_c->infnorm() > max_grad){
+      scale_factor_c->scale(1./max_grad);
+      scale_factor_c->component_max(1.0);
+      scale_factor_c->invert();               
+    } else {
+      scale_factor_c->setToConstant(1.0);
+    }
+    
+    if(scale_factor_d->infnorm() > max_grad){
+      scale_factor_d->scale(1./max_grad);
+      scale_factor_d->component_max(1.0);
+      scale_factor_d->invert();               
+    } else {
+      scale_factor_d->setToConstant(1.0);
+    }
+  } else {
+    scale_factor_c->setToConstant(max_con_grad / scale_factor_c->infnorm());
+    scale_factor_d->setToConstant(max_con_grad / scale_factor_d->infnorm());
+  }
+  if(min_grad > 0.0) {
+    scale_factor_c->component_max(min_grad);
+    scale_factor_d->component_max(min_grad);
+  }
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()
