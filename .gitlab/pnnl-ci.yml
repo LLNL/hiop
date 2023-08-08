@@ -186,7 +186,8 @@ pnnl_cleanup:
 
 pending:
 stage: .pre
-extends: .report-pending
+extends: 
+    - .report-pending
 parallel:
   matrix:
     - MY_CLUSTER: "incline"
