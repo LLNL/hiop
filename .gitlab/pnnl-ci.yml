@@ -185,14 +185,14 @@ pnnl_cleanup:
     name: reporting-github
 
 pending:
-stage: .pre
-extends: 
-    - .report-pending
-parallel:
-  matrix:
-    - MY_CLUSTER: "incline"
-    - MY_CLUSTER: "newell"
-    - MY_CLUSTER: "marianas"
+  stage: .pre
+  extends: 
+      - .report-pending
+  parallel:
+    matrix:
+      - MY_CLUSTER: "incline"
+      - MY_CLUSTER: "newell"
+      - MY_CLUSTER: "marianas"
 
 pending-incline:
   extends:
