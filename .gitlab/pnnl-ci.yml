@@ -181,7 +181,7 @@ pnnl_cleanup:
       -X POST \
       -H @${GITHUB_CURL_HEADERS} \
       https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
-      -d "{\"state\":\"${state}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${STATUS_NAME}\"}"
+      -d "{\"state\":\"${STATE}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${STATUS_NAME}\"}"
   environment:
     name: reporting-github
 
