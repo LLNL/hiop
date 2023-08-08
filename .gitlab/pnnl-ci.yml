@@ -70,7 +70,18 @@ variables:
       export CTEST_CMD=$CTEST_CMD
 
       sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
+       
+      export jobid=$(echo $jobid | cut -f4 -d' ')
+      echo $jobid > "$WORKDIR/jobid_${jobid}"
+
+      partition=$(squeue -j $jobid -h --format="%P")
+      export partition=$(echo $partition | cut -f2 -d'=' | cut -f1 -d' ')
+      
+      echo "Job $jobid submitted to partition $partition"
+      popd
+
       res=1
+
       set +xv
       while :;
         do
@@ -126,18 +137,74 @@ pnnl_cleanup:
   script:
     - |
       set -x
+       if [[ ! -e partition ]]; then
+        echo "No partition file found"
+        export part="none"
+      else
+        export part=$(cat partition)
+      fi
+      
+      export newell_status="gcc@8.5.0/cuda/11.4"
+      export incline_status="gcc@8.5/rocm/4.5.1"
+      export marianas_status="gcc@10.2/cuda/11.4"
+
+
+      if [[ "$part" == *"newell"*  ]]; then
+        export STATUS_NAME=$newell_status
+     
+      elif [[ "$part" == *"incline"*  ]]; then
+        export STATUS_NAME="$incline_status"
+
+      elif [[ "$part" == *"marianas"*  ]]; then
+        export STATUS_NAME="$marianas_status"
+     
       curl -L \
       -X POST \
       -H @${GITHUB_CURL_HEADERS} \
       https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
-      -d "{\"state\":\"${CI_JOB_NAME}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${STATUS_NAME}\"}"
+      -d "{\"state\":\"${CI_JOB_NAME}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"description\":\"${STATUS_NAME}\",\"context\":\"${MY_CLUSTER}\"}"
   environment:
     name: reporting-github
 
-pending:
-  stage: .pre
+.report-pending:
   extends:
-    - .report-status
+    - .pnnl_nohpc_tags
+  variables:
+    STATUS_PROJECT: LLNL/hiop
+    STATUS_NAME: PNNL_GitLab
+    GIT_STRATEGY: none
+  script:
+   -  |
+      set -x
+      curl -L \
+      -X POST \
+      -H @${GITHUB_CURL_HEADER}\
+       https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
+       -d "{\"state\":\"${CI_JOB_NAME}\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${MY_CLUSTER}\"}"
+  environment:
+    name: reporting-github
+
+
+pending-incline:
+  extends:
+    - .report-pending
+  variables:
+    MY_CLUSTER: "incline"
+  stage: .pre
+
+pending-newell:
+  extends:
+    - .report-pending
+  variables:
+    MY_CLUSTER: "newell"
+  stage: .pre
+
+pending-marianas:
+  extends:
+    - .report-pending
+  variables:
+    MY_CLUSTER: "marianas"
+  stage: .pre
 
 success:
   stage: .post
