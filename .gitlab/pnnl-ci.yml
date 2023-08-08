@@ -180,7 +180,7 @@ pnnl_cleanup:
       -X POST \
       -H @${GITHUB_CURL_HEADER}\
        https://api.github.com/repos/${STATUS_PROJECT}/statuses/${CI_COMMIT_SHA} \
-       -d "{\"state\":\"pending\",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${MY_CLUSTER}\"}"
+       -d '{"state":"pending",\"target_url\":\"${CI_PIPELINE_URL}\",\"context\":\"${MY_CLUSTER}\"}''
   environment:
     name: reporting-github
 
