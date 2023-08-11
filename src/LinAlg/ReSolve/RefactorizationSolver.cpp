@@ -232,9 +232,10 @@ namespace ReSolve {
     return 0;
   }
 
-  bool RefactorizationSolver::triangular_solve(double* dx, const double* rhs, double tol)
+  bool RefactorizationSolver::triangular_solve(double* dx, const double* rhs, double tol, std::string memspace)
   {
-    if(refact_ == "glu") {
+    if(refact_ == "glu")
+    {
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
                                        n_,
                                        /* A is original matrix */
@@ -249,66 +250,68 @@ namespace ReSolve {
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
-
-      if(sp_status_ == 0) {
-        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-      } else {
+      if(sp_status_ != 0) {
         // TODO: Implement ReSolve logging system to output these messages
         std::cout << "GLU solve failed with status: " << sp_status_ << "\n";
         return false;
       }
-    } else {
-      if(refact_ == "rf") {
-        if(!is_first_solve_) {
-          sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P_,
-                                       d_Q_,
-                                       1,
-                                       d_T_,
-                                       n_,
-                                       devr_,
-                                       n_);
+      checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      return true;
+    } 
 
-          if(sp_status_ == 0) {
-            if(use_ir_ == "yes") {
-              // Set tolerance based on barrier parameter mu
-              ir_->set_tol(tol);
-
-              checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
-
-              ir_->fgmres(devr_, devx_);
-              if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
-                std::cout << "[Warning] Iterative refinement did not converge!\n";
-                std::cout << "\t Iterative refinement tolerance " << tol << "\n";
-                std::cout << "\t Relative solution error        " << ir_->getFinalResidalNorm()/ir_->getBNorm() << "\n";
-                std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
-                          << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
-                          << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
-              }
-
-            }
-            checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-
-
-          } else {
-            // TODO: Implement ReSolve logging system to output these messages
-            std::cout << "Rf solve failed with status: " << sp_status_ << "\n";
-            return false;
-          }
-        } else {
-          memcpy(dx, rhs, sizeof(double) * n_);
-          int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
-          klu_free_numeric(&Numeric_, &Common_);
-          klu_free_symbolic(&Symbolic_, &Common_);
-          is_first_solve_ = false;
-        }
-      } else {
-        // TODO: Implement ReSolve logging system to output these messages
-        std::cout << "Unknown refactorization, exiting\n";
-        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
+    if(refact_ == "rf")
+    {
+      // First solve is performed on CPU
+      if(is_first_solve_)
+      {
+        memcpy(dx, rhs, sizeof(double) * n_);
+        int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
+        klu_free_numeric(&Numeric_, &Common_);
+        klu_free_symbolic(&Symbolic_, &Common_);
+        is_first_solve_ = false;
+        return true;
       }
+
+      // Each next solve is performed on GPU
+      sp_status_ = cusolverRfSolve(handle_rf_,
+                                   d_P_,
+                                   d_Q_,
+                                   1,
+                                   d_T_,
+                                   n_,
+                                   devr_,
+                                   n_);
+      if(sp_status_ != 0) {
+        if(!silent_output_)
+          std::cout << "Rf solve failed with status: " << sp_status_ << "\n";
+        return false;
+      }
+
+      if(use_ir_ == "yes") {
+        // Set tolerance based on barrier parameter mu
+        ir_->set_tol(tol);
+
+        checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
+
+        ir_->fgmres(devr_, devx_);
+        if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
+          std::cout << "[Warning] Iterative refinement did not converge!\n";
+          std::cout << "\t Iterative refinement tolerance " << tol << "\n";
+          std::cout << "\t Relative solution error        " << ir_->getFinalResidalNorm()/ir_->getBNorm() << "\n";
+          std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
+                    << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
+                    << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
+        }
+            
+      }
+      checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      return true;
     }
-    return true;
+
+    // TODO: Implement ReSolve logging system to output these messages
+    std::cout << "Unknown refactorization, exiting\n";
+    assert(false && "Only GLU and cuSolverRf are available refactorizations.");
+    return false;
   }
 
   // helper private function needed for format conversion

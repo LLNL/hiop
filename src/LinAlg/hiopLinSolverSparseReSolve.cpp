@@ -298,7 +298,7 @@ namespace hiop
       nlp_->log->printf(hovError, "Memory space %s incompatible with ReSolve.\n", mem_space.c_str());
     }
 
-    bool retval = solver_->triangular_solve(dx, rhs_, ir_tol);
+    bool retval = solver_->triangular_solve(dx, rhs_, ir_tol, mem_space);
     if(!retval) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "ReSolve triangular solver failed\n");

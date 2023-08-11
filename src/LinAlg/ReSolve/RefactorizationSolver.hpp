@@ -175,7 +175,7 @@ public:
    * @param tol 
    * @return bool 
    */
-  bool triangular_solve(double* dx, const double* rhs, double tol);
+  bool triangular_solve(double* dx, const double* rhs, double tol, std::string memspace);
 
 
 private:
