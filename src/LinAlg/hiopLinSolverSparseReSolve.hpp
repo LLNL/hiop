@@ -126,6 +126,9 @@ protected:
   int factorizationSetupSucc_;
   bool is_first_call_;
 
+  hiopVector* rhs_host_{ nullptr };
+  hiopMatrixSparse* M_host_{ nullptr };
+
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
 
@@ -152,27 +155,27 @@ protected:
   template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
 };
 
-class hiopLinSolverSymSparseReSolveGPU : public hiopLinSolverSymSparseReSolve
-{
-public:  
-  hiopLinSolverSymSparseReSolveGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSymSparseReSolveGPU();
+// class hiopLinSolverSymSparseReSolveGPU : public hiopLinSolverSymSparseReSolve
+// {
+// public:  
+//   hiopLinSolverSymSparseReSolveGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
+//   virtual ~hiopLinSolverSymSparseReSolveGPU();
 
-  virtual int matrixChanged();
-  virtual bool solve(hiopVector& x_);
+//   virtual int matrixChanged();
+//   virtual bool solve(hiopVector& x_);
 
-  /** Multiple rhs not supported yet */
-  virtual bool
-  solve(hiopMatrix& /* x */)
-  {
-    assert(false && "not yet supported");
-    return false;
-  }
+//   /** Multiple rhs not supported yet */
+//   virtual bool
+//   solve(hiopMatrix& /* x */)
+//   {
+//     assert(false && "not yet supported");
+//     return false;
+//   }
 
-private:
-  hiopVector* rhs_host_;
-  hiopMatrixSparse* M_host_;
-};
+// private:
+//   hiopVector* rhs_host_;
+//   hiopMatrixSparse* M_host_;
+// };
 
 } // namespace hiop
 
