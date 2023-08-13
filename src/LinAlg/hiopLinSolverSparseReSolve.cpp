@@ -49,6 +49,7 @@
  * @file hiopLinSolverSparseReSolve.cpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
+ * @author Slaven Peles <peless@ornl.gov>, ORNL
  *
  */
 
@@ -81,11 +82,9 @@ namespace hiop
   {
     // Create ReSolve solver and allocate rhs temporary storage
     solver_ = new ReSolve::RefactorizationSolver(n);
-    rhs_    = new double[n]{ 0 };
 
     // If memory space is device, allocate host mirror for HiOp's KKT matrix in triplet format
     if(nlp_->options->GetString("mem_space") == "device") {
-      rhs_host_ = LinearAlgebraFactory::create_vector("default", n);
       M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
     }
 
@@ -219,11 +218,9 @@ namespace hiop
   hiopLinSolverSymSparseReSolve::~hiopLinSolverSymSparseReSolve()
   {
     delete solver_;
-    delete [] rhs_;
 
     // If memory space is device, delete allocated host mirrors
     if(nlp_->options->GetString("mem_space") == "device") {
-      delete rhs_host_;
       delete M_host_;
     }
 
@@ -279,7 +276,7 @@ namespace hiop
     std::string mem_space = nlp_->options->GetString("mem_space");
     double* dx = x.local_data();
 
-    bool retval = solver_->triangular_solve(dx, rhs_, ir_tol, mem_space);
+    bool retval = solver_->triangular_solve(dx, ir_tol, mem_space);
     if(!retval) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "ReSolve triangular solver failed\n");
@@ -297,7 +294,7 @@ namespace hiop
     // If the matrix is on device, copy it to the host mirror
     std::string mem_space = nlp_->options->GetString("mem_space");
     if(mem_space == "device") {
-      checkCudaErrors(cudaMemcpy(M_host_->M(),    M_->M(),    sizeof(double)     * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(M_host_->M(),     M_->M(),     sizeof(double)     * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
       checkCudaErrors(cudaMemcpy(M_host_->i_row(), M_->i_row(), sizeof(index_type) * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
       checkCudaErrors(cudaMemcpy(M_host_->j_col(), M_->j_col(), sizeof(index_type) * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));      
     } 

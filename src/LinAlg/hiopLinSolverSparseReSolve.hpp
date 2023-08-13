@@ -50,6 +50,7 @@
  * @file hiopLinSolverSparseReSolve.hpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
+ * @author Slaven Peles <peless@ornl.gov>, ORNL
  *
  */
 
@@ -112,9 +113,6 @@ public:
 protected:
   ReSolve::RefactorizationSolver* solver_;
 
-  /* Right-hand side vector */
-  double* rhs_;
-
   int m_;   ///< number of rows of the whole matrix
   int n_;   ///< number of cols of the whole matrix
   int nnz_; ///< number of nonzeros in the matrix
@@ -126,8 +124,7 @@ protected:
   int factorizationSetupSucc_;
   bool is_first_call_;
 
-  hiopVector* rhs_host_{ nullptr };
-  hiopMatrixSparse* M_host_{ nullptr };
+  hiopMatrixSparse* M_host_{ nullptr }; ///< Host mirror for the KKT matrix
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */

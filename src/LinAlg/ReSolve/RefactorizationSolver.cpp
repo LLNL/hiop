@@ -86,6 +86,9 @@ namespace ReSolve {
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
 
+    // Allocate host mirror for the solution vector
+    hostx_ = new double[n_];
+
     // Allocate solution and rhs vectors
     checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
@@ -103,6 +106,9 @@ namespace ReSolve {
     cusolverSpDestroy(handle_cusolver_);
     cublasDestroy(handle_cublas_);
     cusparseDestroyMatDescr(descr_A_);
+
+    // Delete host mirror for the solution vector
+    delete [] hostx_;
 
     // Delete residual and solution vectors
     cudaFree(devr_);
@@ -232,7 +238,7 @@ namespace ReSolve {
     return 0;
   }
 
-  bool RefactorizationSolver::triangular_solve(double* dx, const double* rhs, double tol, std::string memspace)
+  bool RefactorizationSolver::triangular_solve(double* dx, double tol, std::string memspace)
   {
     if(refact_ == "glu")
     {
@@ -258,8 +264,7 @@ namespace ReSolve {
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
-      if(sp_status_ != 0) {
-        // TODO: Implement ReSolve logging system to output these messages
+      if(sp_status_ != 0 && !silent_output_) {
         std::cout << "GLU solve failed with status: " << sp_status_ << "\n";
         return false;
       }
@@ -278,8 +283,8 @@ namespace ReSolve {
       {
         double* hostx = nullptr;
         if(memspace == "device") {
-          hostx = new double[n_];
-          checkCudaErrors(cudaMemcpy(hostx, dx, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+          checkCudaErrors(cudaMemcpy(hostx_, dx, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+          hostx = hostx_;
         } else {
           hostx = dx;
         }
@@ -289,7 +294,6 @@ namespace ReSolve {
         is_first_solve_ = false;
         if(memspace == "device") {
           checkCudaErrors(cudaMemcpy(dx, hostx, sizeof(double) * n_, cudaMemcpyHostToDevice));
-          delete [] hostx;
         } else {
           // do nothing
         }
@@ -344,9 +348,9 @@ namespace ReSolve {
       return true;
     }
 
-    // TODO: Implement ReSolve logging system to output these messages
-    std::cout << "Unknown refactorization, exiting\n";
-    assert(false && "Only GLU and cuSolverRf are available refactorizations.");
+    if(!silent_output_) {
+      std::cout << "Unknown refactorization " << refact_ << ", exiting\n";
+    }
     return false;
   }
 
