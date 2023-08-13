@@ -236,6 +236,14 @@ namespace ReSolve {
   {
     if(refact_ == "glu")
     {
+      double* devx = nullptr;
+      if(memspace == "device") {
+        checkCudaErrors(cudaMemcpy(devr_, dx, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = dx;
+      } else {
+        checkCudaErrors(cudaMemcpy(devr_, dx, sizeof(double) * n_, cudaMemcpyHostToDevice));
+        devx = devx_;
+      }
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
                                        n_,
                                        /* A is original matrix */
@@ -245,7 +253,7 @@ namespace ReSolve {
                                        mat_A_csr_->get_irows(), //dia_,
                                        mat_A_csr_->get_jcols(), //dja_,
                                        devr_,/* right hand side */
-                                       devx_,/* left hand side */
+                                       devx,/* left hand side, local pointer */
                                        &ite_refine_succ_,
                                        &r_nrminf_,
                                        info_M_,
@@ -255,7 +263,11 @@ namespace ReSolve {
         std::cout << "GLU solve failed with status: " << sp_status_ << "\n";
         return false;
       }
-      checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      if(memspace == "device") {
+        // do nothing
+      } else {
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      }
       return true;
     } 
 
@@ -264,16 +276,35 @@ namespace ReSolve {
       // First solve is performed on CPU
       if(is_first_solve_)
       {
-        memcpy(dx, rhs, sizeof(double) * n_);
-        int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
+        double* hostx = nullptr;
+        if(memspace == "device") {
+          hostx = new double[n_];
+          checkCudaErrors(cudaMemcpy(hostx, dx, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+        } else {
+          hostx = dx;
+        }
+        int ok = klu_solve(Symbolic_, Numeric_, n_, 1, hostx, &Common_); // replace dx with hostx
         klu_free_numeric(&Numeric_, &Common_);
         klu_free_symbolic(&Symbolic_, &Common_);
         is_first_solve_ = false;
+        if(memspace == "device") {
+          checkCudaErrors(cudaMemcpy(dx, hostx, sizeof(double) * n_, cudaMemcpyHostToDevice));
+          delete [] hostx;
+        } else {
+          // do nothing
+        }
         return true;
       }
 
-      // cusolverRfSolve overwrites rhs vector, make a copy (needed for iterative refinement)
-      checkCudaErrors(cudaMemcpy(devx_, devr_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+      double* devx = nullptr;
+      if(memspace == "device") {
+        devx = dx;
+        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+      } else {
+        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = devx_;
+      }
 
       // Each next solve is performed on GPU
       sp_status_ = cusolverRfSolve(handle_rf_,
@@ -282,7 +313,7 @@ namespace ReSolve {
                                    1,
                                    d_T_,
                                    n_,
-                                   devx_,
+                                   devx,  // replace devx_ with local pointer devx
                                    n_);
       if(sp_status_ != 0) {
         if(!silent_output_)
@@ -294,7 +325,7 @@ namespace ReSolve {
         // Set tolerance based on barrier parameter mu
         ir_->set_tol(tol);
 
-        ir_->fgmres(devx_, devr_);
+        ir_->fgmres(devx, devr_);  // replace devx_ with local pointer devx
         if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
           std::cout << "[Warning] Iterative refinement did not converge!\n";
           std::cout << "\t Iterative refinement tolerance " << tol << "\n";
@@ -305,7 +336,11 @@ namespace ReSolve {
         }
             
       }
-      checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      if(memspace == "device") {
+        // do nothing
+      } else {
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      }
       return true;
     }
 

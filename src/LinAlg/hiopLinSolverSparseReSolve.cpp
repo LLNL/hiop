@@ -276,40 +276,13 @@ namespace hiop
     // Set IR tolerance
     double ir_tol = nlp_->options->GetNumeric("ir_inner_tol");
 
-    double* dx = nullptr;
-
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "host" || mem_space == "default") {
-      // Set dx to local data of the right-hand-side vector; this data is overwritten with the solution
-      dx = x.local_data();
-      // Make a copy of the right-hand-side to rhs_
-      memcpy(rhs_, dx, n_*sizeof(double));
-      // Copy rhs_ to device
-      checkCudaErrors(cudaMemcpy(solver_->devr(), rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
-    } else if(mem_space == "device") {
-      // Copy the right-hand-side vector to a buffer on the device
-      checkCudaErrors(cudaMemcpy(solver_->devr(), x.local_data(), sizeof(double) * n_, cudaMemcpyDeviceToDevice));
-      // Copy right-hand-side stored in solution vector to a buffer on the host.
-      dx = new double[n_]; // this is egregious, but is just a temporary solution
-      checkCudaErrors(cudaMemcpy(dx, x.local_data(), sizeof(double) * n_, cudaMemcpyDeviceToHost));
-      // Make an extra copy of the right-hand-side
-      memcpy(rhs_, dx, n_*sizeof(double));
-    } else {
-      nlp_->log->printf(hovError, "Memory space %s incompatible with ReSolve.\n", mem_space.c_str());
-    }
+    double* dx = x.local_data();
 
     bool retval = solver_->triangular_solve(dx, rhs_, ir_tol, mem_space);
     if(!retval) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "ReSolve triangular solver failed\n");
-    }
-
-    if(mem_space == "device") {
-      // Copy solution from host back to the device
-      checkCudaErrors(cudaMemcpy(x.local_data(), dx, sizeof(double) * n_, cudaMemcpyHostToDevice));
-      // delete temp storage
-      delete [] dx;
-      dx =nullptr;
     }
 
     nlp_->runStats.linsolv.tmTriuSolves.stop();
