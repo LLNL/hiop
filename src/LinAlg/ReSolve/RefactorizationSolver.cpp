@@ -272,6 +272,9 @@ namespace ReSolve {
         return true;
       }
 
+      // cusolverRfSolve overwrites rhs vector, make a copy (needed for iterative refinement)
+      checkCudaErrors(cudaMemcpy(devx_, devr_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+
       // Each next solve is performed on GPU
       sp_status_ = cusolverRfSolve(handle_rf_,
                                    d_P_,
@@ -279,7 +282,7 @@ namespace ReSolve {
                                    1,
                                    d_T_,
                                    n_,
-                                   devr_,
+                                   devx_,
                                    n_);
       if(sp_status_ != 0) {
         if(!silent_output_)
@@ -291,9 +294,7 @@ namespace ReSolve {
         // Set tolerance based on barrier parameter mu
         ir_->set_tol(tol);
 
-        checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
-
-        ir_->fgmres(devr_, devx_);
+        ir_->fgmres(devx_, devr_);
         if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
           std::cout << "[Warning] Iterative refinement did not converge!\n";
           std::cout << "\t Iterative refinement tolerance " << tol << "\n";
@@ -304,7 +305,7 @@ namespace ReSolve {
         }
             
       }
-      checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       return true;
     }
 
