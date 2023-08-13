@@ -117,8 +117,13 @@ protected:
   int n_;   ///< number of cols of the whole matrix
   int nnz_; ///< number of nonzeros in the matrix
 
-  int* index_covert_CSR2Triplet_;
-  int* index_covert_extra_Diag2CSR_;
+  // Mapping on the host
+  int* index_convert_CSR2Triplet_host_;
+  int* index_convert_extra_Diag2CSR_host_;
+
+  // Mapping on the device
+  int* index_convert_CSR2Triplet_device_;
+  int* index_convert_extra_Diag2CSR_device_;
 
   // Algorithm control flags
   int factorizationSetupSucc_;

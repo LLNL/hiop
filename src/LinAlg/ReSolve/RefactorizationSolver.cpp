@@ -207,9 +207,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::refactorize()
   {
-    // TODO: This memcpy should not be in this function.
-    checkCudaErrors(cudaMemcpy(mat_A_csr_->get_vals(), mat_A_csr_->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
                                        n_,

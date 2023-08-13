@@ -243,6 +243,9 @@ int main(int argc, char **argv)
     // only support cusolverLU right now, 2023.02.28
     //lsq initialization of the duals fails for this example since the Jacobian is rank deficient
     //use zero initialization
+    // nlp.options->SetStringValue("linear_solver_sparse", "resolve");
+    // nlp.options->SetStringValue("resolve_refactorization", "rf");
+    // nlp.options->SetIntegerValue("ir_inner_maxit", 20);
     nlp.options->SetStringValue("duals_init", "zero");
     nlp.options->SetStringValue("mem_space", "device");
     nlp.options->SetStringValue("fact_acceptor", "inertia_free");
