@@ -58,7 +58,6 @@
 #include "RefactorizationSolver.hpp"
 
 #include "hiop_blasdefs.hpp"
-// #include "KrylovSolverKernels.h"
 
 #include "klu.h"
 #include "cusparse_v2.h"
@@ -213,18 +212,18 @@ namespace ReSolve {
                                        /* A is original matrix */
                                        nnz_,
                                        descr_A_,
-                                       mat_A_csr_->get_vals(),  //da_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
+                                       mat_A_csr_->get_vals(), 
+                                       mat_A_csr_->get_irows(),
+                                       mat_A_csr_->get_jcols(),
                                        info_M_);
       sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
     } else {
       if(refact_ == "rf") {
         sp_status_ = cusolverRfResetValues(n_, 
                                            nnz_, 
-                                           mat_A_csr_->get_irows(), //dia_,
-                                           mat_A_csr_->get_jcols(), //dja_,
-                                           mat_A_csr_->get_vals(),  //da_,
+                                           mat_A_csr_->get_irows(),
+                                           mat_A_csr_->get_jcols(),
+                                           mat_A_csr_->get_vals(), 
                                            d_P_,
                                            d_Q_,
                                            handle_rf_);
@@ -252,9 +251,9 @@ namespace ReSolve {
                                        /* A is original matrix */
                                        nnz_,
                                        descr_A_,
-                                       mat_A_csr_->get_vals(),  //da_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
+                                       mat_A_csr_->get_vals(), 
+                                       mat_A_csr_->get_irows(),
+                                       mat_A_csr_->get_jcols(),
                                        devr_,/* right hand side */
                                        devx,/* left hand side, local pointer */
                                        &ite_refine_succ_,
@@ -275,16 +274,6 @@ namespace ReSolve {
 
     if(refact_ == "rf")
     {
-      double* devx = nullptr;
-      if(memspace == "device") {
-        devx = dx;
-        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
-      } else {
-        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
-        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
-        devx = devx_;
-      }
-
       // First solve is performed on CPU
       if(is_first_solve_)
       {
@@ -305,6 +294,16 @@ namespace ReSolve {
           // do nothing
         }
         return true;
+      }
+
+      double* devx = nullptr;
+      if(memspace == "device") {
+        devx = dx;
+        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+      } else {
+        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = devx_;
       }
 
       // Each next solve is performed on GPU
@@ -420,7 +419,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::initializeCusolverGLU()
   {
-    // nlp_->log->printf(hovScalars, "CUSOLVER: Glu \n");
     cusparseCreateMatDescr(&descr_M_);
     cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
@@ -436,7 +434,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::initializeCusolverRf()
   {
-    // nlp_->log->printf(hovScalars, "CUSOLVER: Rf \n");
     cusolverRfCreate(&handle_rf_);
 
     checkCudaErrors(cusolverRfSetAlgs(handle_rf_,
@@ -543,9 +540,9 @@ namespace ReSolve {
                                      /* A is original matrix */
                                      nnz_, 
                                      descr_A_, 
-                                     mat_A_csr_->get_vals(),  //da_, 
-                                     mat_A_csr_->get_irows(), //dia_, 
-                                     mat_A_csr_->get_jcols(), //dja_, 
+                                     mat_A_csr_->get_vals(), 
+                                     mat_A_csr_->get_irows(), 
+                                     mat_A_csr_->get_jcols(), 
                                      info_M_);
 
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
@@ -769,8 +766,8 @@ namespace ReSolve {
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
   void RefactorizationSolver::resolveCheckCudaError(T result,
-                                                  const char* const file,
-                                                  int const line)
+                                                    const char* const file,
+                                                    int const line)
   {
     if(result) {
       fprintf(stdout, 

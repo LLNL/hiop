@@ -153,7 +153,7 @@ namespace hiop
       ordering = 1;
     }
     solver_->ordering() = ordering;
-    std::cout << "Ordering: " << solver_->ordering() << "\n";
+    nlp_->log->printf(hovSummary, "Ordering: %d\n", solver_->ordering());
 
     // Select factorization
     std::string fact;
@@ -165,7 +165,7 @@ namespace hiop
       fact = "klu";
     }
     solver_->fact() = fact;
-    std::cout << "Factorization: " << solver_->fact() << "\n";
+    nlp_->log->printf(hovSummary, "Factorization: %s\n", solver_->fact().c_str());
 
     // Select refactorization
     std::string refact;
@@ -177,7 +177,7 @@ namespace hiop
       refact = "glu";
     }
     solver_->refact() = refact;
-    std::cout << "Refactorization: " << solver_->refact() << "\n";
+    nlp_->log->printf(hovSummary, "Refactorization: %s\n", solver_->refact().c_str());
 
     // by default, dont use iterative refinement
     std::string use_ir;
@@ -258,7 +258,7 @@ namespace hiop
       }
     }
     solver_->use_ir() = use_ir;
-    std::cout << "Use IR: " << solver_->use_ir() << "\n";
+    nlp_->log->printf(hovSummary, "Use IR: %s\n", solver_->use_ir().c_str());
   } // constructor
 
   hiopLinSolverSymSparseReSolve::~hiopLinSolverSymSparseReSolve()
@@ -303,8 +303,6 @@ namespace hiop
         nlp_->log->printf(hovScalars, "Numeric klu factorization succesful! \n");
       }
     } else { // factorizationSetupSucc_ == 1
-      // Right now CSR data is always on CPU; function update_matrix_values should however deliver data on GPU.
-      // checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals(), solver_->mat_A_csr()->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       solver_->refactorize();
     }
 
@@ -374,8 +372,6 @@ namespace hiop
     if(solver_->setup_factorization() < 0) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "Symbolic factorization failed!\n");
-      // Clear everything if fails
-      solver_->mat_A_csr()->clear_data();
       return;
     };
     is_first_call_ = false;
