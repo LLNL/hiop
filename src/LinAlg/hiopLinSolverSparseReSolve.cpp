@@ -374,6 +374,8 @@ namespace hiop
     if(solver_->setup_factorization() < 0) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "Symbolic factorization failed!\n");
+      // Clear everything if fails
+      solver_->mat_A_csr()->clear_data();
       return;
     };
     is_first_call_ = false;

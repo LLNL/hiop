@@ -275,6 +275,16 @@ namespace ReSolve {
 
     if(refact_ == "rf")
     {
+      double* devx = nullptr;
+      if(memspace == "device") {
+        devx = dx;
+        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+      } else {
+        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = devx_;
+      }
+
       // First solve is performed on CPU
       if(is_first_solve_)
       {
@@ -295,16 +305,6 @@ namespace ReSolve {
           // do nothing
         }
         return true;
-      }
-
-      double* devx = nullptr;
-      if(memspace == "device") {
-        devx = dx;
-        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
-      } else {
-        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
-        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
-        devx = devx_;
       }
 
       // Each next solve is performed on GPU

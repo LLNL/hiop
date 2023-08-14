@@ -78,13 +78,7 @@ namespace ReSolve {
     if(n_ == 0)
       return;
 
-    cudaFree(irows_);
-    cudaFree(jcols_);
-    cudaFree(vals_);
-
-    delete [] irows_host_;
-    delete [] jcols_host_;
-    delete [] vals_host_ ;
+    clear_data();
   }
 
   void MatrixCsr::allocate_size(int n)
@@ -101,6 +95,28 @@ namespace ReSolve {
     checkCudaErrors(cudaMalloc(&vals_,  nnz_ * sizeof(double)));
     jcols_host_ = new int[nnz_]{0};
     vals_host_  = new double[nnz_]{0};
+  }
+
+  void MatrixCsr::clear_data()
+  {
+    checkCudaErrors(cudaFree(irows_));
+    checkCudaErrors(cudaFree(jcols_));
+    checkCudaErrors(cudaFree(vals_));
+
+    irows_ = nullptr;
+    jcols_ = nullptr;
+    vals_  = nullptr;
+
+    delete [] irows_host_;
+    delete [] jcols_host_;
+    delete [] vals_host_ ;
+
+    irows_host_ = nullptr;
+    jcols_host_ = nullptr;
+    vals_host_  = nullptr;
+
+    n_ = 0;
+    nnz_ = 0;
   }
 
   void MatrixCsr::update_from_host_mirror()

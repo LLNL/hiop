@@ -9,6 +9,7 @@ public:
   ~MatrixCsr();
   void allocate_size(int n);
   void allocate_nnz(int nnz);
+  void clear_data();
 
   int* get_irows()
   {
