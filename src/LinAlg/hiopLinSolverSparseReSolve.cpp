@@ -78,7 +78,7 @@
  */
 template <typename T, typename I>
 __global__ void
-mapArraysKernel(T* dst, const T* src, I* mapidx, I n)
+mapArraysKernel(T* dst, const T* src, const I* mapidx, I n)
 {
   I tid = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -99,7 +99,7 @@ mapArraysKernel(T* dst, const T* src, I* mapidx, I n)
  */
 template <typename T, typename I>
 __global__ void
-addToArrayKernel(T* dst, const T* src, I* mapidx, I n, I nnz)
+addToArrayKernel(T* dst, const T* src, const I* mapidx, I n, I nnz)
 {
   I tid = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -304,7 +304,7 @@ namespace hiop
       }
     } else { // factorizationSetupSucc_ == 1
       // Right now CSR data is always on CPU; function update_matrix_values should however deliver data on GPU.
-      checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals(), solver_->mat_A_csr()->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
+      // checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals(), solver_->mat_A_csr()->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
       solver_->refactorize();
     }
 
@@ -386,7 +386,24 @@ namespace hiop
   void hiopLinSolverSymSparseReSolve::update_matrix_values()
   {
     std::string mem_space = nlp_->options->GetString("mem_space");
-    if(mem_space == "host" || mem_space == "default") {
+    if(mem_space == "device") {
+
+      double* csr_vals = solver_->mat_A_csr()->get_vals();
+      double* coo_vals = M_->M();
+      int coo_nnz = M_->numberOfNonzeros();
+
+      const int blocksize = 512;
+      int gridsize  = (nnz_ + blocksize - 1) / blocksize;
+      mapArraysKernel<double, int><<< gridsize, blocksize >>>(csr_vals, coo_vals, index_convert_CSR2Triplet_device_, nnz_);
+
+      gridsize  = (n_ + blocksize - 1) / blocksize;
+      addToArrayKernel<double, int><<< gridsize, blocksize>>>(csr_vals, coo_vals, index_convert_extra_Diag2CSR_device_, n_, coo_nnz);
+
+      // If factorization was not successful, we need a copy of values on the host
+      if(factorizationSetupSucc_ == 0)
+        checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals_host(), solver_->mat_A_csr()->get_vals(), sizeof(double) * nnz_, cudaMemcpyDeviceToHost));
+
+    } else {
       // KKT matrix is on the host
       double* vals = solver_->mat_A_csr()->get_vals_host();
       // update matrix
@@ -397,22 +414,7 @@ namespace hiop
         if(index_convert_extra_Diag2CSR_host_[i] != -1)
           vals[index_convert_extra_Diag2CSR_host_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
       }
-    } else if(mem_space == "device") {
-      // KKT matrix is on the device, for now copy it to the host mirror and update CSR values
-      // TODO: Write kernel to update values on the device directly
-      double* vals = solver_->mat_A_csr()->get_vals_host();
-      checkCudaErrors(cudaMemcpy(M_host_->M(), M_->M(), sizeof(double) * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
-      
-      // update matrix
-      for(int k = 0; k < nnz_; k++) {
-        vals[k] = M_host_->M()[index_convert_CSR2Triplet_host_[k]];
-      }
-      for(int i = 0; i < n_; i++) {
-        if(index_convert_extra_Diag2CSR_host_[i] != -1)
-          vals[index_convert_extra_Diag2CSR_host_[i]] += M_host_->M()[M_host_->numberOfNonzeros() - n_ + i];
-      }
-    } else {
-      nlp_->log->printf(hovError, "Memory space %s incompatible with ReSolve.\n", mem_space.c_str());
+      checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals(), solver_->mat_A_csr()->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
     }
   }
 
