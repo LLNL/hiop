@@ -57,8 +57,6 @@
 #include "IterativeRefinement.hpp"
 #include "RefactorizationSolver.hpp"
 
-#include "hiop_blasdefs.hpp"
-
 #include "klu.h"
 #include "cusparse_v2.h"
 #include <sstream>
