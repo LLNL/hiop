@@ -1319,7 +1319,12 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //post line-search stuff
     //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
     if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
-      assert(0 && "FR is not available in the dense solver. To be implemented." );
+      use_fr = apply_feasibility_restoration(kkt);
+      if(use_fr) {
+        // continue iterations if FR is accepted
+        solver_status_ = NlpSolve_Pending;
+        nlp->runStats.tmSolverInternal.stop();
+      }
     } else if(lsStatus==1) {
       //need to check switching cond and Armijo to decide if filter is augmented
       if(!grad_phi_dx_computed) {
@@ -1350,8 +1355,18 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     } else if(lsStatus==0) {
       //small step
       if(linsol_safe_mode_on) {
-        assert(0 && "FR is not available in the dense solver. To be implemented." );
-      }
+        // try to do FR
+        use_fr = apply_feasibility_restoration(kkt);
+
+        if(use_fr) {
+          // continue iterations if FR is accepted
+          solver_status_ = NlpSolve_Pending;
+        }
+
+        // exit the linear solve (compute_search_direction) loop
+        nlp->runStats.tmSolverInternal.stop();
+        break;
+      } 
       nlp->runStats.tmSolverInternal.stop();
     } else {
       nlp->runStats.tmSolverInternal.stop();
@@ -2682,18 +2697,29 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
     }
   
     // continue robust FR
+    hiopNlpFormulation* nlpFR{nullptr};
     hiopNlpMDS* nlpMDS = dynamic_cast<hiopNlpMDS*>(nlp);
     if (nlpMDS == nullptr) {
       hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
-      if(NULL == nlpSp)
-      {
-        // this is dense linear system. This is the default case.
-        assert(0 && "feasibility problem hasn't support dense system yet.");
+      if(nullptr == nlpSp) {
+        hiopNlpDenseConstraints* nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
+        assert(nlpD && "Unkown system is provided. Please pick one from Dense, Sparse or MDS. ");
+        // this is Dense system
+        hiopFRProbDense nlp_fr_interface(*this);
+        nlpFR = new hiopNlpDenseConstraints(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
+        fr_solved = solve_feasibility_restoration(kkt, *nlpFR);
+        if(fr_solved) {
+          nlp->log->printf(hovScalars, "FR problem provides sufficient reduction in primal feasibility!\n");
+          // FR succeeds, update it_trial->x and it_trial->d to the next search point
+          it_trial->get_x()->copyFrom(nlp_fr_interface.get_fr_sol_x());
+          it_trial->get_d()->copyFrom(nlp_fr_interface.get_fr_sol_d());
+          reset_var_from_fr_sol(kkt, reset_dual = true);
+        }
       } else {
         // this is Sparse linear system
         hiopFRProbSparse nlp_fr_interface(*this);
-        hiopNlpSparse nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
-        fr_solved = solve_feasibility_restoration(kkt, nlpFR);
+        nlpFR = new hiopNlpSparse(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
+        fr_solved = solve_feasibility_restoration(kkt, *nlpFR);
         if(fr_solved) {
           nlp->log->printf(hovScalars, "FR problem provides sufficient reduction in primal feasibility!\n");
           // FR succeeds, update it_trial->x and it_trial->d to the next search point
@@ -2705,8 +2731,8 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
     } else {
       // this is MDS system
       hiopFRProbMDS nlp_fr_interface(*this);
-      hiopNlpMDS nlpFR(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
-      fr_solved =  solve_feasibility_restoration(kkt, nlpFR);
+      nlpFR = new hiopNlpMDS(nlp_fr_interface, nlp->options->GetString("options_file_fr_prob").c_str());
+      fr_solved = solve_feasibility_restoration(kkt, *nlpFR);
       if(fr_solved) {
         nlp->log->printf(hovScalars, "FR problem provides sufficient reduction in primal feasibility!\n");
         // FR succeeds, update it_trial->x and it_trial->d to the next search point
@@ -2715,6 +2741,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
         reset_var_from_fr_sol(kkt, reset_dual = true);
       }
     }
+    delete nlpFR;
   } else {
     // FR problem inside a FR problem, see equation (33)
     // use wildcard function to update primal variables x
@@ -2744,7 +2771,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
 
 bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hiopNlpFormulation& nlpFR)
 {
-  nlpFR.options->SetStringValue("Hessian", "analytical_exact");
+  nlpFR.options->SetStringValue("Hessian", nlp->options->GetString("Hessian").c_str());
   nlpFR.options->SetStringValue("duals_update_type", "linear");
   nlpFR.options->SetStringValue("duals_init", "zero");
   nlpFR.options->SetStringValue("compute_mode", nlp->options->GetString("compute_mode").c_str());
@@ -2761,8 +2788,16 @@ bool hiopAlgFilterIPMBase::solve_feasibility_restoration(hiopKKTLinSys* kkt, hio
 
   nlpFR.options->SetNumericValue("mu0", mu_FR);
 
-  hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
-  hiopSolveStatus FR_status = solver.run();
+  hiopSolveStatus FR_status;
+  if(nlpFR.options->GetString("Hessian") == "analytical_exact") {
+    hiopAlgFilterIPMNewton solver(&nlpFR, true);  // solver fr problem
+    FR_status = solver.run();
+  } else {
+    hiopNlpDenseConstraints* nlpFR_dense = dynamic_cast<hiopNlpDenseConstraints*>(&nlpFR);
+    assert(nlpFR_dense);
+    hiopAlgFilterIPM solver(nlpFR_dense, true);  // solver fr problem
+    FR_status = solver.run();
+  }
 
   if(FR_status == User_Stopped) {
     // FR succeeds

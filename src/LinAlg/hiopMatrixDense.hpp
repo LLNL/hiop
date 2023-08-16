@@ -221,6 +221,10 @@ public:
   /// @brief build Hess for FR problem, from the base problem `Hess`.
   virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de){assert(false && "not implemented in base class");}
 
+  /// @brief build Jac for FR problem, from the base problem `Jac_c` and `Jac_d`. 
+  virtual void set_Jac_FR(const hiopMatrixDense& Jac_c,
+                          const hiopMatrixDense& Jac_d) {assert(false && "not implemented in base class");}
+
 #ifdef HIOP_DEEPCHECKS
   virtual void overwriteUpperTriangleWithLower(){assert(false && "not implemented in base class");}
   virtual void overwriteLowerTriangleWithUpper(){assert(false && "not implemented in base class");}
@@ -248,6 +252,7 @@ protected:
   size_type n_global_; //total / global number of columns
   MPI_Comm comm_;
   int myrank_;
+  int comm_size_;
 
 protected:
   hiopMatrixDense() {};

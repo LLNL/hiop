@@ -69,9 +69,11 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const size_type& m,
   : hiopMatrixDense(m, glob_n, comm)
 {
   int P=0;
+  comm_size_ = 1;
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
+    int ierr = MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
+    ierr = MPI_Comm_size(comm_, &comm_size_); assert(MPI_SUCCESS==ierr);
 #endif
     glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
   } else {
@@ -169,7 +171,6 @@ void hiopMatrixDenseRowMajor::copyRowsFrom(const hiopMatrixDense& srcmat, int nu
   const auto& src = dynamic_cast<const hiopMatrixDenseRowMajor&>(srcmat);
 #ifdef HIOP_DEEPCHECKS
   assert(row_dest>=0);
-  assert(n_global_==src.n_global_);
   assert(n_local_==src.n_local_);
   assert(row_dest+num_rows<=m_local_);
   assert(num_rows<=src.m_local_);
@@ -295,6 +296,45 @@ void hiopMatrixDenseRowMajor::set_Hess_FR(const hiopMatrixDense& Hess, const hio
   double one{1.0};
   copyFrom(Hess);
   addDiagonal(one, add_diag_de);
+}
+
+void hiopMatrixDenseRowMajor::set_Jac_FR(const hiopMatrixDense& Jac_c, const hiopMatrixDense& Jac_d)
+{
+  assert(Jac_c.n() == Jac_d.n());
+  assert(Jac_c.get_local_size_n() == Jac_d.get_local_size_n());
+  assert(Jac_c.m() + Jac_d.m() == this->m());
+  assert(Jac_c.n() <= this->n()); // we will add variable p, n on the top of base prob
+
+  const auto& Jeq = dynamic_cast<const hiopMatrixDenseRowMajor&>(Jac_c);
+  const auto& Jin = dynamic_cast<const hiopMatrixDenseRowMajor&>(Jac_d);
+
+  this->setToZero();
+
+  if(myrank_ < comm_size_ - 1) {
+    this->copyRowsFrom(Jeq, Jeq.m(), 0);
+    this->copyRowsFrom(Jin, Jin.m(), Jeq.m());
+  } else {
+    // this is the last rank
+    assert(Jeq.get_local_size_n() + 2 * Jeq.m() + 2 * Jin.m() == n_local_);
+
+    // Jac for c(x) - p + n
+    size_type m_eq_local_base = Jeq.m();
+    size_type n_local_base = Jeq.get_local_size_n();
+    
+    for(int i = 0; i < m_eq_local_base; ++i) {
+      memcpy(M_[i], Jeq.M_[i], n_local_base * sizeof(double));
+      M_[i][n_local_base + i] = -1.0;
+      M_[i][n_local_base + m_eq_local_base + i] = 1.0;
+    }
+
+    // Jac for d(x) - p + n
+    size_type m_ineq_local_base = Jin.m();
+    for(int i = 0; i < m_ineq_local_base; ++i) {
+      memcpy(M_[i + m_eq_local_base], Jin.M_[i], n_local_base * sizeof(double));
+      M_[i + m_eq_local_base][n_local_base + 2 * m_eq_local_base + i] = -1.0;
+      M_[i + m_eq_local_base][n_local_base + 2 * m_eq_local_base + m_ineq_local_base + i] = 1.0;
+    }
+  }
 }
 
 #ifdef HIOP_DEEPCHECKS

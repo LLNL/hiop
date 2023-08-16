@@ -18,7 +18,7 @@ using index_type = hiop::index_type;
 /* Test problem from a tiny concave example
  *  min   -3*x*x-2*y*y
  *  s.t.
- *   y - 0.06*x*x >= 
+ *   y - 0.06*x*x >= 0
  *   y + 0.05*x*x <= 10 
  *   y*y <= 64
  *   x*x <= 100

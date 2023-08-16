@@ -216,6 +216,10 @@ public:
   /// @brief build Hess for FR problem, from the base problem `Hess`.
   virtual void set_Hess_FR(const hiopMatrixDense& Hess, const hiopVector& add_diag_de);
 
+  /// @brief build Jac for FR problem, from the base problem `Jac_c` and `Jac_d`. 
+  virtual void set_Jac_FR(const hiopMatrixDense& Jac_c,
+                          const hiopMatrixDense& Jac_d);
+
 #ifdef HIOP_DEEPCHECKS
   void overwriteUpperTriangleWithLower();
   void overwriteLowerTriangleWithUpper();

@@ -59,6 +59,13 @@
 #include "hiopInterface.hpp"
 #include "hiopAlgFilterIPM.hpp"
 
+#ifdef HIOP_USE_MPI
+#include "mpi.h"
+#else
+#define MPI_COMM_WORLD 0
+#define MPI_Comm int
+#endif
+
 namespace hiop
 {
 
@@ -397,6 +404,148 @@ private:
   int ni_st_; // the 1st index of ni in the full primal space
   int x_de_st_; // the 1st index of x_de in the full primal space
 };
+
+/** Specialized interface for feasibility restoration problem with dense blocks in the Jacobian and Hessian.
+ *
+ * More specifically, this interface is for specifying optimization problem:
+ *
+ * min f(x)
+ *  s.t. g(x) <= or = 0, lb<=x<=ub
+ *
+ * such that Jacobian w.r.t. x and Hessian of the Lagrangian w.r.t. x are dense
+ *
+ * @note this interface is 'local' in the sense that data is not assumed to be
+ * distributed across MPI ranks ('get_vecdistrib_info' should return 'false').
+ * Acceleration can be however obtained using OpenMP and CUDA via Raja
+ * abstraction layer that HiOp uses and via linear solver.
+ * 
+ */
+class hiopFRProbDense : public hiopInterfaceDenseConstraints
+{
+public:
+  hiopFRProbDense(hiopAlgFilterIPMBase& solver_base);
+  virtual ~hiopFRProbDense();
+  virtual bool get_MPI_comm(MPI_Comm& comm_out);
+  virtual bool get_vecdistrib_info(size_type global_n, index_type* cols);
+
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const size_type& num_cons,
+                             const index_type* idx_cons,
+                             const double* x,
+                             bool new_x,
+                             double* Jac) { return false; }
+
+  virtual bool eval_Jac_cons(const size_type& n,
+                             const size_type& m,
+                             const double* x,
+                             bool new_x,
+                             double* Jac);
+
+  virtual bool get_prob_sizes(size_type& n, size_type& m);
+  virtual bool get_prob_info(NonlinearityType& type);
+  virtual bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type);
+  virtual bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type);
+
+  virtual bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value);
+  virtual bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf);
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const size_type& num_cons,
+                         const index_type* idx_cons,
+                         const double* x,
+                         bool new_x,
+                         double* cons) { return false; }
+  virtual bool eval_cons(const size_type& n,
+                         const size_type& m,
+                         const double* x,
+                         bool new_x,
+                         double* cons);
+  virtual bool get_warmstart_point(const size_type& n,
+                                   const size_type& m,
+                                   double* x0,
+                                   double* z_bndL0, 
+                                   double* z_bndU0,
+                                   double* lambda0,
+                                   double* ineq_slack,
+                                   double* vl0,
+                                   double* vu0);
+
+  virtual bool iterate_callback(int iter,
+                                double obj_value,
+                                double logbar_obj_value,
+                                int n,
+                                const double* x,
+                                const double* z_L,
+                                const double* z_U,
+                                int m_ineq,
+                                const double* s,
+                                int m,
+                                const double* g,
+                                const double* lambda,
+                                double inf_pr,
+                                double inf_du,
+                                double onenorm_pr_,
+                                double mu,
+                                double alpha_du,
+                                double alpha_pr,
+                                int ls_trials);
+
+  virtual bool force_update_x(const int n, double* x);
+
+  virtual const hiopVector& get_fr_sol_x ()  const { return *last_x_; }
+  virtual const hiopVector& get_fr_sol_d ()  const { return *last_d_; }
+
+private:
+  size_type n_;
+  size_type m_;
+
+  size_type n_x_;
+  size_type m_eq_;
+  size_type m_ineq_;
+
+  hiopAlgFilterIPMBase& solver_base_;
+  hiopNlpDenseConstraints* nlp_base_;
+
+  hiopVector* x_ref_;
+  hiopVector* DR_;
+  hiopVector* wrk_x_;
+  hiopVector* wrk_c_;
+  hiopVector* wrk_d_;
+  hiopVector* wrk_eq_;
+  hiopVector* wrk_ineq_;
+  hiopVector* wrk_cbody_;
+  hiopVector* wrk_dbody_;
+  hiopVector* wrk_primal_;  // [xde pe ne pi ni]
+  hiopVector* wrk_dual_;    // [c d]
+  
+  hiopMatrixDense* Jac_cd_;
+
+  hiopVector* last_x_;
+  hiopVector* last_d_;
+
+  double zeta_;
+  double theta_ref_;
+  double nrmInf_feas_ref_;
+  double mu_;
+  double rho_;
+  double obj_base_;
+
+  index_type* col_partition_;
+  MPI_Comm comm_;
+  size_type rank_;
+  size_type comm_size_;
+#ifdef HIOP_USE_MPI
+  index_type* vec_distrib_base_;
+#endif
+
+  int pe_st_; // the 1st index of pe in the full primal space
+  int ne_st_; // the 1st index of ne in the full primal space
+  int pi_st_; // the 1st index of pi in the full primal space
+  int ni_st_; // the 1st index of ni in the full primal space
+};
+
+
 
 
 

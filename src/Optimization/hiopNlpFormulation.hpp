@@ -287,6 +287,10 @@ public:
   {
     return num_ranks_;
   }
+  inline index_type* getVecDistInfo()
+  { 
+    return vec_distrib_;
+  }
 #endif
 protected:
   /* Preprocess bounds in a form supported by the NLP formulation. Returns counts of
