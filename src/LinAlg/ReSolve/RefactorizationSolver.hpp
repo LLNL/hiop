@@ -175,7 +175,7 @@ public:
    * @param tol 
    * @return bool 
    */
-  bool triangular_solve(double* dx, const double* rhs, double tol);
+  bool triangular_solve(double* dx, double tol, std::string memspace);
 
 
 private:
@@ -225,14 +225,17 @@ private:
   int* mia_ = nullptr;
   int* mja_ = nullptr;
 
+  /* CPU data */
+  double* hostx_ = nullptr;
+
   /* for GPU data */
-  double* devx_;
-  double* devr_;
+  double* devx_ = nullptr;
+  double* devr_ = nullptr;
 
   /* needed for cuSolverRf */
-  int* d_P_;
-  int* d_Q_; // permutation matrices
-  double* d_T_;
+  int* d_P_ = nullptr;
+  int* d_Q_ = nullptr; // permutation matrices
+  double* d_T_ = nullptr;
 
   /**
    * @brief Function that computes M = (L-I) + U

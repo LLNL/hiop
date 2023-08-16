@@ -50,6 +50,7 @@
  * @file hiopLinSolverSparseReSolve.hpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
+ * @author Slaven Peles <peless@ornl.gov>, ORNL
  *
  */
 
@@ -112,19 +113,23 @@ public:
 protected:
   ReSolve::RefactorizationSolver* solver_;
 
-  /* Right-hand side vector */
-  double* rhs_;
-
   int m_;   ///< number of rows of the whole matrix
   int n_;   ///< number of cols of the whole matrix
   int nnz_; ///< number of nonzeros in the matrix
 
-  int* index_covert_CSR2Triplet_;
-  int* index_covert_extra_Diag2CSR_;
+  // Mapping on the host
+  int* index_convert_CSR2Triplet_host_;
+  int* index_convert_extra_Diag2CSR_host_;
+
+  // Mapping on the device
+  int* index_convert_CSR2Triplet_device_;
+  int* index_convert_extra_Diag2CSR_device_;
 
   // Algorithm control flags
   int factorizationSetupSucc_;
   bool is_first_call_;
+
+  hiopMatrixSparse* M_host_{ nullptr }; ///< Host mirror for the KKT matrix
 
   /* private function: creates a cuSolver data structure from KLU data
    * structures. */
@@ -150,28 +155,6 @@ protected:
   void set_csr_indices_values();
 
   template <typename T> void hiopCheckCudaError(T result, const char* const file, int const line);
-};
-
-class hiopLinSolverSymSparseReSolveGPU : public hiopLinSolverSymSparseReSolve
-{
-public:  
-  hiopLinSolverSymSparseReSolveGPU(const int& n, const int& nnz, hiopNlpFormulation* nlp);
-  virtual ~hiopLinSolverSymSparseReSolveGPU();
-
-  virtual int matrixChanged();
-  virtual bool solve(hiopVector& x_);
-
-  /** Multiple rhs not supported yet */
-  virtual bool
-  solve(hiopMatrix& /* x */)
-  {
-    assert(false && "not yet supported");
-    return false;
-  }
-
-private:
-  hiopVector* rhs_host_;
-  hiopMatrixSparse* M_host_;
 };
 
 } // namespace hiop

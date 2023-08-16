@@ -49,6 +49,7 @@
  * @file hiopLinSolverSparseReSolve.cpp
  *
  * @author Kasia Swirydowicz <kasia.Swirydowicz@pnnl.gov>, PNNL
+ * @author Slaven Peles <peless@ornl.gov>, ORNL
  *
  */
 
@@ -66,21 +67,72 @@
 
 #define checkCudaErrors(val) hiopCheckCudaError((val), __FILE__, __LINE__)
 
+
+/**
+ * @brief Map elements of one array to the other
+ * 
+ *    for(int k = 0; k < nnz_; k++) {
+ *      vals[k] = M_->M()[index_convert_CSR2Triplet_host_[k]];
+ *    }
+ * 
+ */
+template <typename T, typename I>
+__global__ void
+mapArraysKernel(T* dst, const T* src, const I* mapidx, I n)
+{
+  I tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+  if (tid < n)
+  {
+    dst[tid] = src[ mapidx[tid] ];
+  }
+}
+
+/**
+ * @brief Map elements of one array to the other
+ * 
+ *  for(int i = 0; i < n_; i++) {
+ *    if(index_convert_extra_Diag2CSR_host_[i] != -1)
+ *      vals[index_convert_extra_Diag2CSR_host_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+ *  }
+ * 
+ */
+template <typename T, typename I>
+__global__ void
+addToArrayKernel(T* dst, const T* src, const I* mapidx, I n, I nnz)
+{
+  I tid = blockDim.x * blockIdx.x + threadIdx.x;
+
+  if (tid < n)
+  {
+    if(mapidx[tid] != -1)
+      dst[ mapidx[tid] ] += src[nnz - n + tid];
+  }
+}
+
+
 namespace hiop
 {
   hiopLinSolverSymSparseReSolve::hiopLinSolverSymSparseReSolve(const int& n, 
                                                                const int& nnz, 
                                                                hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp), 
-      index_covert_CSR2Triplet_{ nullptr },
-      index_covert_extra_Diag2CSR_{ nullptr }, 
+      index_convert_CSR2Triplet_host_{ nullptr },
+      index_convert_extra_Diag2CSR_host_{ nullptr }, 
+      index_convert_CSR2Triplet_device_{ nullptr },
+      index_convert_extra_Diag2CSR_device_{ nullptr }, 
       n_{ n },
       nnz_{ 0 },
       factorizationSetupSucc_{ 0 },
       is_first_call_{ true }
   {
+    // Create ReSolve solver and allocate rhs temporary storage
     solver_ = new ReSolve::RefactorizationSolver(n);
-    rhs_    = new double[n]{ 0 };
+
+    // If memory space is device, allocate host mirror for HiOp's KKT matrix in triplet format
+    if(nlp_->options->GetString("mem_space") == "device") {
+      M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
+    }
 
     // Set verbosity of ReSolve based on HiOp verbosity
     if(nlp_->options->GetInteger("verbosity_level") >= 3) {
@@ -101,7 +153,7 @@ namespace hiop
       ordering = 1;
     }
     solver_->ordering() = ordering;
-    std::cout << "Ordering: " << solver_->ordering() << "\n";
+    nlp_->log->printf(hovSummary, "Ordering: %d\n", solver_->ordering());
 
     // Select factorization
     std::string fact;
@@ -113,7 +165,7 @@ namespace hiop
       fact = "klu";
     }
     solver_->fact() = fact;
-    std::cout << "Factorization: " << solver_->fact() << "\n";
+    nlp_->log->printf(hovSummary, "Factorization: %s\n", solver_->fact().c_str());
 
     // Select refactorization
     std::string refact;
@@ -125,7 +177,7 @@ namespace hiop
       refact = "glu";
     }
     solver_->refact() = refact;
-    std::cout << "Refactorization: " << solver_->refact() << "\n";
+    nlp_->log->printf(hovSummary, "Refactorization: %s\n", solver_->refact().c_str());
 
     // by default, dont use iterative refinement
     std::string use_ir;
@@ -206,17 +258,23 @@ namespace hiop
       }
     }
     solver_->use_ir() = use_ir;
-    std::cout << "Use IR: " << solver_->use_ir() << "\n";
+    nlp_->log->printf(hovSummary, "Use IR: %s\n", solver_->use_ir().c_str());
   } // constructor
 
   hiopLinSolverSymSparseReSolve::~hiopLinSolverSymSparseReSolve()
   {
     delete solver_;
-    delete [] rhs_;
+
+    // If memory space is device, delete allocated host mirrors
+    if(nlp_->options->GetString("mem_space") == "device") {
+      delete M_host_;
+    }
 
     // Delete CSR <--> triplet mappings
-    delete[] index_covert_CSR2Triplet_;
-    delete[] index_covert_extra_Diag2CSR_;
+    delete[] index_convert_CSR2Triplet_host_;
+    delete[] index_convert_extra_Diag2CSR_host_;
+    checkCudaErrors(cudaFree(index_convert_CSR2Triplet_device_));
+    checkCudaErrors(cudaFree(index_convert_extra_Diag2CSR_device_));
   }
 
   int hiopLinSolverSymSparseReSolve::matrixChanged()
@@ -263,11 +321,10 @@ namespace hiop
     // Set IR tolerance
     double ir_tol = nlp_->options->GetNumeric("ir_inner_tol");
 
+    std::string mem_space = nlp_->options->GetString("mem_space");
     double* dx = x.local_data();
-    memcpy(rhs_, dx, n_*sizeof(double));
-    checkCudaErrors(cudaMemcpy(solver_->devr(), rhs_, sizeof(double) * n_, cudaMemcpyHostToDevice));
 
-    bool retval = solver_->triangular_solve(dx, rhs_, ir_tol);
+    bool retval = solver_->triangular_solve(dx, ir_tol, mem_space);
     if(!retval) {
       nlp_->log->printf(hovError,  // catastrophic failure
                         "ReSolve triangular solver failed\n");
@@ -282,6 +339,14 @@ namespace hiop
     assert(n_ == M_->n() && M_->n() == M_->m());
     assert(n_ > 0);
 
+    // If the matrix is on device, copy it to the host mirror
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "device") {
+      checkCudaErrors(cudaMemcpy(M_host_->M(),     M_->M(),     sizeof(double)     * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(M_host_->i_row(), M_->i_row(), sizeof(index_type) * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(M_host_->j_col(), M_->j_col(), sizeof(index_type) * M_->numberOfNonzeros(), cudaMemcpyDeviceToHost));      
+    } 
+  
     // Transfer triplet to CSR form
 
     // Allocate row pointers and compute number of nonzeros.
@@ -312,20 +377,44 @@ namespace hiop
     is_first_call_ = false;
   }
 
+  /// nnz_ is number of nonzeros in CSR matrix
+  /// M_->numberOfNonzeros() is number of zeros in symmetric triplet matrix
   void hiopLinSolverSymSparseReSolve::update_matrix_values()
   {
-    double* vals = solver_->mat_A_csr()->get_vals_host();
-    // update matrix
-    for(int k = 0; k < nnz_; k++) {
-      vals[k] = M_->M()[index_covert_CSR2Triplet_[k]];
-    }
-    for(int i = 0; i < n_; i++) {
-      if(index_covert_extra_Diag2CSR_[i] != -1)
-        vals[index_covert_extra_Diag2CSR_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "device") {
+
+      double* csr_vals = solver_->mat_A_csr()->get_vals();
+      double* coo_vals = M_->M();
+      int coo_nnz = M_->numberOfNonzeros();
+
+      const int blocksize = 512;
+      int gridsize  = (nnz_ + blocksize - 1) / blocksize;
+      mapArraysKernel<double, int><<< gridsize, blocksize >>>(csr_vals, coo_vals, index_convert_CSR2Triplet_device_, nnz_);
+
+      gridsize  = (n_ + blocksize - 1) / blocksize;
+      addToArrayKernel<double, int><<< gridsize, blocksize>>>(csr_vals, coo_vals, index_convert_extra_Diag2CSR_device_, n_, coo_nnz);
+
+      // If factorization was not successful, we need a copy of values on the host
+      if(factorizationSetupSucc_ == 0)
+        checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals_host(), solver_->mat_A_csr()->get_vals(), sizeof(double) * nnz_, cudaMemcpyDeviceToHost));
+
+    } else {
+      // KKT matrix is on the host
+      double* vals = solver_->mat_A_csr()->get_vals_host();
+      // update matrix
+      for(int k = 0; k < nnz_; k++) {
+        vals[k] = M_->M()[index_convert_CSR2Triplet_host_[k]];
+      }
+      for(int i = 0; i < n_; i++) {
+        if(index_convert_extra_Diag2CSR_host_[i] != -1)
+          vals[index_convert_extra_Diag2CSR_host_[i]] += M_->M()[M_->numberOfNonzeros() - n_ + i];
+      }
+      checkCudaErrors(cudaMemcpy(solver_->mat_A_csr()->get_vals(), solver_->mat_A_csr()->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
     }
   }
 
-
+  /// @pre Data is either on the host or the host mirror is synced with the device
   void hiopLinSolverSymSparseReSolve::compute_nnz()
   {
     //
@@ -333,12 +422,24 @@ namespace hiop
     //
     int* row_ptr = solver_->mat_A_csr()->get_irows_host();
 
+    // If the data is on device, fetch it from the host mirror
+    hiopMatrixSparse* M_host = nullptr;
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "host" || mem_space == "default") {
+      M_host = M_;
+    } else if(mem_space == "device") {
+      M_host = M_host_;
+    } else {
+      nlp_->log->printf(hovError, "Memory space %s incompatible with ReSolve.\n", mem_space.c_str());
+    }
+
+
     // off-diagonal part
     row_ptr[0] = 0;
-    for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
-      if(M_->i_row()[k] != M_->j_col()[k]) {
-        row_ptr[M_->i_row()[k] + 1]++;
-        row_ptr[M_->j_col()[k] + 1]++;
+    for(int k = 0; k < M_host->numberOfNonzeros() - n_; k++) {
+      if(M_host->i_row()[k] != M_host->j_col()[k]) {
+        row_ptr[M_host->i_row()[k] + 1]++;
+        row_ptr[M_host->j_col()[k] + 1]++;
         nnz_ += 2;
       }
     }
@@ -354,8 +455,20 @@ namespace hiop
     assert(nnz_ == row_ptr[n_]);
   }
 
+  /// @pre Data is either on the host or the host mirror is synced with the device
   void hiopLinSolverSymSparseReSolve::set_csr_indices_values()
   {
+    // If the data is on device, fetch it from the host mirror
+    hiopMatrixSparse* M_host = nullptr;
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "host" || mem_space == "default") {
+      M_host = M_;
+    } else if(mem_space == "device") {
+      M_host = M_host_;
+    } else {
+      nlp_->log->printf(hovError, "Memory space %s incompatible with ReSolve.\n", mem_space.c_str());
+    }
+
     //
     // set correct col index and value
     //
@@ -363,40 +476,42 @@ namespace hiop
     int*       col_idx = solver_->mat_A_csr()->get_jcols_host();
     double*    vals    = solver_->mat_A_csr()->get_vals_host();
 
-    index_covert_CSR2Triplet_    = new int[nnz_];
-    index_covert_extra_Diag2CSR_ = new int[n_];
+    index_convert_CSR2Triplet_host_    = new int[nnz_];
+    index_convert_extra_Diag2CSR_host_ = new int[n_];
+    checkCudaErrors(cudaMalloc(&index_convert_CSR2Triplet_device_, nnz_ * sizeof(int)));
+    checkCudaErrors(cudaMalloc(&index_convert_extra_Diag2CSR_device_, n_ * sizeof(int)));
 
     int* nnz_each_row_tmp = new int[n_]{ 0 };
     int total_nnz_tmp{ 0 }, nnz_tmp{ 0 }, rowID_tmp, colID_tmp;
 
     for(int k = 0; k < n_; k++) {
-      index_covert_extra_Diag2CSR_[k] = -1;
+      index_convert_extra_Diag2CSR_host_[k] = -1;
     }
 
-    for(int k = 0; k < M_->numberOfNonzeros() - n_; k++) {
-      rowID_tmp = M_->i_row()[k];
-      colID_tmp = M_->j_col()[k];
+    for(int k = 0; k < M_host->numberOfNonzeros() - n_; k++) {
+      rowID_tmp = M_host->i_row()[k];
+      colID_tmp = M_host->j_col()[k];
       if(rowID_tmp == colID_tmp) {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + row_ptr[rowID_tmp];
         col_idx[nnz_tmp] = colID_tmp;
-        vals[nnz_tmp] = M_->M()[k];
-        index_covert_CSR2Triplet_[nnz_tmp] = k;
+        vals[nnz_tmp] = M_host->M()[k];
+        index_convert_CSR2Triplet_host_[nnz_tmp] = k;
 
-        vals[nnz_tmp] += M_->M()[M_->numberOfNonzeros() - n_ + rowID_tmp];
-        index_covert_extra_Diag2CSR_[rowID_tmp] = nnz_tmp;
+        vals[nnz_tmp] += M_host->M()[M_host->numberOfNonzeros() - n_ + rowID_tmp];
+        index_convert_extra_Diag2CSR_host_[rowID_tmp] = nnz_tmp;
 
         nnz_each_row_tmp[rowID_tmp]++;
         total_nnz_tmp++;
       } else {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + row_ptr[rowID_tmp];
         col_idx[nnz_tmp] = colID_tmp;
-        vals[nnz_tmp] = M_->M()[k];
-        index_covert_CSR2Triplet_[nnz_tmp] = k;
+        vals[nnz_tmp] = M_host->M()[k];
+        index_convert_CSR2Triplet_host_[nnz_tmp] = k;
 
         nnz_tmp = nnz_each_row_tmp[colID_tmp] + row_ptr[colID_tmp];
         col_idx[nnz_tmp] = rowID_tmp;
-        vals[nnz_tmp] = M_->M()[k];
-        index_covert_CSR2Triplet_[nnz_tmp] = k;
+        vals[nnz_tmp] = M_host->M()[k];
+        index_convert_CSR2Triplet_host_[nnz_tmp] = k;
 
         nnz_each_row_tmp[rowID_tmp]++;
         nnz_each_row_tmp[colID_tmp]++;
@@ -409,8 +524,8 @@ namespace hiop
         assert(nnz_each_row_tmp[i] == row_ptr[i + 1] - row_ptr[i] - 1);
         nnz_tmp = nnz_each_row_tmp[i] + row_ptr[i];
         col_idx[nnz_tmp] = i;
-        vals[nnz_tmp] = M_->M()[M_->numberOfNonzeros() - n_ + i];
-        index_covert_CSR2Triplet_[nnz_tmp] = M_->numberOfNonzeros() - n_ + i;
+        vals[nnz_tmp] = M_host->M()[M_host->numberOfNonzeros() - n_ + i];
+        index_convert_CSR2Triplet_host_[nnz_tmp] = M_host->numberOfNonzeros() - n_ + i;
         total_nnz_tmp += 1;
 
         std::vector<int> ind_temp(row_ptr[i + 1] - row_ptr[i]);
@@ -422,10 +537,12 @@ namespace hiop
                  );
 
         reorder(vals + row_ptr[i], ind_temp, row_ptr[i + 1] - row_ptr[i]);
-        reorder(index_covert_CSR2Triplet_ + row_ptr[i], ind_temp, row_ptr[i + 1] - row_ptr[i]);
+        reorder(index_convert_CSR2Triplet_host_ + row_ptr[i], ind_temp, row_ptr[i + 1] - row_ptr[i]);
         std::sort(col_idx + row_ptr[i], col_idx + row_ptr[i + 1]);
       }
     }
+    checkCudaErrors(cudaMemcpy(index_convert_CSR2Triplet_device_, index_convert_CSR2Triplet_host_, nnz_ * sizeof(int), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(index_convert_extra_Diag2CSR_device_, index_convert_extra_Diag2CSR_host_, n_ * sizeof(int), cudaMemcpyHostToDevice));
     delete[] nnz_each_row_tmp;
   }
 
@@ -446,89 +563,6 @@ namespace hiop
     }
   }
 
-
-
-  hiopLinSolverSymSparseReSolveGPU::hiopLinSolverSymSparseReSolveGPU(const int& n, 
-                                                                     const int& nnz, 
-                                                                     hiopNlpFormulation* nlp)
-    : hiopLinSolverSymSparseReSolve(n, nnz, nlp), 
-      rhs_host_{nullptr},
-      M_host_{nullptr}
-  {
-    rhs_host_ = LinearAlgebraFactory::create_vector("default", n);
-    M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
-  }
-  
-  hiopLinSolverSymSparseReSolveGPU::~hiopLinSolverSymSparseReSolveGPU()
-  {
-    delete rhs_host_;
-    delete M_host_;
-  }
-
-  int hiopLinSolverSymSparseReSolveGPU::matrixChanged()
-  {
-    size_type nnz = M_->numberOfNonzeros();
-    double* mval_dev = M_->M();
-    double* mval_host= M_host_->M();
-
-    index_type* irow_dev = M_->i_row();
-    index_type* irow_host= M_host_->i_row();
-
-    index_type* jcol_dev = M_->j_col();
-    index_type* jcol_host= M_host_->j_col();
-
-    if("device" == nlp_->options->GetString("mem_space")) {
-      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyDeviceToHost));      
-    } else {
-      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * nnz, cudaMemcpyHostToHost));
-      checkCudaErrors(cudaMemcpy(irow_host, irow_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
-      checkCudaErrors(cudaMemcpy(jcol_host, jcol_dev, sizeof(index_type) * nnz, cudaMemcpyHostToHost));
-    }
-    
-    hiopMatrixSparse* swap_ptr = M_;
-    M_ = M_host_;
-    M_host_ = swap_ptr;
-    
-    int vret = hiopLinSolverSymSparseReSolve::matrixChanged();
-
-    swap_ptr = M_;
-    M_ = M_host_;
-    M_host_ = swap_ptr;
-    
-    return vret;
-  }
-  
-  bool hiopLinSolverSymSparseReSolveGPU::solve(hiopVector& x)
-  {
-    double* mval_dev = x.local_data();
-    double* mval_host= rhs_host_->local_data();
-   
-    if("device" == nlp_->options->GetString("mem_space")) {
-      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-    } else {
-      checkCudaErrors(cudaMemcpy(mval_host, mval_dev, sizeof(double) * n_, cudaMemcpyHostToHost));
-    }
-
-    hiopMatrixSparse* swap_ptr = M_;
-    M_ = M_host_;
-    M_host_ = swap_ptr;
-
-    bool bret = hiopLinSolverSymSparseReSolve::solve(*rhs_host_);
-
-    swap_ptr = M_;
-    M_ = M_host_;
-    M_host_ = swap_ptr;
-
-    if("device" == nlp_->options->GetString("mem_space")) {
-      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToDevice));
-    } else {
-      checkCudaErrors(cudaMemcpy(mval_dev, mval_host, sizeof(double) * n_, cudaMemcpyHostToHost));     
-    }
- 
-    return bret;
-  }
 
 } // namespace hiop
 

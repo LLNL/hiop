@@ -57,9 +57,6 @@
 #include "IterativeRefinement.hpp"
 #include "RefactorizationSolver.hpp"
 
-#include "hiop_blasdefs.hpp"
-// #include "KrylovSolverKernels.h"
-
 #include "klu.h"
 #include "cusparse_v2.h"
 #include <sstream>
@@ -86,6 +83,9 @@ namespace ReSolve {
     cusparseSetMatType(descr_A_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_A_, CUSPARSE_INDEX_BASE_ZERO);
 
+    // Allocate host mirror for the solution vector
+    hostx_ = new double[n_];
+
     // Allocate solution and rhs vectors
     checkCudaErrors(cudaMalloc(&devx_, n_ * sizeof(double)));
     checkCudaErrors(cudaMalloc(&devr_, n_ * sizeof(double)));
@@ -103,6 +103,9 @@ namespace ReSolve {
     cusolverSpDestroy(handle_cusolver_);
     cublasDestroy(handle_cublas_);
     cusparseDestroyMatDescr(descr_A_);
+
+    // Delete host mirror for the solution vector
+    delete [] hostx_;
 
     // Delete residual and solution vectors
     cudaFree(devr_);
@@ -201,27 +204,24 @@ namespace ReSolve {
 
   int RefactorizationSolver::refactorize()
   {
-    // TODO: This memcpy should not be in this function.
-    checkCudaErrors(cudaMemcpy(mat_A_csr_->get_vals(), mat_A_csr_->get_vals_host(), sizeof(double) * nnz_, cudaMemcpyHostToDevice));
-
     if(refact_ == "glu") {
       sp_status_ = cusolverSpDgluReset(handle_cusolver_, 
                                        n_,
                                        /* A is original matrix */
                                        nnz_,
                                        descr_A_,
-                                       mat_A_csr_->get_vals(),  //da_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
+                                       mat_A_csr_->get_vals(), 
+                                       mat_A_csr_->get_irows(),
+                                       mat_A_csr_->get_jcols(),
                                        info_M_);
       sp_status_ = cusolverSpDgluFactor(handle_cusolver_, info_M_, d_work_);
     } else {
       if(refact_ == "rf") {
         sp_status_ = cusolverRfResetValues(n_, 
                                            nnz_, 
-                                           mat_A_csr_->get_irows(), //dia_,
-                                           mat_A_csr_->get_jcols(), //dja_,
-                                           mat_A_csr_->get_vals(),  //da_,
+                                           mat_A_csr_->get_irows(),
+                                           mat_A_csr_->get_jcols(),
+                                           mat_A_csr_->get_vals(), 
                                            d_P_,
                                            d_Q_,
                                            handle_rf_);
@@ -232,83 +232,120 @@ namespace ReSolve {
     return 0;
   }
 
-  bool RefactorizationSolver::triangular_solve(double* dx, const double* rhs, double tol)
+  bool RefactorizationSolver::triangular_solve(double* dx, double tol, std::string memspace)
   {
-    if(refact_ == "glu") {
+    if(refact_ == "glu")
+    {
+      double* devx = nullptr;
+      if(memspace == "device") {
+        checkCudaErrors(cudaMemcpy(devr_, dx, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = dx;
+      } else {
+        checkCudaErrors(cudaMemcpy(devr_, dx, sizeof(double) * n_, cudaMemcpyHostToDevice));
+        devx = devx_;
+      }
       sp_status_ = cusolverSpDgluSolve(handle_cusolver_,
                                        n_,
                                        /* A is original matrix */
                                        nnz_,
                                        descr_A_,
-                                       mat_A_csr_->get_vals(),  //da_,
-                                       mat_A_csr_->get_irows(), //dia_,
-                                       mat_A_csr_->get_jcols(), //dja_,
+                                       mat_A_csr_->get_vals(), 
+                                       mat_A_csr_->get_irows(),
+                                       mat_A_csr_->get_jcols(),
                                        devr_,/* right hand side */
-                                       devx_,/* left hand side */
+                                       devx,/* left hand side, local pointer */
                                        &ite_refine_succ_,
                                        &r_nrminf_,
                                        info_M_,
                                        d_work_);
-
-      if(sp_status_ == 0) {
-        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-      } else {
-        // TODO: Implement ReSolve logging system to output these messages
+      if(sp_status_ != 0 && !silent_output_) {
         std::cout << "GLU solve failed with status: " << sp_status_ << "\n";
         return false;
       }
-    } else {
-      if(refact_ == "rf") {
-        if(!is_first_solve_) {
-          sp_status_ = cusolverRfSolve(handle_rf_,
-                                       d_P_,
-                                       d_Q_,
-                                       1,
-                                       d_T_,
-                                       n_,
-                                       devr_,
-                                       n_);
-
-          if(sp_status_ == 0) {
-            if(use_ir_ == "yes") {
-              // Set tolerance based on barrier parameter mu
-              ir_->set_tol(tol);
-
-              checkCudaErrors(cudaMemcpy(devx_, rhs, sizeof(double) * n_, cudaMemcpyHostToDevice));
-
-              ir_->fgmres(devr_, devx_);
-              if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
-                std::cout << "[Warning] Iterative refinement did not converge!\n";
-                std::cout << "\t Iterative refinement tolerance " << tol << "\n";
-                std::cout << "\t Relative solution error        " << ir_->getFinalResidalNorm()/ir_->getBNorm() << "\n";
-                std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
-                          << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
-                          << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
-              }
-
-            }
-            checkCudaErrors(cudaMemcpy(dx, devr_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
-
-
-          } else {
-            // TODO: Implement ReSolve logging system to output these messages
-            std::cout << "Rf solve failed with status: " << sp_status_ << "\n";
-            return false;
-          }
-        } else {
-          memcpy(dx, rhs, sizeof(double) * n_);
-          int ok = klu_solve(Symbolic_, Numeric_, n_, 1, dx, &Common_);
-          klu_free_numeric(&Numeric_, &Common_);
-          klu_free_symbolic(&Symbolic_, &Common_);
-          is_first_solve_ = false;
-        }
+      if(memspace == "device") {
+        // do nothing
       } else {
-        // TODO: Implement ReSolve logging system to output these messages
-        std::cout << "Unknown refactorization, exiting\n";
-        assert(false && "Only GLU and cuSolverRf are available refactorizations.");
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
       }
+      return true;
+    } 
+
+    if(refact_ == "rf")
+    {
+      // First solve is performed on CPU
+      if(is_first_solve_)
+      {
+        double* hostx = nullptr;
+        if(memspace == "device") {
+          checkCudaErrors(cudaMemcpy(hostx_, dx, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+          hostx = hostx_;
+        } else {
+          hostx = dx;
+        }
+        int ok = klu_solve(Symbolic_, Numeric_, n_, 1, hostx, &Common_); // replace dx with hostx
+        klu_free_numeric(&Numeric_, &Common_);
+        klu_free_symbolic(&Symbolic_, &Common_);
+        is_first_solve_ = false;
+        if(memspace == "device") {
+          checkCudaErrors(cudaMemcpy(dx, hostx, sizeof(double) * n_, cudaMemcpyHostToDevice));
+        } else {
+          // do nothing
+        }
+        return true;
+      }
+
+      double* devx = nullptr;
+      if(memspace == "device") {
+        devx = dx;
+        checkCudaErrors(cudaMemcpy(devr_, dx,    sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+      } else {
+        checkCudaErrors(cudaMemcpy(devx_, dx,    sizeof(double) * n_, cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(devr_, devx_, sizeof(double) * n_, cudaMemcpyDeviceToDevice));
+        devx = devx_;
+      }
+
+      // Each next solve is performed on GPU
+      sp_status_ = cusolverRfSolve(handle_rf_,
+                                   d_P_,
+                                   d_Q_,
+                                   1,
+                                   d_T_,
+                                   n_,
+                                   devx,  // replace devx_ with local pointer devx
+                                   n_);
+      if(sp_status_ != 0) {
+        if(!silent_output_)
+          std::cout << "Rf solve failed with status: " << sp_status_ << "\n";
+        return false;
+      }
+
+      if(use_ir_ == "yes") {
+        // Set tolerance based on barrier parameter mu
+        ir_->set_tol(tol);
+
+        ir_->fgmres(devx, devr_);  // replace devx_ with local pointer devx
+        if(!silent_output_ && (ir_->getFinalResidalNorm() > tol*ir_->getBNorm())) {
+          std::cout << "[Warning] Iterative refinement did not converge!\n";
+          std::cout << "\t Iterative refinement tolerance " << tol << "\n";
+          std::cout << "\t Relative solution error        " << ir_->getFinalResidalNorm()/ir_->getBNorm() << "\n";
+          std::cout << "\t fgmres: init residual norm: " << ir_->getInitialResidalNorm()      << "\n"
+                    << "\t final residual norm:        " << ir_->getFinalResidalNorm()        << "\n"
+                    << "\t number of iterations:       " << ir_->getFinalNumberOfIterations() << "\n";
+        }
+            
+      }
+      if(memspace == "device") {
+        // do nothing
+      } else {
+        checkCudaErrors(cudaMemcpy(dx, devx_, sizeof(double) * n_, cudaMemcpyDeviceToHost));
+      }
+      return true;
     }
-    return true;
+
+    if(!silent_output_) {
+      std::cout << "Unknown refactorization " << refact_ << ", exiting\n";
+    }
+    return false;
   }
 
   // helper private function needed for format conversion
@@ -380,7 +417,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::initializeCusolverGLU()
   {
-    // nlp_->log->printf(hovScalars, "CUSOLVER: Glu \n");
     cusparseCreateMatDescr(&descr_M_);
     cusparseSetMatType(descr_M_, CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descr_M_, CUSPARSE_INDEX_BASE_ZERO);
@@ -396,7 +432,6 @@ namespace ReSolve {
 
   int RefactorizationSolver::initializeCusolverRf()
   {
-    // nlp_->log->printf(hovScalars, "CUSOLVER: Rf \n");
     cusolverRfCreate(&handle_rf_);
 
     checkCudaErrors(cusolverRfSetAlgs(handle_rf_,
@@ -503,9 +538,9 @@ namespace ReSolve {
                                      /* A is original matrix */
                                      nnz_, 
                                      descr_A_, 
-                                     mat_A_csr_->get_vals(),  //da_, 
-                                     mat_A_csr_->get_irows(), //dia_, 
-                                     mat_A_csr_->get_jcols(), //dja_, 
+                                     mat_A_csr_->get_vals(), 
+                                     mat_A_csr_->get_irows(), 
+                                     mat_A_csr_->get_jcols(), 
                                      info_M_);
 
     assert(CUSOLVER_STATUS_SUCCESS == sp_status_);
@@ -729,8 +764,8 @@ namespace ReSolve {
   // KS: might later become part of src/Utils, putting it here for now
   template <typename T>
   void RefactorizationSolver::resolveCheckCudaError(T result,
-                                                  const char* const file,
-                                                  int const line)
+                                                    const char* const file,
+                                                    int const line)
   {
     if(result) {
       fprintf(stdout, 
