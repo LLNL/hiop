@@ -157,7 +157,7 @@ pnnl_cleanup:
 
       elif [[ "$part" == *"marianas"*  ]]; then
         export STATUS_NAME="$marianas_status"
-     
+      fi
       curl -L \
       -X POST \
       -H @${GITHUB_CURL_HEADERS} \
@@ -199,6 +199,11 @@ success:
   stage: .post
   extends:
     - .report-status
+  parallel:
+    matrix:
+      - MY_CLUSTER: "incline"
+      - MY_CLUSTER: "newell"
+      - MY_CLUSTER: "marianas"
 
 failure:
   stage: .post
@@ -206,3 +211,8 @@ failure:
     - .report-status
   rules:
     - when: on_failure
+  parallel:
+      matrix:
+        - MY_CLUSTER: "incline"
+        - MY_CLUSTER: "newell"
+        - MY_CLUSTER: "marianas"
