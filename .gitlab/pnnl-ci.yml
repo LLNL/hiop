@@ -199,6 +199,8 @@ success:
   stage: .post
   extends:
     - .report-status
+  variables:
+    STATE: success
   parallel:
     matrix:
       - MY_CLUSTER: "incline"
@@ -211,6 +213,8 @@ failure:
     - .report-status
   rules:
     - when: on_failure
+  variables:
+    STATE: failure
   parallel:
       matrix:
         - MY_CLUSTER: "incline"
