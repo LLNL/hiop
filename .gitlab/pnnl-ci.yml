@@ -214,7 +214,7 @@ failure:
   rules:
     - when: on_failure
   variables:
-    STATE: failure
+    STATE: failed
   parallel:
       matrix:
         - MY_CLUSTER: "incline"
