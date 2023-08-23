@@ -109,8 +109,11 @@ public:
                               double* MHSS);
 
 private:
-  int n_vars, n_cons;
-  bool convex_obj_, rankdefic_eq_, rankdefic_ineq_;
+  int n_vars_;
+  int n_cons_;
+  bool convex_obj_;
+  bool rankdefic_eq_;
+  bool rankdefic_ineq_;
   double scal_neg_obj_;
 };
 

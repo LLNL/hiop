@@ -395,8 +395,8 @@ protected:
     std::string mem_space_;
     RowStartsInfo()
       : idx_start_(nullptr),
-        num_rows_(0), 
-        register_row_st_{0}
+        register_row_st_{0},
+        num_rows_(0)
     {}
     RowStartsInfo(size_type n_rows, std::string memspace);
     virtual ~RowStartsInfo();

@@ -35,11 +35,15 @@ class SparseEx3 : public hiop::hiopInterfaceSparse
 {
 public:
   SparseEx3(int nx,int S)
-  : nx_(nx),n_vars(nx+S*nx), n_cons{2+S*nx},S_(S) //total number of variables should be nx+S*nx
+  : n_vars_(nx+S*nx), 
+    n_cons_{2+S*nx},
+    nx_(nx),
+    S_(S) //total number of variables should be nx+S*nx
   {
     assert(nx>=3);
-    if(nx>3)
-      n_cons += nx-3;
+    if(nx>3) {
+      n_cons_ += nx-3;
+    }
     nS_ = int(nx_/2);
     xi_ = new double[S_*nS_];
     x0_ = new double[nx_];
@@ -48,11 +52,16 @@ public:
   }
 
   SparseEx3(int nx,int S,int nS)
-  : nx_(nx),n_vars(nx+S*nx), n_cons{2+S*nx},S_(S),nS_(nS) //total number of variables should be nx+S*nx
+  : n_vars_(nx+S*nx),
+    n_cons_{2+S*nx},
+    nx_(nx),
+    S_(S),
+    nS_(nS) //total number of variables should be nx+S*nx
   {
     assert(nx>=3);
-    if(nx>3)
-      n_cons += nx-3;
+    if(nx>3) {
+      n_cons_ += nx-3;
+    }
     xi_ = new double[nS_*S_];
     x0_ = new double[nx_];
     for(int i=0;i<nS_*S_;i++) { 
@@ -61,12 +70,12 @@ public:
     for(int i=0;i<nx_;i++) x0_[i] = 1.0;
   }
   bool get_prob_sizes(size_type& n, size_type& m)
-  { n=n_vars; m=n_cons; return true; }
+  { n=n_vars_; m=n_cons_; return true; }
 
 
   bool get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
   {
-    assert(n==n_vars);
+    assert(n==n_vars_);
     for(size_type i=0; i<nx_; i++) {
       if(i==0) { xlow[i]=-1e20; xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
       if(i==1) { xlow[i]= 0.0;  xupp[i]=1e20; type[i]=hiopNonlinear; continue; }
@@ -91,7 +100,7 @@ public:
 
   bool get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
   {
-    assert(m==n_cons);
+    assert(m==n_cons_);
     size_type conidx{0};
     clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
     clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
@@ -115,16 +124,16 @@ public:
                               int& nnz_sparse_Jacineq,
                               int& nnz_sparse_Hess_Lagr)
   {
-    n = n_vars;
+    n = n_vars_;
     nnz_sparse_Jaceq = 2;
     nnz_sparse_Jacineq = 2+2*(nx_-3)+S_*(nx_+ 2*(nx_-1)) ;
-    nnz_sparse_Hess_Lagr = nx_+S_*nx_+S_*nx_; //this variable should always be <= n_vars
+    nnz_sparse_Hess_Lagr = nx_+S_*nx_+S_*nx_; //this variable should always be <= n_vars_
     return true;
   }
 
   bool eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
   {
-    assert(n==n_vars);
+    assert(n==n_vars_);
     obj_value=0.;
     for(int i=0;i<nx_;i++) {
       //obj_value += 0.25*std::pow(x[i]-1.,4);
@@ -140,8 +149,8 @@ public:
 
   bool eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
   {
-    assert(n==n_vars);
-    for(int i=0;i<n_vars;i++) {
+    assert(n==n_vars_);
+    for(int i=0;i<n_vars_;i++) {
       gradf[i] = 0.;
     }
     for(int i=0;i<nx_;i++) {
@@ -167,8 +176,8 @@ public:
                  double* cons)
   {
 
-    assert(n==n_vars); assert(m==n_cons);
-    //for the base problem n_cons==2+n-3;
+    assert(n==n_vars_); assert(m==n_cons_);
+    //for the base problem n_cons_==2+n-3;
 
     //local contributions to the constraints in cons are reset
     for(auto j=0;j<m; j++) cons[j]=0.;
@@ -235,7 +244,7 @@ public:
                      index_type* jJacS, 
                      double* MJacS)
   {
-    assert(n==n_vars); assert(m==n_cons);
+    assert(n==n_vars_); assert(m==n_cons_);
     assert(n>=3);
     //2*(n-1) for basecase
 
@@ -374,7 +383,7 @@ public:
 
   bool get_starting_point(const size_type& n, double* x0)
   {
-    assert(n==n_vars);
+    assert(n==n_vars_);
     for(auto i=0; i<n; i++) {
       x0[i]=1.0;
     }
@@ -392,8 +401,11 @@ public:
   }
 
 private:
-  int n_vars, n_cons;
-  int nx_, S_,nS_;
+  int n_vars_;
+  int n_cons_;
+  int nx_;
+  int S_;
+  int nS_;
   double* xi_;// of size S_*nS_
   double* x0_;// of size S_*nS_
 };

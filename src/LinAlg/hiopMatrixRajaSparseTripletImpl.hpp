@@ -79,8 +79,8 @@ hiopMatrixRajaSparseTriplet(int rows,
                             int _nnz,
                             std::string memspace)
   : hiopMatrixSparse(rows, cols, _nnz),
-    row_starts_(nullptr), 
-    mem_space_(memspace)
+    mem_space_(memspace),
+    row_starts_(nullptr)
 {
   if(rows==0 || cols==0)
   {
@@ -522,8 +522,6 @@ transAddToSymDenseMatrixUpperTriangle(int row_start,
   assert(W.n()==W.m());
 
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
-  auto Wm = W.m();
-  auto Wn = W.n();
   int* iRow = iRow_;
   int* jCol = jCol_;
   double* values = values_;
@@ -1029,12 +1027,9 @@ copyRowsFrom(const hiopMatrix& src_gen,
   assert(this->n() == src.n());
   assert(n_rows <= src.m());
 
-  const int* iRow_src = src.i_row();
   const int* jCol_src = src.j_col();
   const double* values_src = src.M();
-  size_type nnz_src = src.numberOfNonzeros();
 
-  size_type m_src = src.m();
   if(src.row_starts_ == nullptr) {
     src.row_starts_ = src.allocAndBuildRowStarts();
   }
@@ -1044,7 +1039,6 @@ copyRowsFrom(const hiopMatrix& src_gen,
   index_type* iRow = iRow_;
   index_type* jCol = jCol_;
   double* values = values_;
-  size_type nnz_dst = numberOfNonzeros();
 
   // this function only set up sparsity in the first run. Sparsity won't change after the first run.
   if(row_starts_ == nullptr) {
@@ -1123,17 +1117,13 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
   assert(n_rows + rows_src_idx_st <= src.m());
   assert(n_rows + rows_dst_idx_st <= this->m());
 
-  const index_type* iRow_src = src.i_row();
   const index_type* jCol_src = src.j_col();
   const double* values_src = src.M();
-  size_type nnz_src = src.numberOfNonzeros();
 
   // local copy of member variable/function, for RAJA access
   index_type* iRow = iRow_;
   index_type* jCol = jCol_;
   double* values = values_;
-  size_type nnz_dst = numberOfNonzeros();
-  size_type n_rows_src = src.m();
   size_type n_rows_dst = this->m();
 
   if(src.row_starts_ == nullptr) {
@@ -1285,9 +1275,9 @@ void hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::copyFromDev() const
 template<class MEMBACKEND, class RAJAEXECPOL>
 hiopMatrixRajaSparseTriplet<MEMBACKEND, RAJAEXECPOL>::RowStartsInfo::
 RowStartsInfo(size_type n_rows, std::string memspace)
-  : num_rows_(n_rows),
-    mem_space_(memspace), 
-    register_row_st_{0}
+  : register_row_st_{0},
+    num_rows_(n_rows),
+    mem_space_(memspace)
 {
   auto& resmgr = umpire::ResourceManager::getInstance();
   umpire::Allocator alloc = resmgr.getAllocator(mem_space_);
@@ -2151,7 +2141,6 @@ set_Hess_FR(const hiopMatrixSparse& Hess,
   assert(m_row==m2 || m2==0);
   
   int nnz1 = m_row + M2.numberOfOffDiagNonzeros();
-  int nnz2 = M2.numberOfNonzeros();
 
   assert(this->nnz_ == nnz1);
 
@@ -2159,8 +2148,6 @@ set_Hess_FR(const hiopMatrixSparse& Hess,
     M2.row_starts_ = M2.allocAndBuildRowStarts();
   }
   assert(M2.row_starts_);
-  const int* M2iRow_host = M2.i_row_host();
-  const int* M2jCol_host = M2.j_col_host();
 
   index_type* M1_row_start{nullptr};
   index_type* M2_row_start = M2.row_starts_->idx_start_;
@@ -2266,7 +2253,6 @@ set_Hess_FR(const hiopMatrixSparse& Hess,
     double* M1values = M1.M();
     const double* M2values = M2.M();
   
-    const auto& diag_x = dynamic_cast<const hiopVectorRaja<MEMBACKEND, RAJAEXECPOL>&>(add_diag);  
     const double* diag_data = add_diag.local_data_const();
   
     if(m2 > 0) {

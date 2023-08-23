@@ -27,7 +27,12 @@
 class PriDecRecourseProbleEx2 : public hiop::hiopInterfaceMDS
 {
 public:
-  PriDecRecourseProbleEx2(int n, int nS, int S): nx_(n), nS_(nS),S_(S),x_(nullptr),xi_(nullptr)
+  PriDecRecourseProbleEx2(int n, int nS, int S)
+  : x_(nullptr),
+    xi_(nullptr),
+    nx_(n),
+    nS_(nS),
+    S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny = nx = n

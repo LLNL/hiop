@@ -944,16 +944,17 @@ bool hiopVectorCompoundPD::isfinite_local() const
   return true;
 }
 
-void hiopVectorCompoundPD::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const 
+void hiopVectorCompoundPD::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, int max_elems/*=-1*/, int rank/*=-1*/) const
 {
-  int myrank_=0, numranks=1; 
-  MPI_Comm comm_ = MPI_COMM_SELF;
+  int myrank_=0;
 
   if(nullptr == file) {
     file = stdout;
   }
 
 #ifdef HIOP_USE_MPI
+  int numranks = 1;
+  MPI_Comm comm_ = MPI_COMM_SELF;
   if(rank>=0) {
     int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);

@@ -68,10 +68,6 @@ namespace hiop
 {  
 hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* nlp)
   : hiopKKTLinSysNormalEquation(nlp),
-    nlpSp_{nullptr},
-    HessSp_{nullptr},
-    Jac_cSp_{nullptr},
-    Jac_dSp_{nullptr},
     rhs_{nullptr},
     Hess_diag_{nullptr},
     deltawx_{nullptr},
@@ -83,13 +79,17 @@ hiopKKTLinSysSparseNormalEqn::hiopKKTLinSysSparseNormalEqn(hiopNlpFormulation* n
     Hx_copy_{nullptr},
     Hd_copy_{nullptr},
     Hxd_inv_copy_{nullptr},
+    write_linsys_counter_(-1),
+    csr_writer_(nlp),
+    nlpSp_{nullptr},
+    HessSp_{nullptr},
+    Jac_cSp_{nullptr},
+    Jac_dSp_{nullptr},    
     JacD_{nullptr},
     JacDt_{nullptr},
     JDiagJt_{nullptr},
     Diag_dualreg_{nullptr},
-    M_normaleqn_{nullptr},
-    write_linsys_counter_(-1),
-    csr_writer_(nlp)
+    M_normaleqn_{nullptr}
 {
   nlpSp_ = dynamic_cast<hiopNlpSparse*>(nlp_);
   assert(nlpSp_);
@@ -151,8 +151,6 @@ bool hiopKKTLinSysSparseNormalEqn::build_kkt_matrix(const hiopPDPerturbation& pd
   assert(HessSp_->is_diagonal());
   
   hiopMatrixSymSparseTriplet* Hess_triplet = dynamic_cast<hiopMatrixSymSparseTriplet*>(Hess_);
-  const hiopMatrixSparseTriplet* Jac_c_triplet = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_c_);
-  const hiopMatrixSparseTriplet* Jac_d_triplet = dynamic_cast<const hiopMatrixSparseTriplet*>(Jac_d_);
   
   assert(HessSp_ && Jac_cSp_ && Jac_dSp_);
   if(nullptr==Jac_dSp_ || nullptr==HessSp_) {

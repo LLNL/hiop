@@ -33,10 +33,11 @@ class DenseConsEx3 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
   DenseConsEx3(int n)
-    : n_vars(n), n_cons(2), comm(MPI_COMM_WORLD)
+    : n_vars(n), n_cons(2)
   {
     comm_size=1; my_rank=0; 
 #ifdef HIOP_USE_MPI
+    comm = MPI_COMM_WORLD;
     int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
     ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
@@ -226,7 +227,9 @@ public:
 
 private:
   int n_vars, n_cons;
+#ifdef HIOP_USE_MPI
   MPI_Comm comm;
+#endif
   int my_rank, comm_size;
   index_type* col_partition;
 public:

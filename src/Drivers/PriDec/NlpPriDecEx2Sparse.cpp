@@ -103,8 +103,9 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
   double* xi;
   
 #ifdef HIOP_USE_MPI
-  double t3 =  MPI_Wtime(); 
-  double t4 = 0.; 
+  // uncomment if want to monitor contingency computing time
+  //double t3 =  MPI_Wtime(); 
+  //double t4 = 0.; 
 #endif 
   
   xi = new double[nS_]; 
@@ -142,6 +143,7 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
 
   //assert("for debugging" && false); //for debugging purpose
   status = solver.run();
+  assert(status<=hiopSolveStatus::User_Stopped); //check solver status if necessary
   rval = solver.getObjective();  
   if(y_==nullptr) {
     y_ = new double[ny_];

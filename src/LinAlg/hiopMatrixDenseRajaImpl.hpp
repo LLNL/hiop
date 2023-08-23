@@ -1099,7 +1099,6 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::addSubDiagonal(const double& 
   assert(start+dlen<=n_local_);
 #endif
 
-  int diag = std::min(get_local_size_m(), get_local_size_n());
   double* data = data_dev_;
   const double* dd = d.local_data_const();
   RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n()); // matrix
@@ -1141,7 +1140,6 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::addSubDiagonal(int start_on_d
   assert(start_on_dest_diag>=0 && start_on_dest_diag<m_local_);
   num_elems = std::min(num_elems, m_local_-start_on_dest_diag);
 
-  int diag = std::min(get_local_size_m(), get_local_size_n());
   double* data = data_dev_;
   const double* dd = d.local_data_const();
   RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
@@ -1174,7 +1172,6 @@ addSubDiagonal(int start_on_dest_diag, int num_elems, const double& c)
   assert(n_local_ == n_global_ && "method supported only for non-distributed matrices");
   assert(n_local_ == m_local_  && "method supported only for symmetric matrices");
 
-  int diag = std::min(get_local_size_m(), get_local_size_n());
   double* data  = data_dev_;
   RAJA::View<double, RAJA::Layout<2>> Mview(data, get_local_size_m(), get_local_size_n());
   RAJA::forall<hiop_raja_exec>(RAJA::RangeSegment(0, num_elems),

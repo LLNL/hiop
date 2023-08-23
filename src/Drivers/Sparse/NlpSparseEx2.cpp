@@ -28,17 +28,17 @@
  *
  */
 SparseEx2::SparseEx2(int n, bool convex_obj, bool rankdefic_Jac_eq, bool rankdefic_Jac_ineq, double scal_neg_obj)
-  : convex_obj_{convex_obj},
+  : n_vars_{n},
+    n_cons_{2},
+    convex_obj_{convex_obj},
     rankdefic_eq_(rankdefic_Jac_eq),
     rankdefic_ineq_(rankdefic_Jac_ineq),
-    n_vars{n},
-    scal_neg_obj_{scal_neg_obj},
-    n_cons{2}
+    scal_neg_obj_{scal_neg_obj}
 {
   assert(n>=3);
   if(n>3)
-    n_cons += n-3;
-  n_cons += rankdefic_eq_ + rankdefic_ineq_;
+    n_cons_ += n-3;
+  n_cons_ += rankdefic_eq_ + rankdefic_ineq_;
 }
 
 SparseEx2::~SparseEx2()
@@ -47,14 +47,14 @@ SparseEx2::~SparseEx2()
 
 bool SparseEx2::get_prob_sizes(size_type& n, size_type& m)
 {
-  n=n_vars;
-  m=n_cons;
+  n=n_vars_;
+  m=n_cons_;
   return true;
 }
 
 bool SparseEx2::get_vars_info(const size_type& n, double *xlow, double* xupp, NonlinearityType* type)
 {
-  assert(n==n_vars);
+  assert(n==n_vars_);
   for(index_type i=0; i<n; i++) {
     if(i==0) {
       xlow[i] = -1e20;
@@ -84,13 +84,13 @@ bool SparseEx2::get_vars_info(const size_type& n, double *xlow, double* xupp, No
 
 bool SparseEx2::get_cons_info(const size_type& m, double* clow, double* cupp, NonlinearityType* type)
 {
-  assert(m==n_cons);
+  assert(m==n_cons_);
   index_type conidx{0};
   clow[conidx]= 10.0;    cupp[conidx]= 10.0;      type[conidx++]=hiopInterfaceBase::hiopLinear;
   clow[conidx]= 5.0;     cupp[conidx]= 1e20;      type[conidx++]=hiopInterfaceBase::hiopLinear;
-  for(index_type i=3; i<n_vars; i++) {
+  for(index_type i=3; i<n_vars_; i++) {
     clow[conidx] = 1.0;
-    cupp[conidx]= 2*n_vars;
+    cupp[conidx]= 2*n_vars_;
     type[conidx++]=hiopInterfaceBase::hiopLinear;
   }
 
@@ -116,16 +116,16 @@ bool SparseEx2::get_sparse_blocks_info(int& nx,
                                        int& nnz_sparse_Jacineq,
                                        int& nnz_sparse_Hess_Lagr)
 {
-    nx = n_vars;;
+    nx = n_vars_;;
     nnz_sparse_Jaceq = 2 + 2*rankdefic_eq_;
-    nnz_sparse_Jacineq = 2 + 2*(n_vars-3) + 2*rankdefic_ineq_;
-    nnz_sparse_Hess_Lagr = n_vars;
+    nnz_sparse_Jacineq = 2 + 2*(n_vars_-3) + 2*rankdefic_ineq_;
+    nnz_sparse_Hess_Lagr = n_vars_;
     return true;
 }
 
 bool SparseEx2::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
-  assert(n==n_vars);
+  assert(n==n_vars_);
   obj_value=0.;
   for(auto i=0;i<n;i++) {
     obj_value += (2*convex_obj_-1) * scal_neg_obj_ * 0.25 * pow(x[i]-1., 4) + 0.5 * pow(x[i], 2);
@@ -135,7 +135,7 @@ bool SparseEx2::eval_f(const size_type& n, const double* x, bool new_x, double& 
 
 bool SparseEx2::eval_grad_f(const size_type& n, const double* x, bool new_x, double* gradf)
 {
-  assert(n==n_vars);
+  assert(n==n_vars_);
   for(auto i=0;i<n;i++) {
     gradf[i] = (2*convex_obj_-1) * scal_neg_obj_ * pow(x[i]-1.,3) + x[i];
   }
@@ -155,8 +155,8 @@ bool SparseEx2::eval_cons(const size_type& n,
 
 bool SparseEx2::eval_cons(const size_type& n, const size_type& m, const double* x, bool new_x, double* cons)
 {
-  assert(n==n_vars); assert(m==n_cons);
-  assert(n_cons==2+n-3+rankdefic_eq_+rankdefic_ineq_);
+  assert(n==n_vars_); assert(m==n_cons_);
+  assert(n_cons_==2+n-3+rankdefic_eq_+rankdefic_ineq_);
 
   //local contributions to the constraints in cons are reset
   for(auto j=0;j<m; j++) cons[j]=0.;
@@ -211,7 +211,7 @@ bool SparseEx2::eval_Jac_cons(const size_type& n,
                               index_type* jJacS,
                               double* MJacS)
 {
-    assert(n==n_vars); assert(m==n_cons);
+    assert(n==n_vars_); assert(m==n_cons_);
     assert(n>=3);
 
     assert(nnzJacS == 4 + 2*(n-3) + 2*rankdefic_eq_ + 2*rankdefic_ineq_);
@@ -318,7 +318,7 @@ bool SparseEx2::eval_Hess_Lagr(const size_type& n,
 
 bool SparseEx2::get_starting_point(const size_type& n, double* x0)
 {
-  assert(n==n_vars);
+  assert(n==n_vars_);
   for(auto i=0; i<n; i++) {
     x0[i]=0.0;
   }
