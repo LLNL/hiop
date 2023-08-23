@@ -1169,7 +1169,6 @@ public:
   int matrixOverwriteUpperTriangleWithLower(hiop::hiopMatrixDense& A, const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
     
     for (int i = 0; i < M; i++)
     {
@@ -1190,7 +1189,6 @@ public:
   int matrixOverwriteLowerTriangleWithUpper(hiop::hiopMatrixDense& A, const int rank=0)
   {
     const local_ordinal_type M = getNumLocRows(&A);
-    const local_ordinal_type N = getNumLocCols(&A);
     
     for (int i = 0; i < M; i++)
     {

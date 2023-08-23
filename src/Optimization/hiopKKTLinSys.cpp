@@ -1509,7 +1509,6 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVector& x, hiopVector& rhs)
 {
   double relError;
-  double rhsnorm=rhs.infnorm();
   M.timesVec(1.0,rhs,-1.0,x);
   double resnorm=rhs.infnorm();
 

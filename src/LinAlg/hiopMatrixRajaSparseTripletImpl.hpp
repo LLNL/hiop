@@ -517,9 +517,12 @@ transAddToSymDenseMatrixUpperTriangle(int row_start,
                                       double alpha,
                                       hiopMatrixDense& W) const
 {
-  assert(row_start>=0 && row_start+ncols_<=W.m());
-  assert(col_start>=0 && col_start+nrows_<=W.n());
-  assert(W.n()==W.m());
+  auto Wm = W.m();
+  auto Wn = W.n();
+
+  assert(row_start>=0 && row_start+ncols_<=Wm);
+  assert(col_start>=0 && col_start+nrows_<=Wn);
+  assert(Wn==Wm);
 
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   int* iRow = iRow_;
