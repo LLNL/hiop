@@ -71,8 +71,8 @@ namespace hiop
 
 hiopVectorHip::hiopVectorHip(const size_type& glob_n, index_type* col_part, MPI_Comm comm)
   : hiopVector(),
-    idx_cumsum_{nullptr},
-    comm_(comm)
+    comm_(comm),
+    idx_cumsum_{nullptr}
 {
   n_ = glob_n;
 
