@@ -887,9 +887,8 @@ hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiop
 {
   //S1 is X*some_diag*S  (kxl). Here St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
   size_type k=X.m(), l=St.m();
-  [[maybe_unused]] const size_type n=St.n();
 #ifdef HIOP_DEEPCHECKS
-  assert(n==X.n());
+  assert(St.n()==X.n());
   if(_S1!=NULL) 
     assert(_S1->m()==k);
 #endif
@@ -904,9 +903,8 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
 {
   //Y1 is X*somediag*Y (kxl). Here Yt=Y^T is lxn,  X is kxn
   size_type k=X.m(), l=Yt.m();
-  [[maybe_unused]] size_type n=Yt.n(); 
 #ifdef HIOP_DEEPCHECKS
-  assert(X.n()==n);
+  assert(X.n()==Yt.n());
   if(_Y1!=NULL) assert(_Y1->m()==k);
 #endif
 

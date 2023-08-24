@@ -454,12 +454,7 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
   scale_factor_d->component_max(1.0);
   scale_factor_d->invert();
 
-  [[maybe_unused]] const double* eq_arr = scale_factor_c->local_data_const();
-  [[maybe_unused]] const double* ineq_arr = scale_factor_d->local_data_const();
-  [[maybe_unused]] double* scale_factor_cd_arr = scale_factor_cd->local_data();
-
   scale_factor_cd->copy_from_two_vec_w_pattern(*scale_factor_c, cons_eq_mapping, *scale_factor_d, cons_ineq_mapping);
-
 }
 
 hiopNLPObjGradScaling::~hiopNLPObjGradScaling()

@@ -1204,7 +1204,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
    * Note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part containts additional 
    * diagonal elements.
   */
-  [[maybe_unused]] int n_diag_val=0;
   std::unordered_map<int,int> extra_diag_nnz_map_temp;
   int *diag_defined = new int[n];
 
@@ -1222,7 +1221,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
           diag_defined[iRow_[k]] = k;
           csr_kRowPtr[iRow_[k]+1]++;
           csr_nnz++;
-          n_diag_val++;
         }else{
           extra_diag_nnz_map_temp[iRow_[k]] = k;
         }
@@ -1256,7 +1254,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
       diag_defined[i] = -1;
     }
 
-    [[maybe_unused]] int total_nnz_tmp{0};
     int nnz_tmp{0}, rowID_tmp, colID_tmp;
     for(int k=0;k<n;k++){
         index_convert_extra_Diag2CSR_temp[k]=-1;
@@ -1280,7 +1277,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
           index_convert_CSR2Triplet[nnz_tmp] = k;
 
           nnz_each_row_tmp[rowID_tmp]++;
-          total_nnz_tmp++;
         }
       } else {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
@@ -1289,7 +1285,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
         index_convert_CSR2Triplet[nnz_tmp] = k;
 
         nnz_each_row_tmp[rowID_tmp]++;
-        total_nnz_tmp++;
       }
     }
 
