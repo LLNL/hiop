@@ -105,7 +105,7 @@ void hiopFixedVarsRemover::setFSVectorDistrib(index_type* vec_distrib_in, int nu
 /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
 index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  size_t nlen = fs_vec_distrib.size(); //nlen==nranks+1
+  size_type nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
   index_type* rsVecDistrib = new index_type[nlen];
   rsVecDistrib[0]=0;
