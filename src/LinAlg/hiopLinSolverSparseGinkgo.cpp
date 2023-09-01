@@ -172,9 +172,9 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
       delete[] nnz_each_row_tmp;
     }
 
-    auto val_array = gko::Array<double>::view(exec, nnz_, kVal_);
-    auto row_ptrs = gko::Array<int>::view(exec, n_ + 1, kRowPtr_);
-    auto col_idxs = gko::Array<int>::view(exec, nnz_, jCol_);
+    auto val_array = gko::array<double>::view(exec, nnz_, kVal_);
+    auto row_ptrs = gko::array<int>::view(exec, n_ + 1, kRowPtr_);
+    auto col_idxs = gko::array<int>::view(exec, nnz_, jCol_);
     auto mtx = gko::share(gko::matrix::Csr<double, int>::create(exec, gko::dim<2>{(long unsigned int)n_, (long unsigned int)n_}, val_array, col_idxs, row_ptrs));
     return mtx;
 }
