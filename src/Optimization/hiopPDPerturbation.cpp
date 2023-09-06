@@ -162,8 +162,8 @@ namespace hiop
    */
   bool hiopPDPerturbationPrimalFirstScalar::compute_initial_deltas()
   {
-    double delta_temp;
-    double delta_temp2;
+    double delta_temp = 0.0;
+    double delta_temp2 = 0.0;
     update_degeneracy_type();
 
     if(delta_wx_curr_db_>0.) {
