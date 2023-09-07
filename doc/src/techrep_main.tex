@@ -133,7 +133,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 0.7}
+  {\large\bfseries version 1.0}
 
 \vspace{3cm}
 
@@ -155,7 +155,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated Sep 30, 2022}}
+{\large\bfseries Updated Sep 7, 2023}}
 
 \vspace{0.75cm}
 
@@ -752,7 +752,7 @@ Starting v0.5, \Hi also offers parallel computing capabilities via the PriDec so
 &&[z_u]&&& \hspace{0.5cm} x_l \leq x \leq x_u. & [z_u] &&&\label{pridebounds}
 \end{align}
 Mathematically, the above problem is identical (and has the same specification) to the NLP~\eqref{obj}-\eqref{bounds}, with the exception of the so-called ``recourse'' terms $r_i(x)$ appearing in the objective. Each of these functions are real-valued, $r_i:\mathbb{R}^n\rightarrow \mathbb{R}$, for all $i\in\{1,2,\ldots, K\}$, and can be of various order of differentiability. As of now, the recourse functions $r_i(x)$ need to be Lipschitz continuous and continuously differentiable.
-It is also possible for $r_i(x)$ to be Lipschitz and only weakly concave (with convergence guarantees). The users are encouraged to contact \Hi developers for the latest developements in this area. A compact description of the algorithm implemented by PriDec can be found in~\cite{pridec_impl} (the technical report version is available \texttt{doc/} directory).
+It is also possible for $r_i(x)$ to be Lipschitz and only weakly concave (with convergence guarantees). The users are encouraged to contact \Hi developers for the latest developements in this area. A compact description of the mathematical algorithm implemented by PriDec can be found in~\cite{wang2023}, while the parallelization strategy can be found in~\cite{wang2021}.
 
 The input in which \Hi expects for this class of problems is a bit different than for NLPs of the form~\eqref{obj}-\eqref{bounds} and MDS NLPs introduced in the previous sections. This is mainly caused by the specifics of the primal decomposition algorithm/solver that was purposedly developed to solve~\eqref{prideobj}-\eqref{pridebounds} for large $K$ (\textit{e.g.}, $K=O(10^6)$) efficiently on a massively parallel computing platform. Nevertheless, for smaller $K$, problems of form~\eqref{prideobj}-\eqref{pridebounds} can be solved with \Hi using the sparse and MDS input interfaces.
 

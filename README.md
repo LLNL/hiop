@@ -29,25 +29,27 @@ author = {Cosmin G. Petra},
 ```
 and when using the the PriDec solver please cite:
 ```
-@article{wang2022,
+@article{wang2023,
   archivePrefix = {arXiv},
-  eprint = {arXiv:2204.09631},
   author = {J. Wang and C. G. Petra},
-  title = {An optimization algorithm for nonsmooth nonconvex problems with upper-$C^2$ objective},
-  publisher = {arXiv},
-  year = {2022},
-  journal={ (submitted) },
+  title = {A Sequential Quadratic Programming Algorithm for Nonsmooth Problems with Upper-$\mathcal{C}^2$ Objective},
+  journal = {SIAM Journal on Optimization},
+  volume = {33},
+  number = {3},
+  pages = {2379-2405},
+  year = {2023},
+  doi = {10.1137/22M1490995}
 }
 @INPROCEEDINGS{wang2021,
-  author={Wang, Jingyi and Chiang, Nai-Yuan and Petra, Cosmin G.},
+  author={J. Wang and N. Chiang and C. G. Petra},
   booktitle={2021 20th International Symposium on Parallel and Distributed Computing (ISPDC)}, 
   title={An asynchronous distributed-memory optimization solver for two-stage stochastic programming problems}, 
   year={2021},
   volume={},
   number={},
   pages={33-40},
-  doi={10.1109/ISPDC52870.2021.9521613}
-}
+  doi={10.1109/ISPDC52870.2021.9521613}}
+ }
 ```
 
 ## Build/install instructions
