@@ -89,18 +89,18 @@ public:
                                        const double* hess = 0,
                                        const char* master_options_file=nullptr) = 0;
 
-  virtual bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval) = 0;
-  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad) = 0;
+  virtual bool eval_f_rterm(size_type idx, const int& n, const double* x, double& rval) = 0;
+  virtual bool eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad) = 0;
 
 
   /** 
    * Returns the number S of recourse terms
    */
-  virtual size_t get_num_rterms() const = 0;
+  virtual size_type get_num_rterms() const = 0;
   /**
    * Return the number of primal optimization variables
    */
-  virtual size_t get_num_vars() const = 0;
+  virtual size_type get_num_vars() const = 0;
 
   virtual void get_solution(double* x) const = 0;
   virtual double get_objective() = 0;

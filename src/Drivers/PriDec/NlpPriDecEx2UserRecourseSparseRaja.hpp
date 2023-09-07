@@ -50,17 +50,17 @@ class PriDecRecourseProbleEx2Sparse : public hiop::hiopInterfaceSparse
 {
 public:
   PriDecRecourseProbleEx2Sparse(int n, int nS, int S, std::string mem_space) 
-    : nx_(n), 
-      nS_(nS),S_(S),
-      x_(nullptr),
+    : x_(nullptr),
       xi_(nullptr),
+      nx_(n), 
+      nS_(nS),S_(S),
       mem_space_(mem_space)
   {
     // Make sure mem_space_ is uppercase
     transform(mem_space_.begin(), mem_space_.end(), mem_space_.begin(), ::toupper);
 
-    auto& resmgr = umpire::ResourceManager::getInstance();
-    umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
+    //auto& resmgr = umpire::ResourceManager::getInstance();
+    //umpire::Allocator allocator = resmgr.getAllocator(mem_space_);
     // umpire::Allocator allocator 
     //  = resmgr.getAllocator(mem_space_ == "DEFAULT" ? "HOST" : mem_space_);
 

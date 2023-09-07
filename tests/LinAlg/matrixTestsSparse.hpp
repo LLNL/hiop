@@ -257,8 +257,6 @@ public:
       hiop::hiopVector& x,
       const int rank=0)
   {
-    [[maybe_unused]] const auto val = getMatrixData(&A);
-
     const real_type A_val = two;
     const real_type x_val = three;
     int fail = 0;
@@ -1048,8 +1046,6 @@ public:
     int fail{0};
 
     B.copyRowsBlockFrom(A, A_rows_st, n_rows, B_rows_st, B_nnz_st);
-
-    [[maybe_unused]] const auto val = getMatrixData(&B);
 
     fail += verifyAnswer(&B,0,B_nnz_st,B_val);
     fail += verifyAnswer(&B,B_nnz_st,B_nnz_st+nnz_A_need_to_copy,A_val);

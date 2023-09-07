@@ -172,10 +172,10 @@ std::shared_ptr<gko::matrix::Csr<double, int>> transferTripletToCSR(std::shared_
       delete[] nnz_each_row_tmp;
     }
 
-    auto val_array = gko::Array<double>::view(exec, nnz_, kVal_);
-    auto row_ptrs = gko::Array<int>::view(exec, n_ + 1, kRowPtr_);
-    auto col_idxs = gko::Array<int>::view(exec, nnz_, jCol_);
-    auto mtx = gko::share(gko::matrix::Csr<double, int>::create(exec, gko::dim<2>{n_, n_}, val_array, col_idxs, row_ptrs));
+    auto val_array = gko::array<double>::view(exec, nnz_, kVal_);
+    auto row_ptrs = gko::array<int>::view(exec, n_ + 1, kRowPtr_);
+    auto col_idxs = gko::array<int>::view(exec, nnz_, jCol_);
+    auto mtx = gko::share(gko::matrix::Csr<double, int>::create(exec, gko::dim<2>{(long unsigned int)n_, (long unsigned int)n_}, val_array, col_idxs, row_ptrs));
     return mtx;
 }
 
@@ -189,7 +189,6 @@ void update_matrix(hiopMatrixSparse* M_,
     int n_ = mtx->get_size()[0];
     int nnz_= mtx->get_num_stored_elements();
     auto values = host_mtx->get_values();
-    int rowID_tmp{0};
     for(int k=0; k<nnz_; k++) {
         values[k] = M_->M()[index_covert_CSR2Triplet_[k]];
     }
@@ -280,10 +279,10 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
                                                              const int& nnz,
                                                              hiopNlpFormulation* nlp)
     : hiopLinSolverSymSparse(n, nnz, nlp),
-      index_covert_CSR2Triplet_{nullptr},
-      index_covert_extra_Diag2CSR_{nullptr},
       n_{n},
-      nnz_{0}
+      nnz_{0},
+      index_covert_CSR2Triplet_{nullptr},
+      index_covert_extra_Diag2CSR_{nullptr}
   {}
 
   hiopLinSolverSymSparseGinkgo::~hiopLinSolverSymSparseGinkgo()
@@ -356,7 +355,7 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
-    const auto size = gko::dim<2>{n_, 1};
+    const auto size = gko::dim<2>{(long unsigned int)n_, 1};
     auto dense_x_host = vec::create(host, size, arr::view(host, n_, dx), 1);
     auto dense_x = vec::create(exec_, size);
     dense_x->copy_from(dense_x_host.get());

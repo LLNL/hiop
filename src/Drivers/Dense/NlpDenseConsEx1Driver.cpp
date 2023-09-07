@@ -60,8 +60,9 @@ static void usage(const char* exeName)
 
 int main(int argc, char **argv)
 {
-  int rank=0, numRanks=1;
+  int rank = 0;
 #ifdef HIOP_USE_MPI
+  int numRanks = 1;
   int err;
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);

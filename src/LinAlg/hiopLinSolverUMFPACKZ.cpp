@@ -4,7 +4,11 @@ namespace hiop
 {
   hiopLinSolverUMFPACKZ::hiopLinSolverUMFPACKZ(hiopMatrixComplexSparseTriplet& sysmat,
 					       hiopNlpFormulation* nlp_/*=NULL*/)
-    : m_symbolic(NULL), m_numeric(NULL), m_null(NULL), sys_mat(sysmat), nlp(nlp_)
+    : m_symbolic(nullptr), 
+      m_numeric(nullptr),
+      m_null(nullptr),
+      nlp(nlp_),
+      sys_mat(sysmat)
   {
     n = sys_mat.n();
     nnz = sys_mat.numberOfNonzeros();

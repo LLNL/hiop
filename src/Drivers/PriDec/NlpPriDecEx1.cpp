@@ -257,7 +257,7 @@ solve_master(hiopVector& x,
 
 };
 
-bool PriDecMasterProblemEx1::eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval)
+bool PriDecMasterProblemEx1::eval_f_rterm(size_type idx, const int& n,const  double* x, double& rval)
 {
   rval = 0.;
   for(int i=0; i<n; i++) {
@@ -273,7 +273,7 @@ bool PriDecMasterProblemEx1::eval_f_rterm(size_t idx, const int& n,const  double
 };
 
 // x is handled by primalDecomp to be the correct coupled x
-bool PriDecMasterProblemEx1::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
+bool PriDecMasterProblemEx1::eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad)
 {
   assert(static_cast<int>(nc_) == n);
   double* grad_vec = grad.local_data();

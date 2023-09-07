@@ -22,7 +22,12 @@ namespace hiop
   public:
     // masterrank=-1 means all ranks save
     hiopCSR_IO(hiopNlpFormulation* nlp, int masterrank=0)
-      : _nlp(nlp), _master_rank(masterrank), m(-1), last_counter(-1)
+      : _nlp(nlp),
+#ifdef HIOP_USE_MPI
+        _master_rank(masterrank),
+#endif
+        m(-1),
+        last_counter(-1)
     {
     }
 
@@ -227,8 +232,11 @@ namespace hiop
   
   private:
     hiopNlpFormulation* _nlp;
+#ifdef HIOP_USE_MPI
     int _master_rank;
-    int m, last_counter; //used only for consistency (such as order of calls) checks
+#endif
+    int m;
+    int last_counter; //used only for consistency (such as order of calls) checks
   };
 } // end namespace
 

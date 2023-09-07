@@ -90,7 +90,9 @@ public:
 */
 private:
   size_type n_vars_, n_cons_;
+#ifdef HIOP_USE_MPI
   MPI_Comm comm;
+#endif
   int my_rank;
   int comm_size;
   index_type* col_partition_;

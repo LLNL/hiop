@@ -94,8 +94,8 @@ using hiopMatrixRajaDense = hiop::hiopMatrixDenseRaja<hiop::MemBackendUmpire, hi
 using namespace hiop;
 
 MdsEx1::MdsEx1(int ns_in, int nd_in, std::string mem_space, bool empty_sp_row)
-  : mem_space_(mem_space), 
-    ns_(ns_in),
+  : ns_(ns_in),
+    mem_space_(mem_space), 
     sol_x_(NULL),
     sol_zl_(NULL),
     sol_zu_(NULL),

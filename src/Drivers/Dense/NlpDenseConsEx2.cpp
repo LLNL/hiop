@@ -7,12 +7,12 @@
 DenseConsEx2::DenseConsEx2(int n, bool unconstrained)
   : n_vars_(n),
     n_cons_(4),
-    comm(MPI_COMM_WORLD),
     unconstrained_(unconstrained)
 {
   comm_size = 1;
   my_rank = 0; 
 #ifdef HIOP_USE_MPI
+  comm = MPI_COMM_WORLD;
   int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
   ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif

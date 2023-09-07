@@ -22,7 +22,7 @@ using ex9_raja_reduce = hiop::ExecRajaPoliciesBackend<hiop::ExecPolicyRajaOmp>::
 using namespace hiop;
 
 PriDecMasterProbleEx2Sparse::
-PriDecMasterProbleEx2Sparse(size_t nx, size_t ny, size_t nS, size_t S, std::string mem_space) 
+PriDecMasterProbleEx2Sparse(size_type nx, size_type ny, size_type nS, size_type S, std::string mem_space) 
   : nx_(nx), 
     ny_(ny),
     nS_(nS),
@@ -118,7 +118,7 @@ set_recourse_approx_evaluator(const int n,
 }
 
 // all the memory management is done through umpire in the PriDecRecourseProbleEx2Sparse class
-bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const double* x, double& rval)
+bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_type idx, const int& n, const double* x, double& rval)
 {
   assert(nx_==n);
   rval=-1e+20;
@@ -186,7 +186,7 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_t idx, const int& n, const d
 };
 
 // returns the gradient computed in eval_f_rterm
-bool PriDecMasterProbleEx2Sparse::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
+bool PriDecMasterProbleEx2Sparse::eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nx_==n);
   double* grad_vec = grad.local_data();
@@ -196,12 +196,12 @@ bool PriDecMasterProbleEx2Sparse::eval_grad_rterm(size_t idx, const int& n, doub
   return true;
 };
 
-inline size_t PriDecMasterProbleEx2Sparse::get_num_rterms() const
+inline size_type PriDecMasterProbleEx2Sparse::get_num_rterms() const
 {
   return S_;
 }
 
-inline size_t PriDecMasterProbleEx2Sparse::get_num_vars() const
+inline size_type PriDecMasterProbleEx2Sparse::get_num_vars() const
 {
   return nx_;
 }
