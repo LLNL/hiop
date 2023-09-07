@@ -1,6 +1,33 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 1.0.0: Mature solvers interfaces and execution backends
+### Notable new features
+Interfaces of various solvers reached an equilibrium point after HiOp was interfaced with multiple optimization front-ends (e.g., power grid ACOPF and SC-ACOPF problems and topology optimization) both on CPUs and GPUs. The PriDec solver reached exascale on Frontier after minor communication optimizations. The quasi-Newton interior-point solver received a couple of updates that increase robustness. The Newton interior-point solver can fully operate on GPUs with select GPU linear solvers (CUSOLVER-LU and Gingko).
+
+* Instrumentation of RAJA sparse matrix class with execution spaces by @cnpetra in https://github.com/LLNL/hiop/pull/589
+* Fix Assignment Typo in hiopMatrixSparseCsrCuda.cpp by @pate7 in https://github.com/LLNL/hiop/pull/612
+* Use failure not failed in PNNL commit status posting by @cameronrutherford in https://github.com/LLNL/hiop/pull/609
+* rebuild modules on quartz by @nychiang in https://github.com/LLNL/hiop/pull/619
+* Use constraint violation in checkTermination by @nychiang in https://github.com/LLNL/hiop/pull/617
+* MPI communication optimization by @rothpc in https://github.com/LLNL/hiop/pull/613
+* fix memory leaks in inertia-free alg and condensed linsys by @nychiang in https://github.com/LLNL/hiop/pull/622
+* Update IPM algorithm for the dense solver by @nychiang in https://github.com/LLNL/hiop/pull/616
+* Use integer preprocessor macros for version information by @tepperly in https://github.com/LLNL/hiop/pull/627
+* use compound vec in bicg IR by @nychiang in https://github.com/LLNL/hiop/pull/621
+* Use bicg ir in the quasi-Newton solver by @nychiang in https://github.com/LLNL/hiop/pull/620
+* Add support to MPI in C/Fortran examples  by @nychiang in https://github.com/LLNL/hiop/pull/633
+* Refactor CUSOLVER-LU module and interface by @pelesh in https://github.com/LLNL/hiop/pull/634
+* Add MPI unit test for DenseEx4 by @nychiang in https://github.com/LLNL/hiop/pull/644
+* Add more options to control NLP scaling by @nychiang in https://github.com/LLNL/hiop/pull/649
+* Development of the feasibility restoration in the quasi-Newton solver by @nychiang in https://github.com/LLNL/hiop/pull/647
+* GPU linear solver interface by @pelesh in https://github.com/LLNL/hiop/pull/650
+
+
+### New Contributors
+* @pate7 made their first contribution in https://github.com/LLNL/hiop/pull/612
+* @rothpc made their first contribution in https://github.com/LLNL/hiop/pull/613
+
 ## Version 0.7.2: Execution spaces abstractions and misc fixes
 This release hosts a series of comprehensive internal developments and software re-engineering to improve the portability and performance on accelerators/GPU platforms. No changes to the user interface permeated under this release.
 
