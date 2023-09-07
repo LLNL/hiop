@@ -10,7 +10,7 @@ using namespace hiop;
 
 
 PriDecMasterProbleEx2::
-PriDecMasterProbleEx2(size_t nx, size_t ny, size_t nS, size_t S) : nx_(nx), ny_(ny),nS_(nS),S_(S)
+PriDecMasterProbleEx2(size_type nx, size_type ny, size_type nS, size_type S) : nx_(nx), ny_(ny),nS_(nS),S_(S)
 {
   assert(nx==ny);
   y_ = new double[ny_];
@@ -103,16 +103,17 @@ set_recourse_approx_evaluator(const int n,
   return true; 
 }
 
-bool PriDecMasterProbleEx2::eval_f_rterm(size_t idx, const int& n, const double* x, double& rval)
+bool PriDecMasterProbleEx2::eval_f_rterm(size_type idx, const int& n, const double* x, double& rval)
 {
   assert(nx_==n);
   rval=-1e+20;
-  hiopSolveStatus status;
   double* xi;
+  hiopSolveStatus status;
   
 #ifdef HIOP_USE_MPI
-  double t3 =  MPI_Wtime(); 
-  double t4 = 0.; 
+  // uncomment if want to monitor contingency computing time
+  //double t3 =  MPI_Wtime(); 
+  //double t4 = 0.; 
 #endif 
   
   // xi can be set below 
@@ -149,6 +150,7 @@ bool PriDecMasterProbleEx2::eval_f_rterm(size_t idx, const int& n, const double*
 
   //assert("for debugging" && false); //for debugging purpose
   status = solver.run();
+  assert(status<=hiopSolveStatus::User_Stopped); //check solver status if necessary
   rval = solver.getObjective();  
   if(y_==NULL) {
     y_ = new double[ny_];
@@ -171,7 +173,7 @@ bool PriDecMasterProbleEx2::eval_f_rterm(size_t idx, const int& n, const double*
 };
 
 // returns the gradient computed in eval_f_rterm
-bool PriDecMasterProbleEx2::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
+bool PriDecMasterProbleEx2::eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad)
 {
   assert(nx_==n);
   double* grad_vec = grad.local_data();
@@ -181,12 +183,12 @@ bool PriDecMasterProbleEx2::eval_grad_rterm(size_t idx, const int& n, double* x,
   return true;
 };
 
-inline size_t PriDecMasterProbleEx2::get_num_rterms() const
+inline size_type PriDecMasterProbleEx2::get_num_rterms() const
 {
   return S_;
 }
 
-inline size_t PriDecMasterProbleEx2::get_num_vars() const
+inline size_type PriDecMasterProbleEx2::get_num_vars() const
 {
   return nx_;
 }

@@ -821,7 +821,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
   
     hiopVector* hess_appx = grad_r->alloc_clone();
     hess_appx->setToZero();
-    [[maybe_unused]] double* hess_appx_vec = hess_appx->local_data();
    
     hiopVector* x0 = grad_r->alloc_clone();
     x0->setToZero(); 
@@ -929,12 +928,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
-        [[maybe_unused]] int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
         for(int r=1; r<comm_size_; r++) {
           //int cur_idx = cont_idx[idx];
           rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
@@ -1123,7 +1120,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       }
 
       if(my_rank_==0) {
-        [[maybe_unused]] int mpi_test_flag = 0;
         for(int r=1; r<comm_size_;r++) {
           rec_prob[r]->wait();
           req_cont_idx[r]->wait();
@@ -1306,7 +1302,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     double* grad_r_main_vec=grad_r_main->local_data();
 
     hiopVector* hess_appx = grad_r->alloc_clone();
-    [[maybe_unused]] double* hess_appx_vec = hess_appx->local_data();
     hess_appx->setToZero();
 
     hiopVector* x0 = grad_r->alloc_clone();
@@ -1417,12 +1412,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
-        [[maybe_unused]] int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
         for(int r=1; r<comm_size_; r++) {
           // rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
           rec_prob[r]->post_recv_end_signal(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
@@ -1820,11 +1813,9 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   // double grad_r[nc_];
   hiopVector* grad_r;
   grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
-  [[maybe_unused]] double* grad_r_vec = grad_r->local_data();
   
   hiopVector* hess_appx;
   hess_appx = grad_r->alloc_clone();
-  [[maybe_unused]] double* hess_appx_vec=hess_appx->local_data();
  
   hiopVector* x0 = grad_r->alloc_clone();
   double* x0_vec = x0->local_data();
@@ -1847,7 +1838,6 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_f = 1e20;
   double convg_g = 1e20;
   int accp_count = 0;
-  [[maybe_unused]] double* x_vec = x_->local_data(); 
 
   std::string options_file_master_prob;
 

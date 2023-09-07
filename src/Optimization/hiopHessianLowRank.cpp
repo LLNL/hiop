@@ -887,9 +887,8 @@ hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiop
 {
   //S1 is X*some_diag*S  (kxl). Here St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
   size_type k=X.m(), l=St.m();
-  [[maybe_unused]] const size_type n=St.n();
 #ifdef HIOP_DEEPCHECKS
-  assert(n==X.n());
+  assert(St.n()==X.n());
   if(_S1!=NULL) 
     assert(_S1->m()==k);
 #endif
@@ -904,9 +903,8 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
 {
   //Y1 is X*somediag*Y (kxl). Here Yt=Y^T is lxn,  X is kxn
   size_type k=X.m(), l=Yt.m();
-  [[maybe_unused]] size_type n=Yt.n(); 
 #ifdef HIOP_DEEPCHECKS
-  assert(X.n()==n);
+  assert(X.n()==Yt.n());
   if(_Y1!=NULL) assert(_Y1->m()==k);
 #endif
 
@@ -1034,14 +1032,13 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    const hiopVector& d)
 {
   size_type k=W.m();
-  [[maybe_unused]] const size_type n=X.n();
-  size_t n_local=X.get_local_size_n();
+  size_type n_local=X.get_local_size_n();
 
   assert(X.m()==k);
     
 #ifdef HIOP_DEEPCHECKS
   assert(W.n()==k);
-  assert(d.get_size()==n);
+  assert(d.get_size()==X.n());
   assert(d.get_local_size()==n_local);
 #endif
   
@@ -1059,7 +1056,7 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
       xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
       acc=0.0;
-      for(size_t p=0; p<n_local; p++)
+      for(size_type p=0; p<n_local; p++)
 	acc += xi[p]*dd[p]*xj[p];
 
       //Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
@@ -1450,14 +1447,13 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 				    const hiopVector& d)
 {
   size_type k=W.m();
-  [[maybe_unused]] const size_type n=X.n();
-  size_t n_local=X.get_local_size_n();
+  size_type n_local=X.get_local_size_n();
 
   assert(X.m()==k);
   
 #ifdef HIOP_DEEPCHECKS
   assert(W.n()==k);
-  assert(d.get_size()==n);
+  assert(d.get_size()==X.n());
   assert(d.get_local_size()==n_local);
 #endif
   //#define chunk 512; //!opt
@@ -1474,9 +1470,9 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
       xj=Xdata+j*n_local;
       //compute W[i,j] = sum {X[i,p]*d[p]*X[j,p] : p=1,...,n_local}
       acc=0.0;
-      for(size_t p=0; p<n_local; p++)
+      for(size_type p=0; p<n_local; p++) {
 	acc += xi[p]*dd[p]*xj[p];
-
+      }
       assert(W.get_local_size_n() == k);
       //Wdata[i][j]=Wdata[j][i]=beta*Wdata[i][j]+alpha*acc;
       Wdata[i*k+j]=Wdata[j*k+i]=beta*Wdata[i*k+j]+alpha*acc;

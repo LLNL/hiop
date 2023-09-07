@@ -105,7 +105,7 @@ void hiopFixedVarsRemover::setFSVectorDistrib(index_type* vec_distrib_in, int nu
 /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
 index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  size_t nlen = fs_vec_distrib.size(); //nlen==nranks+1
+  size_type nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
   index_type* rsVecDistrib = new index_type[nlen];
   rsVecDistrib[0]=0;
@@ -467,10 +467,6 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
   scale_factor_d->scale(1./max_grad);
   scale_factor_d->component_max(1.0);
   scale_factor_d->invert();
-
-  [[maybe_unused]] const double* eq_arr = scale_factor_c->local_data_const();
-  [[maybe_unused]] const double* ineq_arr = scale_factor_d->local_data_const();
-  [[maybe_unused]] double* scale_factor_cd_arr = scale_factor_cd->local_data();
 
   scale_factor_cd->copy_from_two_vec_w_pattern(*scale_factor_c, cons_eq_mapping, *scale_factor_d, cons_ineq_mapping);
 

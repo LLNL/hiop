@@ -66,7 +66,7 @@ using namespace hiop;
 class PriDecMasterProbleEx2Sparse : public hiop::hiopInterfacePriDecProblem
 {
 public:
-  PriDecMasterProbleEx2Sparse(size_t nx, size_t ny, size_t nS, size_t S);
+  PriDecMasterProbleEx2Sparse(size_type nx, size_type ny, size_type nS, size_type S);
   
   virtual ~PriDecMasterProbleEx2Sparse();
 
@@ -85,18 +85,18 @@ public:
    * n is the number of coupled x, not the entire dimension of x, and might be denoted as nc_ elsewhere.
    * rval is the return value of the recourse solution function evaluation.
    */
-  bool eval_f_rterm(size_t idx, const int& n, const double* x, double& rval);
+  bool eval_f_rterm(size_type idx, const int& n, const double* x, double& rval);
   
   /**
    * This function computes the gradient of the recourse solution function w.r.t x.
    * n is the number of coupled x, not the entire dimension of x, and 
    * grad is the output.
    */
-  bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
+  bool eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad);
   
-  inline size_t get_num_rterms() const;
+  inline size_type get_num_rterms() const;
   
-  inline size_t get_num_vars() const;
+  inline size_type get_num_vars() const;
 
   void get_solution(double* x) const;
 
@@ -104,15 +104,15 @@ public:
 
 private:
   /// dimension of primal variable `x`
-  size_t nx_;
+  size_type nx_;
   /// dimension of the coupled variable, nc_<=nx_
-  size_t nc_;
+  size_type nc_;
   ///dimension of recourse problem primal variable `y` for each contingency
-  size_t ny_;
+  size_type ny_;
   /// dimension of uncertainty dimension entering the recourse problem
-  size_t nS_;
+  size_type nS_;
   ///number of sample to use, effectively the number of recourse terms  
-  size_t S_;
+  size_type S_;
 
   double* y_;
 

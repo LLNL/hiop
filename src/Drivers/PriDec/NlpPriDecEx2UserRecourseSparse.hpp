@@ -29,11 +29,11 @@ class PriDecRecourseProbleEx2Sparse : public hiop::hiopInterfaceSparse
 {
 public:
   PriDecRecourseProbleEx2Sparse(int n, int nS, int S)
-    : nx_(n), 
+    : x_(nullptr),
+      xi_(nullptr),
+      nx_(n), 
       nS_(nS),
-      S_(S),
-      x_(nullptr),
-      xi_(nullptr)
+      S_(S)
   {
     assert(nS_>=1);
     assert(nx_>=nS_);  // ny = nx = n

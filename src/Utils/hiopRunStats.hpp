@@ -305,7 +305,9 @@ class hiopRunStats
 {
 public:
   hiopRunStats(MPI_Comm comm_=MPI_COMM_WORLD)
+#ifdef HIOP_USE_MPI  
     : comm(comm_)
+#endif
   { 
     initialize();
   };
@@ -388,9 +390,11 @@ public:
 
     return ss.str();
   }
+
+#ifdef HIOP_USE_MPI
 private:
   MPI_Comm comm;
-
+#endif
 };
 
 }

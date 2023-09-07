@@ -77,8 +77,6 @@ namespace hiop
 
    int hiopKKTLinSysCompressedMDSXYcYd::factorizeWithCurvCheck()
   {
-    [[maybe_unused]] int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n();
-    [[maybe_unused]] int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
     //factorization
     int n_neg_eig = hiopKKTLinSysCurvCheck::factorizeWithCurvCheck();
 
@@ -164,10 +162,10 @@ namespace hiop
     //
     //factorization + inertia correction if needed
     //
-    [[maybe_unused]] const bool retval = factorize();
+    const bool retval = factorize();
     
     nlp_->runStats.tmSolverInternal.stop();
-    return true;
+    return retval;
   }
 
 
@@ -183,7 +181,6 @@ namespace hiop
     delta_cd_ = perturb_calc_->get_curr_delta_cd();
 
     int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de();
-    [[maybe_unused]] const int nx = HessMDS_->n();
     int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
 
     hiopMatrixDense& Msys = linSys->sysMatrix();
@@ -407,9 +404,8 @@ namespace hiop
 
   hiopLinSolverSymDense* hiopKKTLinSysCompressedMDSXYcYd::determineAndCreateLinsys(int nxd, int neq, int nineq)
   {
-
-   [[maybe_unused]] bool switched_linsolvers = false;
-#ifdef HIOP_USE_MAGMA 
+#ifdef HIOP_USE_MAGMA
+    bool switched_linsolvers = false;
     if(safe_mode_) {
       hiopLinSolverSymDenseMagmaBuKa* p = dynamic_cast<hiopLinSolverSymDenseMagmaBuKa*>(linSys_);
       if(p==NULL) {
