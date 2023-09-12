@@ -46,6 +46,13 @@
 // Lawrence Livermore National Security, LLC, and shall not be used for advertising or 
 // product endorsement purposes.
 
+/**
+ * @file hiopHessianLowRank.hpp
+ *
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
+ *
+ */
+
 #ifndef HIOP_HESSIANLOWRANK
 #define HIOP_HESSIANLOWRANK
 
@@ -91,12 +98,14 @@ namespace hiop
 class hiopHessianLowRank : public hiopMatrix
 {
 public:
-  hiopHessianLowRank(hiopNlpDenseConstraints* nlp_, int max_memory_length);
+  hiopHessianLowRank(hiopNlpDenseConstraints* nlp, int max_memory_length);
   virtual ~hiopHessianLowRank();
 
   /* return false if the update destroys hereditary positive definitness and the BFGS update is not taken*/
-  virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
-		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr);
+  virtual bool update(const hiopIterate& x_curr,
+                      const hiopVector& grad_f_curr,
+                      const hiopMatrix& Jac_c_curr_in,
+                      const hiopMatrix& Jac_d_curr_in);
 
   /* updates the logBar diagonal term from the representation */
   virtual bool updateLogBarrierDiagonal(const hiopVector& Dx);
@@ -106,8 +115,10 @@ public:
   /* W = beta*W + alpha*X*inverse(this)*X^T (a more efficient version of solve)
    * This is performed as W = beta*W + alpha*X*(this\X^T)
    */ 
-  virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
-					       double alpha, const hiopMatrixDense& X);
+  virtual void symMatTimesInverseTimesMatTrans(double beta,
+                                               hiopMatrixDense& W,
+                                               double alpha,
+                                               const hiopMatrixDense& X);
 #ifdef HIOP_DEEPCHECKS
   /* same as above but without the Dx term in H */
   virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
@@ -121,56 +132,69 @@ public:
   virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
 
   /* code shared by the above two methods*/
-  virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm = false) const;
+  virtual void timesVecCmn(double beta,
+                           hiopVector& y,
+                           double alpha,
+                           const hiopVector&x,
+                           bool addLogBarTerm = false) const;
 
 protected:
-  int l_max; //max memory size
-  int l_curr; //number of pairs currently stored
-  double sigma; //initial scaling factor of identity
-  double sigma0; //default scaling factor of identity
-  int sigma_update_strategy;
-  double sigma_safe_min, sigma_safe_max; //min and max safety thresholds for sigma
-  hiopNlpDenseConstraints* nlp;
-  mutable std::vector<hiopVector*> a;
-  mutable std::vector<hiopVector*> b;
-  hiopVector* yk;
-  hiopVector* sk;
+  int l_max_; //max memory size
+  int l_curr_; //number of pairs currently stored
+  double sigma_; //initial scaling factor of identity
+  double sigma0_; //default scaling factor of identity
+  int sigma_update_strategy_;
+  double sigma_safe_min_; //min and max safety thresholds for sigma_
+  double sigma_safe_max_; //min and max safety thresholds for sigma_
+  hiopNlpDenseConstraints* nlp_;
+  mutable std::vector<hiopVector*> a_;
+  mutable std::vector<hiopVector*> b_;
+  hiopVector* yk_;
+  hiopVector* sk_;
 private:
-  hiopVector* DhInv; //(B0+Dk)^{-1}
+  hiopVector* DhInv_; //(B0+Dk)^{-1}
   // needed in timesVec (for residual checking in solveCompressed.
   // can be recomputed from DhInv decided to store it instead to avoid round-off errors
-  hiopVector* _Dx;
-  bool matrixChanged;
+  hiopVector* Dx_;
+  bool matrixChanged_;
   //these are matrices from the compact representation; they are updated at each iteration.
   // more exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]
   //                                 [  L'      -D] [Yt   ]                   
-  hiopMatrixDense *St,*Yt; //we store the transpose to easily access columns in S and T
-  hiopMatrixDense *L;     //lower triangular from the compact representation
-  hiopVector* D;       //diag 
+  hiopMatrixDense* St_;
+  hiopMatrixDense* Yt_; //we store the transpose to easily access columns in S and T
+  hiopMatrixDense* L_;     //lower triangular from the compact representation
+  hiopVector* D_;       //diag 
   //these are matrices from the representation of the inverse
-  hiopMatrixDense* V;    
+  hiopMatrixDense* V_;    
 #ifdef HIOP_DEEPCHECKS
   //copy of the matrix - needed to check the residual
-   hiopMatrixDense* _Vmat; 
+   hiopMatrixDense* Vmat_; 
 #endif
   void growL(const int& lmem_curr, const int& lmem_max, const hiopVector& YTs);
-  void growD(const int& l_curr, const int& l_max, const double& sTy);
+  void growD(const int& lmem_curr, const int& lmem_max, const double& sTy);
   void updateL(const hiopVector& STy, const double& sTy);
   void updateD(const double& sTy);
   //also stored are the iterate, gradient obj, and Jacobians at the previous optimization iteration
-  hiopIterate *_it_prev;
-  hiopVector *_grad_f_prev;
-  hiopMatrixDense *_Jac_c_prev, *_Jac_d_prev;
+  hiopIterate* it_prev_;
+  hiopVector* grad_f_prev_;
+  hiopMatrixDense* Jac_c_prev_;
+  hiopMatrixDense* Jac_d_prev_;
 
   //internal helpers
   void updateInternalBFGSRepresentation();
 
   //internals buffers, mostly for MPIAll_reduce
-  double* _buff_kxk; // size = num_constraints^2 
-  double* _buff_2lxk; // size = 2 x q-Newton mem size x num_constraints
-  double *_buff1_lxlx3, *_buff2_lxlx3;
+  double* buff_kxk_; // size = num_constraints^2 
+  double* buff_2lxk_; // size = 2 x q-Newton mem size x num_constraints
+  double* buff1_lxlx3_;
+  double* buff2_lxlx3_;
   //auxiliary objects
-  hiopMatrixDense *_S1, *_Y1, *_lxl_mat1, *_kx2l_mat1, *_kxl_mat1; //preallocated matrices 
+  hiopMatrixDense* S1_;
+  hiopMatrixDense* Y1_;
+  hiopMatrixDense* lxl_mat1_;
+  hiopMatrixDense* kx2l_mat1_;
+  hiopMatrixDense* kxl_mat1_; //preallocated matrices
+
   //holds X*D*S
   hiopMatrixDense& new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St);
   //holds X*D*Y
@@ -179,62 +203,79 @@ private:
   hiopMatrixDense& new_kxl_mat1 (int k, int l);
   hiopMatrixDense& new_kx2l_mat1(int k, int l);
   
-  hiopVector *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
+  hiopVector* l_vec1_;
+  hiopVector* l_vec2_;
+  hiopVector* n_vec1_;
+  hiopVector* n_vec2_;
+  hiopVector* twol_vec1_;
   hiopVector& new_l_vec1(int l);
   hiopVector& new_l_vec2(int l);
   inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec1!=NULL);
-    assert(_n_vec1->get_size()==n);
+    assert(n_vec1_ != nullptr);
+    assert(n_vec1_->get_size()==n);
 #endif
-    return *_n_vec1;
+    return *n_vec1_;
   }
   inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec2!=NULL);
-    assert(_n_vec2->get_size()==n);
+    assert(n_vec2_ != nullptr);
+    assert(n_vec2_->get_size()==n);
 #endif
-    return *_n_vec2;
+    return *n_vec2_;
   }
   inline hiopVector& new_2l_vec1(int l) {
-    if(_2l_vec1!=NULL && _2l_vec1->get_size()==2*l) return *_2l_vec1;
-    if(_2l_vec1!=NULL) delete _2l_vec1;
-    _2l_vec1=LinearAlgebraFactory::create_vector(nlp->options->GetString("mem_space"), 2*l);
-    return *_2l_vec1;
+    if(twol_vec1_ != nullptr && twol_vec1_->get_size() == 2 * l) {
+      return *twol_vec1_;
+    }
+    if(twol_vec1_ != nullptr) {
+      delete twol_vec1_;
+    }
+    twol_vec1_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), 2 * l);
+    return *twol_vec1_;
   }
 private:
   //utilities
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
-  static void symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W_,
-					   double alpha, const hiopMatrixDense& X_,
-					   const hiopVector& d);
+  static void symmMatTimesDiagTimesMatTrans_local(double beta,
+                                                  hiopMatrixDense& W,
+                                                  double alpha,
+                                                  const hiopMatrixDense& X,
+                                                  const hiopVector& d);
   /* W=S*Diag*X^T */
-  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, 
-					      const hiopVector& d, const hiopMatrixDense& X);
+  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W,
+                                              const hiopMatrixDense& S,
+                                              const hiopVector& d,
+                                              const hiopMatrixDense& X);
+
   /* members and utilities related to V matrix: factorization and solve */
-  hiopVector *_V_work_vec;
-  int _V_ipiv_size; int* _V_ipiv_vec;
+  hiopVector* V_work_vec_;
+  int V_ipiv_size_;
+  int* V_ipiv_vec_;
+
   void factorizeV();
   void solveWithV(hiopVector& rhs_s, hiopVector& rhs_y);
   void solveWithV(hiopMatrixDense& rhs);
 private:
   hiopHessianLowRank() {};
   hiopHessianLowRank(const hiopHessianLowRank&) {};
-  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {return *this;};
+  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {
+    return *this;
+  }
 public:
   /* methods that need to be implemented as the class inherits from hiopMatrix*/
 public:
   virtual hiopMatrix* alloc_clone() const
   {
     assert(false && "not provided because it is not needed");
-    return NULL;
+    return nullptr;
   }
   virtual hiopMatrix* new_copy() const
   {
     assert(false && "not provided because it is not needed");
-    return NULL;
+    return nullptr;
   }
 
   virtual void setToZero()
@@ -249,8 +290,10 @@ public:
   void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const;
 
   /** y = beta * y + alpha * this^T * x */
-  virtual void transTimesVec(double beta,   hiopVector& y,
-			     double alpha,  const hiopVector& x ) const
+  virtual void transTimesVec(double beta,
+                             hiopVector& y,
+                             double alpha,
+                             const hiopVector& x ) const
   {
     assert(false && "not provided because it is not needed");
   }
@@ -270,7 +313,7 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addDiagonal(const double& alpha, const hiopVector& d_)
+  virtual void addDiagonal(const double& alpha, const hiopVector& d)
   {
     assert(false && "not provided because it is not needed");
   }
@@ -278,15 +321,18 @@ public:
   {
     assert(false && "not provided because it is not needed");
   }
-  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d_)
+  virtual void addSubDiagonal(const double& alpha, index_type start, const hiopVector& d)
   {
     assert(false && "not provided because it is not needed");
   }
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
-   * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
-   * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+   * 'd_src' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
+   * when num_elems>=0, or the remaining elems on 'd_src' starting at 'start_on_src_vec'. */
+  virtual void addSubDiagonal(int start_on_dest_diag,
+                              const double& alpha,
+                              const hiopVector& d_src,
+                              int start_on_src_vec,
+                              int num_elems=-1)
   {
     assert(false && "not needed / implemented");
   }
@@ -310,8 +356,7 @@ public:
   {
     assert(false && "not needed; should not be used");
   }
-  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-						     double alpha, hiopMatrixDense& W) const
+  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, double alpha, hiopMatrixDense& W) const
   {
     assert(false && "not needed; should not be used");
   }
@@ -350,7 +395,7 @@ public:
   * given by the value of 'maxRows' will be printed. If this value is negative, all
   * elements will be printed.
   */
-  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
+  virtual void print(FILE* f=nullptr, const char* msg=nullptr, int maxRows=-1, int maxCols=-1, int rank=-1) const
   {
     assert(false && "not provided because it is not needed");
   }
@@ -382,8 +427,10 @@ class hiopHessianInvLowRank_obsolette : public hiopHessianLowRank
 {
 public:
   hiopHessianInvLowRank_obsolette(hiopNlpDenseConstraints* nlp, int max_memory_length);
-  virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
-		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr);
+  virtual bool update(const hiopIterate& x_curr,
+                      const hiopVector& grad_f_curr,
+                      const hiopMatrix& Jac_c_curr_in,
+                      const hiopMatrix& Jac_d_curr_in);
 
   virtual bool updateLogBarrierDiagonal(const hiopVector& Dx);
 
@@ -397,19 +444,23 @@ public:
   /* W = beta*W + alpha*X*this*X^T
    * ! make sure this is called before 'apply'
    */
-  virtual void symmetricTimesMat(double beta, hiopMatrixDense& W,
-				 double alpha, const hiopMatrixDense& X);
+  virtual void symmetricTimesMat(double beta, hiopMatrixDense& W, double alpha, const hiopMatrixDense& X);
 
   virtual ~hiopHessianInvLowRank_obsolette();
 
 private: //internal methods
   
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
-  static void symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W_,
-					   double alpha, const hiopMatrixDense& X_,
-					   const hiopVector& d);
+  static void symmMatTimesDiagTimesMatTrans_local(double beta,
+                                                  hiopMatrixDense& W,
+                                                  double alpha,
+                                                  const hiopMatrixDense& X,
+                                                  const hiopVector& d);
   /* W=S*Diag*X^T */
-  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, const hiopVector& d, const hiopMatrixDense& X);
+  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W,
+                                              const hiopMatrixDense& S,
+                                              const hiopVector& d,
+                                              const hiopMatrixDense& X);
 
   /* rhs = R \ rhs, where R is upper triangular lxl and rhs is lx */
   static void triangularSolve(const hiopMatrixDense& R, hiopMatrixDense& rhs);
@@ -422,50 +473,59 @@ private: //internal methods
   void updateR(const hiopVector& STy, const double& sTy);
   void updateD(const double& sTy);
 private:
-  hiopVector* H0;
-  hiopMatrixDense *St,*Yt; //we store the transpose to easily access columns in S and T
-  hiopMatrixDense *R;
-  hiopVector* D;
+  hiopVector* H0_;
+  hiopMatrixDense* St_;
+  hiopMatrixDense* Yt_; //we store the transpose to easily access columns in S and T
+  hiopMatrixDense* R_;
+  hiopVector* D_;
 
-  int sigma_update_strategy;
-  double sigma_safe_min, sigma_safe_max;
+  int sigma_update_strategy_;
+  double sigma_safe_min_;
+  double sigma_safe_max_;
 
   //also stored are the iterate, gradient obj, and Jacobians at the previous iterations
-  hiopIterate *_it_prev;
-  hiopVector *_grad_f_prev;
-  hiopMatrixDense *_Jac_c_prev, *_Jac_d_prev;
+  hiopIterate* it_prev_;
+  hiopVector* grad_f_prev_;
+  hiopMatrixDense* Jac_c_prev_;
+  hiopMatrixDense* Jac_d_prev_;
 
   //internals buffers
-  double* _buff_kxk; // size = num_constraints^2 
-  double* _buff_lxk; // size = q-Newton mem size x num_constraints
-  double* _buff_lxl;
+  double* buff_kxk_; // size = num_constraints^2 
+  double* buff_lxk_; // size = q-Newton mem size x num_constraints
+  double* buff_lxl_;
   //auxiliary objects
-  hiopMatrixDense *_S1, *_Y1, *_DpYtH0Y; //aux matrices to hold St*X, Yt*H0*X, and D+Y^T*H0*Y in symmetricTimesMat
+  hiopMatrixDense* S1_; //aux matrices to hold St*X, Yt*H0*X, and D+Y^T*H0*Y in symmetricTimesMat
+  hiopMatrixDense* Y1_;
+  hiopMatrixDense* DpYtH0Y_; 
   hiopMatrixDense& new_S1(const hiopMatrixDense& St, const hiopMatrixDense& X);
   hiopMatrixDense& new_Y1(const hiopMatrixDense& Yt, const hiopMatrixDense& X);
   hiopMatrixDense& new_DpYtH0Y(const hiopMatrixDense& Yt);
   //similar for S3=DpYtH0Y*S2
-  hiopMatrixDense *_S3;
+  hiopMatrixDense* S3_;
   hiopMatrixDense& new_S3(const hiopMatrixDense& Left, const hiopMatrixDense& Right);
-  hiopVector *_l_vec1, *_l_vec2, *_l_vec3, *_n_vec1, *_n_vec2;
+  hiopVector* l_vec1_;
+  hiopVector* l_vec2_;
+  hiopVector* l_vec3_;
+  hiopVector* n_vec1_;
+  hiopVector* n_vec2_;
   hiopVector& new_l_vec1(int l);
   hiopVector& new_l_vec2(int l);
   hiopVector& new_l_vec3(int l);
   inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec1!=NULL);
-    assert(_n_vec1->get_size()==n);
+    assert(n_vec1_ != nullptr);
+    assert(n_vec1_->get_size()==n);
 #endif
-    return *_n_vec1;
+    return *n_vec1_;
   }
   inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec2!=NULL);
-    assert(_n_vec2->get_size()==n);
+    assert(n_vec2_ != nullptr);
+    assert(n_vec2_->get_size()==n);
 #endif
-    return *_n_vec2;
+    return *n_vec2_;
   }
 };
 
