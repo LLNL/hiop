@@ -66,7 +66,7 @@ namespace hiop
                            // 4 use Metis;
                            // 5 automatic choice(MA47 or Metis);
     icntl_[7-1] = 1;       // Pivoting strategy.
-    icntl_[9-1] = 10;      // up to 10 steps of iterative refinement
+    icntl_[9-1] = 1;       // use one step of iterative refinement
     icntl_[11-1] = 16;
     icntl_[12-1] = 16;
     icntl_[15-1] = 0;
@@ -92,7 +92,13 @@ namespace hiop
     keep_ = new int[lkeep_]{0}; // Initialize to 0 as otherwise MA57ED can sometimes fail
 
     iwork_ = new int[5 * n_];
-    dwork_ = new double[n_];
+    if(icntl_[9-1] > 1 && icntl_[10-1] > 1 ) {
+      dwork_ = new double[4*n_];
+    } else if(icntl_[9-1] > 1) {
+      dwork_ = new double[3*n_];
+    } else {
+      dwork_ = new double[n_];
+    }
     
     MA57AD( &n_, &nnz_, irowM_, jcolM_, &lkeep_, keep_, iwork_, icntl_, info_, rinfo_ );
         
@@ -194,7 +200,10 @@ namespace hiop
 
     int job = 1; // full solve
     int one = 1;
-    icntl_[9-1] = 1; // do one step of iterative refinement
+
+    if(icntl_[9-1]>1) {
+      job = 0;  // only allow 0 or 2
+    }
 
     hiopVector* x = dynamic_cast<hiopVector*>(&x_in);
     assert(x!=nullptr);
