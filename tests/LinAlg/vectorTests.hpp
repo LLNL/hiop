@@ -1319,7 +1319,7 @@ public:
     pattern.setToConstant(one);
     setLocalElement(&pattern, N - 1, zero);
 
-    const real_type x_val = two;
+    const real_type x_val = one;
     x.setToConstant(x_val);
     // Make sure pattern eliminates the correct element
     setLocalElement(&x, N - 1, 1000*three);
