@@ -1546,7 +1546,6 @@ bool hiopFRProbDense::get_vars_info(const size_type& n, double *xlow, double* xu
 
   const hiopVector& xl = nlp_base_->get_xl();
   const hiopVector& xu = nlp_base_->get_xu();
-  const NonlinearityType* var_type = nlp_base_->get_var_type();
 
   // x, p and n, in the order of [x pe ne pi ni]
 
@@ -1575,8 +1574,6 @@ bool hiopFRProbDense::get_cons_info(const size_type& m, double* clow, double* cu
   const hiopVector& crhs = nlp_base_->get_crhs();
   const hiopVector& dl = nlp_base_->get_dl();
   const hiopVector& du = nlp_base_->get_du();
-  const NonlinearityType* cons_eq_type = nlp_base_->get_cons_eq_type();
-  const NonlinearityType* cons_ineq_type = nlp_base_->get_cons_ineq_type();
 
   wrk_dual_->setToConstant(0.0);
 
@@ -1930,7 +1927,7 @@ bool hiopFRProbDense::iterate_callback(int iter,
   if(nrmInf_feas_ori <= max_nrmInf_feas && iter>0) {
     // termination condition 2) (theta and logbar) are not in the original filter
     // check (original) filter condition
-    double trial_obj_ori = obj_base_; // obj_base_ has been updated in the FR loop when we evaluate obj
+    [[maybe_unused]] double trial_obj_ori = obj_base_; // obj_base_ has been updated in the FR loop when we evaluate obj
 
     // compute the original logbar objective from the trial point given by the FR problem
     // Note that this function will updates the slack and dual variables
@@ -1942,7 +1939,7 @@ bool hiopFRProbDense::iterate_callback(int iter,
     it_base_trial->get_d()->copyFrom(*wrk_d_);
 
     // compute other slacks in the base problem
-    size_type n_adjusted_slacks = it_base_trial->compute_safe_slacks(*it_base_curr, solver_base_.get_mu());
+    [[maybe_unused]] size_type n_adjusted_slacks = it_base_trial->compute_safe_slacks(*it_base_curr, solver_base_.get_mu());
 
     // evaluate base problem log barr     
     solver_base_.get_logbar()->updateWithNlpInfo_trial_funcOnly(*it_base_trial, obj_base_, *wrk_cbody_, *wrk_dbody_);
