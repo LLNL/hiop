@@ -1,5 +1,4 @@
-
-module use -a /usr/workspace/hiop/quartz/software/spack_modules/linux-rhel8-broadwell
+module use -a /usr/workspace/hiop/software/spack_modules_20230927/linux-rhel8-broadwell/
 
 module purge
 
