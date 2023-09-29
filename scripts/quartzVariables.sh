@@ -2,19 +2,6 @@ module use -a /usr/workspace/hiop/software/spack_modules_20230927/linux-rhel8-br
 
 module purge
 
-#module load coinhsl-2015.06.23-gcc-10.3.1-laebmhu
-#module load metis-5.1.0-gcc-10.3.1-jaquufw
-#module load openblas-0.3.20-gcc-10.3.1-5ahntf5
-
-#module load raja-0.14.0-gcc-10.3.1-pjdruyn 
-#module load umpire-6.0.0-gcc-10.3.1-sq7yi4q
-#module load zlib-1.2.12-gcc-10.3.1-q4d3dyj
-
-#module load gcc/10.3.1
-#module load mvapich2/2.3.6
-#module load cmake/3.22.4
-#module load python/3.9.12
-
 module load gcc/12.1.1
 
 # cmake@=3.26.3%gcc@=12.1.1~doc+ncurses+ownlibs build_system=generic build_type=Release arch=linux-rhel8-broadwell
