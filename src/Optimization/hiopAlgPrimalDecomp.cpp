@@ -205,10 +205,10 @@ HessianApprox(hiopInterfacePriDecProblem* priDecProb,
 
 hiopAlgPrimalDecomposition::HessianApprox::
 HessianApprox(const int& n,
-              hiopInterfacePriDecProblem* priDecProb,
+              [[maybe_unused]] hiopInterfacePriDecProblem* priDecProb,
               hiopOptions* options_pridec,
               MPI_Comm comm_world)
-    : priDecProb_(priDecProb), options_(options_pridec), comm_world_(comm_world)
+    : options_(options_pridec), comm_world_(comm_world)
 {
   n_=n;
   fkm1 = 1e20;
@@ -561,8 +561,8 @@ set_alpha_max(const double alp_max)
 hiopAlgPrimalDecomposition::
 hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/) 
-  : master_prob_(prob_in), 
-    comm_world_(comm_world)
+  : comm_world_(comm_world),
+    master_prob_(prob_in)
 {
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
@@ -618,9 +618,9 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
                            const int nc, 
                            const int* xc_index,
                            MPI_Comm comm_world/*=MPI_COMM_WORLD*/)
-  : master_prob_(prob_in),
-    nc_(nc), 
-    comm_world_(comm_world)
+  : comm_world_(comm_world),
+    master_prob_(prob_in),
+    nc_(nc)
 {
   S_ = master_prob_->get_num_rterms();
   n_ = master_prob_->get_num_vars();
@@ -821,7 +821,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
   
     hiopVector* hess_appx = grad_r->alloc_clone();
     hess_appx->setToZero();
-    double* hess_appx_vec = hess_appx->local_data();
    
     hiopVector* x0 = grad_r->alloc_clone();
     x0->setToZero(); 
@@ -913,11 +912,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         grad_r->setToZero();
         
         std::vector<int> cont_idx(S_);
-        for(int i=0; i<S_; i++) {
+        for(int i=0; i<static_cast<int>(S_); i++) {
           cont_idx[i] = i;
         }
         // The number of contigencies/recourse problems should be larger than the number of processors
-        assert(S_>=comm_size_-1);
+        assert(static_cast<int>(S_)>=comm_size_-1);
         // idx is the next contingency to be sent out from the master
         int idx = 0;
         // Initilize the recourse communication by sending indices to the evaluator 
@@ -929,12 +928,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
-        int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
         for(int r=1; r<comm_size_; r++) {
           //int cur_idx = cont_idx[idx];
           rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
@@ -950,25 +947,25 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
-        while(idx<=S_ || last_loop) { 
+        while(idx<=static_cast<int>(S_) || last_loop) { 
           for(int r=1; r< comm_size_;r++) {
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
-              if(!last_loop && idx<S_) {
+              if(!last_loop && idx<static_cast<int>(S_)) {
                 log_->printf(hovLinesearch, "idx %d sent to rank %d\n", idx,r);
               } else {
                 log_->printf(hovLinesearch, "last loop for rank %d\n", r );
               }
               // add to the master rank variables
               rval += rec_prob[r]->value();
-              for(int i=0;i<nc_;i++) {
+              for(int i=0;i<static_cast<int>(nc_);i++) {
                 grad_r_vec[i] += rec_prob[r]->grad(i);
               }
               if(last_loop) {
                 finish_flag[r]=1;
               }
               // this is for dealing with the end of contingencies where some ranks have already finished
-              if(idx<S_) {
+              if(idx<static_cast<int>(S_)) {
                 req_cont_idx[r]->wait();    // Ensure previous cont idx send has completed.
                 req_cont_idx[r]->set_idx(cont_idx[idx]);
                 req_cont_idx[r]->post_send(1,r,comm_world_);
@@ -996,7 +993,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         rval /= S_;
         grad_r->scale(1.0/S_);
         // send end signal to all evaluators
-        int cur_idx = -1;
         for(int r=1; r<comm_size_; r++) {
           req_cont_idx[r]->wait();  // Ensure previous idx send has completed.
           req_cont_idx[r]->set_idx(-1);
@@ -1034,7 +1030,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
         }
-        for(int ri=0; ri<cont_idx.size(); ri++) {
+        for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
           aux = 0.;
           int idx_temp = cont_idx[ri];
 
@@ -1048,7 +1044,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
         grad_aux->setToZero(); 
 
-        for(int ri=0; ri<cont_idx.size(); ri++) {
+        for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
           int idx_temp = cont_idx[ri];
           bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
           if(!bret) {
@@ -1070,7 +1066,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           */
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               cont_idx[ri] = req_cont_idx[my_rank_]->value();
             }
             if(cont_idx[0]==-1) {
@@ -1086,7 +1082,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               assert(nc_==n_);
               x0->copyFromStarting(0, *x_);
             }
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               aux = 0.;
               int idx_temp = cont_idx[ri];
               
@@ -1099,7 +1095,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
             grad_aux->setToZero(); 
 
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
               if(!bret) {
@@ -1124,7 +1120,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       }
 
       if(my_rank_==0) {
-        int mpi_test_flag = 0;
         for(int r=1; r<comm_size_;r++) {
           rec_prob[r]->wait();
           req_cont_idx[r]->wait();
@@ -1143,7 +1138,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         recourse_val = rval;
 
         log_->printf(hovSummary, "real rval %18.12e\n", rval);
-        MPI_Status mpi_status; 
 
         hess_appx->setToConstant(1.0);
 
@@ -1308,7 +1302,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
     double* grad_r_main_vec=grad_r_main->local_data();
 
     hiopVector* hess_appx = grad_r->alloc_clone();
-    double* hess_appx_vec = hess_appx->local_data();
     hess_appx->setToZero();
 
     hiopVector* x0 = grad_r->alloc_clone();
@@ -1403,11 +1396,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // array for number of indices, currently the indices are in [0,S_] 
         
         std::vector<int> cont_idx(S_);
-        for(int i=0; i<S_; i++) {
+        for(int i=0; i<static_cast<int>(S_); i++) {
           cont_idx[i] = i;
         }
         // The number of contigencies/recourse problems should be larger than the number of processors
-        assert(S_>=comm_size_-1);
+        assert(static_cast<int>(S_)>=comm_size_-1);
         // idx is the next contingency to be sent out from the master
         int idx = 0;
         // Initilize the recourse communication by sending indices to the evaluator 
@@ -1419,12 +1412,10 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
-        int mpi_test_flag; // for testing if the send/recv is completed
         // Posting initial receive of recourse solutions from evaluators
         for(int r=1; r<comm_size_; r++) {
           // rec_prob[r]->post_recv(2,r,comm_world_);// 2 is the tag, r is the rank source 
           rec_prob[r]->post_recv_end_signal(2,r,comm_world_);// 2 is the tag, r is the rank source 
-          // log_->printf(hovIteration, "receive flag for contingency value %d\n", mpi_test_flag); 
         }
         // Both finish_flag and last_loop are used to deal with the final round remaining contingencies/recourse problems.
         // Some ranks are finished while others are not. The loop needs to continue to fetch the results. 
@@ -1440,11 +1431,11 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         
         log_->printf(hovFcnEval, "Elapsed time for entire iteration %d is %f\n",it, t2 - t1);
         
-        while(idx<=S_ || last_loop) { 
+        while(idx<=static_cast<int>(S_) || last_loop) { 
           for(int r=1; r< comm_size_; r++) {
             int mpi_test_flag = rec_prob[r]->test();
             if(mpi_test_flag && (finish_flag[r]==0)) {// receive completed
-              if(!last_loop && idx<S_) {
+              if(!last_loop && idx<static_cast<int>(S_)) {
                 log_->printf(hovLinesearch, "idx %d sent to rank %d\n", idx,r);
               } else {
                 log_->printf(hovLinesearch, "last loop for rank %d\n", r );
@@ -1462,7 +1453,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
                 finish_flag[r]=1;
               }
               // this is for dealing with the end of contingencies where some ranks have already finished
-              if(idx<S_) {
+              if(idx<static_cast<int>(S_)) {
                 req_cont_idx[r]->wait();    // Ensure previous send has completed.
                 req_cont_idx[r]->set_idx(cont_idx[idx]);
                 req_cont_idx[r]->post_send(1,r,comm_world_);
@@ -1492,7 +1483,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         //rval /= S_;
         //grad_r->scale(1.0/S_);
         // send end signal to all evaluators
-        int cur_idx = -1;
         for(int r=1; r<comm_size_; r++) {
           req_cont_idx[r]->wait();  // Ensure previous send has completed.
           req_cont_idx[r]->set_idx(-1);
@@ -1532,7 +1522,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           assert(nc_==n_);
           x0->copyFromStarting(0, *x_);
         }
-        for(int ri=0; ri<cont_idx.size(); ri++) {
+        for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
           aux = 0.;
           int idx_temp = cont_idx[ri];
 
@@ -1547,7 +1537,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
         grad_aux->setToZero(); 
 
-        for(int ri=0; ri<cont_idx.size(); ri++) {
+        for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
           int idx_temp = cont_idx[ri];
           bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
           if(!bret) {
@@ -1575,7 +1565,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
           */
           if(mpi_test_flag) {
             // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               cont_idx[ri] = req_cont_idx[my_rank_]->value();
             }
             if(cont_idx[0]==-1) {
@@ -1593,7 +1583,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
               assert(nc_==n_);
               x0->copyFromStarting(0, *x_);
             }
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               aux = 0.;
               int idx_temp = cont_idx[ri];
               
@@ -1607,7 +1597,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
             // log_->printf(hovFcnEval, "recourse value: is %18.12e)\n", rec_val);
             grad_aux->setToZero(); 
 
-            for(int ri=0; ri<cont_idx.size(); ri++) {
+            for(int ri=0; ri<static_cast<int>(cont_idx.size()); ri++) {
               int idx_temp = cont_idx[ri];
               bret = master_prob_->eval_grad_rterm(idx_temp, nc_, x0_vec, *grad_aux);
               if(!bret) {
@@ -1638,10 +1628,9 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
       if(my_rank_==0) {
         assert(rval == 0);
-        for(int i=0; i<nc_; i++ ) {
+        for(int i=0; i<static_cast<int>(nc_); i++ ) {
           assert(grad_r_vec[i] == 0.);
         }
-        int mpi_test_flag = 0;
         for(int r=1; r<comm_size_; r++) {
           rec_prob[r]->wait();
           req_cont_idx[r]->wait();
@@ -1673,8 +1662,6 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
         log_->printf(hovSummary, "real rval %18.12e\n", rval);
         
-        MPI_Status mpi_status; 
-
         hess_appx->setToConstant(1.0);
 
         if(nc_<n_) {
@@ -1821,17 +1808,14 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   x_->setToZero();
       
   bool bret;
-  int rank_master=0; //master rank is also the solver rank
   // Define the values and gradients as needed in the master rank
   double rval = 0.;
   // double grad_r[nc_];
   hiopVector* grad_r;
   grad_r = LinearAlgebraFactory::create_vector(options_->GetString("mem_space"), nc_) ; 
-  double* grad_r_vec = grad_r->local_data();
   
   hiopVector* hess_appx;
   hess_appx = grad_r->alloc_clone();
-  double* hess_appx_vec=hess_appx->local_data();
  
   hiopVector* x0 = grad_r->alloc_clone();
   double* x0_vec = x0->local_data();
@@ -1854,7 +1838,6 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
   double convg_f = 1e20;
   double convg_g = 1e20;
   int accp_count = 0;
-  double* x_vec = x_->local_data(); 
 
   std::string options_file_master_prob;
 
@@ -1879,12 +1862,11 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
     grad_r->setToZero();
 
     std::vector<int> cont_idx(S_);
-    for(int i=0; i<S_; i++) {
+    for(int i=0; i<static_cast<int>(S_); i++) {
       cont_idx[i] = i;
     }
     // The number of contigencies should be larger than the number of processors, which is 1
     // idx is the next contingency to be sent out from the master
-    int idx = 0;
     if(nc_<n_) {
       //printf("xc_idx %d ",xc_idx_[0]);
       x0->copy_from_indexes(*x_, *xc_idx_);
@@ -1892,7 +1874,7 @@ hiopSolveStatus hiopAlgPrimalDecomposition::run_single()
       assert(nc_==n_);
       x0->copyFromStarting(0, *x_);
     }
-    for(int i=0; i< S_;i++) {
+    for(int i=0; i< static_cast<int>(S_);i++) {
       int idx_temp = cont_idx[i];
       double aux=0.;
       bret = master_prob_->eval_f_rterm(idx_temp, nc_, x0_vec, aux); //need to add extra time here

@@ -363,8 +363,8 @@ instantiate_linear_solver(const char* linsol_opt,
   size_type nd=Jac_dSp.m();
   size_type neq=Jac_cSp.m();
   size_type nineq=Jac_dSp.m();
-  size_type n = nx + nineq + neq + nineq; 
-  size_type nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
+  [[maybe_unused]] const size_type n = nx + nineq + neq + nineq; 
+  [[maybe_unused]] const size_type nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
 
   auto linear_solver = nlp_->options->GetString(linsol_opt);
   auto compute_mode = nlp_->options->GetString("compute_mode");
@@ -552,9 +552,6 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
   std::stringstream ss_log;
   
   int nx = Jac_cSp.n(), nd=Jac_dSp.m(), neq=Jac_cSp.m(), nineq=Jac_dSp.m();
-  int n = nx + nineq + neq + nineq; 
-
-  int nnz = nx + nd + Jac_cSp.numberOfNonzeros() + Jac_dSp.numberOfNonzeros() + nd + (nx + nd + neq + nineq);
 
   t.reset();
   t.start();

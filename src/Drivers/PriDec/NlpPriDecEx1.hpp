@@ -151,12 +151,12 @@ public:
   /**
    * This function returns the recourse objective, which is 0.5*(x+Se_i)(x+Se_i).
    */
-  virtual bool eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval);
+  virtual bool eval_f_rterm(size_type idx, const int& n,const  double* x, double& rval);
   
   /**
    * This function returns the recourse gradient.
    */
-  virtual bool eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad);
+  virtual bool eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad);
   
   /**
    * This function sets up the approximation of the recourse objective based on the function value and gradient 
@@ -167,19 +167,19 @@ public:
   virtual bool set_recourse_approx_evaluator(const int n, 
                                              hiopInterfacePriDecProblem::RecourseApproxEvaluator* evaluator);
   // Returns the number S of recourse terms.
-  size_t get_num_rterms() const {return S_;}
-  size_t get_num_vars() const {return n_;}
+  size_type get_num_rterms() const {return S_;}
+  size_type get_num_vars() const {return n_;}
   // Returns the solution.
   void get_solution(double* x) const 
   {
-    for(int i=0; i<n_; i++)
+    for(int i=0; i<static_cast<int>(n_); i++)
       x[i] = sol_[i];
   }
   double get_objective() {return obj_;}
 private:
-  size_t n_;
-  size_t S_;
-  size_t nc_;
+  size_type n_;
+  size_type S_;
+  size_type nc_;
   PriDecEx1* my_nlp;
   double obj_;
   double* sol_; 

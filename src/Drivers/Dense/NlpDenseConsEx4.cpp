@@ -5,14 +5,14 @@
 #include <cstdio>
 
 DenseConsEx4::DenseConsEx4()
-  : unconstrained_(false),
-    n_vars_(2),
+  : n_vars_(2),
     n_cons_(4),
-    comm(MPI_COMM_WORLD)
+    unconstrained_(false)
 {
   comm_size = 1;
   my_rank = 0; 
 #ifdef HIOP_USE_MPI
+  comm = MPI_COMM_WORLD;
   int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
   ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
 #endif
@@ -96,7 +96,6 @@ bool DenseConsEx4::get_cons_info(const size_type& m, double* clow, double* cupp,
 
 bool DenseConsEx4::eval_f(const size_type& n, const double* x, bool new_x, double& obj_value)
 {
-  size_type n_local = col_partition_[my_rank+1] - col_partition_[my_rank];
   obj_value = 0.;
 
   index_type i_local;
@@ -247,7 +246,6 @@ bool DenseConsEx4::eval_Jac_cons(const size_type& n,
 
   assert(n==n_vars_); assert(m==n_cons_); 
   size_type n_local = col_partition_[my_rank+1] - col_partition_[my_rank];
-  int i;
   //here we will iterate over the local indexes, however we still need to work with the
   //global indexes to correctly determine the entries in the Jacobian corresponding
   //to the 'rebels' variables x_1, x_2, x_3

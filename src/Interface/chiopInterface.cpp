@@ -82,6 +82,7 @@ int hiop_mds_solve_problem(cHiopMDSProblem *prob) {
   hiopSolveStatus status;
   hiopAlgFilterIPMNewton solver(prob->refcppHiop);
   status = solver.run();
+  assert(status<=hiopSolveStatus::User_Stopped); //check solver status if necessary
   prob->obj_value = solver.getObjective();
   solver.getSolution(prob->solution);
   return 0;
@@ -110,7 +111,6 @@ int hiop_sparse_create_problem(cHiopSparseProblem *prob) {
 } 
 
 int hiop_sparse_solve_problem(cHiopSparseProblem *prob) {
-  hiopSolveStatus status;
   hiopAlgFilterIPMNewton solver(prob->refcppHiop_);
   prob->status_ = solver.run();
   prob->obj_value_ = solver.getObjective();
@@ -144,7 +144,6 @@ int hiop_dense_create_problem(cHiopDenseProblem *prob) {
 } 
 
 int hiop_dense_solve_problem(cHiopDenseProblem *prob) {
-  hiopSolveStatus status;
   hiopAlgFilterIPMQuasiNewton solver(prob->refcppHiop);
   prob->status = solver.run();
   prob->obj_value = solver.getObjective();

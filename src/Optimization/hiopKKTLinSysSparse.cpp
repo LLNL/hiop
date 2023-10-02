@@ -890,7 +890,6 @@ namespace hiop
     size_type nxu = nlp_->n_upp();
 
     // note that hess may be saved as a triangular matrix
-    int n1st = 0;
     int n2st = nx + neq + nineq;
     int n3st = n2st + nd;
     int n4st = n3st + ndl + ndu + nxl + nxu; // shortcut for each subbloock

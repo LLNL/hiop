@@ -70,18 +70,14 @@ namespace hiop
 {
 
 hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char* option_file)
+  :
 #ifdef HIOP_USE_MPI
-  : mpi_init_called(false),
-    interface_base(interface_),
-    nlp_transformations_(this),
-    prob_type_(hiopInterfaceBase::hiopNonlinear),
-    nlp_evaluated_(false)
-#else 
-  : interface_base(interface_),
-    nlp_transformations_(this),
-    prob_type_(hiopInterfaceBase::hiopNonlinear),
-    nlp_evaluated_(false)
+    mpi_init_called(false),
 #endif
+    prob_type_(hiopInterfaceBase::hiopNonlinear),
+    nlp_evaluated_(false),
+    nlp_transformations_(this),
+    interface_base(interface_)
 {
   strFixedVars_ = ""; //uninitialized
   dFixedVarsTol_ = -1.; //uninitialized
@@ -807,8 +803,6 @@ bool hiopNlpFormulation::get_starting_point(hiopVector& x0_for_hiop,
                                            slacks_avail,
                                            d_for_user);
   if(duals_avail) {
-    double* yc0d = yc0_for_hiop.local_data();
-    double* yd0d = yd0_for_hiop.local_data();
 
     assert(n_cons_eq_   == yc0_for_hiop.get_size() && "when did the cons change?");
     assert(n_cons_ineq_ == yd0_for_hiop.get_size() && "when did the cons change?");
@@ -862,9 +856,6 @@ bool hiopNlpFormulation::get_warmstart_point(hiopVector& x0_for_hiop,
                                             vl_for_user,
                                             vu_for_user);
   {
-    double* yc0d = yc0_for_hiop.local_data();
-    double* yd0d = yd0_for_hiop.local_data();
-
     assert(n_cons_eq_   == yc0_for_hiop.get_size() && "when did the cons change?");
     assert(n_cons_ineq_ == yd0_for_hiop.get_size() && "when did the cons change?");
     assert(n_cons_eq_+n_cons_ineq_ == n_cons_);
@@ -1988,10 +1979,6 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
     }
     assert(buf_lambda_);
     
-    const double* lambda_eq_arr = lambda_eq.local_data_const();
-    const double* lambda_ineq_arr = lambda_ineq.local_data_const();
-    double* buf_lambda_arr = buf_lambda_->local_data();
-
     buf_lambda_->
       copy_from_two_vec_w_pattern(lambda_eq, *cons_eq_mapping_, lambda_ineq, *cons_ineq_mapping_);
 
@@ -2001,7 +1988,7 @@ bool hiopNlpSparse::eval_Hess_Lagr(const hiopVector& x,
     
     double obj_factor_with_scale = obj_factor*get_obj_scale();
 
-    int nnzHSS = pHessL->numberOfNonzeros(), nnzHSD = 0;
+    int nnzHSS = pHessL->numberOfNonzeros();
 
     if(0==num_hess_eval_)
     {

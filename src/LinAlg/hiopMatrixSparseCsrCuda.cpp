@@ -376,20 +376,12 @@ double hiopMatrixSparseCSRCUDA::max_abs_value()
 void hiopMatrixSparseCSRCUDA::row_max_abs_value(hiopVector &ret_vec)
 {
   assert(ret_vec.get_local_size() == nrows_);
-
-  hiopVectorPar& yy = dynamic_cast<hiopVectorPar&>(ret_vec);
-  yy.setToZero();
-  double* y_data = yy.local_data();
-
   assert(false && "not yet implemented");
 }
 
 void hiopMatrixSparseCSRCUDA::scale_row(hiopVector &vec_scal, const bool inv_scale)
 {
   assert(vec_scal.get_local_size() == nrows_);
-
-  hiopVectorPar& vscal = dynamic_cast<hiopVectorPar&>(vec_scal);  
-  double* vd = vscal.local_data();
   assert(false && "not yet implemented");
 }
 

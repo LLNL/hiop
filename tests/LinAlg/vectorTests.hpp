@@ -2037,7 +2037,6 @@ public:
    */
   bool vector_is_equal(hiop::hiopVector& x, hiop::hiopVector& y, const int rank)
   {
-    const local_ordinal_type Nx = getLocalSize(&x);
     int fail = 0;
     x.setToConstant(one);
     y.setToConstant(one);

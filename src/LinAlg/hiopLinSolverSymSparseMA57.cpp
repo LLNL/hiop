@@ -118,7 +118,6 @@ namespace hiop
 
     bool done{false};
     bool is_singular{false};
-    int num_tries{0};
 
     //get the triplet values array and copy the entries into it (different behavior for triplet and csr implementations)
     double* Mvals = get_triplet_values_array();
@@ -162,10 +161,11 @@ namespace hiop
           };
           break;
         default:
-          if( info_[0] >= 0 ) done = true;
+          if(info_[0] >= 0) {
+            done = true;
+          }
           assert( "unknown error!" && 0 );
       } // end switch
-      num_tries++;
     } while( !done );
 
     nlp_->runStats.linsolv.tmFactTime.stop();
@@ -193,7 +193,6 @@ namespace hiop
     nlp_->runStats.linsolv.tmTriuSolves.start();
 
     int job = 1; // full solve
-    int one = 1;
     icntl_[9-1] = 1; // do one step of iterative refinement
 
     hiopVector* x = dynamic_cast<hiopVector*>(&x_in);

@@ -405,8 +405,8 @@ protected:
 
 private:
   hiopNlpFormulation(const hiopNlpFormulation& s)
-    : interface_base(s.interface_base),
-      nlp_transformations_(this)
+    : nlp_transformations_(this), interface_base(s.interface_base)
+      
   {};
 };
 

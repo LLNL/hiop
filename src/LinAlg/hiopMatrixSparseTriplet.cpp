@@ -678,7 +678,6 @@ copyDiagMatrixToSubblock(const double& src_val,
   assert(nnz_to_copy + dest_row_st <= this->m());
   assert(nnz_to_copy + col_dest_st <= this->n());
 
-  int itnz_src=0;
   int itnz_dest=dest_nnz_st;
   for(auto ele_add=0; ele_add<nnz_to_copy; ++ele_add) {
     iRow_[itnz_dest] = dest_row_st + ele_add;
@@ -797,12 +796,6 @@ void hiopMatrixSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   const auto& J_c = dynamic_cast<const hiopMatrixSparseTriplet&>(Jac_c);
   const auto& J_d = dynamic_cast<const hiopMatrixSparseTriplet&>(Jac_d);
     
-  // shortcut to the original Jac
-  const int *irow_c = J_c.i_row();
-  const int *jcol_c = J_c.j_col();
-  const int *irow_d = J_d.i_row();
-  const int *jcol_d = J_d.j_col();
-
   // assuming original Jac is sorted!
   int nnz_Jac_c = J_c.numberOfNonzeros();
   int nnz_Jac_d = J_d.numberOfNonzeros();
@@ -906,7 +899,6 @@ void hiopMatrixSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
     const double* J_d_val = J_d.M();
     for(int i = 0; i < m_d; ++i) {
       index_type k_base = J_d.row_starts_->idx_start_[i];
-      size_type nnz_in_row = J_d.row_starts_->idx_start_[i+1] - k_base;
     
       // copy from base Jac_d
       while(k_base < J_d.row_starts_->idx_start_[i+1]) {
@@ -1199,7 +1191,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
                                                     std::unordered_map<int,int>& extra_diag_nnz_map)
 {
   assert(*csr_kRowPtr_in==nullptr && *index_convert_CSR2Triplet_in==nullptr);
-  int m = this->m();
   int n = this->n();
   int nnz = numberOfNonzeros();
 
@@ -1213,7 +1204,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
    * Note that input is in lower triangular triplet form. First part is the sparse matrix, and the 2nd part containts additional 
    * diagonal elements.
   */
-  int n_diag_val=0;
   std::unordered_map<int,int> extra_diag_nnz_map_temp;
   int *diag_defined = new int[n];
 
@@ -1231,7 +1221,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
           diag_defined[iRow_[k]] = k;
           csr_kRowPtr[iRow_[k]+1]++;
           csr_nnz++;
-          n_diag_val++;
         }else{
           extra_diag_nnz_map_temp[iRow_[k]] = k;
         }
@@ -1242,7 +1231,7 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
       csr_kRowPtr[i] += csr_kRowPtr[i-1];
     }
     assert(csr_nnz==csr_kRowPtr[n]);
-    assert(csr_nnz+extra_diag_nnz_map_temp.size()==nnz);
+    assert(static_cast<int>(csr_nnz+extra_diag_nnz_map_temp.size())==nnz);
 
     *csr_kVal_in = new double[csr_nnz];
     *csr_jCol_in = new int[csr_nnz];
@@ -1265,7 +1254,7 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
       diag_defined[i] = -1;
     }
 
-    int total_nnz_tmp{0},nnz_tmp{0}, rowID_tmp, colID_tmp;
+    int nnz_tmp{0}, rowID_tmp, colID_tmp;
     for(int k=0;k<n;k++){
         index_convert_extra_Diag2CSR_temp[k]=-1;
         index_convert_extra_Diag2CSR[k]=-1;
@@ -1288,7 +1277,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
           index_convert_CSR2Triplet[nnz_tmp] = k;
 
           nnz_each_row_tmp[rowID_tmp]++;
-          total_nnz_tmp++;
         }
       } else {
         nnz_tmp = nnz_each_row_tmp[rowID_tmp] + csr_kRowPtr[rowID_tmp];
@@ -1297,7 +1285,6 @@ void hiopMatrixSparseTriplet::convert_to_csr_arrays(int &csr_nnz,
         index_convert_CSR2Triplet[nnz_tmp] = k;
 
         nnz_each_row_tmp[rowID_tmp]++;
-        total_nnz_tmp++;
       }
     }
 
@@ -1397,7 +1384,6 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   const auto& Hess_base = dynamic_cast<const hiopMatrixSymSparseTriplet&>(Hess);
 
   // assuming original Hess is sorted, and in upper-triangle format
-  int nnz_h = Hess_base.numberOfNonzeros();
 
   int m_h = Hess.m();
   int n_h = Hess.n();

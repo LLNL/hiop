@@ -188,7 +188,6 @@ namespace hiop
   {
     int inert[3];
     int info;
-    int retcode;
     magma_uplo_t uplo=MagmaLower; // M is upper in C++ so it's lower in fortran
 #ifdef HIOP_USE_HIP
     uplo = MagmaUpper; // M is upper in C++ so it's lower in fortran
@@ -226,7 +225,6 @@ namespace hiop
     assert(M_->n() == M_->m());
     assert(x.get_size() == M_->n());
     int N = M_->n();
-    int LDA = N;
     int LDB = N;
     int NRHS = 1;
     if(N == 0) {
@@ -328,7 +326,6 @@ namespace hiop
     assert(M_->n() == M_->m());
     int N=M_->n();
     int LDA = N;
-    int LDB=N;
     if(N==0) {
       return true;
     }
@@ -429,7 +426,6 @@ namespace hiop
     assert(M_->n() == M_->m());
     assert(x.get_size()==M_->n());
     int N=M_->n();
-    int LDA = N;
     int LDB=N;
     if(N==0) {
       return true;

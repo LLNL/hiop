@@ -21,7 +21,6 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   int nonZerosUsed = 0;
 
   size_type m = A->m();
-  size_type n = A->n();
 
   for (auto i = 0; i < m; i++)
   {
@@ -85,7 +84,6 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   int nonZerosUsed = 0;
 
   size_type m = A->m();
-  size_type n = A->n();
 
   for (auto i = 0; i < m; i++)
   {
@@ -122,8 +120,9 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
 
 int main(int argc, char **argv)
 {
-  int rank=0, numRanks=1;
 #ifdef HIOP_USE_MPI
+  int rank = 0;
+  int numRanks = 1;
   int err;
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
@@ -170,7 +169,7 @@ int main(int argc, char **argv)
     
     hiopPCGSolver pcg_solver(N_local, A_opr, Minv_opr, nullptr, nullptr);
     
-    bool is_solved = pcg_solver.solve(rhs);
+    [[maybe_unused]] bool is_solved = pcg_solver.solve(rhs);
 
     std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
 
@@ -212,9 +211,13 @@ int main(int argc, char **argv)
     hiopPCGSolver pcg_solver(N_local, A_opr, Minv_opr, nullptr, nullptr);
     
     bool is_solved = pcg_solver.solve(rhs);
-
-    std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
-
+    
+    if(is_solved) {
+      std::cout << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
+    } else {
+      std::cout << "Failed! " << mem_space << ": " << pcg_solver.get_convergence_info() << std::endl;
+    }
+    
     // Destroy testing objects
     delete A_opr;
     delete Minv_opr;

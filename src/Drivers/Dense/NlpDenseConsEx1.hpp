@@ -91,9 +91,9 @@ class DiscretizedFunction : public hiop::hiopVectorPar
 public:
   DiscretizedFunction(Ex1Meshing1D* meshing);
   
-  virtual double dotProductWith( const DiscretizedFunction& v ) const;
+  double dotProductWith( const hiopVector& v ) const override;
   virtual double integral() const;
-  virtual double twonorm() const;
+  double twonorm() const override;
 
   /* the following methods are mostly for educational purposes and may not be optimized */
   //converts the local indexes to global indexes
@@ -112,7 +112,7 @@ class DenseConsEx1 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
   DenseConsEx1(int n_mesh_elem=100, double mesh_ratio=1.0)
-    : n_vars(n_mesh_elem), n_cons(0), comm(MPI_COMM_WORLD)
+    : n_vars(n_mesh_elem), comm(MPI_COMM_WORLD)
   {
     //create the members
     _mesh = new Ex1Meshing1D(0.0,1.0, n_vars, mesh_ratio, comm);
@@ -219,7 +219,7 @@ public:
     return true;
   }
 private:
-  int n_vars, n_cons;
+  int n_vars;
   MPI_Comm comm;
   Ex1Meshing1D* _mesh;
 

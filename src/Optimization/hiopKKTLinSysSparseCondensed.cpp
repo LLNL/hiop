@@ -72,15 +72,15 @@ hiopKKTLinSysCondensedSparse::hiopKKTLinSysCondensedSparse(hiopNlpFormulation* n
   : hiopKKTLinSysCompressedSparseXDYcYd(nlp),
     JacD_(nullptr),
     JacDt_(nullptr),
-    JtDiagJ_(nullptr),
     Hess_lower_csr_(nullptr),
     Hess_upper_csr_(nullptr),
     Hess_csr_(nullptr),
+    JtDiagJ_(nullptr),
     M_condensed_(nullptr),
     Hess_upper_plus_diag_(nullptr),
-    deltawx_(nullptr),
-    Dx_plus_deltawx_(nullptr),
     Diag_Dx_deltawx_(nullptr),
+    Dx_plus_deltawx_(nullptr),
+    deltawx_(nullptr),
     Hd_copy_(nullptr)
 {
 }
@@ -110,8 +110,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopPDPerturbation& pd
 
   const hiopVector& delta_wx_in = *delta_wx_;
   const hiopVector& delta_wd_in = *delta_wd_;
-  const hiopVector& dcc = *delta_cc_;
-  const hiopVector& dcd = *delta_cd_;
 
   nlp_->runStats.kkt.tmUpdateInit.start();
 
@@ -300,7 +298,6 @@ bool hiopKKTLinSysCondensedSparse::build_kkt_matrix(const hiopPDPerturbation& pd
     
     //t.stop(); printf("ADD-symb  took %.5f\n", t.getElapsedTime());
   } else {
-    auto* lins_sys_sparse = dynamic_cast<hiopLinSolverSymSparse*>(linSys_);
     assert(linSys_);
     assert(M_condensed_);
     //todo assert(M_condensed_ == linSys_->sys_matrix());
@@ -360,8 +357,6 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   assert(0 == ryc.get_size() && "this KKT does not support equality constraints");
 
   size_type nx = rx.get_size();
-  size_type nd = rd.get_size();
-  size_type nyd = ryd.get_size();
 
   assert(rhs_);
   assert(rhs_->get_size() == nx);
@@ -420,8 +415,6 @@ bool hiopKKTLinSysCondensedSparse::solveCompressed(hiopVector& rx,
   nlp_->runStats.kkt.tmSolveInner.start();
   
   size_type nx = rx.get_size();
-  size_type nd = rd.get_size();
-  size_type nyd = ryd.get_size();
 
   // this is rhs used by the direct "condensed" solve
   if(rhs_ == NULL) {

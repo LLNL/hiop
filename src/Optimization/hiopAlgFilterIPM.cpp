@@ -76,11 +76,11 @@ namespace hiop
 {
 
 hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const bool within_FR)
- : c_soc(nullptr),
-   d_soc(nullptr),
-   soc_dir(nullptr),
-   within_FR_{within_FR},
+ : soc_dir(nullptr),
    onenorm_pr_curr_{0.0},
+   c_soc(nullptr),
+   d_soc(nullptr),
+   within_FR_{within_FR},
    pd_perturb_{nullptr},
    fact_acceptor_{nullptr}
 {
@@ -335,8 +335,8 @@ int hiopAlgFilterIPMBase::startingProcedure(hiopIterate& it_ini,
     return false;
   }
 
-  bool do_nlp_scaling = nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d);
-
+  [[maybe_unused]] const bool do_nlp_scaling = nlp->apply_scaling(c, d, gradf, Jac_c, Jac_d);
+  
   nlp->runStats.tmSolverInternal.start();
   nlp->runStats.tmStartingPoint.start();
 
@@ -558,7 +558,7 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
     const double target_mu = nlp->options->GetNumeric("tolerance");
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
-    double bound_relax_perturb;
+    double bound_relax_perturb = bound_relax_perturb_init;
     
     if(nlp->options->GetString("elastic_bound_strategy")=="mu_scaled") {
       bound_relax_perturb = 0.995*mu_new;
@@ -603,7 +603,7 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
       }
     }
     //compute infeasibility theta at trial point, since slacks and/or bounds are modified 
-    double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+    [[maybe_unused]] const double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
   } // end of if elastic_mode_on
   
   return true;
@@ -777,8 +777,8 @@ void hiopAlgFilterIPMBase::getDualSolutions(double* zl_a, double* zu_a, double* 
   if(solver_status_==NlpSolve_Pending) {
     nlp->log->printf(hovWarning, "getSolution: HiOp has not completed yet and solution returned may not be optimal.");
   }
-  hiopVector& zl = *it_curr->get_zl();
-  hiopVector& zu = *it_curr->get_zu();
+  [[maybe_unused]] hiopVector& zl = *it_curr->get_zl();
+  [[maybe_unused]] hiopVector&  zu = *it_curr->get_zu();
 
   nlp->get_dual_solutions(*it_curr, zl_a, zu_a, lambda_a);
 }
@@ -1307,7 +1307,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
                        num_adjusted_slacks);
       nlp->adjust_bounds(*it_trial);
       //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
-      double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+      [[maybe_unused]] const double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 #ifndef NDEBUG
         if(0==use_soc) {
           // TODO: check why this assertion fails
@@ -2278,7 +2278,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
                          num_adjusted_slacks);
         nlp->adjust_bounds(*it_trial);
         //compute infeasibility theta at trial point, since bounds changed --- note that the returned value won't change
-        double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
+        [[maybe_unused]] const double theta_temp = resid->compute_nlp_infeasib_onenorm(*it_trial, *_c_trial, *_d_trial);
 #ifndef NDEBUG
         if(0==use_soc) {
           // TODO: check why this assertion fails
@@ -2905,7 +2905,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
   double kkt_err_trial;
   double alpha_primal_soft;
   double alpha_dual_soft;
-  double infeas_nrm_soft;
+  double infeas_nrm_soft=0;     // to avoid uninitialized use below
 
   bool bret = false;
 
@@ -2921,7 +2921,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
       //evaluate the problem at the trial iterate (functions only)
       if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
         solver_status_ = Error_In_User_Function;
-        return Error_In_User_Function;
+        return true;
       }
       // compute rhs for soft feasibility restoration. Use resid_trial since it hasn't been used
       resid_trial->update(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial, *_grad_f,*_Jac_c,*_Jac_d, *logbar);      
@@ -2943,7 +2943,7 @@ bool hiopAlgFilterIPMBase::solve_soft_feasibility_restoration(hiopKKTLinSys* kkt
     //evaluate the problem at the trial iterate (functions only)
     if(!this->evalNlp_funcOnly(*it_trial, _f_nlp_trial, *_c_trial, *_d_trial)) {
       solver_status_ = Error_In_User_Function;
-      return Error_In_User_Function;
+      return true;
     }
 
     //update and adjust the duals
@@ -3023,7 +3023,7 @@ bool hiopAlgFilterIPMBase::compute_search_direction_inertia_free(hiopKKTLinSys* 
                                                                  const int iter_num)
 {
   size_type num_refact = 0;
-  const size_t max_refactorization = 10;
+  const size_t max_refactorization = 10u;
 
   while(true)
   {
@@ -3061,9 +3061,9 @@ bool hiopAlgFilterIPMBase::compute_search_direction_inertia_free(hiopKKTLinSys* 
     if(kkt->test_direction(dir, _Hess_Lagr)) {
       break;
     } else {
-      if(num_refact >= max_refactorization) {
+      if(static_cast<size_t>(num_refact) >= max_refactorization) {
         nlp->log->printf(hovError,
-                         "Reached max number (%d) of refactorization within an outer iteration.\n",
+                         "Reached max number (%lu) of refactorization within an outer iteration.\n",
                          max_refactorization);
         return false;
       }

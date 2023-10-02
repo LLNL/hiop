@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     fflush(stdout);
 
     double obj_value=-1e+20;
-    hiopSolveStatus status;
+    [[maybe_unused]] hiopSolveStatus status;
     
     //user's NLP -> implementation of hiop::hiopInterfaceMDS
     MdsEx1* my_nlp = new MdsEx1(n_sp, n_de);

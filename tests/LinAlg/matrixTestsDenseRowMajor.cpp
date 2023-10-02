@@ -255,8 +255,9 @@ void MatrixTestsDenseRowMajor::setLocalElement(
     const real_type val)
 {
   auto* xvec = dynamic_cast<hiop::hiopVectorPar*>(x);
-  if(xvec == nullptr)
+  if(xvec == nullptr) {
     THROW_NULL_DEREF;
+  }
 
     real_type* data = x->local_data();
     data[i] = val;

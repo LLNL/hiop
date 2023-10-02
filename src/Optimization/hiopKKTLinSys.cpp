@@ -557,7 +557,6 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
 
   int nx  = Hess_->m();
   assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
-  int neq = Jac_c_->m(), nineq = Jac_d_->m();
 
   //compute and put the barrier diagonals in
   //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -685,10 +684,10 @@ bool hiopKKTLinSysCompressedXYcYd::computeDirections(const hiopResidual* resid,
     return false;
   }
 
-  bool bret = compute_directions_for_full_space(resid, dir);  
+  const bool bret = compute_directions_for_full_space(resid, dir);  
 
   nlp_->runStats.tmSolverInternal.stop();
-  return true;
+  return bret;
 }
 
 #ifdef HIOP_DEEPCHECKS
@@ -790,7 +789,6 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
   Hess_=Hess;
 
   int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
-  int neq = Jac_c_->m(), nineq = Jac_d_->m();
 
   // compute barrier diagonals (these change only between outer optimiz iterations)
   // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -903,10 +901,10 @@ bool hiopKKTLinSysCompressedXDYcYd::computeDirections(const hiopResidual* resid,
     return false;
   }
   
-  bool bret = compute_directions_for_full_space(resid, dir);
+  const bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
-  return true;
+  return bret;
 }
 
 
@@ -922,10 +920,10 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   const hiopResidual &r=*resid;
 
   // in the order of rx, rd, ryc, ryd, rxl, rxu, rdl, rdu, rszl, rszu, rsvl, rsvu
-  const size_type nx = resid->rx->get_local_size();
-  const size_type nd = resid->rd->get_local_size();
-  const size_type nyc = resid->ryc->get_local_size();
-  const size_type nyd = resid->ryd->get_local_size();
+  const size_type nx = r.rx->get_local_size();
+  const size_type nd = r.rd->get_local_size();
+  const size_type nyc = r.ryc->get_local_size();
+  const size_type nyd = r.ryd->get_local_size();
   size_type dim_rhs = 5*nx + 5*nd + nyc + nyd;
   /***********************************************************************
    * solve the compressed system as a preconditioner
@@ -1509,7 +1507,6 @@ errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVec
 double hiopKKTLinSysLowRank::solveError(const hiopMatrixDense& M,  const hiopVector& x, hiopVector& rhs)
 {
   double relError;
-  double rhsnorm=rhs.infnorm();
   M.timesVec(1.0,rhs,-1.0,x);
   double resnorm=rhs.infnorm();
 
@@ -1905,11 +1902,11 @@ bool hiopPrecondKKTOpr::times_vec(hiopVector& y, const hiopVector& x)
 {
   res_cv_->copyFrom(x);
 
-  bool bret = kkt_->computeDirections(resid_, dir_); 
+  const bool bret = kkt_->computeDirections(resid_, dir_); 
   
   y.copyFrom(*dir_cv_);
 
-  return true;
+  return bret;
 }
 
 bool hiopPrecondKKTOpr::trans_times_vec(hiopVector& y, const hiopVector& x)
@@ -1959,8 +1956,6 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
   Hess_ = Hess;
 
   size_type nx  = Hess_->m();
-  size_type neq = Jac_c_->m();
-  size_type nineq = Jac_d_->m();
   assert(nx==Hess_->n());
   assert(nx==Jac_c_->n());
   assert(nx==Jac_d_->n());
@@ -2100,10 +2095,10 @@ bool hiopKKTLinSysNormalEquation::computeDirections(const hiopResidual* resid, h
     return false;
   }
   
-  bool bret = compute_directions_for_full_space(resid, dir);
+  const bool bret = compute_directions_for_full_space(resid, dir);
   
   nlp_->runStats.tmSolverInternal.stop();
-  return true;
+  return bret;
 }
 
 

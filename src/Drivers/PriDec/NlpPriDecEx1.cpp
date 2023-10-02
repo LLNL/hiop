@@ -211,7 +211,7 @@ solve_master(hiopVector& x,
     }
   }
 
-  bool ierr = my_nlp->set_include(include_r);
+  [[maybe_unused]] bool ierr = my_nlp->set_include(include_r);
   if(include_r) {
     assert(my_nlp->quad_is_defined());
   }
@@ -257,11 +257,11 @@ solve_master(hiopVector& x,
 
 };
 
-bool PriDecMasterProblemEx1::eval_f_rterm(size_t idx, const int& n,const  double* x, double& rval)
+bool PriDecMasterProblemEx1::eval_f_rterm(size_type idx, const int& n,const  double* x, double& rval)
 {
   rval = 0.;
   for(int i=0; i<n; i++) {
-    if(i==idx) {   
+    if(i==static_cast<int>(idx)) {   
       rval += (x[i]+S_)*(x[i]+S_);
     } else {
       rval += x[i]*x[i];
@@ -273,12 +273,12 @@ bool PriDecMasterProblemEx1::eval_f_rterm(size_t idx, const int& n,const  double
 };
 
 // x is handled by primalDecomp to be the correct coupled x
-bool PriDecMasterProblemEx1::eval_grad_rterm(size_t idx, const int& n, double* x, hiopVector& grad)
+bool PriDecMasterProblemEx1::eval_grad_rterm(size_type idx, const int& n, double* x, hiopVector& grad)
 {
-  assert(nc_ == n);
+  assert(static_cast<int>(nc_) == n);
   double* grad_vec = grad.local_data();
   for(int i=0; i<n; i++) {
-    if(i==idx) {   
+    if(i==static_cast<int>(idx)) {   
       grad_vec[i] = (x[i]+S_);
     } else {
       grad_vec[i] = x[i];

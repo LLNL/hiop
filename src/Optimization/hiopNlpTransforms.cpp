@@ -70,9 +70,10 @@ hiopFixedVarsRemover(hiopNlpFormulation* nlp,
                      const size_type& numFixedVars_local)
   : hiopNlpTransformation(nlp),
     n_fixed_vars_local(numFixedVars_local), fixedVarTol(fixedVarTol_),
-    Jacc_fs(NULL), Jacd_fs(NULL),
+    Jacc_fs(nullptr), Jacd_fs(nullptr),
+    Jacc_rs_ref(nullptr), Jacd_rs_ref(nullptr),
     fs2rs_idx_map(xl.get_local_size()),
-    x_rs_ref_(nullptr), Jacc_rs_ref(NULL), Jacd_rs_ref(NULL)
+    x_rs_ref_(nullptr)
 {
   xl_fs = xl.new_copy();
   xu_fs = xu.new_copy();
@@ -104,7 +105,7 @@ void hiopFixedVarsRemover::setFSVectorDistrib(index_type* vec_distrib_in, int nu
 /* allocates and returns the reduced-space column partitioning to be used internally by HiOp */
 index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
 {
-  size_t nlen = fs_vec_distrib.size(); //nlen==nranks+1
+  size_type nlen = fs_vec_distrib.size(); //nlen==nranks+1
   assert(nlen>=1);
   index_type* rsVecDistrib = new index_type[nlen];
   rsVecDistrib[0]=0;
@@ -133,12 +134,13 @@ index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
   assert(nlen==1);
 #endif
   assert(rsVecDistrib[0]==0);
+  const int intNLEN(static_cast<int>(nlen));
   //then accumulate these 
-  for(int r=1; r<nlen; r++)
+  for(int r=1; r<intNLEN; r++)
     rsVecDistrib[r] += rsVecDistrib[r-1];
   
   //finally substract these from the full-space index vector distribution 
-  for(int r=0; r<nlen; r++) {
+  for(int r=0; r<intNLEN; r++) {
     rsVecDistrib[r] = fs_vec_distrib[r]-rsVecDistrib[r];
   }
   assert(rsVecDistrib[0]==0);
@@ -197,7 +199,7 @@ bool hiopFixedVarsRemover::setupConstraintsPart(const int& neq, const int& nineq
 /* "copies" a full space vector/array to a reduced space vector/array */
 void hiopFixedVarsRemover::copyFsToRs(const hiopVector& fsVec,  hiopVector& rsVec)
 {
-  assert(fsVec.get_local_size()==fs2rs_idx_map.size());
+  assert(fsVec.get_local_size()==static_cast<int>(fs2rs_idx_map.size()));
   apply_to_vector(&fsVec, &rsVec);
 }
 
@@ -205,7 +207,8 @@ void hiopFixedVarsRemover::
 copyFsToRs(const hiopInterfaceBase::NonlinearityType* fs, hiopInterfaceBase::NonlinearityType* rs)
 {
   int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++) {
+  const int Size(static_cast<int>(fs2rs_idx_map.size()));
+  for(int i=0; i<Size; i++) {
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx>=0) {
       rs[rs_idx] = fs[i];
@@ -220,7 +223,8 @@ void hiopFixedVarsRemover::apply_inv_to_vector(const hiopVector* vec_rs, hiopVec
   const double* vec_rs_arr = vec_rs->local_data_const();
   double* vec_fs_arr = vec_fs->local_data();
   int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++) {
+  const int Size(static_cast<int>(fs2rs_idx_map.size()));
+  for(int i=0; i<Size; i++) {
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx<0) {
       vec_fs_arr[i] = xl_fs_arr[i];
@@ -236,7 +240,8 @@ void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector*
   double* vec_rs_arr = vec_rs->local_data();
   const double* vec_fs_arr = vec_fs->local_data_const();
   int rs_idx;
-  for(int i=0; i<fs2rs_idx_map.size(); i++) {
+  const int Size(fs2rs_idx_map.size());
+  for(int i=0; i<Size; i++) {
     rs_idx = fs2rs_idx_map[i];
     if(rs_idx>=0) {
       vec_rs_arr[rs_idx]=vec_fs_arr[i];
@@ -248,7 +253,7 @@ void hiopFixedVarsRemover::apply_to_vector(const hiopVector* vec_fs, hiopVector*
 void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, double* M_fs)
 {
   int rs_idx;
-  const size_t nfs = fs2rs_idx_map.size();
+  const int nfs = static_cast<int>(fs2rs_idx_map.size());
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
@@ -270,12 +275,12 @@ void hiopFixedVarsRemover::applyToMatrix(const double* M_rs, const int& m_in, do
 void hiopFixedVarsRemover::applyInvToMatrix(const double* M_fs, const int& m_in, double* M_rs)
 {
   int rs_idx;
-  const size_t nfs = fs2rs_idx_map.size();
+  const int nfs = static_cast<int>(fs2rs_idx_map.size());
   assert(nfs == fs_n_local());
   const int nrs = rs_n_local();
 
   for(int i=0; i<m_in; i++) {
-    for(int j=0; j<fs2rs_idx_map.size(); j++) {  
+    for(int j=0; j<nfs; j++) {  
       rs_idx = fs2rs_idx_map[j];
       if(rs_idx>=0) {
   	M_rs[i*nrs+rs_idx] = M_fs[i*nfs+j];
@@ -306,7 +311,7 @@ hiopFixedVarsRelaxer::~hiopFixedVarsRelaxer()
 void hiopFixedVarsRelaxer::
 relax(const double& fixed_var_tol, const double& fixed_var_perturb, hiopVector& xl, hiopVector& xu)
 {
-  double *xla=xl.local_data(), *xua=xu.local_data(), *v;
+  double *xla=xl.local_data(), *xua=xu.local_data();
   size_type n=xl.get_local_size();
   double xuabs;
   for(index_type i=0; i<n; i++) {
@@ -425,8 +430,8 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
                                              hiopVectorInt& cons_ineq_mapping)
   : hiopNlpTransformation(nlp),
     n_vars(gradf.get_size()), n_vars_local(gradf.get_local_size()),
-    scale_factor_obj(1.),
-    n_eq(c.get_size()), n_ineq(d.get_size())
+    n_eq(c.get_size()), n_ineq(d.get_size()),
+    scale_factor_obj(1.)
 {
   const double max_grad = nlp_->options->GetNumeric("scaling_max_grad");
   const double min_grad = nlp_->options->GetNumeric("scaling_min_grad");
@@ -462,10 +467,6 @@ hiopNLPObjGradScaling::hiopNLPObjGradScaling(hiopNlpFormulation* nlp,
   scale_factor_d->scale(1./max_grad);
   scale_factor_d->component_max(1.0);
   scale_factor_d->invert();
-
-  const double* eq_arr = scale_factor_c->local_data_const();
-  const double* ineq_arr = scale_factor_d->local_data_const();
-  double* scale_factor_cd_arr = scale_factor_cd->local_data();
 
   scale_factor_cd->copy_from_two_vec_w_pattern(*scale_factor_c, cons_eq_mapping, *scale_factor_d, cons_ineq_mapping);
 

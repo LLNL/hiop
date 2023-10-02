@@ -98,9 +98,9 @@ hiopVectorRaja(const size_type& glob_n,
   : hiopVector(),
     exec_space_(ExecSpace<MEMBACKEND, RAJAEXECPOL>(MEMBACKEND(mem_space))),
     exec_space_host_(ExecSpace<MEMBACKENDHOST, EXECPOLICYHOST>(MEMBACKENDHOST::new_backend_host())),
-    idx_cumsum_{nullptr},
     mem_space_(mem_space),
-    comm_(comm)
+    comm_(comm),
+    idx_cumsum_{nullptr}
 {
   n_ = glob_n;
 
