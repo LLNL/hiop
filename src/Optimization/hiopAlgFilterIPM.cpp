@@ -547,7 +547,10 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
                                                      double& mu_new,
                                                      double& tau_new)
 {
-  double new_mu = fmax(eps_tol/10, fmin(kappa_mu*mu_curr, pow(mu_curr,theta_mu)));
+  const double target_tol = nlp->options->GetNumeric("tolerance");
+  const double target_comp_tol = nlp->options->GetNumeric("comp_tol")/nlp->get_obj_scale();
+  double new_mu = std::fmax(0.0, std::fmin(kappa_mu*mu_curr, std::pow(mu_curr,theta_mu)));
+  new_mu = std::fmax(new_mu, std::fmin(target_tol, target_comp_tol)/(10.+1.) );
   if(fabs(new_mu-mu_curr)<1e-16) {
     return false;
   }
@@ -555,7 +558,7 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
   tau_new = fmax(tau_min,1.0-mu_new);
   
   if(elastic_mode_on) {
-    const double target_mu = nlp->options->GetNumeric("tolerance");
+    const double target_mu = target_tol;
     const double bound_relax_perturb_init = nlp->options->GetNumeric("elastic_mode_bound_relax_initial");
     const double bound_relax_perturb_min = nlp->options->GetNumeric("elastic_mode_bound_relax_final");
     double bound_relax_perturb = bound_relax_perturb_init;
