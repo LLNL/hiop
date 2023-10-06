@@ -166,7 +166,7 @@ int main(int argc, char **argv)
       return -1;
     }
   } else if(status<0) {
-    if(rank==0)r
+    if(rank==0)
       printf("solver returned negative solve status: %d (with objective is %18.12e)\n", status, obj_value);
     return -1;
   }
