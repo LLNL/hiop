@@ -1114,6 +1114,10 @@ copyRowsBlockFrom(const hiopMatrix& src_gen,
                   const index_type& rows_dst_idx_st,
                   const size_type& dest_nnz_st)
 {
+  if(n_rows <= 0) {
+    return;
+  }
+
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(this->n() >= src.n());
