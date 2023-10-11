@@ -217,7 +217,7 @@ int main(int argc, char** argv)
     // Remove testing objects
     delete mxn_sparse;
     delete mxn_empty;
-    delete nullxn_sparse
+    delete nullxn_sparse;
     delete m2xn_sparse;
     delete m3xn3_sparse;
     delete m4xn4_sparse;
@@ -374,7 +374,7 @@ int main(int argc, char** argv)
     // Remove testing objects
     delete mxn_sparse;
     delete mxn_empty;
-    delete nullxn_sparse
+    delete nullxn_sparse;
     delete mxn_sparse_2;
     delete m2xn_sparse;
     delete m3xn3_sparse;
