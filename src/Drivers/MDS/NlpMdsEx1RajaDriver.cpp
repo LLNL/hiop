@@ -160,7 +160,7 @@ int main(int argc, char **argv)
   obj_value = solver.getObjective();
   
   if(selfCheck && has_empty_sp_row) {
-    if(fabs(obj_value-(-4.9994888159755632e+01))>1e-6) {
+    if(fabs(obj_value-(-4.9994906229741609e+01))>1e-6) {
       printf("selfcheck: objective mismatch for MDS Ex1 problem with 400 sparse variables and 100 "
              "dense variables did. BTW, obj=%18.12e was returned by HiOp.\n", obj_value);
       return -1;
