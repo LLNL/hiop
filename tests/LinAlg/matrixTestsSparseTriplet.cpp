@@ -314,7 +314,7 @@ void MatrixTestsSparseTriplet::initializeMatrix(
 
   assert(A->numberOfNonzeros() == m * entries_per_row && "Matrix initialized with insufficent number of non-zero entries");
 
-  for(local_ordinal_type row = 0, col = 0, i = 0; row < m; row++, col = 0) 
+  for(local_ordinal_type row = 0, col = 0, i = 0; row < m && i < A->numberOfNonzeros(); row++, col = 0) 
   {
     for(local_ordinal_type j=0; j<entries_per_row-1; i++, j++, col += n / entries_per_row)
     {

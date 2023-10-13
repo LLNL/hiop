@@ -1034,7 +1034,7 @@ public:
     assert(A.n() >= B.n());
     assert(n_rows + A_rows_st <= A.m());
     assert(n_rows + B_rows_st <= B.m());
-    assert(nnz_A_need_to_copy<A_nnz);
+    assert(nnz_A_need_to_copy<=A_nnz);
     assert(nnz_A_need_to_copy+B_nnz_st<=B_nnz);
 
     const real_type A_val = one;
