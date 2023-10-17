@@ -96,6 +96,8 @@ private:
 
   static const std::map<std::string, gko::solver::trisolve_algorithm> alg_map_;
 
+  hiopMatrixSparse* M_host_{ nullptr }; ///< Host mirror for the KKT matrix
+
 public:
 
   /** called the very first time a matrix is factored. Allocates space

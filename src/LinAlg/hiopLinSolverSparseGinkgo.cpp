@@ -283,12 +283,21 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
       nnz_{0},
       index_covert_CSR2Triplet_{nullptr},
       index_covert_extra_Diag2CSR_{nullptr}
-  {}
+  {
+    if(nlp_->options->GetString("mem_space") == "device") {
+      M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
+    }
+  }
 
   hiopLinSolverSymSparseGinkgo::~hiopLinSolverSymSparseGinkgo()
   {
     delete [] index_covert_CSR2Triplet_;
     delete [] index_covert_extra_Diag2CSR_;
+    
+    // If memory space is device, delete allocated host mirrors
+    if(nlp_->options->GetString("mem_space") == "device") {
+      delete M_host_;
+    }
   }
 
   void hiopLinSolverSymSparseGinkgo::firstCall()
@@ -304,7 +313,19 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     auto gmres_restart = nlp_->options->GetInteger("ir_inner_restart");
     iterative_refinement_ = gmres_iter > 0;
 
-    host_mtx_ = transferTripletToCSR(exec_->get_master(), n_, M_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
+    // If the matrix is on device, copy it to the host mirror
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    if(mem_space == "device") {
+      auto host = exec_->get_master();
+      auto nnz = M_->numberOfNonzeros();
+      host->copy_from(exec_.get(), nnz, M_->M(), M_host_->M());
+      host->copy_from(exec_.get(), nnz, M_->i_row(), M_host_->i_row());
+      host->copy_from(exec_.get(), nnz, M_->j_col(), M_host_->j_col());
+    } else {
+      M_host_ = M_;
+    } 
+
+    host_mtx_ = transferTripletToCSR(exec_->get_master(), n_, M_host_, &index_covert_CSR2Triplet_, &index_covert_extra_Diag2CSR_);
     mtx_ = exec_ == (exec_->get_master()) ? host_mtx_ : gko::clone(exec_, host_mtx_);
     nnz_ = mtx_->get_num_stored_elements();
 
@@ -321,7 +342,15 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     if( !mtx_ ) {
       this->firstCall();
     } else {
-      update_matrix(M_, mtx_, host_mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
+      std::string mem_space = nlp_->options->GetString("mem_space");
+      if(mem_space == "device") {
+        auto host = exec_->get_master();
+        auto nnz = M_->numberOfNonzeros();
+        host->copy_from(exec_.get(), nnz, M_->M(), M_host_->M());
+      } else {
+        M_host_ = M_;
+      } 
+      update_matrix(M_host_, mtx_, host_mtx_, index_covert_CSR2Triplet_, index_covert_extra_Diag2CSR_);
     }
     
     gko_solver_ = gko::share(reusable_factory_->generate(mtx_));
@@ -353,20 +382,22 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
     hiopVectorPar* x = dynamic_cast<hiopVectorPar*>(&x_);
     assert(x != NULL);
     hiopVectorPar* rhs = dynamic_cast<hiopVectorPar*>(x->new_copy());
+
+    std::string mem_space = nlp_->options->GetString("mem_space");
+    auto exec = host;
+    if(mem_space == "device") {
+      exec = exec_;
+    }
+
     double* dx = x->local_data();
     double* drhs = rhs->local_data();
     const auto size = gko::dim<2>{(long unsigned int)n_, 1};
-    auto dense_x_host = vec::create(host, size, arr::view(host, n_, dx), 1);
-    auto dense_x = vec::create(exec_, size);
-    dense_x->copy_from(dense_x_host.get());
-    auto dense_b_host = vec::create(host, size, arr::view(host, n_, drhs), 1);
-    auto dense_b = vec::create(exec_, size);
-    dense_b->copy_from(dense_b_host.get());
+    auto dense_x = vec::create(exec, size, arr::view(exec, n_, dx), 1);
+    auto dense_b = vec::create(exec, size, arr::view(exec, n_, drhs), 1);
 
     gko_solver_->apply(dense_b.get(), dense_x.get());
     nlp_->runStats.linsolv.tmTriuSolves.stop();
     
-    dense_x_host->copy_from(dense_x.get());
     delete rhs; rhs=nullptr;
     return 1;
   }
