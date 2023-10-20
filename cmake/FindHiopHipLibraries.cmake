@@ -15,6 +15,7 @@ if (NOT DEFINED ROCM_PATH )
     set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "ROCm path")
   endif()
 endif()
+message(STATUS "ROCm path: ${ROCM_PATH}")
 set(CMAKE_MODULE_PATH "${ROCM_PATH}/lib/cmake" ${CMAKE_MODULE_PATH})
 
 # Set GPU Targets and Find all the HIP modules

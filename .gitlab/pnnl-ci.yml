@@ -25,19 +25,19 @@ variables:
   variables:
     SLURM_Q: "newell_shared"
     MY_CLUSTER: "newell"
-    SLURM_ARGS: --gres=gpu:1 --exclusive
+    SLURM_ARGS: --gres=gpu:1 -N 1 -n 8
 
 .marianas:
   variables:
     SLURM_Q: "dl"
     MY_CLUSTER: "marianas"
-    SLURM_ARGS: --gres=gpu:1 --exclusive
+    SLURM_ARGS: --gres=gpu:1 -N 1 -n 8
 
 .incline:
   variables:
     SLURM_Q: "incline"
     MY_CLUSTER: "incline"
-    SLURM_ARGS: --exclusive
+    SLURM_ARGS: -N 1 -n 8
 
 .pnnl_build: 
   extends:
@@ -69,7 +69,7 @@ variables:
       # Extra args for ctest
       export CTEST_CMD=$CTEST_CMD
 
-      sbatch -A EXASGD --exclusive -N 1 -n 8 -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
+      sbatch -A EXASGD -p $SLURM_Q -t $TIMELIMIT $SLURM_ARGS -o output -e output $WORKDIR/BUILD.sh $BUILD_SCRIPT_ARGS
       res=1
       set +xv
       while :;
@@ -99,7 +99,6 @@ build_on_incline:
   extends:
     - .pnnl_build
     - .incline
-  allow_failure: true
 
 pnnl_cleanup:
   needs: []
