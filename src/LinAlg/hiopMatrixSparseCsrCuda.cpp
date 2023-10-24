@@ -980,7 +980,7 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSpars
                                      CUDA_R_64F,
                                      CUSPARSE_ACTION_SYMBOLIC, 
                                      CUSPARSE_INDEX_BASE_ZERO,
-                                     CUSPARSE_CSR2CSC_ALG2,
+                                     CUSPARSE_CSR2CSC_ALG1,
                                      &buffer_size);
   assert(CUSPARSE_STATUS_SUCCESS == st);
   cudaError_t ret = cudaMalloc(&buffer_csc2csr_, sizeof(char)*buffer_size);
@@ -1009,7 +1009,7 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_numeric(const hiopMatrixSparse
                           CUDA_R_64F,
                           CUSPARSE_ACTION_NUMERIC,
                           CUSPARSE_INDEX_BASE_ZERO,
-                          CUSPARSE_CSR2CSC_ALG2,
+                          CUSPARSE_CSR2CSC_ALG1,
                           buffer_csc2csr_);
   assert(CUSPARSE_STATUS_SUCCESS == st);
 }
