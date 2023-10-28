@@ -158,7 +158,7 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_type idx, const int& n, cons
 
   hiopAlgFilterIPMNewton solver(&nlp);
 
-  hiopSolveStatus status = solver.run();
+  hiopSolveStatus status = solver.run(); (void)status;
   assert(status==Solve_Success ||
          status==Solve_Success_RelTol ||
          status==Solve_Acceptable_Level);

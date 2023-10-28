@@ -87,7 +87,7 @@ namespace hiop
     {
       int mpi_test_flag; MPI_Status mpi_status;
       int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       if (mpi_test_flag) {
         request_ = MPI_REQUEST_NULL;
       }
@@ -96,7 +96,7 @@ namespace hiop
 
     void wait() {
       auto ierr = MPI_Wait(&request_, MPI_STATUS_IGNORE);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       request_ = MPI_REQUEST_NULL;
     }
 
@@ -106,7 +106,7 @@ namespace hiop
       assert(request_ == MPI_REQUEST_NULL);
       int recv_sign = 0;
       int ierr = MPI_Irecv(&recv_sign, 1, MPI_INT, rank_from, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
     // only sende signal (that computation is finished), no actual functional information
     void post_send_end_signal(int tag, int rank_to, MPI_Comm comm)
@@ -114,7 +114,7 @@ namespace hiop
       assert(request_ == MPI_REQUEST_NULL);
       int send_sign = 0;
       int ierr = MPI_Isend(&send_sign, 1, MPI_INT, rank_to, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
 
     void post_recv(int tag, int rank_from, MPI_Comm comm)
@@ -122,14 +122,14 @@ namespace hiop
       assert(request_ == MPI_REQUEST_NULL);
       double* buffer_arr = buffer->local_data();
       int ierr = MPI_Irecv(buffer_arr, n_+1, MPI_DOUBLE, rank_from, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
       assert(request_ == MPI_REQUEST_NULL);
       double* buffer_arr = buffer->local_data();
       int ierr = MPI_Isend(buffer_arr, n_+1, MPI_DOUBLE, rank_to, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
     double value(){return buffer->local_data()[0];}
     void set_value(const double v){buffer->local_data()[0]=v;}
@@ -160,7 +160,7 @@ namespace hiop
     int test() {
       int mpi_test_flag; MPI_Status mpi_status;
       int ierr = MPI_Test(&request_, &mpi_test_flag, &mpi_status);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       if (mpi_test_flag) {
         request_ = MPI_REQUEST_NULL;
       }
@@ -168,20 +168,20 @@ namespace hiop
     }
     void wait() {
       int ierr = MPI_Wait(&request_, MPI_STATUS_IGNORE);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       request_ = MPI_REQUEST_NULL;
     }
     void post_recv(int tag, int rank_from, MPI_Comm comm)
     {
       assert(request_ == MPI_REQUEST_NULL);
       int ierr = MPI_Irecv(&idx, 1, MPI_INT, rank_from, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
     void post_send(int tag, int rank_to, MPI_Comm comm)
     {
       assert(request_ == MPI_REQUEST_NULL);
       int ierr = MPI_Isend(&idx, 1, MPI_INT, rank_to, tag, comm, &request_);
-      assert(MPI_SUCCESS == ierr);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
     }
     int value(){return idx;}
     void set_idx(const int& i){idx = i;}
@@ -573,8 +573,8 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   // only two rank types for now, master and evaluator/worker
 
   #ifdef HIOP_USE_MPI
-    int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(ierr == MPI_SUCCESS);
-    int ret = MPI_Comm_size(comm_world, &comm_size_); assert(ret==MPI_SUCCESS);
+    int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(MPI_SUCCESS==ierr); (void)ierr;
+    int ret = MPI_Comm_size(comm_world, &comm_size_); assert(ret==MPI_SUCCESS); (void)ret;
     if(my_rank_==0) { 
       my_rank_type_ = 0;
     } else {
@@ -628,8 +628,8 @@ hiopAlgPrimalDecomposition(hiopInterfacePriDecProblem* prob_in,
   // only two rank types for now, master and evaluator/worker
 
 #ifdef HIOP_USE_MPI
-  int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(ierr == MPI_SUCCESS);
-  int ret = MPI_Comm_size(comm_world_, &comm_size_); assert(ret==MPI_SUCCESS);
+  int ierr = MPI_Comm_rank(comm_world_, &my_rank_); assert(MPI_SUCCESS==ierr); (void)ierr;
+  int ret = MPI_Comm_size(comm_world_, &comm_size_); assert(ret==MPI_SUCCESS); (void)ret;
   if(my_rank_==0) { 
     my_rank_type_ = 0;
   } else {
@@ -892,7 +892,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
       // send basecase solutions to all ranks
 
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
-      assert(ierr == MPI_SUCCESS);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
 
       // set up recourse problem send/recv interface
       std::vector<ReqRecourseApprox* > rec_prob;
@@ -924,7 +924,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         for(int r=1; r< comm_size_;r++) {
           int cur_idx = cont_idx[idx];
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
-          assert(MPI_SUCCESS == ierr);  
+          assert(MPI_SUCCESS==ierr); (void)ierr;  
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
@@ -1015,7 +1015,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // Receive the index of the contingency to evaluate
         int mpi_test_flag = 0;
         int ierr = MPI_Recv(&cont_i, 1, MPI_INT, rank_master, 1, comm_world_, &status_);
-        assert(MPI_SUCCESS == ierr);  
+        assert(MPI_SUCCESS==ierr); (void)ierr;  
         cont_idx[0] = cont_i;
         // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
         // compute the recourse function values and gradients
@@ -1231,7 +1231,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         end_signal = 1; 
       }
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
-      assert(ierr == MPI_SUCCESS);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       
       for(auto it : rec_prob) {
         delete it;
@@ -1371,7 +1371,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
 
       // send basecase solutions to all ranks
       int ierr = MPI_Bcast(x_vec, n_, MPI_DOUBLE, rank_master, comm_world_);
-      assert(ierr == MPI_SUCCESS);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
 
       // set up recourse problem send/recv interface
       std::vector<ReqRecourseApprox* > rec_prob;
@@ -1408,7 +1408,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         for(int r=1; r< comm_size_;r++) {
           int cur_idx = cont_idx[idx];
           int ierr = MPI_Send(&cur_idx, 1, MPI_INT, r, 1,comm_world_);
-          assert(MPI_SUCCESS == ierr);  
+          assert(MPI_SUCCESS==ierr); (void)ierr;  
           // log_->printf(hovIteration, "rank %d to get contingency index  %d\n", r, cur_idx); //verbosity level 10
           idx += 1;
         }
@@ -1505,7 +1505,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         // Receive the index of the contingency to evaluate
         int mpi_test_flag = 0;
         int ierr = MPI_Recv(&cont_i, 1, MPI_INT, rank_master, 1, comm_world_, &status_);
-        assert(MPI_SUCCESS == ierr);  
+        assert(MPI_SUCCESS==ierr); (void)ierr;  
         cont_idx[0] = cont_i;
         // log_->printf(hovIteration, "contingency index %d, rank %d)\n", cont_idx[0],my_rank_); 
         // compute the recourse function values and gradients
@@ -1754,7 +1754,7 @@ void hiopAlgPrimalDecomposition::set_local_accum(const std::string local_accum)
         end_signal = 1; 
       }
       ierr = MPI_Bcast(&end_signal, 1, MPI_INT, rank_master, comm_world_);
-      assert(ierr == MPI_SUCCESS);
+      assert(MPI_SUCCESS==ierr); (void)ierr;
       
       for(auto it : rec_prob) {
         delete it;

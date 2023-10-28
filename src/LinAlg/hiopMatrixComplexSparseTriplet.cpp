@@ -79,7 +79,9 @@ namespace hiop
     int* iRow = stM->i_row();
     int* jCol = stM->j_col();
     int nnz = stM->numberOfNonzeros();
+#ifndef NDEBUG
     int ncols = stM->n();
+#endif
     // y += alpha*this*x
     for(int i=0; i<nnz; i++) {
       assert(iRow[i] < nrows);

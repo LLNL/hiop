@@ -17,7 +17,7 @@ void initializeSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   size_type* iRow = A->i_row();
   size_type* jCol = A->j_col();
   double* val = A->M();
-  const auto nnz = A->numberOfNonzeros();
+  const auto nnz = A->numberOfNonzeros(); (void)nnz;
   int nonZerosUsed = 0;
 
   size_type m = A->m();
@@ -81,7 +81,9 @@ void initializeRajaSymSparseMat(hiop::hiopMatrixSparse* mat, bool is_diag_pred)
   size_type* iRow = A->i_row_host();
   size_type* jCol = A->j_col_host();
   double* val = A->M_host();
+#ifndef NDEBUG
   const auto nnz = A->numberOfNonzeros();
+#endif
   int nonZerosUsed = 0;
 
   size_type m = A->m();
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MPI
   int rank = 0;
   int numRanks = 1;
-  int err;
+  int err; (void)err;
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
   err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);

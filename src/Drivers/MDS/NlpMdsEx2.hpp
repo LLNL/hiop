@@ -429,7 +429,7 @@ public:
     //values for sparse Jacobian if requested by the solver
     if(MJacS!=NULL) {
       int nnzit=0;
-      int con_idx=0;  
+      int con_idx=0; (void)con_idx;
 
        //sparse Jacobian EQ w.r.t. x and s
        for(int i=0; i<ns_; i++) {

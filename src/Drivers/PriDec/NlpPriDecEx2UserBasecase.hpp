@@ -99,7 +99,7 @@ public:
   
   void get_rec_obj(const size_type& n, const double* x, double& obj_value)
   {
-    bool temp = rec_evaluator_->eval_f(n, x, false, obj_value);
+    bool temp = rec_evaluator_->eval_f(n, x, false, obj_value); (void)temp;
     assert(temp);
   }
 

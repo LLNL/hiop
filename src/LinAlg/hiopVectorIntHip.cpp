@@ -91,6 +91,7 @@ void hiopVectorIntHip::copy_from_vectorseq(const hiopVectorIntSeq& src)
 {
   assert(src.get_local_size() == sz_);
   auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+  (void)b;
   assert(b);
 }
 
@@ -98,12 +99,14 @@ void hiopVectorIntHip::copy_to_vectorseq(hiopVectorIntSeq& dest) const
 {
   assert(dest.get_local_size() == sz_);
   auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+  (void)b;
   assert(b);
 }
 
 void hiopVectorIntHip::set_to_zero()
 {
   hipError_t cuerr = hipMemset(buf_, 0, sz_);
+  (void)cuerr;
   assert(cuerr == hipSuccess);
 }
 
@@ -112,6 +115,7 @@ void hiopVectorIntHip::set_to_constant(const index_type c)
 {
   hipError_t cuerr = hipMemset(buf_, c, sz_);
   assert(cuerr == hipSuccess);
+  (void)cuerr;
 }
 
 /**

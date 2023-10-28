@@ -149,7 +149,10 @@ void hiopMatrixSparseTriplet::timesMatTrans(double beta,
   auto& W = dynamic_cast<hiopMatrixDense&>(Wmat);
   const auto& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
   const hiopMatrixSparseTriplet& M1 = *this;
-  const int m1 = M1.nrows_, nx = M1.ncols_, m2 = M2.nrows_;
+#ifndef NDEBUG
+  const int nx = M1.ncols_;
+#endif
+  const int m1 = M1.nrows_, m2 = M2.nrows_;
   assert(nx==M1.ncols_);
   assert(nx==M2.ncols_);
   assert(M2.ncols_ == nx);
@@ -393,7 +396,9 @@ addMDinvMtransToDiagBlockOfSymDeMatUTri(int rowAndCol_dest_start,
                                         const hiopVector& D, hiopMatrixDense& W) const
 {
   const int row_dest_start = rowAndCol_dest_start, col_dest_start = rowAndCol_dest_start;
+#ifndef NDEBUG
   int n = this->nrows_;
+#endif
   assert(row_dest_start>=0 && row_dest_start+n<=W.m());
   assert(col_dest_start>=0 && col_dest_start+nrows_<=W.n());
   assert(D.get_size() == this->ncols_);
@@ -452,7 +457,10 @@ addMDinvNtransToSymDeMatUTri(int row_dest_start, int col_dest_start,
 {
   const hiopMatrixSparseTriplet& M2 = dynamic_cast<const hiopMatrixSparseTriplet&>(M2mat);
   const hiopMatrixSparseTriplet& M1 = *this;
-  const int m1 = M1.nrows_, nx = M1.ncols_, m2 = M2.nrows_;
+#ifndef NDEBUG
+  const int nx = M1.ncols_,
+#endif  
+  const int m1 = M1.nrows_, m2 = M2.nrows_;
   assert(nx==M1.ncols_);
   assert(nx==M2.ncols_);
   assert(D.get_size() == nx);
@@ -797,18 +805,20 @@ void hiopMatrixSparseTriplet::set_Jac_FR(const hiopMatrixSparse& Jac_c,
   const auto& J_d = dynamic_cast<const hiopMatrixSparseTriplet&>(Jac_d);
     
   // assuming original Jac is sorted!
-  int nnz_Jac_c = J_c.numberOfNonzeros();
-  int nnz_Jac_d = J_d.numberOfNonzeros();
   int m_c = J_c.m();
   int m_d = J_d.m();
   int n_c = J_c.n();
   int n_d = J_d.n();
   assert(n_c == n_d);
 
+#ifndef NDEBUG
+  int nnz_Jac_c = J_c.numberOfNonzeros();
+  int nnz_Jac_d = J_d.numberOfNonzeros();
   int nnz_Jac_c_new = nnz_Jac_c + 2*m_c;
   int nnz_Jac_d_new = nnz_Jac_d + 2*m_d;
 
   assert(nnz_ == nnz_Jac_c_new + nnz_Jac_d_new);
+#endif
   
   if(J_c.row_starts_ == nullptr){
     J_c.row_starts_ = J_c.allocAndBuildRowStarts();
@@ -1046,8 +1056,10 @@ void hiopMatrixSparseTriplet::copySubmatrixFrom(const hiopMatrix& src_gen,
                                                 const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+#ifndef NDEBUG
   auto m_rows = src.m();
   auto n_cols = src.n();
+#endif
 
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
@@ -1080,9 +1092,10 @@ void hiopMatrixSparseTriplet::copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                                      const bool offdiag_only)
 {
   const hiopMatrixSparseTriplet& src = dynamic_cast<const hiopMatrixSparseTriplet&>(src_gen);
+#ifndef NDEBUG
   auto m_rows = src.n();
   auto n_cols = src.m();
-
+#endif
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
   assert(m_rows + dest_row_st <= this->m());
@@ -1354,9 +1367,10 @@ bool hiopMatrixSparseTriplet::is_diagonal() const
 
 void hiopMatrixSparseTriplet::extract_diagonal(hiopVector& diag_out) const
 {
+#ifndef NDEBUG
   size_type vec_dim = diag_out.get_local_size();
   assert( vec_dim == nrows_ && vec_dim == ncols_);
-  
+#endif
   hiopVectorPar& vec = dynamic_cast<hiopVectorPar&>(diag_out);
   double* v_data = vec.local_data();
   
@@ -1386,14 +1400,15 @@ void hiopMatrixSymSparseTriplet::set_Hess_FR(const hiopMatrixSparse& Hess,
   // assuming original Hess is sorted, and in upper-triangle format
 
   int m_h = Hess.m();
+#ifndef NDEBUG
   int n_h = Hess.n();
   assert(n_h == m_h);
+#endif
   
   // note that n_h can be zero, i.e., original hess is empty. 
   // Hence we use add_diag.get_size() to detect the length of x in the base problem
-  int nnz_h_FR = add_diag.get_size() + Hess_base.numberOfOffDiagNonzeros() ;
-
-  assert(nnz_ == nnz_h_FR);
+  int nnz_h_FR = add_diag.get_size() + Hess_base.numberOfOffDiagNonzeros();
+  assert(nnz_ == nnz_h_FR); (void)nnz_h_FR;
   
   if(Hess_base.row_starts_ == nullptr){
     Hess_base.row_starts_ = Hess_base.allocAndBuildRowStarts();

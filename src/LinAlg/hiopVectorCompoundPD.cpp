@@ -956,7 +956,7 @@ void hiopVectorCompoundPD::print(FILE* file/*=nullptr*/, const char* msg/*=nullp
   int numranks = 1;
   MPI_Comm comm_ = MPI_COMM_SELF;
   if(rank>=0) {
-    int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
+    int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS); (void)err;
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
   }
 #endif
@@ -1008,6 +1008,7 @@ void hiopVectorCompoundPD::set_array_from_to(hiopInterfaceBase::NonlinearityType
 bool hiopVectorCompoundPD::is_equal(const hiopVector& vec) const
 {
   assert(0 && "not required.");
+  return false;
 }
 
 void hiopVectorCompoundPD::addVector(hiopVector *v) 

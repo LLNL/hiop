@@ -356,7 +356,7 @@ int hiopResidual::update(const hiopIterate& it,
                  nrmInf_bar_complem};
   double aux_g[6];
   int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm()); 
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   nrmInf_nlp_optim=aux_g[0];
   nrmInf_nlp_feasib=aux_g[1];
   nrmInf_nlp_complem=aux_g[2];
@@ -606,7 +606,7 @@ void hiopResidual::update_soc(const hiopIterate& it,
   //otherwise, if calling infnorm() for each vector, there will be 12 Allreduce's, each of 1 double
   double aux[6] = {nrmInf_nlp_optim,nrmInf_nlp_feasib,nrmInf_nlp_complem,nrmInf_bar_optim,nrmInf_bar_feasib,nrmInf_bar_complem}, aux_g[6];
   int ierr = MPI_Allreduce(aux, aux_g, 6, MPI_DOUBLE, MPI_MAX, nlp->get_comm());
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   nrmInf_nlp_optim = aux_g[0];
   nrmInf_nlp_feasib = aux_g[1];
   nrmInf_nlp_complem = aux_g[2];

@@ -1609,7 +1609,7 @@ bool hiopFRProbDense::eval_f(const size_type& n, const double* x, bool new_x, do
 
 #ifdef HIOP_USE_MPI
   double obj_global;
-  int ierr = MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   obj_value = obj_global;
 #endif
 
@@ -1676,7 +1676,7 @@ bool hiopFRProbDense::eval_cons(const size_type& n,
       wrk_c_->axpy(1.0, *wrk_eq_);
     }
     int ierr = MPI_Bcast(wrk_c_->local_data(), m_eq_, MPI_DOUBLE, comm_size_-1, comm_); 
-    assert(ierr==MPI_SUCCESS);
+    assert(MPI_SUCCESS==ierr); (void)ierr;
   }
 
   // compute FR equality constratint body d-pi+ni
@@ -1688,7 +1688,7 @@ bool hiopFRProbDense::eval_cons(const size_type& n,
       wrk_d_->axpy(1.0, *wrk_ineq_);
     }
     int ierr = MPI_Bcast(wrk_d_->local_data(), m_ineq_, MPI_DOUBLE, comm_size_-1, comm_); 
-    assert(ierr==MPI_SUCCESS);
+    assert(MPI_SUCCESS==ierr); (void)ierr;
   }
 #else
   // compute FR equality constratint body c-pe+ne

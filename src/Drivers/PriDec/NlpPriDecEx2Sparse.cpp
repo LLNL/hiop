@@ -99,7 +99,7 @@ bool PriDecMasterProbleEx2Sparse::eval_f_rterm(size_type idx, const int& n, cons
 {
   assert(nx_==n);
   rval=-1e+20;
-  hiopSolveStatus status;
+  hiopSolveStatus status; (void)status;
   double* xi;
   
 #ifdef HIOP_USE_MPI

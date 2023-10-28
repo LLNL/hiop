@@ -13,8 +13,8 @@ DenseConsEx2::DenseConsEx2(int n, bool unconstrained)
   my_rank = 0; 
 #ifdef HIOP_USE_MPI
   comm = MPI_COMM_WORLD;
-  int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
-  ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr); (void)ierr;
+  ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
 
   if(unconstrained_) {
@@ -111,7 +111,7 @@ bool DenseConsEx2::eval_f(const size_type& n, const double* x, bool new_x, doubl
   }
 #ifdef HIOP_USE_MPI
   double obj_global;
-  int ierr = MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
   obj_value = obj_global;
 #endif
   return true;
@@ -212,7 +212,7 @@ bool DenseConsEx2::eval_cons(const size_type& n,
 #ifdef HIOP_USE_MPI
   if(num_cons>0) {
     double* cons_global = new double[num_cons];
-    int ierr = MPI_Allreduce(cons, cons_global, num_cons, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+    int ierr = MPI_Allreduce(cons, cons_global, num_cons, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     memcpy(cons, cons_global, num_cons*sizeof(double));
     delete[] cons_global;
   }

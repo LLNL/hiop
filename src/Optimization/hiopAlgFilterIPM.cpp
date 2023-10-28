@@ -601,7 +601,7 @@ bool hiopAlgFilterIPMBase::update_log_barrier_params(hiopIterate& it,
         
         // adjust duals
         bool bret = it.adjustDuals_primalLogHessian(mu_new,kappa_Sigma);
-        assert(bret);
+        assert(bret); (void)bret;
       }
     }
     //compute infeasibility theta at trial point, since slacks and/or bounds are modified 
@@ -1170,7 +1170,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       }
     } else {
       auto* fact_acceptor_dwd = dynamic_cast<hiopFactAcceptorInertiaFreeDWD*> (fact_acceptor_);
-      assert(fact_acceptor_dwd);
+      assert(fact_acceptor_dwd); (void)fact_acceptor_dwd;
       //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
       if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
         //it failed under safe mode
@@ -2135,7 +2135,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         } 
       } else {
         auto* fact_acceptor_dwd = dynamic_cast<hiopFactAcceptorInertiaFreeDWD*> (fact_acceptor_);
-        assert(fact_acceptor_dwd);
+        assert(fact_acceptor_dwd); (void)fact_acceptor_dwd;
         bool linsol_safe_mode_on_before = linsol_safe_mode_on;
         //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
         if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
@@ -2623,7 +2623,7 @@ int hiopAlgFilterIPMBase::apply_second_order_correction(hiopKKTLinSys* kkt,
   double alpha_dual_soc = alpha_primal_soc;
 
   int num_soc = 0;
-  bool bret = true;
+  bool bret = true; (void)bret;
   int ls_status = 0;
   
   // set initial c/d for soc
@@ -2704,7 +2704,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
     if (nlpMDS == nullptr) {
       hiopNlpSparse* nlpSp = dynamic_cast<hiopNlpSparse*>(nlp);
       if(nullptr == nlpSp) {
-        hiopNlpDenseConstraints* nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp);
+        hiopNlpDenseConstraints* nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp); (void)nlpD;
         assert(nlpD && "Unkown system is provided. Please pick one from Dense, Sparse or MDS. ");
         // this is Dense system
         hiopFRProbDense nlp_fr_interface(*this);
@@ -2848,7 +2848,7 @@ bool hiopAlgFilterIPMBase::reset_var_from_fr_sol(hiopKKTLinSys* kkt, bool reset_
     double alpha_primal_temp = 1.0;
     double alpha_dual_temp = 1.0;
     bool bret = it_curr->fractionToTheBdry(*dir, _tau, alpha_primal_temp, alpha_dual_temp);
-    assert(bret);
+    assert(bret); (void)bret;
 
     it_trial->takeStep_duals(*it_curr, *dir, alpha_primal_temp, alpha_dual_temp);
 

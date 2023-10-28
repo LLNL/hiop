@@ -134,8 +134,13 @@ namespace hiop
     Jac_dMDS_ = dynamic_cast<const hiopMatrixMDS*>(Jac_d);
     if(!Jac_dMDS_) { assert(false); return false; }
 
-    int nxs = HessMDS_->n_sp(), nxd = HessMDS_->n_de(), nx = HessMDS_->n(); 
-    int neq = Jac_cMDS_->m(), nineq = Jac_dMDS_->m();
+#ifndef NDEBUG
+    int nxs = HessMDS_->n_sp();
+    int nx = HessMDS_->n();
+#endif
+    int nxd = HessMDS_->n_de();
+    int neq = Jac_cMDS_->m();
+    int nineq = Jac_dMDS_->m();
 
     assert(nx==nxs+nxd);
     assert(nx==Jac_cMDS_->n_sp()+Jac_cMDS_->n_de());
@@ -317,7 +322,10 @@ namespace hiop
 
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
-    int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+#ifndef NDEBUG
+    int nx=rx.get_size();
+#endif
+    int nyc=ryc.get_size(), nyd=ryd.get_size();
     int nxsp=Hxs_->get_size(); assert(nxsp<=nx);
     int nxde = nlpMDS_->nx_de();
     assert(nxsp+nxde==nx);

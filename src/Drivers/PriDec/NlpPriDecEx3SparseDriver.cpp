@@ -33,8 +33,8 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
   int comm_size;
-  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr); (void)ierr;
+  ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr); (void)ierr;
   double t3 =  MPI_Wtime(); 
   double t4 = 0.; 
 #endif

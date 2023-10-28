@@ -17,7 +17,7 @@ namespace hiop
     int P=0;
     if(col_part) {
 #ifdef HIOP_USE_MPI
-      int ierr=MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
+      int ierr=MPI_Comm_rank(comm_, &P); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
       glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
     } else {

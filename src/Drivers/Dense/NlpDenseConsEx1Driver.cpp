@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   int rank = 0;
 #ifdef HIOP_USE_MPI
   int numRanks = 1;
-  int err;
+  int err; (void)err;
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
   err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
