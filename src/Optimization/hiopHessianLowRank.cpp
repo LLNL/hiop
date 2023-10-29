@@ -1364,13 +1364,13 @@ void hiopHessianInvLowRank_obsolette::
 symmetricTimesMat(double beta, hiopMatrixDense& W,
 		  double alpha, const hiopMatrixDense& X)
 {
-  size_type l = St->m();
-  size_type k = W.m();
+  size_type l = St->m(); (void)l;
+  size_type k = W.m(); (void)k;
 #ifndef NDEBUG
   size_type n=St->n();
-  assert(n==H0->get_size());
   assert(k==W.n());
-  assert(l==Yt->m());
+  assert(l==Yt->m());  
+  assert(n==H0->get_size());
   assert(n==Yt->n()); assert(n==St->n());
   assert(k==X.m()); assert(n==X.n());
 #endif
