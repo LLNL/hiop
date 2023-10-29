@@ -90,10 +90,8 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA(size_type rows, size_type cols,
     buffer_gemm5_(nullptr),
     mat_sp_descr_(nullptr)
 {
-#ifndef NDEBUG
-  cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
+  cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_); (void)ret_sp;
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
-#endif
 
   // the call below initializes the fields of mat_descr_ to what we need
   //  - MatrixType -> CUSPARSE_MATRIX_TYPE_GENERAL
@@ -120,10 +118,8 @@ hiopMatrixSparseCSRCUDA::hiopMatrixSparseCSRCUDA()
     buffer_gemm5_(nullptr),
     mat_sp_descr_(nullptr)
 {
-#ifndef NDEBUG
-  cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_);
+  cusparseStatus_t ret_sp = cusparseCreate(&h_cusparse_); (void)ret_sp;
   assert(ret_sp == CUSPARSE_STATUS_SUCCESS);
-#endif
 
   // the call below initializes the fields of mat_descr_ to what we need
   //  - MatrixType -> CUSPARSE_MATRIX_TYPE_GENERAL
@@ -175,7 +171,6 @@ void hiopMatrixSparseCSRCUDA::alloc()
   assert(cudaSuccess == err && values_);
 
   assert(nullptr == mat_sp_descr_);
-#ifndef NDEBUG
   auto st = cusparseCreateCsr(&mat_sp_descr_,
                               nrows_,
                               ncols_,
@@ -187,8 +182,8 @@ void hiopMatrixSparseCSRCUDA::alloc()
                               CUSPARSE_INDEX_32I,
                               CUSPARSE_INDEX_BASE_ZERO,
                               CUDA_R_64F);
+  (void)st;
   assert(st == CUSPARSE_STATUS_SUCCESS);
-#endif
 }
 
 void hiopMatrixSparseCSRCUDA::dealloc()
@@ -874,7 +869,7 @@ void hiopMatrixSparseCSRCUDA::times_mat_numeric(double beta,
   auto& X = *this;
 
   if(beta==0.0) {
-    auto cret = cudaMemset(M.values_, 0x0, M.nnz_*sizeof(double));
+    auto cret = cudaMemset(M.values_, 0x0, M.nnz_*sizeof(double)); (void)cret;
     assert(cudaSuccess == cret);
   }
   
@@ -893,6 +888,7 @@ void hiopMatrixSparseCSRCUDA::times_mat_numeric(double beta,
                                         compute_type,
                                         CUSPARSE_SPGEMM_DEFAULT,
                                         M.gemm_sp_descr_);
+  (void)st;
   assert(st == CUSPARSE_STATUS_SUCCESS);
 }
 
@@ -999,6 +995,7 @@ void hiopMatrixSparseCSRCUDA::form_transpose_from_symbolic(const hiopMatrixSpars
                                      &buffer_size);
   assert(CUSPARSE_STATUS_SUCCESS == st);
   cudaError_t ret = cudaMalloc(&buffer_csc2csr_, sizeof(char)*buffer_size);
+  (void)ret;
   assert(cudaSuccess == ret);
 }
 
