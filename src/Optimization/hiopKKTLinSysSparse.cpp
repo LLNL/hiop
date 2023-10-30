@@ -208,8 +208,10 @@ namespace hiop
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     int nx=rx.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+#ifndef NDEBUG
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
+#endif
     if(rhs_ == NULL) {
       rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
                                                  nx+nyc+nyd);
@@ -538,8 +540,10 @@ namespace hiop
     nlp_->runStats.kkt.tmSolveRhsManip.start();
 
     int nx=rx.get_size(), nd=rd.get_size(), nyc=ryc.get_size(), nyd=ryd.get_size();
+#ifndef NDEBUG
     int nxsp=Hx_->get_size();
     assert(nxsp==nx);
+#endif
     if(rhs_ == NULL) {
       rhs_ = LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"),
                                                  nx+nd+nyc+nyd);
@@ -1083,8 +1087,10 @@ namespace hiop
 
     size_type nx=rx.get_size(), nd=rd.get_size(), neq=ryc.get_size(), nineq=ryd.get_size(),
               ndl = nlp_->m_ineq_low(), ndu = nlp_->m_ineq_upp(), nxl = nlp_->n_low(), nxu = nlp_->n_upp();
+#ifndef NDEBUG
     size_type nxsp=Hx_->get_size();
     assert(nxsp==nx);
+#endif
     int n = nx + neq + nineq + nd + ndl + ndu + nxl + nxu + ndl + ndu + nxl + nxu;
 
     if(rhs_ == nullptr) {

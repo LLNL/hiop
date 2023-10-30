@@ -108,7 +108,7 @@ bool PriDecMasterProbleEx2::eval_f_rterm(size_type idx, const int& n, const doub
   assert(nx_==n);
   rval=-1e+20;
   double* xi;
-  hiopSolveStatus status;
+  hiopSolveStatus status; (void)status;
   
 #ifdef HIOP_USE_MPI
   // uncomment if want to monitor contingency computing time

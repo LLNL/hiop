@@ -356,10 +356,11 @@ bool hiopKKTLinSysCondensedSparse::solve_compressed_direct(hiopVector& rx,
   assert(Jac_dSp_);
   assert(0 == ryc.get_size() && "this KKT does not support equality constraints");
 
+#ifndef NDEBUG
   size_type nx = rx.get_size();
-
   assert(rhs_);
   assert(rhs_->get_size() == nx);
+#endif
 
    /* (H+Dx+Jd^T*(Dd+delta_wd*I)*Jd)dx = rx + Jd^T*Dd*ryd + Jd^T*rd
    * dd = Jd*dx - ryd

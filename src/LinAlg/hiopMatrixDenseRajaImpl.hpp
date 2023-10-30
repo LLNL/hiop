@@ -87,7 +87,7 @@ hiopMatrixDenseRaja(const size_type& m,
   int P     = 0;
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr = MPI_Comm_rank(comm_, &P); assert(ierr == MPI_SUCCESS);
+    int ierr = MPI_Comm_rank(comm_, &P); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
     glob_jl_ = col_part[P];
     glob_ju_ = col_part[P+1];
@@ -420,7 +420,7 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::shiftRows(size_type shift)
   assert(m_local_ - abs(shift) >= 1);
 #if defined(HIOP_DEEPCHECKS) && !defined(NDEBUG)
   copyFromDev();
-  double test1 = 8.3, test2 = -98.3;
+  double test1 = 8.3, test2 = -98.3; (void)test1; (void)test2;
   if(n_local_>0)
   {
     //not sure if memcpy is copying sequentially on all systems. we check this.
@@ -706,7 +706,7 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::timesVec(double beta,
   //here m_local_ is > 0
   exec_space_host_.copy(ya_host_, ya, m_local_, exec_space_);
   int ierr = MPI_Allreduce(ya_host_, yglob_host_, m_local_, MPI_DOUBLE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   exec_space_.copy(ya, yglob_host_, m_local_, exec_space_host_);
 #endif
 }
@@ -832,7 +832,7 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::timesMat(double beta,
 
   // int n2Red=W.m()*W.n(); 
   // double* Wglob = new_mxnlocal_buff(); //[n2Red];
-  // int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
+  // int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(MPI_SUCCESS==ierr); (void)ierr;
   // memcpy(WM[0], Wglob, n2Red*sizeof(double));
 #endif // HIOP_USE_MPI
 }
@@ -994,7 +994,7 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& Xma
   auto& W = dynamic_cast<hiopMatrixDenseRaja&>(Wmat);
   assert(W.n_local_==W.n_global_ && "not intended for the case when the result matrix is distributed.");
 #ifdef HIOP_DEEPCHECKS
-  const auto& X = dynamic_cast<const hiopMatrixDenseRaja&>(Xmat);
+  const auto& X = dynamic_cast<const hiopMatrixDenseRaja&>(Xmat); (void)X;
   assert(W.isfinite());
   assert(X.isfinite());
   assert(this->n()==X.n());
@@ -1017,7 +1017,7 @@ timesMatTrans(double beta, hiopMatrix& Wmat, double alpha, const hiopMatrix& Xma
   double* Wdata_host = W.data_host_;
   W.copyFromDev();
   double* Wglob = W.new_mxnlocal_host_buff();
-  int ierr = MPI_Allreduce(Wdata_host, Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(Wdata_host, Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   memcpy(Wdata_host, Wglob, n2Red * sizeof(double));
   W.copyToDev();
 #endif
@@ -1354,7 +1354,7 @@ double hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::max_abs_value()
 
 #ifdef HIOP_USE_MPI
   double maxvg;
-  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return maxvg;
 #endif
   return maxv;
@@ -1404,7 +1404,7 @@ void hiopMatrixDenseRaja<MEMBACKEND, RAJAEXECPOL>::row_max_abs_value(hiopVector 
                            MPI_DOUBLE,
                            MPI_MAX,
                            comm_);
-  assert(ierr==MPI_SUCCESS);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   vec.copy_from_vectorpar(maxvg);
 #endif
 }

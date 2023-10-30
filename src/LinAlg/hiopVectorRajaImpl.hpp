@@ -114,7 +114,7 @@ hiopVectorRaja(const size_type& glob_n,
   if(col_part)
   {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm_, &P);  assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Comm_rank(comm_, &P);  assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
     glob_il_ = col_part[P];
     glob_iu_ = col_part[P+1];
@@ -329,8 +329,10 @@ void hiopVectorRaja<MEM, POL>::copy_from_indexes(const hiopVector& vv, const hio
   double* dd = data_dev_;
   double* vd = v.data_dev_;
 
+#ifndef NDEBUG
   size_type nv = v.get_local_size();
-  
+#endif
+
   RAJA::forall< hiop_raja_exec >(RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -568,7 +570,9 @@ copyToStartingAt_w_pattern(hiopVector& vec, int start_index_in_dest, const hiopV
   }
 
   index_type* nnz_cumsum = idx_cumsum_->local_data();
+#ifndef NDEBUG
   index_type v_n_local = v.n_local_;
+#endif
   RAJA::forall<hiop_raja_exec>(
     RAJA::RangeSegment(1, n_local_+1),
     RAJA_LAMBDA(RAJA::Index_type i)
@@ -829,7 +833,7 @@ double hiopVectorRaja<MEM, POL>::twonorm() const
 #ifdef HIOP_USE_MPI
   double nrm_global;
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_DOUBLE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS == ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return std::sqrt(nrm_global);
 #endif  
   return std::sqrt(nrm);
@@ -863,7 +867,7 @@ double hiopVectorRaja<MEM, POL>::dotProductWith(const hiopVector& vec) const
 #ifdef HIOP_USE_MPI
   double dotprodG;
   int ierr = MPI_Allreduce(&dotprod, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   dotprod=dotprodG;
 #endif
 
@@ -883,7 +887,7 @@ double hiopVectorRaja<MEM, POL>::infnorm() const
 #ifdef HIOP_USE_MPI
   double nrm_global;
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_DOUBLE, MPI_MAX, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm_global;
 #endif
 
@@ -923,7 +927,7 @@ double hiopVectorRaja<MEM, POL>::onenorm() const
   double norm1 = onenorm_local();
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr = MPI_Allreduce(&norm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&norm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm1_global;
 #endif
   return norm1;
@@ -1216,8 +1220,9 @@ void hiopVectorRaja<MEM, POL>::axpy(double alpha, const hiopVector& xvec, const 
   double* dd = data_dev_;
   double* xd = const_cast<double*>(x.data_dev_);
   index_type* id = const_cast<index_type*>(idxs.local_data_const());
+#ifndef NDEBUG
   auto tmp_n_local = n_local_;
-
+#endif
   RAJA::forall< hiop_raja_exec >( RAJA::RangeSegment(0, n_local_),
     RAJA_LAMBDA(RAJA::Index_type i)
     {
@@ -1384,7 +1389,7 @@ double hiopVectorRaja<MEM, POL>::min() const
 
 #ifdef HIOP_USE_MPI
   double ret_val_g;
-  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_val = ret_val_g;
 #endif
   return ret_val;
@@ -1413,7 +1418,7 @@ double hiopVectorRaja<MEM, POL>::min_w_pattern(const hiopVector& select) const
 
 #ifdef HIOP_USE_MPI
   double ret_val_g;
-  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_val = ret_val_g;
 #endif
   return ret_val;
@@ -1630,7 +1635,7 @@ int hiopVectorRaja<MEM, POL>::allPositive()
 
 #ifdef HIOP_USE_MPI
   int allPosG;
-  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif
   return allPos;
@@ -1851,7 +1856,7 @@ bool hiopVectorRaja<MEM, POL>::matchesPattern(const hiopVector& pattern)
 #ifdef HIOP_USE_MPI
   int mismatch_glob = mismatch;
   int ierr = MPI_Allreduce(&mismatch, &mismatch_glob, 1, MPI_INT, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return (mismatch_glob == 0);
 #endif
   return (mismatch == 0);
@@ -1887,7 +1892,7 @@ int hiopVectorRaja<MEM, POL>::allPositive_w_patternSelect(const hiopVector& sele
 #ifdef HIOP_USE_MPI
   int allPosG;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif  
   return allPos;
@@ -1964,7 +1969,7 @@ bool hiopVectorRaja<MEM, POL>::is_zero() const
 
 #ifdef HIOP_USE_MPI
   int all_zero_G;
-  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return all_zero_G;
 #endif
   return all_zero;
@@ -2045,7 +2050,7 @@ print(FILE* file, const char* msg/*=NULL*/, int max_elems/*=-1*/, int rank/*=-1*
   int myrank=0, numranks=1; 
 #ifdef HIOP_USE_MPI
   if(rank >= 0) {
-    int err = MPI_Comm_rank(comm_, &myrank); assert(err==MPI_SUCCESS);
+    int err = MPI_Comm_rank(comm_, &myrank); assert(err==MPI_SUCCESS); (void)err;
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
   }
 #endif
@@ -2129,7 +2134,7 @@ size_type hiopVectorRaja<MEM, POL>::numOfElemsLessThan(const double &val) const
 #ifdef HIOP_USE_MPI
   size_type nrm_global;
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS == ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm = nrm_global;
 #endif
 
@@ -2152,7 +2157,7 @@ size_type hiopVectorRaja<MEM, POL>::numOfElemsAbsLessThan(const double &val) con
 #ifdef HIOP_USE_MPI
   size_type nrm_global;
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS == ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm = nrm_global;
 #endif
 
@@ -2207,7 +2212,7 @@ template<class MEM, class POL>
 bool hiopVectorRaja<MEM, POL>::is_equal(const hiopVector& vec) const
 {
 #ifdef HIOP_DEEPCHECKS
-  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec);
+  const hiopVectorRaja& v = dynamic_cast<const hiopVectorRaja<MEM, POL>&>(vec); (void)v;
   assert(v.n_local_ == n_local_);
 #endif 
 
@@ -2226,7 +2231,7 @@ bool hiopVectorRaja<MEM, POL>::is_equal(const hiopVector& vec) const
 #ifdef HIOP_USE_MPI
   int all_equalG;
   int ierr = MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return all_equalG;
 #endif  
   return all_equal;

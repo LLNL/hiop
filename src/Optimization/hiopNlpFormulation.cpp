@@ -81,11 +81,11 @@ hiopNlpFormulation::hiopNlpFormulation(hiopInterfaceBase& interface_, const char
 {
   strFixedVars_ = ""; //uninitialized
   dFixedVarsTol_ = -1.; //uninitialized
-  bool bret;
+  bool bret; (void) bret;
 #ifdef HIOP_USE_MPI
   bret = interface_base.get_MPI_comm(comm_); assert(bret);
 
-  int nret;
+  int nret; (void) nret;
   //MPI may not be initialized: this occurs when a serial driver call HiOp built with MPI support on
   int initialized;
   nret = MPI_Initialized( &initialized );
@@ -262,7 +262,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   size_type nfixed_vars=nfixed_vars_local;
 #ifdef HIOP_USE_MPI
   int ierr = MPI_Allreduce(&nfixed_vars_local, &nfixed_vars, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_); 
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
   hiopFixedVarsRemover* fixedVarsRemover = NULL;
   if(nfixed_vars>0) {
@@ -383,7 +383,7 @@ bool hiopNlpFormulation::finalizeInitialization()
   size_type aux[3]={n_bnds_low_local_, n_bnds_upp_local_, n_bnds_lu_};
   size_type aux_g[3];
   ierr=MPI_Allreduce(aux, aux_g, 3, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   n_bnds_low_ = aux_g[0];
   n_bnds_upp_ = aux_g[1];
   n_bnds_lu_ = aux_g[2];
@@ -1284,7 +1284,7 @@ bool hiopNlpFormulation::user_force_update(int iter,
                                            double& alpha_du,
                                            double& alpha_pr)
 {
-  bool retval;
+  bool retval; (void)retval;
   assert(x.get_size()==n_vars_);
   assert(c.get_size()+d.get_size()==n_cons_);
 
@@ -1304,7 +1304,7 @@ void hiopNlpFormulation::print(FILE* f, const char* msg, int rank) const
    int myrank=0; 
 #ifdef HIOP_USE_MPI
    if(rank>=0) {
-     int ierr = MPI_Comm_rank(comm_, &myrank); assert(ierr==MPI_SUCCESS); 
+     int ierr = MPI_Comm_rank(comm_, &myrank); assert(MPI_SUCCESS==ierr); (void)ierr; 
    }
 #endif
   if(myrank==rank || rank==-1) {
@@ -1436,7 +1436,9 @@ bool hiopNlpDenseConstraints::eval_Jac_c_d_interface_impl(hiopVector& x, bool ne
   }
 
   hiopVector* x_user = nlp_transformations_.apply_inv_to_x(x, new_x);
+#ifndef NDEBUG
   double* Jac_consde = cons_Jac_de->local_data();
+#endif
   hiopMatrix* Jac_user = nlp_transformations_.apply_inv_to_jacob_cons(*cons_Jac_, n_cons_);
 
   hiopMatrixDense* cons_Jac_user_de = dynamic_cast<hiopMatrixDense*>(Jac_user);

@@ -402,7 +402,7 @@ void hiopMatrixSparseCSRSeq::copyRowsFrom(const hiopMatrix& src_gen,
                                           const index_type* rows_idxs,
                                           size_type n_rows)
 {
-  const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
+  const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen); (void)src;
   assert(this->m() == n_rows);
   assert(this->numberOfNonzeros() <= src.numberOfNonzeros());
   assert(this->n() == src.n());
@@ -422,7 +422,7 @@ void hiopMatrixSparseCSRSeq::copyRowsBlockFrom(const hiopMatrix& src_gen,
                                                const index_type& rows_src_idx_st, const size_type& n_rows,
                                                const index_type& rows_dest_idx_st, const size_type& dest_nnz_st)
 {
-  const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
+  const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen); (void)src;
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(this->n() >= src.n());
   assert(n_rows + rows_src_idx_st <= src.m());
@@ -438,8 +438,8 @@ void hiopMatrixSparseCSRSeq::copySubmatrixFrom(const hiopMatrix& src_gen,
                                                const bool offdiag_only)
 {
   const hiopMatrixSparseCSRSeq& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
-  auto m_rows = src.m();
-  auto n_cols = src.n();
+  auto m_rows = src.m(); (void)m_rows;
+  auto n_cols = src.n(); (void)n_cols;
 
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
@@ -456,8 +456,8 @@ void hiopMatrixSparseCSRSeq::copySubmatrixFromTrans(const hiopMatrix& src_gen,
                                                     const bool offdiag_only)
 {
   const auto& src = dynamic_cast<const hiopMatrixSparseCSRSeq&>(src_gen);
-  auto m_rows = src.n();
-  auto n_cols = src.m();
+  auto m_rows = src.n(); (void)m_rows;
+  auto n_cols = src.m(); (void)n_cols;
 
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
@@ -598,8 +598,10 @@ hiopMatrixSparseCSR* hiopMatrixSparseCSRSeq::times_mat_alloc(const hiopMatrixSpa
   const index_type m = this->m();
   const index_type n = Y.n();
 
+#ifndef NDEBUG
   const index_type K = this->n();
   assert(Y.m() == K);
+#endif
   
   index_type nnzM = 0;
     // count the number of entries in the result M
@@ -663,12 +665,14 @@ void hiopMatrixSparseCSRSeq::times_mat_symbolic(hiopMatrixSparseCSR& M_in,
   index_type* jcolindM = M.j_col();
   
   const index_type m = this->m();
+#ifndef NDEBUG
   const index_type n = Y.n();
   assert(M.m()==m && M.n()==n);
-  
+
   const index_type K = this->n();
   assert(Y.m() == K);
-  
+#endif
+
   //if(nullptr == M.buf_col_) {
   //  M.buf_col_ = new double[n];
   //}
@@ -747,9 +751,11 @@ void hiopMatrixSparseCSRSeq::times_mat_numeric(double beta,
   const index_type m = this->m();
   const index_type n = Y.n();
   assert(M.m()==m && M.n()==n);
-  
+
+#ifndef NDEBUG
   const index_type K = this->n();
   assert(Y.m() == K);
+#endif
 
   if(beta!=1.0) {
     int NN = M.numberOfNonzeros();
@@ -976,7 +982,7 @@ void hiopMatrixSparseCSRSeq::form_transpose_from_numeric(const hiopMatrixSparseT
     }
   }
 #endif
-  const index_type* Mirow = M.i_row();
+  const index_type* Mirow = M.i_row(); (void)Mirow;
   const index_type* Mjcol = M.j_col();
   const double* Mvalues  = M.M();
 
@@ -1363,8 +1369,8 @@ void hiopMatrixSparseCSRSeq::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
   const double* valuesX = values_;
   
 #ifdef HIOP_DEEPCHECKS
-  index_type* irowptrM = M.i_row();
-  index_type* jcolindM = M.j_col();
+  index_type* irowptrM = M.i_row(); (void)irowptrM;
+  index_type* jcolindM = M.j_col(); (void)jcolindM;
 #endif
   double* valuesM = M.M();
   
@@ -1425,7 +1431,7 @@ void hiopMatrixSparseCSRSeq::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
 
     // iterate over remaining col indexes of (i row of) X
     for(; ptX<irowptrX[i+1]; ++ptX) {
-      const index_type jX = jcolindX[ptX];
+      const index_type jX = jcolindX[ptX]; (void)jX;
       assert(jX<ncols_);
 #ifdef HIOP_DEEPCHECKS
       assert(jX==jcolindM[itnnzM]);
@@ -1438,7 +1444,7 @@ void hiopMatrixSparseCSRSeq::add_matrix_numeric(hiopMatrixSparseCSR& M_in,
 
     // iterate over remaining col indexes of (i row of) X
     for(; ptY<irowptrY[i+1]; ++ptY) {
-      const index_type jY = jcolindY[ptY];
+      const index_type jY = jcolindY[ptY]; (void)jY;
       assert(jY<ncols_);
       assert(itnnzM<M.numberOfNonzeros());
 #ifdef HIOP_DEEPCHECKS

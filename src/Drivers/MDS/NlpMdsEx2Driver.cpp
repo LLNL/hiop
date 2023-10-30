@@ -93,8 +93,8 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
   int comm_size;
-  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr);
-  //int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Comm_size(MPI_COMM_WORLD, &comm_size); assert(MPI_SUCCESS==ierr); (void)ierr;
+  //int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank); assert(MPI_SUCCESS==ierr); (void)ierr;
   if(comm_size != 1) {
     printf("[error] driver detected more than one rank but the driver should be run "
            "in serial only; will exit\n");

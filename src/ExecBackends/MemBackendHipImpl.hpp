@@ -75,7 +75,7 @@ struct AllocImpl<MemBackendHip, T, I>
   inline static T* alloc(MemBackendHip& mb, const I& n)
   {
     T* p = nullptr;
-    auto err = hipMalloc((void**)&p, n*sizeof(T));
+    auto err = hipMalloc((void**)&p, n*sizeof(T)); (void)err;
     assert(hipSuccess==err);
     return p;
   }
@@ -86,7 +86,7 @@ struct DeAllocImpl<MemBackendHip, T>
 {
   inline static void dealloc(MemBackendHip& mb, T* p)
   {
-    auto err = hipFree((void*)p);
+    auto err = hipFree((void*)p); (void)err;
     assert(hipSuccess==err);
   }  
 };

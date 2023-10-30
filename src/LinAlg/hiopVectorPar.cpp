@@ -78,7 +78,7 @@ hiopVectorPar::hiopVectorPar(const size_type& glob_n, index_type* col_part/*=NUL
   int P=0; 
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm_, &P);  assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Comm_rank(comm_, &P);  assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
     glob_il_=col_part[P]; glob_iu_=col_part[P+1];
   } else { 
@@ -199,7 +199,9 @@ void hiopVectorPar::copy_from_indexes(const hiopVector& vv, const hiopVectorInt&
   assert(indexes.get_local_size() == n_local_);
   
   const index_type* index_arr = indexes.local_data_const();
+#ifndef NDEBUG
   size_type nv = v.get_local_size();
+#endif
   for(index_type i=0; i<n_local_; i++) {
     assert(index_arr[i]<nv);
     this->data_[i] = v.data_[index_arr[i]];
@@ -471,7 +473,7 @@ double hiopVectorPar::twonorm() const
 #ifdef HIOP_USE_MPI
   nrm *= nrm;
   double nrmG;
-  int ierr = MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm=sqrt(nrmG);
 #endif  
   return nrm;
@@ -491,7 +493,7 @@ double hiopVectorPar::dotProductWith(const hiopVector& v_) const
   }
 #ifdef HIOP_USE_MPI
   double dotprodG;
-  int ierr = MPI_Allreduce(&dotprod, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&dotprod, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   dotprod=dotprodG;
 #endif
 
@@ -513,7 +515,7 @@ double hiopVectorPar::infnorm() const
   }
 #ifdef HIOP_USE_MPI
   double nrm_glob;
-  int ierr = MPI_Allreduce(&nrm, &nrm_glob, 1, MPI_DOUBLE, MPI_MAX, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm, &nrm_glob, 1, MPI_DOUBLE, MPI_MAX, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm_glob;
 #endif
 
@@ -546,7 +548,7 @@ double hiopVectorPar::onenorm() const
 #ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr = MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm1_global;
 #endif
   return nrm1;
@@ -812,7 +814,7 @@ double hiopVectorPar::min() const
 #ifdef HIOP_USE_MPI
   double ret_val_g;
   int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_val = ret_val_g;
 #endif
   return ret_val;
@@ -832,7 +834,7 @@ double hiopVectorPar::min_w_pattern(const hiopVector& select) const
   }
 #ifdef HIOP_USE_MPI
   double ret_val_g;
-  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&ret_val, &ret_val_g, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_val = ret_val_g;
 #endif
   return ret_val;
@@ -955,7 +957,7 @@ int hiopVectorPar::allPositive()
 
 #ifdef HIOP_USE_MPI
   int allPosG;
-  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif
   return allPos;
@@ -1086,7 +1088,7 @@ bool hiopVectorPar::matchesPattern(const hiopVector& ix_)
 #ifdef HIOP_USE_MPI
   int bmatches_glob=bmatches;
   int ierr=MPI_Allreduce(&bmatches, &bmatches_glob, 1, MPI_INT, MPI_LAND, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return bmatches_glob;
 #endif
   return bmatches;
@@ -1108,7 +1110,7 @@ int hiopVectorPar::allPositive_w_patternSelect(const hiopVector& w_)
 #ifdef HIOP_USE_MPI
   int allPosG=allPos;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif  
   return allPos;
@@ -1158,7 +1160,7 @@ bool hiopVectorPar::is_zero() const
   }
 #ifdef HIOP_USE_MPI
   int all_zero_G;
-  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&all_zero, &all_zero_G, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return all_zero_G;
 #endif
   return all_zero;
@@ -1192,7 +1194,7 @@ void hiopVectorPar::print(FILE* file/*=nullptr*/, const char* msg/*=nullptr*/, i
 
 #ifdef HIOP_USE_MPI
   if(rank>=0) {
-    int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS);
+    int err = MPI_Comm_rank(comm_, &myrank_); assert(err==MPI_SUCCESS); (void)err;
     err = MPI_Comm_size(comm_, &numranks); assert(err==MPI_SUCCESS);
   }
 #endif
@@ -1231,7 +1233,7 @@ size_type hiopVectorPar::numOfElemsLessThan(const double &val) const
 #ifdef HIOP_USE_MPI
   size_type ret_num_global;
   int ierr = MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_num = ret_num_global;
 #endif
 
@@ -1250,7 +1252,7 @@ size_type hiopVectorPar::numOfElemsAbsLessThan(const double &val) const
 #ifdef HIOP_USE_MPI
   size_type ret_num_global;
   int ierr=MPI_Allreduce(&ret_num, &ret_num_global, 1, MPI_HIOP_SIZE_TYPE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   ret_num = ret_num_global;
 #endif
 
@@ -1300,7 +1302,7 @@ bool hiopVectorPar::is_equal(const hiopVector& vec) const
 
 #ifdef HIOP_USE_MPI
   int all_equalG;
-  int ierr=MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&all_equal, &all_equalG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return all_equalG;
 #endif
   return all_equal;

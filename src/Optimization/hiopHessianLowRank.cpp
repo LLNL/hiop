@@ -419,7 +419,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
 #ifdef HIOP_USE_MPI
   int ierr;
-  ierr = MPI_Allreduce(_buff1_lxlx3, _buff2_lxlx3, 3*l*l, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(_buff1_lxlx3, _buff2_lxlx3, 3*l*l, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
 
   // - block (2,2)
   DpYtDhInvY.copyFrom(_buff2_lxlx3);
@@ -547,8 +547,8 @@ symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W,
   S2Y2.copyBlockFromMatrix(0,l,Y1);
 #ifdef HIOP_USE_MPI
   int ierr;
-  ierr = MPI_Allreduce(S2Y2.local_data(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  ierr = MPI_Allreduce(W.local_data(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(S2Y2.local_data(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
+  ierr = MPI_Allreduce(W.local_data(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   S2Y2.copyFrom(_buff_2lxk);
   W.copyFrom(_buff_kxk);
   //also copy S1 and Y1
@@ -925,7 +925,9 @@ void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, d
 
 void hiopHessianLowRank::timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) const
 {
+#ifndef NDEBUG
   size_type n=St->n();
+#endif
   assert(l_curr==St->m());
   assert(y.get_size()==n);
   assert(St->get_local_size_n() == Yt->get_local_size_n());
@@ -1362,17 +1364,21 @@ void hiopHessianInvLowRank_obsolette::
 symmetricTimesMat(double beta, hiopMatrixDense& W,
 		  double alpha, const hiopMatrixDense& X)
 {
-  size_type n=St->n(), l=St->m(), k=W.m();
-  assert(n==H0->get_size());
+  size_type l = St->m(); (void)l;
+  size_type k = W.m(); (void)k;
+#ifndef NDEBUG
+  size_type n=St->n();
   assert(k==W.n());
-  assert(l==Yt->m());
+  assert(l==Yt->m());  
+  assert(n==H0->get_size());
   assert(n==Yt->n()); assert(n==St->n());
   assert(k==X.m()); assert(n==X.n());
+#endif
 
   //1.--compute W = beta*W + alpha*X*HO*X^T by calling symmMatTransTimesDiagTimesMat_local
 #ifdef HIOP_USE_MPI
   int myrank, ierr;
-  ierr=MPI_Comm_rank(nlp->get_comm(),&myrank); assert(MPI_SUCCESS==ierr);
+  ierr=MPI_Comm_rank(nlp->get_comm(),&myrank); assert(MPI_SUCCESS==ierr); (void)ierr;
   if(0==myrank)
     symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*H0);
   else 
@@ -1393,14 +1399,14 @@ symmetricTimesMat(double beta, hiopMatrixDense& W,
   symmMatTimesDiagTimesMatTrans_local(0.0,DpYtH0Y, 1.0,*Yt,*H0);
 #ifdef HIOP_USE_MPI
   //!opt - use one buffer and one reduce call
-  ierr=MPI_Allreduce(S1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(S1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   S1.copyFrom(_buff_lxk);
-  ierr=MPI_Allreduce(Y1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(Y1.local_data(),      _buff_lxk,l*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   Y1.copyFrom(_buff_lxk);
-  ierr=MPI_Allreduce(W.local_data(),       _buff_kxk,k*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(W.local_data(),       _buff_kxk,k*k, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   W.copyFrom(_buff_kxk);
 
-  ierr=MPI_Allreduce(DpYtH0Y.local_data(), _buff_lxl,l*l, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr=MPI_Allreduce(DpYtH0Y.local_data(), _buff_lxl,l*l, MPI_DOUBLE,MPI_SUM,nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   DpYtH0Y.copyFrom(_buff_lxl);
 #endif
  //add D to finish calculating D+Y^T*H0*Y
@@ -1666,7 +1672,7 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_S1(const hiopMatrixDense& 
   //S1 is St*X^T (lxk), where St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
   size_type k=X.m(), l=St.m();
 #ifdef HIOP_DEEPCHECKS
-  const size_type n=St.n();
+  const size_type n=St.n(); (void)n;
   assert(n==X.n());
   if(_S1!=NULL) 
     assert(_S1->n()==k);
@@ -1683,7 +1689,7 @@ hiopMatrixDense& hiopHessianInvLowRank_obsolette::new_Y1(const hiopMatrixDense& 
   //Y1 is Yt*H0*X^T = Y^T*H0*X^T, where Y^T is lxn, H0 is diag nxn, X is kxn
   size_type k=X.m(), l=Yt.m();
 #ifdef HIOP_DEEPCHECKS
-  const size_type n=Yt.n(); 
+  const size_type n=Yt.n(); (void)n;
   assert(X.n()==n);
   if(_Y1!=NULL) assert(_Y1->n()==k);
 #endif

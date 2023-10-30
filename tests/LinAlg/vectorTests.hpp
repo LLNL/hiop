@@ -500,16 +500,16 @@ public:
                                  hiop::hiopVectorInt& d_map,
                                  const int rank=0)
   {
-    const local_ordinal_type cd_size = getLocalSize(&cd);
     const local_ordinal_type c_size = getLocalSize(&c);
+  #ifndef NDEBUG
+    const local_ordinal_type cd_size = getLocalSize(&cd);
     const local_ordinal_type d_size = getLocalSize(&d);
     const local_ordinal_type c_map_size = c_map.get_local_size();
     const local_ordinal_type d_map_size = d_map.get_local_size();
-
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
     assert(c_size + d_size == cd_size && "size doesn't match");
-
+#endif
     const real_type c_val = one;
     const real_type d_val = two;
 
@@ -544,16 +544,16 @@ public:
                                hiop::hiopVectorInt& d_map,
                                const int rank=0)
   {
+    const local_ordinal_type c_size = getLocalSize(&c); 
+#ifndef NDEBUG
     const local_ordinal_type cd_size = getLocalSize(&cd);
-    const local_ordinal_type c_size = getLocalSize(&c);
     const local_ordinal_type d_size = getLocalSize(&d);
-
     const local_ordinal_type c_map_size = c_map.get_local_size();
     const local_ordinal_type d_map_size = d_map.get_local_size();
     assert(c_size == c_map_size && "size doesn't match");
     assert(d_size == d_map_size && "size doesn't match");
     assert(c_size + d_size == cd_size && "size doesn't match");
-
+#endif
     const real_type cd_val = two;
 
     c_map.linspace(0, 1);
@@ -1076,10 +1076,11 @@ public:
    */
   bool vectorAxpy(hiop::hiopVector& v, hiop::hiopVector& x, const int rank)
   {
-    const local_ordinal_type N = getLocalSize(&v);
     assert(v.get_size() == x.get_size());
+#ifndef NDEBUG
+    const local_ordinal_type N = getLocalSize(&v);
     assert(N == getLocalSize(&x));
-
+#endif
     const real_type alpha = half;
     const real_type x_val = two;
     const real_type v_val = two;
@@ -1106,10 +1107,11 @@ public:
       hiop::hiopVector& z,
       const int rank)
   {
-    const local_ordinal_type N = getLocalSize(&v);
     assert(v.get_size() == x.get_size());
+#ifndef NDEBUG
+    const local_ordinal_type N = getLocalSize(&v);
     assert(N == getLocalSize(&x));
-
+#endif
     const real_type alpha = half;
     const real_type x_val = two;
     const real_type v_val = two;
@@ -1138,10 +1140,11 @@ public:
       hiop::hiopVector& z,
       const int rank)
   {
-    const local_ordinal_type N = getLocalSize(&v);
     assert(v.get_size() == x.get_size());
+#ifndef NDEBUG
+    const local_ordinal_type N = getLocalSize(&v);
     assert(N == getLocalSize(&x));
-
+#endif
     const real_type alpha = three;
     const real_type x_val = half;
     const real_type v_val = two;
@@ -1662,11 +1665,13 @@ public:
       const int rank)
   {
     // setup constants and make assertions
+#ifndef NDEBUG
     const local_ordinal_type N = getLocalSize(&x);
     assert(N == getLocalSize(&lower));
     assert(N == getLocalSize(&upper));
     assert(N == getLocalSize(&lower_pattern));
     assert(N == getLocalSize(&upper_pattern));
+#endif    
     static const real_type kappa1 = half;
     static const real_type kappa2 = half;
     int fail = 0;

@@ -210,7 +210,7 @@ double hiopIterate::normOneOfBoundDuals() const
   double nrm1=zl->onenorm_local() + zu->onenorm_local();
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm1=nrm1_global;
 #endif
   nrm1 += vl->onenorm_local() + vu->onenorm_local();
@@ -229,7 +229,7 @@ double hiopIterate::normOneOfEqualityDuals() const
   double nrm1=zl->onenorm_local() + zu->onenorm_local();
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&nrm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm1=nrm1_global;
 #endif
   nrm1 += vl->onenorm_local() + vu->onenorm_local() + yc->onenorm_local() + yd->onenorm_local();
@@ -249,7 +249,7 @@ void hiopIterate::normOneOfDuals(double& nrm1Eq, double& nrm1Bnd) const
 #ifdef HIOP_USE_MPI
   double nrm1_global;
   int ierr=MPI_Allreduce(&nrm1Bnd, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm());
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm1Bnd=nrm1_global;
 #endif
   nrm1Bnd += vl->onenorm_local() + vu->onenorm_local();
@@ -356,7 +356,7 @@ fractionToTheBdry(const hiopIterate& dir, const double& tau, double& alphaprimal
   alphadual=fmin(alphadual,alpha); 
 #ifdef HIOP_USE_MPI
   double aux[2]={alphaprimal,alphadual}, aux_g[2];
-  int ierr=MPI_Allreduce(aux, aux_g, 2, MPI_DOUBLE, MPI_MIN, nlp->get_comm()); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(aux, aux_g, 2, MPI_DOUBLE, MPI_MIN, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   alphaprimal=aux_g[0]; alphadual=aux_g[1];
 #endif
 
@@ -527,7 +527,7 @@ double hiopIterate::evalLogBarrier() const
   barrier+= sxu->logBarrier_local(nlp->get_ixu());
 #ifdef HIOP_USE_MPI
   double res;
-  int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(&barrier, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   barrier=res;
 #endif
   barrier+= sdl->logBarrier_local(nlp->get_idl());
@@ -556,7 +556,7 @@ double hiopIterate::linearDampingTerm(const double& mu, const double& kappa_d) c
   term += sxu->linearDampingTerm_local(nlp->get_ixu(), nlp->get_ixl(), mu, kappa_d);
 #ifdef HIOP_USE_MPI
   double res;
-  int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(&term, &res, 1, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(MPI_SUCCESS==ierr); (void)ierr;
   term = res;
 #endif  
   term += sdl->linearDampingTerm_local(nlp->get_idl(), nlp->get_idu(), mu, kappa_d);

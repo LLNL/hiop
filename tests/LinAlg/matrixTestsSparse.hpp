@@ -939,9 +939,8 @@ public:
   int matrix_copy_rows_from( hiop::hiopMatrixSparse& A, hiop::hiopMatrixSparse& B, hiop::hiopVectorInt& select)
   {
     int n_A_rows = A.m();
-    int n_B_rows = B.m();    
     assert(A.n() == B.n());
-    assert(n_A_rows <= n_B_rows);
+    assert(A.m() <= B.m());
 
     const real_type A_val = one;
     const real_type B_val = two;

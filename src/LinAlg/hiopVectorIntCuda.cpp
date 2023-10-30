@@ -52,14 +52,13 @@
  *
  */
 #include "hiopVectorIntCuda.hpp"
+#include "hiopVectorIntSeq.hpp"
 
 #include "MemBackendCudaImpl.hpp"
 #include "MemBackendCppImpl.hpp"
 #include "VectorCudaKernels.hpp"
 
 #include <cuda_runtime.h>
-
-#include "hiopVectorIntSeq.hpp"
 #include <cassert>
 
 namespace hiop
@@ -92,6 +91,7 @@ void hiopVectorIntCuda::copy_from_vectorseq(const hiopVectorIntSeq& src)
 {
   assert(src.get_local_size() == sz_);
   auto b = exec_space_.copy(buf_, src.local_data_const(), sz_, src.exec_space());
+  (void)b;
   assert(b);
 }
 
@@ -99,12 +99,14 @@ void hiopVectorIntCuda::copy_to_vectorseq(hiopVectorIntSeq& dest) const
 {
   assert(dest.get_local_size() == sz_);
   auto b = dest.exec_space().copy(dest.local_data(), buf_, sz_, exec_space_);
+  (void)b;
   assert(b);
 }
 
 void hiopVectorIntCuda::set_to_zero()
 {
   cudaError_t cuerr = cudaMemset(buf_, 0, sz_);
+  (void)cuerr;
   assert(cuerr == cudaSuccess);
 }
 
@@ -112,6 +114,7 @@ void hiopVectorIntCuda::set_to_zero()
 void hiopVectorIntCuda::set_to_constant(const index_type c)
 {
   cudaError_t cuerr = cudaMemset(buf_, c, sz_);
+  (void)cuerr;
   assert(cuerr == cudaSuccess);
 }
 

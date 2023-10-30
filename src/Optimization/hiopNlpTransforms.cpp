@@ -129,7 +129,7 @@ index_type* hiopFixedVarsRemover::allocRSVectorDistrib()
                        1,
                        MPI_HIOP_INDEX_TYPE,
                        comm);
-  assert(ierr==MPI_SUCCESS);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
 #else
   assert(nlen==1);
 #endif

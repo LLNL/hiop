@@ -345,14 +345,14 @@ public:
        << "    avg iter " << (tmSolverInternal.getElapsedTime()/nIter) << "s  " << std::endl;
 #ifdef HIOP_USE_MPI
     int nranks;
-    int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr);
+    int ierr = MPI_Comm_size(comm, &nranks); assert(MPI_SUCCESS==ierr); (void)ierr;
 
     double loc=tmSolverInternal.getElapsedTime(), mean;
-    ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+    ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     mean = mean/nranks;
     loc = tmSolverInternal.getElapsedTime()-mean; loc = loc*loc;
     double stddev;
-    ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+    ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     stddev = sqrt(stddev);
     stddev /= nranks;
     ss << "    internal total std dev across ranks " << (stddev/mean*100) << " percent"  << std::endl;
@@ -373,12 +373,12 @@ public:
 #ifdef HIOP_USE_MPI
     loc=tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime();
 
-    ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+    ierr = MPI_Allreduce(&loc, &mean, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     mean = mean/nranks;
     loc = tmEvalObj.getElapsedTime() + tmEvalGrad_f.getElapsedTime() + tmEvalCons.getElapsedTime() + tmEvalJac_con.getElapsedTime() - mean; 
     loc = loc*loc;
 
-    ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr);
+    ierr = MPI_Allreduce(&loc, &stddev, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     stddev = sqrt(stddev);
     stddev /= nranks;
     ss << "    Fcn/deriv total std dev across ranks " << (stddev/mean*100) << " percent"  << std::endl;

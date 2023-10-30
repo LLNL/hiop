@@ -79,7 +79,7 @@ int hiop_mds_create_problem(cHiopMDSProblem *prob) {
 } 
 
 int hiop_mds_solve_problem(cHiopMDSProblem *prob) {
-  hiopSolveStatus status;
+  hiopSolveStatus status; (void)status;
   hiopAlgFilterIPMNewton solver(prob->refcppHiop);
   status = solver.run();
   assert(status<=hiopSolveStatus::User_Stopped); //check solver status if necessary

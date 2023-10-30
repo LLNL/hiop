@@ -122,7 +122,7 @@ bool hiopDualsLsqUpdate::go(const hiopIterate& iter,
                             const double& infeas_nrm_trial)
 {
   hiopNlpDenseConstraints* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
-  assert(nullptr!=nlpd);
+  assert(nullptr!=nlpd); (void)nlpd;
 
   //first update the duals using steplength along the search directions. This is fine for 
   //signed duals z_l, z_u, v_l, and v_u. The rest of the duals, yc and yd, will be found as a 
@@ -543,7 +543,7 @@ bool hiopDualsLsqUpdateLinsysAugSparse::do_lsq_update(hiopIterate& iter,
                                                       const hiopMatrix& jac_d)
 {
   hiopNlpSparse* nlpsp = dynamic_cast<hiopNlpSparse*>(nlp_);
-  assert(nullptr!=nlpsp);
+  assert(nullptr!=nlpsp); (void)nlpsp;
   
   const hiopMatrixSparse& Jac_cSp = dynamic_cast<const hiopMatrixSparse&>(jac_c);
   const hiopMatrixSparse& Jac_dSp = dynamic_cast<const hiopMatrixSparse&>(jac_d);

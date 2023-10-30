@@ -602,6 +602,7 @@ protected:
   inline void use_sparse_gemm_descriptor(cusparseSpGEMMDescr_t gemm_sp_descr_in)
   {
     auto st = cusparseSpGEMM_destroyDescr(gemm_sp_descr_);
+    (void)st;
     assert(st == CUSPARSE_STATUS_SUCCESS);
     gemm_sp_descr_ = gemm_sp_descr_in;
   }
@@ -611,7 +612,7 @@ protected:
    */
   inline void use_sparse_mat_descriptor(cusparseSpMatDescr_t sp_mat_descr)
   {
-    auto st = cusparseDestroySpMat(mat_sp_descr_);
+    auto st = cusparseDestroySpMat(mat_sp_descr_); (void)st;
     assert(st == CUSPARSE_STATUS_SUCCESS);
     mat_sp_descr_ = sp_mat_descr;
 
@@ -632,6 +633,7 @@ protected:
   inline void dealloc_gemm_buffer3()
   {
     auto ret = cudaFree(buffer_gemm3_);
+    (void)ret;
     assert(cudaSuccess == ret);
     buffer_gemm3_ = nullptr;
   }
@@ -650,6 +652,7 @@ protected:
   {
     assert(buffer_gemm5_ == nullptr);
     auto cret = cudaMalloc((void**)&(buffer_gemm5_), buff_size);
+    (void)cret;
     assert(cudaSuccess == cret);
     return buffer_gemm5_;
   }

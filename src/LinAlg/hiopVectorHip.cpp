@@ -86,7 +86,7 @@ hiopVectorHip::hiopVectorHip(const size_type& glob_n, index_type* col_part, MPI_
   int P = 0; 
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr=MPI_Comm_rank(comm_, &P);  assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Comm_rank(comm_, &P);  assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
     glob_il_ = col_part[P];
     glob_iu_ = col_part[P+1];
@@ -174,6 +174,7 @@ void hiopVectorHip::copyFrom(const hiopVector& v_in)
   assert(v.n_local_ == n_local_);
 
   auto b = exec_space_.copy(data_, v.data_, n_local_, v.exec_space());
+  (void)b;
   assert(b);
 }
 
@@ -182,6 +183,7 @@ void hiopVectorHip::copyFrom(const double* v_local_data)
 {
   if(v_local_data) {
     auto b = exec_space_.copy(data_, v_local_data, n_local_);
+    (void)b;
     assert(b);
   }
 }
@@ -210,6 +212,7 @@ void hiopVectorHip::copyFromStarting(int start_index_in_dest, const double* v, i
 {
   assert(start_index_in_dest+nv <= n_local_);
   auto b = exec_space_.copy(data_+start_index_in_dest, v, nv);
+  (void)b;
   assert(b);
 }
 
@@ -218,11 +221,13 @@ void hiopVectorHip::copyFromStarting(int start_index_in_dest, const hiopVector& 
 {
   assert(n_local_==n_ && "only for local/non-distributed vectors");
   assert(start_index_in_dest+v_src.get_local_size() <= n_local_);
+
   const hiopVectorHip& v = dynamic_cast<const hiopVectorHip&>(v_src);
   auto b = exec_space_.copy(data_+start_index_in_dest,
                             v.data_,
                             v.n_local_,
                             v.exec_space());
+  (void)b;
   assert(b);
 }
 
@@ -230,6 +235,7 @@ void hiopVectorHip::copyFromStarting(int start_index_in_dest, const hiopVector& 
 void hiopVectorHip::copy_from_starting_at(const double* v, int start_index_in_v, int nv)
 {
   auto b = exec_space_.copy(data_, v+start_index_in_v, nv);
+  (void)b;
   assert(b);
 }
 
@@ -284,6 +290,7 @@ void hiopVectorHip::copyTo(double* dest) const
   auto* this_nonconst = const_cast<hiopVectorHip*>(this);
   assert(nullptr != this_nonconst);
   auto b = this_nonconst->exec_space_.copy(dest, data_, n_local_);
+  (void)b;
   assert(b);
 }
 
@@ -307,8 +314,10 @@ void hiopVectorHip::copyToStarting(int start_index, hiopVector& dst) const
 /// @brief Copy 'this' to dst starting at start_index in 'dst'.
 void hiopVectorHip::copyToStarting(hiopVector& dst, int start_index) const
 {
+#ifndef NDEBUG
   int v_size = dst.get_local_size();
   assert(start_index+n_local_ <= v_size);
+#endif
 
   // If there is nothing to copy, return.
   if(n_local_ == 0)
@@ -436,14 +445,14 @@ double hiopVectorHip::twonorm() const
   int one = 1; 
   double nrm = 0.;
   if(n_local_>0) {
-    hipblasStatus_t ret_hipblas = hipblasDnrm2(handle_hipblas_, n_local_, data_, one, &nrm);
+    hipblasStatus_t ret_hipblas = hipblasDnrm2(handle_hipblas_, n_local_, data_, one, &nrm); (void)ret_hipblas;
     assert(ret_hipblas == HIPBLAS_STATUS_SUCCESS);
   }
 
 #ifdef HIOP_USE_MPI
   nrm *= nrm;
   double nrmG;
-  int ierr = MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm = std::sqrt(nrmG);
 #endif  
   return nrm;
@@ -456,7 +465,7 @@ double hiopVectorHip::infnorm() const
 #ifdef HIOP_USE_MPI
   double nrm_global;
   int ierr = MPI_Allreduce(&nrm, &nrm_global, 1, MPI_DOUBLE, MPI_MAX, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm_global;
 #endif
 
@@ -475,7 +484,7 @@ double hiopVectorHip::onenorm() const
   double norm1 = onenorm_local();
 #ifdef HIOP_USE_MPI
   double nrm1_global;
-  int ierr = MPI_Allreduce(&norm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&norm1, &nrm1_global, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return nrm1_global;
 #endif
   return norm1;
@@ -563,7 +572,7 @@ void hiopVectorHip::component_sqrt()
 void hiopVectorHip::scale(double alpha)
 {
   int one = 1;  
-  hipblasStatus_t ret_hipblas = hipblasDscal(handle_hipblas_, n_local_, &alpha, data_, one);
+  hipblasStatus_t ret_hipblas = hipblasDscal(handle_hipblas_, n_local_, &alpha, data_, one); (void)ret_hipblas;
   assert(ret_hipblas == HIPBLAS_STATUS_SUCCESS);
 }
 
@@ -571,7 +580,7 @@ void hiopVectorHip::scale(double alpha)
 void hiopVectorHip::axpy(double alpha, const hiopVector& xvec)
 {
   int one = 1;
-  hipblasStatus_t ret_hipblas = hipblasDaxpy(handle_hipblas_, n_local_, &alpha, xvec.local_data_const(), one, data_, one);
+  hipblasStatus_t ret_hipblas = hipblasDaxpy(handle_hipblas_, n_local_, &alpha, xvec.local_data_const(), one, data_, one); (void)ret_hipblas;
   assert(ret_hipblas == HIPBLAS_STATUS_SUCCESS);
 }
 
@@ -662,13 +671,13 @@ double hiopVectorHip::dotProductWith( const hiopVector& v ) const
 {
   int one = 1;
   double retval; 
-  hipblasStatus_t ret_hipblas = hipblasDdot(handle_hipblas_, n_local_, v.local_data_const(), one, data_, one, &retval);
+  hipblasStatus_t ret_hipblas = hipblasDdot(handle_hipblas_, n_local_, v.local_data_const(), one, data_, one, &retval); (void)ret_hipblas;
   assert(ret_hipblas == HIPBLAS_STATUS_SUCCESS);
 
 #ifdef HIOP_USE_MPI
   double dotprodG;
   int ierr = MPI_Allreduce(&retval, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   retval = dotprodG;
 #endif
 
@@ -766,7 +775,7 @@ int hiopVectorHip::allPositive()
 
 #ifdef HIOP_USE_MPI
   int allPosG;
-  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif
   return allPos;
@@ -789,7 +798,7 @@ int hiopVectorHip::allPositive_w_patternSelect(const hiopVector& wvec)
 #ifdef HIOP_USE_MPI
   int allPosG;
   int ierr = MPI_Allreduce(&allPos, &allPosG, 1, MPI_INT, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return allPosG;
 #endif  
   return allPos;
@@ -802,7 +811,7 @@ double hiopVectorHip::min() const
 
 #ifdef HIOP_USE_MPI
   double resultG;
-  double ierr=MPI_Allreduce(&result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  double ierr=MPI_Allreduce(&result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return resultG;
 #endif
   return result;
@@ -820,7 +829,7 @@ double hiopVectorHip::min_w_pattern(const hiopVector& select) const
 
 #ifdef HIOP_USE_MPI
   double resultG;
-  double ierr=MPI_Allreduce(&result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr);
+  double ierr=MPI_Allreduce(&result, &resultG, 1, MPI_DOUBLE, MPI_MIN, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return resultG;
 #endif
   return result;
@@ -932,7 +941,7 @@ bool hiopVectorHip::matchesPattern(const hiopVector& pattern)
 #ifdef HIOP_USE_MPI
   int mismatch_glob = bret;
   int ierr = MPI_Allreduce(&bret, &mismatch_glob, 1, MPI_INT, MPI_MIN, comm_);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   return (mismatch_glob != 0);
 #endif
   return bret;
@@ -1089,6 +1098,7 @@ void hiopVectorHip::set_array_from_to(hiopInterfaceBase::NonlinearityType* arr,
 bool hiopVectorHip::is_equal(const hiopVector& vec) const
 {
   assert(false&&"NOT needed. Remove this func. TODO");
+  return false;  
 }
 
 

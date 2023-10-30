@@ -72,8 +72,8 @@ hiopMatrixDenseRowMajor::hiopMatrixDenseRowMajor(const size_type& m,
   comm_size_ = 1;
   if(col_part) {
 #ifdef HIOP_USE_MPI
-    int ierr = MPI_Comm_rank(comm_, &P); assert(ierr==MPI_SUCCESS);
-    ierr = MPI_Comm_size(comm_, &comm_size_); assert(MPI_SUCCESS==ierr);
+    int ierr = MPI_Comm_rank(comm_, &P); assert(MPI_SUCCESS==ierr); (void)ierr;
+    ierr = MPI_Comm_size(comm_, &comm_size_); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
     glob_jl_=col_part[P]; glob_ju_=col_part[P+1];
   } else {
@@ -248,7 +248,7 @@ void hiopMatrixDenseRowMajor::shiftRows(size_type shift)
   //and
   assert(m_local_-std::abs(shift)>=1);
 #ifdef HIOP_DEEPCHECKS
-  double test1=8.3, test2=-98.3;
+  double test1=8.3, test2=-98.3; (void)test1; (void)test2;
   if(n_local_>0) {
     //not sure if memcpy is copying sequentially on all systems. we check this.
     //let's at least check it
@@ -484,7 +484,7 @@ timesVec(double beta, double* ya, double alpha, const double* xa) const
 #ifdef HIOP_USE_MPI
   //here m_local_ is > 0
   double yglob[m_local_]; 
-  int ierr=MPI_Allreduce(ya, yglob, m_local_, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr=MPI_Allreduce(ya, yglob, m_local_, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   memcpy(ya, yglob, m_local_*sizeof(double));
 #endif
 
@@ -565,7 +565,7 @@ void hiopMatrixDenseRowMajor::timesMat(double beta, hiopMatrix& W_, double alpha
 
   // int n2Red=W.m()*W.n(); 
   // double* Wglob = new_mxnlocal_buff(); //[n2Red];
-  // int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(ierr==MPI_SUCCESS);
+  // int ierr = MPI_Allreduce(WM[0], Wglob, n2Red, MPI_DOUBLE, MPI_SUM,comm); assert(MPI_SUCCESS==ierr); (void)ierr;
   // memcpy(WM[0], Wglob, n2Red*sizeof(double));
  
 #endif
@@ -678,7 +678,7 @@ void hiopMatrixDenseRowMajor::timesMatTrans(double beta, hiopMatrix& W_, double 
   auto& W = dynamic_cast<hiopMatrixDenseRowMajor&>(W_); 
   assert(W.n_local_==W.n_global_ && "not intended for the case when the result matrix is distributed.");
 #ifdef HIOP_DEEPCHECKS
-  const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_);
+  const auto& X = dynamic_cast<const hiopMatrixDenseRowMajor&>(X_); (void)X;
   assert(W.isfinite());
   assert(X.isfinite());
   assert(this->n()==X.n());
@@ -696,7 +696,7 @@ void hiopMatrixDenseRowMajor::timesMatTrans(double beta, hiopMatrix& W_, double 
   int n2Red=W.m()*W.n(); 
   double* WM=W.local_data();
   double* Wglob= W.new_mxnlocal_buff(); 
-  int ierr = MPI_Allreduce(WM, Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(ierr==MPI_SUCCESS);
+  int ierr = MPI_Allreduce(WM, Wglob, n2Red, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   memcpy(WM, Wglob, n2Red*sizeof(double));
 #endif
 }
@@ -835,7 +835,7 @@ double hiopMatrixDenseRowMajor::max_abs_value()
   double maxv = DLANGE(&norm, &n_local_, &m_local_, M_[0], &n_local_, NULL);
 #ifdef HIOP_USE_MPI
   double maxvg;
-  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+  int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   return maxvg;
 #endif
   return maxv;
@@ -855,7 +855,7 @@ void hiopMatrixDenseRowMajor::row_max_abs_value(hiopVector &ret_vec)
     maxv = DLANGE(&norm, &one, &n_local_, M_[0]+(irow*n_local_), &one, nullptr);
 #ifdef HIOP_USE_MPI
     double maxvg;
-    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Allreduce(&maxv,&maxvg,1,MPI_DOUBLE,MPI_MAX,comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
     maxv = maxvg;
 #endif
     vec.local_data()[irow] = maxv;

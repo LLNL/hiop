@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 #ifdef HIOP_USE_MPI
   MPI_Init(&argc, &argv);
   int ierr = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  assert(MPI_SUCCESS==ierr);
+  assert(MPI_SUCCESS==ierr); (void)ierr;
   //if(0==rank) printf("Support for MPI is enabled\n");
 #endif
   bool selfCheck;

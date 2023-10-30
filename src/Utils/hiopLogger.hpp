@@ -93,7 +93,7 @@ public:
   {
 #ifdef HIOP_USE_MPI
     int ierr = MPI_Comm_rank(comm_wrld, &my_rank_);
-    assert(MPI_SUCCESS == ierr);
+    assert(MPI_SUCCESS==ierr); (void)ierr; (void)ierr;
 #else
     my_rank_ = 0;
 #endif

@@ -517,12 +517,13 @@ transAddToSymDenseMatrixUpperTriangle(int row_start,
                                       double alpha,
                                       hiopMatrixDense& W) const
 {
+#ifndef NDEBUG
   auto Wm = W.m();
   auto Wn = W.n();
-
   assert(row_start>=0 && row_start+ncols_<=Wm);
   assert(col_start>=0 && col_start+nrows_<=Wn);
   assert(Wn==Wm);
+#endif
 
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   int* iRow = iRow_;
@@ -534,9 +535,11 @@ transAddToSymDenseMatrixUpperTriangle(int row_start,
       const int i = jCol[it] + row_start;
       const int j = iRow[it] + col_start;
 #ifdef HIOP_DEEPCHECKS
+#ifndef NDEBUG
       assert(i < Wm && j < Wn);
       assert(i>=0 && j>=0);
       assert(i<=j && "source entries need to map inside the upper triangular part of destination");
+#endif
 #endif
       WM(i, j) += alpha * values[it];
     });
@@ -714,8 +717,10 @@ copy_to(hiopMatrixDense& W)
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(), W.m(), W.n());
   
   size_type nnz = this->nnz_;
+#ifndef NDEBUG
   size_type nrows = this->nrows_;
   size_type ncols = this->ncols_;
+#endif
   index_type* jCol = jCol_;
   index_type* iRow = iRow_;
   double* values = values_;
@@ -1349,7 +1354,9 @@ set_Jac_FR(const hiopMatrixSparse& Jac_c,
 
   // assuming original Jac is sorted!
   int nnz_Jac_c = J_c.numberOfNonzeros();
+#ifndef NDEBUG
   int nnz_Jac_d = J_d.numberOfNonzeros();
+#endif
   int m_c = J_c.nrows_;
   int m_d = J_d.nrows_;
   int n_c = J_c.ncols_;
@@ -1505,8 +1512,10 @@ copySubmatrixFrom(const hiopMatrix& src_gen,
                   const bool offdiag_only)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+#ifndef NDEBUG
   auto m_rows = src.m();
   auto n_cols = src.n();
+#endif
 
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
@@ -1548,9 +1557,10 @@ copySubmatrixFromTrans(const hiopMatrix& src_gen,
                        const bool offdiag_only)
 {
   const hiopMatrixRajaSparseTriplet& src = dynamic_cast<const hiopMatrixRajaSparseTriplet&>(src_gen);
+#ifndef NDEBUG
   auto m_rows = src.m();
   auto n_cols = src.n();
-
+#endif
   assert(this->numberOfNonzeros() >= src.numberOfNonzeros());
   assert(n_cols + dest_col_st <= this->n() );
   assert(m_rows + dest_row_st <= this->m());
@@ -1620,7 +1630,7 @@ setSubmatrixToConstantDiag_w_colpattern(const double& scalar,
         sum += 1;
       }
     });
-  size_type nrm = sum.get();
+  size_type nrm = sum.get(); (void)nrm;
   assert(nrm == nnz_to_copy);
 #endif
 
@@ -1708,7 +1718,7 @@ setSubmatrixToConstantDiag_w_rowpattern(const double& scalar,
         sum += 1;
       }
     });
-  size_type nrm = sum.get();
+  size_type nrm = sum.get(); (void)nrm;
   assert(nrm == nnz_to_copy);
 #endif
 
@@ -1838,7 +1848,7 @@ copyDiagMatrixToSubblock_w_pattern(const hiopVector& dx,
         sum += 1;
       }
     });
-  size_type nrm = sum.get();
+  size_type nrm = sum.get(); (void)nrm;
   assert(nrm == nnz_to_copy);
 #endif
 
@@ -2017,8 +2027,10 @@ addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start,
   RAJA::View<double, RAJA::Layout<2>> WM(W.local_data(),
                                          W.get_local_size_m(),
                                          W.get_local_size_n());
+#ifndef NDEBUG
   auto Wm = W.m();
   auto Wn = W.n();
+#endif
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
@@ -2071,7 +2083,9 @@ startingAtAddSubDiagonalToStartingAt(int diag_src_start,
   assert(diag_src_start>=0 && diag_src_start+num_elems<=this->nrows_);
   double* v = vd.local_data();
 
+#ifndef NDEBUG
   auto vds = vd.get_size();
+#endif
   auto iRow = this->iRow_;
   auto jCol = this->jCol_;
   auto values = this->values_;
@@ -2133,10 +2147,12 @@ set_Hess_FR(const hiopMatrixSparse& Hess,
   const auto& M2 = dynamic_cast<const hiopMatrixRajaSymSparseTriplet<MEMBACKEND, RAJAEXECPOL>&>(Hess);
 
   // assuming original Hess is sorted, and in upper-triangle format
-  const int m1 = M1.m();
+#ifndef NDEBUG
   const int n1 = M1.n();
-  const int m2 = M2.m();
   const int n2 = M2.n();
+#endif  
+  const int m1 = M1.m();
+  const int m2 = M2.m();
   int m_row = add_diag.get_size();
 
   assert(n1==m1);
@@ -2147,8 +2163,9 @@ set_Hess_FR(const hiopMatrixSparse& Hess,
   // Hence we use add_diag.get_size() to detect the length of x in the base problem
   assert(m_row==m2 || m2==0);
   
+#ifndef NDEBUG
   int nnz1 = m_row + M2.numberOfOffDiagNonzeros();
-
+#endif
   assert(this->nnz_ == nnz1);
 
   if(M2.row_starts_==NULL) {

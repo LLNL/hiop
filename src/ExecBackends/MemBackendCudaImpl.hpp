@@ -76,7 +76,7 @@ struct AllocImpl<MemBackendCuda, T, I>
   inline static T* alloc(MemBackendCuda& mb, const I& n)
   {
     T* p;
-    auto err = cudaMalloc((void**)&p, n*sizeof(T));
+    auto err = cudaMalloc((void**)&p, n*sizeof(T)); (void)err;
     assert(cudaSuccess==err);
     return p;
   }
@@ -87,7 +87,7 @@ struct DeAllocImpl<MemBackendCuda, T>
 {
   inline static void dealloc(MemBackendCuda& mb, T* p)
   {
-    auto err = cudaFree((void*)p);
+    auto err = cudaFree((void*)p); (void)err;
     assert(cudaSuccess==err);
   }  
 };
@@ -105,7 +105,7 @@ struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, 
                            const I& n)
   {
     cudaError_t err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToDevice);
-    assert(err == cudaSuccess);
+    assert(err == cudaSuccess); (void)err;
     return cudaSuccess == err;
   }
 };
@@ -120,7 +120,7 @@ struct TransferImpl<MemBackendCuda, EXECPOLDEST, MemBackendCpp, EXECPOLSRC, T, I
                            const I& n)
   {
     auto err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyHostToDevice);
-    assert(cudaSuccess == err);
+    assert(cudaSuccess == err); (void)err;
     return cudaSuccess == err;
   }
 };
@@ -135,7 +135,7 @@ struct TransferImpl<MemBackendCpp, EXECPOLDEST, MemBackendCuda, EXECPOLSRC, T, I
                            const I& n)
   {
     auto err = cudaMemcpy(p_dest, p_src, n*sizeof(T), cudaMemcpyDeviceToHost);
-    assert(cudaSuccess == err);
+    assert(cudaSuccess == err); (void)err;
     return cudaSuccess == err;
   }
 };

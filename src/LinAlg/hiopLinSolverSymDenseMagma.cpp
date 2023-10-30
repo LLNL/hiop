@@ -70,7 +70,7 @@ namespace hiop
 
     magma_queue_create(devices[device], &magma_device_queue_);
 
-    int magmaRet;
+    int magmaRet; (void)magmaRet;
 
     const int align=32;
     ldda_ = magma_roundup(n, align );  // multiple of 'align', small power of 2 (i.e., 32)
@@ -286,7 +286,7 @@ namespace hiop
 
     magma_queue_create(devices[device], &magma_device_queue_);
 
-    int magmaRet;
+    int magmaRet; (void)magmaRet;
 
     const int align=32;
     const int nrhs=1;

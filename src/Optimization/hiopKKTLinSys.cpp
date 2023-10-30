@@ -555,8 +555,10 @@ bool hiopKKTLinSysCompressedXYcYd::update(const hiopIterate* iter,
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
   Hess_=Hess;
 
+#ifndef NDEBUG
   int nx  = Hess_->m();
   assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
+#endif
 
   //compute and put the barrier diagonals in
   //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -788,7 +790,9 @@ bool hiopKKTLinSysCompressedXDYcYd::update( const hiopIterate* iter,
 
   Hess_=Hess;
 
+#ifndef NDEBUG
   int nx  = Hess_->m(); assert(nx==Hess_->n()); assert(nx==Jac_c_->n()); assert(nx==Jac_d_->n());
+#endif
 
   // compute barrier diagonals (these change only between outer optimiz iterations)
   // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -1955,10 +1959,12 @@ bool hiopKKTLinSysNormalEquation::update(const hiopIterate* iter,
   Jac_d_ = Jac_d;
   Hess_ = Hess;
 
+#ifndef NDEBUG
   size_type nx  = Hess_->m();
   assert(nx==Hess_->n());
   assert(nx==Jac_c_->n());
   assert(nx==Jac_d_->n());
+#endif
 
   // compute barrier diagonals (these change only between outer optimiz iterations)
   // Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu

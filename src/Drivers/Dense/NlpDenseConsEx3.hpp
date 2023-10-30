@@ -38,8 +38,8 @@ public:
     comm_size=1; my_rank=0; 
 #ifdef HIOP_USE_MPI
     comm = MPI_COMM_WORLD;
-    int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
-    ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
+    int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr); (void)ierr;
+    ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
   
     // set up vector distribution for primal variables - easier to store it as a member in this simple example
@@ -103,7 +103,7 @@ public:
     for(int i=0;i<n_local;i++) obj_value += 0.25*pow(x[i]-1., 4);
 #ifdef HIOP_USE_MPI
     double obj_global;
-    int ierr=MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Allreduce(&obj_value, &obj_global, 1, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     obj_value=obj_global;
 #endif
     return true;
@@ -151,7 +151,7 @@ public:
     
 #ifdef HIOP_USE_MPI
     double* cons_global=new double[num_cons];
-    int ierr=MPI_Allreduce(cons, cons_global, num_cons, MPI_DOUBLE, MPI_SUM, comm); assert(ierr==MPI_SUCCESS);
+    int ierr=MPI_Allreduce(cons, cons_global, num_cons, MPI_DOUBLE, MPI_SUM, comm); assert(MPI_SUCCESS==ierr); (void)ierr;
     memcpy(cons, cons_global, num_cons*sizeof(double));
     delete[] cons_global;
 #endif

@@ -12,8 +12,8 @@ Ex1Meshing1D::Ex1Meshing1D(double a, double b, size_type glob_n, double r, MPI_C
   comm=comm_;
   comm_size=1; my_rank=0; 
 #ifdef HIOP_USE_MPI
-  int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr);
-  ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Comm_size(comm, &comm_size); assert(MPI_SUCCESS==ierr); (void)ierr;
+  ierr = MPI_Comm_rank(comm, &my_rank); assert(MPI_SUCCESS==ierr); (void)ierr;
 #endif
   // set up vector distribution for primal variables - easier to store it as a member in this simple example
   col_partition = new index_type[comm_size+1];
@@ -121,7 +121,7 @@ double DiscretizedFunction::dotProductWith( const hiopVector& v_ ) const
  
  #ifdef HIOP_USE_MPI
     double dotprodG;
-    int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+    int ierr = MPI_Allreduce(&dot, &dotprodG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
     dot=dotprodG;
 #endif
     return dot;
@@ -150,7 +150,7 @@ double DiscretizedFunction::twonorm() const
 
 #ifdef HIOP_USE_MPI
   double nrm_squareG;
-  int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr);
+  int ierr = MPI_Allreduce(&nrm_square, &nrm_squareG, 1, MPI_DOUBLE, MPI_SUM, comm_); assert(MPI_SUCCESS==ierr); (void)ierr;
   nrm_square=nrm_squareG;
 #endif  
   return sqrt(nrm_square);
