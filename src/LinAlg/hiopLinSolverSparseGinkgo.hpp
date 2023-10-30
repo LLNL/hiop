@@ -90,6 +90,7 @@ private:
   std::shared_ptr<gko::Executor> exec_;
   std::shared_ptr<gko::matrix::Csr<double, int>> mtx_;
   std::shared_ptr<gko::matrix::Csr<double, int>> host_mtx_;
+  std::shared_ptr<gko::matrix::Dense<double>> dense_b_;
   std::shared_ptr<gko::LinOpFactory> reusable_factory_;
   std::shared_ptr<gko::LinOp> gko_solver_;
   bool iterative_refinement_;
