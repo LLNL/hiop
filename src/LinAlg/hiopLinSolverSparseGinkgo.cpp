@@ -212,13 +212,11 @@ std::shared_ptr<gko::Executor> create_exec(std::string executor_string)
             {"omp", [] { return gko::OmpExecutor::create(); }},
             {"cuda",
              [] {
-                 return gko::CudaExecutor::create(0, gko::ReferenceExecutor::create(),
-                                                  true);
+                 return gko::CudaExecutor::create(0, gko::ReferenceExecutor::create());
              }},
             {"hip",
              [] {
-                 return gko::HipExecutor::create(0, gko::ReferenceExecutor::create(),
-                                                 true);
+                 return gko::HipExecutor::create(0, gko::ReferenceExecutor::create());
              }},
             {"dpcpp",
              [] {
@@ -284,7 +282,6 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
       index_covert_CSR2Triplet_{nullptr},
       index_covert_extra_Diag2CSR_{nullptr}
   {
-      std::cout << "START" << std::endl;
     if(nlp_->options->GetString("mem_space") == "device") {
       M_host_ = LinearAlgebraFactory::create_matrix_sparse("default", n, n, nnz);
     }
@@ -316,7 +313,6 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
     // If the matrix is on device, copy it to the host mirror
     std::string mem_space = nlp_->options->GetString("mem_space");
-    std::cout << nlp_->options->GetString("ginkgo_exec") << " " << mem_space << std::endl;
     auto M = M_;
     if(mem_space == "device") {
       auto host = exec_->get_master();
@@ -383,7 +379,6 @@ std::shared_ptr<gko::LinOpFactory> setup_solver_factory(std::shared_ptr<const gk
 
   bool hiopLinSolverSymSparseGinkgo::solve ( hiopVector& x_ )
   {
-      std::cout << "SOLVE" << std::endl;
     using vec = gko::matrix::Dense<double>;
     using arr = gko::array<double>;
     auto host = exec_->get_master();
