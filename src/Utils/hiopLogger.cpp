@@ -144,7 +144,7 @@ void hiopLogger::printf(hiopOutVerbosity v, const char* format, ...)
 
   va_list args;
   va_start(args, format);
-  vsprintf(buff_,format, args);
+  vsnprintf(buff_,4096,format, args);
   fprintf(f_,"%s",buff_);
   va_end(args);
 
@@ -155,7 +155,7 @@ void hiopLogger::printf_error(hiopOutVerbosity v, const char* format, ...)
   char buff[4096];
   va_list args;
   va_start (args, format);
-  vsprintf (buff,format, args);
+  vsnprintf(buff,4096,format, args);
   fprintf(stderr,"%s",buff);
   va_end (args);
 };
