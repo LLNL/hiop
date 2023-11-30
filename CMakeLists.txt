@@ -6,7 +6,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "-Wall -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -Werror")
 
 if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
@@ -105,7 +105,9 @@ if(NOT "${HIOP_EXTRA_LINK_FLAGS}" STREQUAL "")
 endif()
 
 if(HIOP_USE_MPI)
-  find_package(MPI REQUIRED)
+  find_package(MPI REQUIRED COMPONENTS C CXX Fortran)
+
+  #find_package(MPI REQUIRED)
   if(NOT DEFINED MPI_CXX_COMPILER)
     set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
@@ -114,7 +116,7 @@ if(HIOP_USE_MPI)
   
   set(CMAKE_Fortran_COMPILER ${MPI_Fortran_COMPILER})
   include_directories(${MPI_Fortran_ADDITIONAL_INCLUDE_DIRS} ${MPI_Fortran_COMPILER_INCLUDE_DIRS} )
-  set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -D HIOP_USE_MPI")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -D HIOP_USE_MPI")
   
   target_link_libraries(hiop_tpl INTERFACE MPI::MPI_CXX MPI::MPI_CXX)
   set(HIOP_EXTRA_MPI_FLAGS "" CACHE STRING "Extra arguments to mpiexec when running tests")

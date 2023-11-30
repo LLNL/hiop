@@ -478,7 +478,7 @@ void hiopOptions::log_printf(hiopOutVerbosity v, const char* format, ...)
   char buff[1024];
   va_list args;
   va_start (args, format);
-  vsprintf (buff,format, args);
+  vsnprintf(buff,1024,format, args);
   if(log_) {
     log_->printf(v,buff);
   } else {
