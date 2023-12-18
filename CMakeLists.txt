@@ -269,6 +269,7 @@ if(HIOP_USE_GPU)
         "\n* HIOP_USE_HIP"
     )
   endif()
+  set(HIOP_USE_RAJA "ON") #CUDA/HIP requires using RAJA. This dependency will be removed in a future release, after somee necessary implementations.
 endif(HIOP_USE_GPU)
 
 if(HIOP_USE_RAJA)
