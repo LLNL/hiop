@@ -1,6 +1,19 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 1.0.2: Misc fixes
+* Removed deprecated ALG2 for cusparseCsr2cscEx2 by @cnpetra in #671
+* Addressed fixed buffer size vulnerability for vsnprintf by @nychiang in #673
+* Removed stringent -Wall and -Werror from release builds to avoid downstream compilation errors
+
+## Version 1.0.1: C++17 compatible and misc fixes
+Default C++ standard remains C++14
+
+* Fix LLNL CI by @nychiang in #663
+* C++17 support: compile -Wall/-Werror proof by @tepperly in #653
+* Fix a bug in copying an empty matrix into a bigger matrix by @nychiang in #666
+* Fix the approach used to update mu by @nychiang in #664
+
 ## Version 1.0.0: Mature solvers interfaces and execution backends
 ### Notable new features
 Interfaces of various solvers reached an equilibrium point after HiOp was interfaced with multiple optimization front-ends (e.g., power grid ACOPF and SC-ACOPF problems and topology optimization) both on CPUs and GPUs. The PriDec solver reached exascale on Frontier after minor communication optimizations. The quasi-Newton interior-point solver received a couple of updates that increase robustness. The Newton interior-point solver can fully operate on GPUs with select GPU linear solvers (CUSOLVER-LU and Gingko).
