@@ -92,8 +92,7 @@ module load mpfr/4.2.0-gcc-8.3.1-module-pkiqrkc
 # suite-sparse@=5.13.0%gcc@=8.3.1~cuda~graphblas~openmp+pic build_system=generic arch=linux-rhel7-power9le
 module load suite-sparse/5.13.0-gcc-8.3.1-module-yoyxdkr
 # umpire@=6.0.0%gcc@=8.3.1~c+cuda~device_alloc~deviceconst~examples~fortran~ipo~numa~openmp~rocm~shared build_system=cmake build_type=Release cuda_arch=70 generator=make tests=none arch=linux-rhel7-power9le
-module load umpire/6.0.0-gcc-8.3.1-module-wdgpdbsdd
-
+module load umpire/6.0.0-gcc-8.3.1-module-wdgpdbs
 
 [ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
 cat > $PWD/nvblas.conf <<-EOD
