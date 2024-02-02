@@ -227,8 +227,13 @@ if(HIOP_USE_GPU)
     set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
   endif()
 
-  if(HIOP_USE_CUDA)
+  if(NOT HIOP_USE_RAJA)
     set(HIOP_USE_RAJA "ON") #CUDA/HIP requires using RAJA.
+    message(STATUS "Enable RAJA since HIOP_USE_GPU is ON. HiOp requires using RAJA with CUDA/HIP.")
+  endif(NOT HIOP_USE_RAJA)
+
+
+  if(HIOP_USE_CUDA)
     enable_language(CUDA)
     check_language(CUDA)
 
