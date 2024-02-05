@@ -1195,7 +1195,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual);
     assert(bret);
     //Step `_alpha_primal` may be reduced when option 'moving_lim_abs' or 'moving_lim_rel' is active.
-    //Return bool indicates if reduction was done.
+    //Returned bool indicates if reduction was done or not.
     bret = ensure_moving_lims(*it_curr, *dir, _alpha_primal);
     
     double theta = onenorm_pr_curr_ = resid->get_theta(); //at it_curr
@@ -2169,6 +2169,10 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       //maximum  step
       bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
+      //Step `_alpha_primal` may be reduced when option 'moving_lim_abs' or 'moving_lim_rel' is active.
+      //Returned bool indicates if reduction was done or not.
+      bret = ensure_moving_lims(*it_curr, *dir, _alpha_primal);
+      
       double theta = onenorm_pr_curr_ = resid->get_theta(); //at it_curr
       double theta_trial;
       nlp->runStats.tmSolverInternal.stop();
@@ -2526,7 +2530,8 @@ bool hiopAlgFilterIPMBase::ensure_moving_lims(const hiopIterate& it, const hiopI
                        "Moving lim (absolute, [%7.3e]): step reduced: %7.3e -> %7.3e.\n",
                        moving_lim_abs,
                        alpha_pr_in,
-                       alpha_pr);      
+                       alpha_pr);
+      return true;
     } else {
       nlp->log->printf(hovLinesearch,
                        "Moving lim (absolute, [%7.3e]) satisfied, step (norm %7.3e) not reduced.\n",
