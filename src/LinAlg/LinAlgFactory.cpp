@@ -353,7 +353,7 @@ hiopMatrixDense* LinearAlgebraFactory::create_matrix_dense(const ExecSpaceInfo& 
       return nullptr;
 #endif //HIOP_USE_RAJA
     } else {// for if(hi.exec_backend_ == "RAJA")
-
+      assert(false && "device memory backend not available because HiOp was not built with RAJA");
       if(mem_space_upper == "CUDA") {
 #ifdef HIOP_USE_CUDA
           assert(mem_space_upper == "DEVICE");

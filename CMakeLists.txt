@@ -222,6 +222,10 @@ else()
 endif()
 
 if(HIOP_USE_GPU)
+  if(NOT HIOP_USE_RAJA)
+    message(FATAL_ERROR "Error: HIOP_USE_GPU is ON, but HIOP_USE_RAJA is OFF. HiOp requires using RAJA with CUDA/HIP.")
+  endif()
+
   include(CheckLanguage)
   if(HIOP_USE_MAGMA)
     set(HIOP_MAGMA_DIR CACHE PATH "Path to Magma directory")
