@@ -1192,7 +1192,12 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     nlp->runStats.tmSolverInternal.start();
 
     //maximum  step
-    bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual); assert(bret);
+    bret = it_curr->fractionToTheBdry(*dir, _tau, _alpha_primal, _alpha_dual);
+    assert(bret);
+    //Step `_alpha_primal` may be reduced when option 'moving_lim_abs' or 'moving_lim_rel' is active.
+    //Return bool indicates if reduction was done.
+    bret = ensure_moving_lims(*it_curr, *dir, _alpha_primal);
+    
     double theta = onenorm_pr_curr_ = resid->get_theta(); //at it_curr
     double theta_trial;
     nlp->runStats.tmSolverInternal.stop();
@@ -2494,6 +2499,42 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
                      iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
   }
+}
+
+bool hiopAlgFilterIPMBase::ensure_moving_lims(const hiopIterate& it, const hiopIterate& dir, double& alpha_pr)
+{
+  auto moving_lim_rel = nlp->options->GetNumeric("moving_lim_rel");
+  if(moving_lim_rel>0) {
+    const auto alpha_pr_in = alpha_pr;
+    alpha_pr = moving_lim_rel * alpha_pr;
+    nlp->log->printf(hovLinesearch,
+                     "Moving lim (relative, [%7.3e]): step reduced: %7.3e -> %7.3e.\n",
+                     moving_lim_rel,
+                     alpha_pr_in,
+                     alpha_pr);
+    return true;
+  }
+
+  auto moving_lim_abs = nlp->options->GetNumeric("moving_lim_abs");
+  if(moving_lim_abs>0) {
+    const auto alpha_pr_in = alpha_pr;
+    auto x_nrm = dir.get_x()->infnorm();
+    auto step_nrm = alpha_pr*x_nrm;
+    if(step_nrm>moving_lim_abs) {
+      alpha_pr = moving_lim_abs / step_nrm;
+      nlp->log->printf(hovLinesearch,
+                       "Moving lim (absolute, [%7.3e]): step reduced: %7.3e -> %7.3e.\n",
+                       moving_lim_abs,
+                       alpha_pr_in,
+                       alpha_pr);      
+    } else {
+      nlp->log->printf(hovLinesearch,
+                       "Moving lim (absolute, [%7.3e]) satisfied, step (norm %7.3e) not reduced.\n",
+                       moving_lim_abs,
+                       step_nrm);    
+    }
+  } // end of moving lim abs 
+  return false;
 }
 
 

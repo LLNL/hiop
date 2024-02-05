@@ -155,8 +155,14 @@ void hiopLogger::printf_error(hiopOutVerbosity v, const char* format, ...)
   char buff[4096];
   va_list args;
   va_start (args, format);
-  vsnprintf(buff,4096,format, args);
-  fprintf(stderr,"%s",buff);
+  vsnprintf(buff, 4096, format, args);
+  if(v<=hovError) {
+    fprintf(stderr, "ERROR: %s", buff);
+  } else if(v<=hovWarning) {
+    fprintf(stderr, "WARNING: %s", buff);
+  } else {
+    fprintf(stderr, "%s", buff);
+  }
   va_end (args);
 };
 

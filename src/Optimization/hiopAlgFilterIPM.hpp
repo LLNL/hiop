@@ -183,7 +183,7 @@ protected:
                                  const bool& elastic_mode_on,
                                  double& mu_new,
                                  double& tau_new);
-
+protected:
   // second order correction
   virtual int apply_second_order_correction(hiopKKTLinSys* kkt,
                                             const double theta_curr,
@@ -198,7 +198,9 @@ protected:
                                             const double alpha_primal,
                                             bool &grad_phi_dx_computed,
                                             double &grad_phi_dx);
-
+  /// @brief Step-length `alpha_pr` may be reduced when option 'moving_lim_abs' or 'moving_lim_rel' is active.
+  bool ensure_moving_lims(const hiopIterate& it, const hiopIterate& dir, double& alpha_pr);
+public:
   /// @brief do feasibility restoration
   virtual bool apply_feasibility_restoration(hiopKKTLinSys* kkt);
   virtual bool solve_soft_feasibility_restoration(hiopKKTLinSys* kkt);
