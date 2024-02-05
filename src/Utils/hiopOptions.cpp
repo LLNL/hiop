@@ -689,13 +689,14 @@ void hiopOptionsNLP::register_options()
                         "Minimum step size allowed in line-search (default 1e-16). If step size is less than this number, " 
                         "feasibility restoration problem is activated.");
 
-    auto d_abs = "Max allowed update of the 'x' primal variables after the line-search. Primal step-length may be reduced "
-                 "so that the inf norm of the 'x' update is less or equal with the option's value. Default value: 0 (disabled).";
-    register_num_option("moving_lim_abs", 0, 0.0, 1e+8, d_abs);
+    auto d_abs = "Max allowed update of the 'x' primal variables during the line-search. Primal step-length may be reduced "
+                 "so that the inf norm of the 'x' update is less than or equal with the option's value. Default value: "
+                 "0 (disabled).";
+    register_num_option("moving_lim_abs", 0., 0., 1e+8, d_abs);
 
     auto d_rel = "Max allowed update of the primal variables relative to fraction-to-boundary (FTB) step. Line-search "
                  "will be started using the FTB step scaled by the option's value. Default value: 0 (disabled).";
-    register_num_option("moving_lim_rel", 0, 0.0, 1., d_rel);
+    register_num_option("moving_lim_rel", 0., 0., 1., d_rel);
     
     register_num_option("theta_max_fact",
                         1e+4,
