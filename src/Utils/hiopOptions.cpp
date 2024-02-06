@@ -677,6 +677,7 @@ void hiopOptionsNLP::register_options()
                       0.,
                       1e+7,
                       "Initial value of the initial multiplier of the identity in the secant approximation (default 1.0)");
+  //step length controls
   {
     vector<string> range(2); range[0] = "no"; range[1] = "yes";
     register_str_option("accept_every_trial_step", "no", range, "Disable line-search and take close-to-boundary step");
@@ -688,18 +689,27 @@ void hiopOptionsNLP::register_options()
                         "Minimum step size allowed in line-search (default 1e-16). If step size is less than this number, " 
                         "feasibility restoration problem is activated.");
 
+    auto d_abs = "Max allowed update of the 'x' primal variables during the line-search. Primal step-length may be reduced "
+                 "so that the inf norm of the 'x' update is less than or equal with the option's value. Default value: "
+                 "0 (disabled).";
+    register_num_option("moving_lim_abs", 0., 0., 1e+8, d_abs);
+
+    auto d_rel = "Max allowed update of the primal variables relative to fraction-to-boundary (FTB) step. Line-search "
+                 "will be started using the FTB step scaled by the option's value. Default value: 0 (disabled).";
+    register_num_option("moving_lim_rel", 0., 0., 1., d_rel);
+    
     register_num_option("theta_max_fact",
                         1e+4,
                         0.0,
                         1e+7,
-                        "Maximum constraint violation (theta_max) is scaled by this fact before using in the fileter line-search "
+                        "Maximum constraint violation (theta_max) is scaled by this factor before using in the filter line-search "
                         "algorithm (default 1e+4). (eqn (21) in Filt-IPM paper)");
 
     register_num_option("theta_min_fact",
                         1e-4,
                         0.0,
                         1e+7,
-                        "Minimum constraint violation (theta_min) is scaled by this fact before using in the fileter line-search "
+                        "Minimum constraint violation (theta_min) is scaled by this factor before using in the filter line-search "
                         "algorithm (default 1e-4). (eqn (21) in Filt-IPM paper)");
   }
   {
@@ -1531,6 +1541,15 @@ void hiopOptionsNLP::ensure_consistence()
       }
       set_val("fact_acceptor", "inertia_free");
     }
+  }
+
+  if(0 != GetNumeric("moving_lim_rel") * GetNumeric("moving_lim_abs")) {
+    if(is_user_defined("moving_lim_rel") || is_user_defined("moving_lim_abs")) {
+      log_printf(hovWarning,
+                 "Options 'moving_lim_rel' and 'moving_lim_rel' are both active, which is not supported. "
+                 "Option 'moving_lim_rel' will be disabled.\n");
+    }
+    set_val("moving_lim_rel", 0.);
   }
 }
 

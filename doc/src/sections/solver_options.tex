@@ -131,7 +131,13 @@ Double values in $[10^{-14},0.1]$. Default value: $10^{-6}$.
 \noindent \textbf{tau\_min}: fraction-to-the-boundary parameter used in the line-search to back-off from the boundary (eqn. (8) in~\cite{waecther_05_ipopt0}). Double values in $[0.9, 0.99999]$. Default value: $0.99$. 
 \medskip
 
-\noindent \textbf{accept\_every\_trial\_stepduals}: disable the line-search and take the close-to-boundary step. String values: ``no'' (default) and ``yes''.
+\noindent \textbf{accept\_every\_trial\_step}: Disables the filter line-search and take the close-to-boundary step. This step can be further controlled (while the filter line-search remains disabled) using options \textit{moving\_lim\_abs} and \textit{moving\_lim\_abs}. This option takes the string values: ``no'' (default) and ``yes''.
+\medskip
+
+\noindent \textbf{moving\_lim\_abs}: Controls the maximum allowed update of the $x$ primal variables during the line-search. Primal step-length may be reduced to ensure that the inf norm of the ``$\Delta x$'' update/direction is less than or equal with the option's value. It can be used with \textit{accept\_every\_trial\_step}. Numerical range is $[0,10^8]$. A zero value will disable this option. Default value: 0. 
+\medskip
+
+\noindent \textbf{moving\_lim\_rel}: Controls the maximum allowed update of the primal variables \textit{relative} to close-to-boundary step. With this option the line-search will be started using the close-to-boundary step \textit{scaled} by the option's value. Default value: 0 (disabled). It can be used with \textit{accept\_every\_trial\_step}. Numerical range is $[0,1]$. A zero value will disable this option. Default value: 0. 
 \medskip
 
 \noindent \textbf{duals\_init}: type of the update for the initialization of Lagrange multipliers corresponding to the equality constraints. Possible values one of the the strings ``lsq'' (least-square (LSQ) solve initialization) and ``zero'' (multipliers are set identically to zero). Default value: is ``lsq''.

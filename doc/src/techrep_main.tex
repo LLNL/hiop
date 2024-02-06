@@ -133,7 +133,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 1.0}
+  {\large\bfseries version 1.03}
 
 \vspace{3cm}
 
@@ -155,7 +155,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated Sep 7, 2023}}
+{\large\bfseries Updated Feb 5, 2024}}
 
 \vspace{0.75cm}
 
@@ -242,7 +242,7 @@ This document describes the \Hi suite of HPC optimization solvers for some large
 \end{itemize}
 
 This document includes instructions on how to obtain and
-build \Hi and a description of its interface, user options, and use as an optimization library. Guidelines on how is best to use the solver for parallel computations are also provided. The document generally targets users of \Hi, but also contains information relevant to potential developers or advanced users; these are strongly encouraged to also read the paper on the computational approach implemented in \Hi~\cite{petra_hiop}.
+build \Hi and a description of its interface, user options, and use as an optimization library. Guidelines on how is best to use the solver for parallel computations are also provided. The document generally targets users of \Hi, but also contains information relevant to potential developers or advanced users; these are strongly encouraged to also read the paper on the computational approach implemented in \Hi~\cite{petra2019memory}.
 
 
 While the MPI quasi-Newton solver of \texttt{Hiop} targets DAE- and PDE-constrained optimization problems formulated in a ``reduced-space'' approach, it can be used for general nonconvex nonlinear optimization as well. For efficiency considerations, it is recommended to \textit{use quasi-Newton \texttt{Hiop} for NLPs that have a relatively small number of general constraints}, say less than $100$; note that there are no restrictions on the number of bounds constraints, \textit{e.g.}, one can specify simple bounds on any, and potentially all the decision variables without affecting the computational efficiency. The minimizers computed by \Hi satisfies \textit{local} first-order optimality conditions.
