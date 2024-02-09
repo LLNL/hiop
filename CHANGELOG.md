@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 1.0.3: Moving limits and misc fixes
+* Update modules for CI tests on LLNL LC by @nychiang in #679
+* Update cmake build system to require RAJA when GPU compute mode is used by @nychiang in #676
+* Moving limits options for NLP IPM solvers by @cnpetra in #681
+
 ## Version 1.0.2: Misc fixes
 * Removed deprecated ALG2 for cusparseCsr2cscEx2 by @cnpetra in #671
 * Addressed fixed buffer size vulnerability for vsnprintf by @nychiang in #673
