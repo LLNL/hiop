@@ -6,8 +6,8 @@ add_subdirectory(Utils)
 
 # Interface headers not already picked up by another subdirectory
 set(hiop_INTERFACE_HEADERS
-  ${CMAKE_BINARY_DIR}/hiop_defs.hpp
-  ${CMAKE_BINARY_DIR}/FortranCInterface.hpp
+  ${PROJECT_BINARY_DIR}/hiop_defs.hpp
+  ${PROJECT_BINARY_DIR}/FortranCInterface.hpp
   )
 
 install(

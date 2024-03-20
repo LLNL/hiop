@@ -122,7 +122,7 @@ if(HIOP_USE_MPI)
   set(HIOP_EXTRA_MPI_FLAGS "" CACHE STRING "Extra arguments to mpiexec when running tests")
 endif(HIOP_USE_MPI)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 target_compile_features(hiop_options
   INTERFACE
@@ -393,11 +393,11 @@ endif()
 
 # The binary dir is already a global include directory
 configure_file(
-  "${CMAKE_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
-  "${CMAKE_BINARY_DIR}/hiop_defs.hpp")
+  "${PROJECT_SOURCE_DIR}/src/Interface/hiop_defs.hpp.in"
+  "${PROJECT_BINARY_DIR}/hiop_defs.hpp")
 
 # include build directory for Fortran name mangling header
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${PROJECT_BINARY_DIR})
 
 include_directories(src/Interface)
 include_directories(src/ExecBackends)
@@ -422,7 +422,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
+  set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/_dist-${CMAKE_BUILD_TYPE}")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 ##########################################################
