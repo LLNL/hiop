@@ -620,7 +620,9 @@ public:
   virtual ~hiopMatVecKKTFullOpr()
   {
     delete resid_;  
-    delete dir_;  
+    delete dir_;
+    delete dir_cv_;
+    delete res_cv_;
   };
 
   /** y = KKT * x */
@@ -673,7 +675,9 @@ public:
   virtual ~hiopPrecondKKTOpr()
   {
     delete resid_;  
-    delete dir_;  
+    delete dir_;
+    delete dir_cv_;
+    delete res_cv_;
   };
 
   /** y = inv(Preconditioner) * x = Preconditioner/x */
