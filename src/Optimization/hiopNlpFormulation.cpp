@@ -1213,7 +1213,7 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
     hiopVectorPar x_host(n_vars_, vec_distrib_, comm_);
     x.copy_to_vectorpar(x_host);
 
-    hiopVectorPar s_host(n_vars_, vec_distrib_, comm_);
+    hiopVectorPar s_host(n_cons_ineq_, vec_distrib_, comm_);
     s.copy_to_vectorpar(s_host);
     
     hiopVectorPar zl_host(n_vars_, vec_distrib_, comm_);
@@ -1270,6 +1270,73 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   }   
   return bret; 
 }
+
+bool hiopNlpFormulation::user_callback_ws_iterate(hiopVector& x,
+                                                  hiopVector& z_L,
+                                                  hiopVector& z_U,
+                                                  hiopVector& y_c,
+                                                  hiopVector& y_d,
+                                                  hiopVector& s,
+                                                  hiopVector& v_L,
+                                                  hiopVector& v_U)
+{
+  assert(x.get_size()==n_vars_);
+  assert(y_c.get_size() == n_cons_eq_);
+  assert(y_d.get_size() == n_cons_ineq_);
+
+  bool bret{false};
+
+  if(options->GetString("callback_mem_space")=="host" && options->GetString("mem_space")=="device") {
+
+#if !defined(HIOP_USE_MPI)
+    int* vec_distrib_ = nullptr;
+    MPI_Comm comm_ = MPI_COMM_SELF;
+#endif  
+    hiopVectorPar x_host(n_vars_, vec_distrib_, comm_);
+    x.copy_to_vectorpar(x_host);
+    
+    hiopVectorPar zl_host(n_vars_, vec_distrib_, comm_);
+    z_L.copy_to_vectorpar(zl_host);
+    
+    hiopVectorPar zu_host(n_vars_, vec_distrib_, comm_);
+    z_U.copy_to_vectorpar(zu_host);
+
+    hiopVectorPar yc_host(n_cons_eq_, vec_distrib_, comm_);
+    y_c.copy_to_vectorpar(yc_host);
+
+    hiopVectorPar yd_host(n_cons_ineq_, vec_distrib_, comm_);
+    y_d.copy_to_vectorpar(yd_host);
+
+    hiopVectorPar s_host(n_cons_ineq_, vec_distrib_, comm_);
+    s.copy_to_vectorpar(s_host);
+
+    hiopVectorPar vl_host(n_cons_ineq_, vec_distrib_, comm_);
+    v_L.copy_to_vectorpar(zl_host);
+    
+    hiopVectorPar vu_host(n_cons_ineq_, vec_distrib_, comm_);
+    v_U.copy_to_vectorpar(zu_host);    
+
+    bret = interface_base.ws_iterate_callback(x_host.local_data_const(),
+                                              zl_host.local_data_const(),
+                                              zu_host.local_data_const(),
+                                              yc_host.local_data_const(),
+                                              yd_host.local_data_const(),
+                                              s_host.local_data_const(),
+                                              vl_host.local_data_const(),
+                                              vu_host.local_data_const());
+  } else {
+    bret = interface_base.ws_iterate_callback(x.local_data_const(),
+                                              z_L.local_data_const(),
+                                              z_U.local_data_const(),
+                                              y_c.local_data_const(),
+                                              y_d.local_data_const(),
+                                              s.local_data_const(),
+                                              v_L.local_data_const(),
+                                              v_U.local_data_const());
+  }   
+  return bret; 
+}
+
 
 bool hiopNlpFormulation::user_force_update(int iter,
                                            double& obj_value,

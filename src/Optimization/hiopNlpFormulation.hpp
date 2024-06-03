@@ -193,6 +193,16 @@ public:
                              int ls_trials);
 
   virtual
+  bool user_callback_ws_iterate(hiopVector& x,
+                                hiopVector& z_L,
+                                hiopVector& z_U,
+                                hiopVector& y_c,
+                                hiopVector& y_d,
+                                hiopVector& s,
+                                hiopVector& v_L,
+                                hiopVector& v_U);
+
+  virtual
   bool user_force_update(int iter,
                          double& obj_value,
                          hiopVector& x,
