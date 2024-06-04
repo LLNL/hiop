@@ -48,7 +48,7 @@
 /**
  * @file NlpSparseRajaEx2.hpp
  * 
- * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
  *
  */
 

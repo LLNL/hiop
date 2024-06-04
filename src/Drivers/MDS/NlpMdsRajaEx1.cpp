@@ -52,8 +52,8 @@
  * @author Slaven Peles <slaven.peles@pnnl.gov>, PNNL
  * @author Cameron Rutherford <robert.rutherford@pnnl.gov>, PNNL
  * @author Jake K. Ryan <jake.ryan@pnnl.gov>, PNNL
- * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
- * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
  *
  */
 

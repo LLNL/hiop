@@ -49,8 +49,8 @@
 /* implements the linear solver class using the PARDISO solver
 * @file hiopLinearOperator.cpp
 * @ingroup LinearSolvers
-* @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
-* @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+* @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
+* @author Cosmin G. Petra <petra1@lnnl.gov>, LLNL
 */
 
 #include "hiopVector.hpp"

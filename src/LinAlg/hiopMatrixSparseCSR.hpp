@@ -48,7 +48,7 @@
 /**
  * @file hiopMatrixSparseCSR.hpp
  *
- * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LLNL
  *
  */
 #ifndef HIOP_SPARSE_MATRIX_CSR

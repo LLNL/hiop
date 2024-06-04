@@ -49,8 +49,8 @@
 /**
   * @file hiopFactAcceptor.cpp
   *
-  * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
-  * @author Cosmin G. Petra <petra@lnnl.gov>, LNNL
+  * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
+  * @author Cosmin G. Petra <petra@lnnl.gov>, LLNL
   *
   */
 
