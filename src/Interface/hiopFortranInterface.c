@@ -49,7 +49,7 @@
  * @file hiopFortranInterface.c
  *
  * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
- * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
  *
  */
 

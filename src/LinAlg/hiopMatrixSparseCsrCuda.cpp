@@ -48,7 +48,7 @@
 /**
  * @file hiopMatrixSparseCsrCuda.cpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 

@@ -48,7 +48,7 @@
 /**
  * @file hiopMatrixSparseCSRSeq.cpp
  *
- * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LLNL
  *
  */
 

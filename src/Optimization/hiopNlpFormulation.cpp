@@ -48,8 +48,8 @@
 /**
  * @file hiopNlpFormulation.cpp
  *
- * @author Cosmin G. Petra <petra1@lnnl.gov>, LNNL
- * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@lnnl.gov>, LLNL
+ * @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
  *
  */
 

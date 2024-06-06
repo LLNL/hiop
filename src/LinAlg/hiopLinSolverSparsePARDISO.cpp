@@ -48,7 +48,7 @@
 /* implements the linear solver class using the PARDISO solver
 * @file hiopLinSolverSparsePARDISO.cpp
 * @ingroup LinearSolvers
-* @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LNNL
+* @author Nai-Yuan Chiang <chiang7@lnnl.gov>, LLNL
 */
 
 #include "hiopLinSolverSparsePARDISO.hpp"

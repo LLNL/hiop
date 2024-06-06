@@ -48,7 +48,7 @@
 /**
  * @file hiopMatrixSparseCsrCuda.hpp
  *
- * @author Cosmin G. Petra <petra1@llnl.gov>, LNNL
+ * @author Cosmin G. Petra <petra1@llnl.gov>, LLNL
  *
  */
 #ifndef HIOP_SPARSE_MATRIX_CSRCUDA
