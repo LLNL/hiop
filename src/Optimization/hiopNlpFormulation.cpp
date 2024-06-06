@@ -1271,14 +1271,14 @@ bool hiopNlpFormulation::user_callback_iterate(int iter,
   return bret; 
 }
 
-bool hiopNlpFormulation::user_callback_ws_iterate(hiopVector& x,
-                                                  hiopVector& z_L,
-                                                  hiopVector& z_U,
-                                                  hiopVector& y_c,
-                                                  hiopVector& y_d,
-                                                  hiopVector& s,
-                                                  hiopVector& v_L,
-                                                  hiopVector& v_U)
+bool hiopNlpFormulation::user_callback_full_iterate(hiopVector& x,
+                                                    hiopVector& z_L,
+                                                    hiopVector& z_U,
+                                                    hiopVector& y_c,
+                                                    hiopVector& y_d,
+                                                    hiopVector& s,
+                                                    hiopVector& v_L,
+                                                    hiopVector& v_U)
 {
   assert(x.get_size()==n_vars_);
   assert(y_c.get_size() == n_cons_eq_);
@@ -1316,23 +1316,23 @@ bool hiopNlpFormulation::user_callback_ws_iterate(hiopVector& x,
     hiopVectorPar vu_host(n_cons_ineq_, vec_distrib_, comm_);
     v_U.copy_to_vectorpar(zu_host);    
 
-    bret = interface_base.ws_iterate_callback(x_host.local_data_const(),
-                                              zl_host.local_data_const(),
-                                              zu_host.local_data_const(),
-                                              yc_host.local_data_const(),
-                                              yd_host.local_data_const(),
-                                              s_host.local_data_const(),
-                                              vl_host.local_data_const(),
-                                              vu_host.local_data_const());
+    bret = interface_base.iterate_full_callback(x_host.local_data_const(),
+                                                zl_host.local_data_const(),
+                                                zu_host.local_data_const(),
+                                                yc_host.local_data_const(),
+                                                yd_host.local_data_const(),
+                                                s_host.local_data_const(),
+                                                vl_host.local_data_const(),
+                                                vu_host.local_data_const());
   } else {
-    bret = interface_base.ws_iterate_callback(x.local_data_const(),
-                                              z_L.local_data_const(),
-                                              z_U.local_data_const(),
-                                              y_c.local_data_const(),
-                                              y_d.local_data_const(),
-                                              s.local_data_const(),
-                                              v_L.local_data_const(),
-                                              v_U.local_data_const());
+    bret = interface_base.iterate_full_callback(x.local_data_const(),
+                                                z_L.local_data_const(),
+                                                z_U.local_data_const(),
+                                                y_c.local_data_const(),
+                                                y_d.local_data_const(),
+                                                s.local_data_const(),
+                                                v_L.local_data_const(),
+                                                v_U.local_data_const());
   }   
   return bret; 
 }

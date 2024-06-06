@@ -485,14 +485,14 @@ public:
    * can be then used in host memory space (without the need to rely on or use Umpire).
    * 
    */
-  virtual bool ws_iterate_callback(const double* x,
-                                   const double* z_L,
-                                   const double* z_U,
-                                   const double* yc,
-                                   const double* yd,
-                                   const double* s,
-                                   const double* v_L,
-                                   const double* v_U)
+  virtual bool iterate_full_callback(const double* x,
+                                     const double* z_L,
+                                     const double* z_U,
+                                     const double* yc,
+                                     const double* yd,
+                                     const double* s,
+                                     const double* v_L,
+                                     const double* v_U)
   {
     return true;
   }
