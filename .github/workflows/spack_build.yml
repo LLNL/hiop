@@ -4,15 +4,14 @@ on: [push]
 
 jobs:
   hiop_spack_builds:
-    # 20.04 is a version shared by E4S cache and Spack binaries for x86_64
-    runs-on: ubuntu-20.04
-    container: spack/ubuntu-focal:latest
+    runs-on: ubuntu-22.04
+    container: spack/ubuntu-jammy:latest
     strategy:
       matrix:
         spack_spec:
-          - hiop@develop+mpi~raja~shared~kron~sparse ^openmpi
-          - hiop@develop~mpi~raja~shared~kron~sparse
-          - hiop@develop~mpi+raja~shared~kron~sparse
+          - hiop@develop+mpi~raja~shared~kron~sparse ^openmpi ^libevent~openssl
+          - hiop@develop~mpi~raja~shared~kron~sparse ^libevent~openssl
+          - hiop@develop~mpi+raja~shared~kron~sparse ^libevent~openssl
 
             # We will need coinhsl for this, but what are the rules for using
             # a coinhsl tarball?
@@ -41,13 +40,7 @@ jobs:
           spack env activate ./spack-env
           spack add $SPACK_SPEC target=x86_64
           spack develop --path $(pwd) --no-clone hiop@develop
-          # Add E4S mirror - likely relying on spack cache but nice backup
-          # https://oaciss.uoregon.edu/e4s/inventory.html
-          # Need to add build cache before concretizing to re-use dependencies
-          # Using custom e4s cache due to known bug
-          # TODO: Update cache link after bug is resolved
-          spack mirror add E4S https://cache.e4s.io/23.02
-          spack buildcache keys --install --trust
+          spack external find --all --exclude python
           spack concretize --reuse
           git config --global --add safe.directory $(pwd)
           spack --stacktrace install --fail-fast
