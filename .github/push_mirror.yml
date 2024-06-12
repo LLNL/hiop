@@ -1,0 +1,24 @@
+#name: Push Mirror
+
+#on: [push, delete]
+
+#jobs:
+#  PNNL_GitLab:
+#    runs-on: ubuntu-22.04
+#    steps:
+#      - uses: actions/checkout@v1
+#      - uses: spyoungtech/mirror-action@master
+#        with:
+#          REMOTE: ${{ secrets.GIT_REPO_URL }}
+#          GIT_USERNAME: ${{ secrets.GIT_USER }}
+#          GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
+#          GIT_PUSH_ARGS: --push-option=ci.skip --tags --force --prune
+#      - uses: nelonoel/branch-name@v1.0.1
+#      - name: Trigger Pipeline
+#        run: |
+#          response=$(curl -X POST -F token=${{ secrets.PNNL_PIPELINE_TRIGGER_TOKEN }} -F ref=${BRANCH_NAME} https://gitlab.pnnl.gov/api/v4/projects/769/trigger/pipeline)
+#          exit_code=$?
+#          sudo apt install jq
+#          pipeline_id=$(echo $response | jq '.id' | sed 's/"//g')
+#          echo "PIPELINE_ID=${pipeline_id}" >> $GITHUB_ENV
+#          exit $exit_code
