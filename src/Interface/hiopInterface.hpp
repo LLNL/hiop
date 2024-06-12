@@ -465,7 +465,38 @@ public:
   {
     return true;
   }
-  
+
+  /** 
+   * This method is used to provide an user all the hiop iterate
+   * procedure. @see solution_callback() for an explanation of the parameters.
+   * 
+   * @param[in] x array of (local) entries of the primal variables (managed by Umpire, see note below)
+   * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire, see note below)
+   * @param[in] z_U array of (local) entries of the dual variables for upper bounds (managed by Umpire, see note below)
+   * @param[in] yc array of (local) entries of the dual variables for equality constraints (managed by Umpire, see note below)
+   * @param[in] yd array of (local) entries of the dual variables for inequality constraints (managed by Umpire, see note below)
+   * @param[in] s array of the slacks added to transfer inequalities to equalities (managed by Umpire, see note below)
+   * @param[in] v_L array of (local) entries of the dual variables for constraint lower bounds (managed by Umpire, see note below)
+   * @param[in] v_U array of (local) entries of the dual variables for constraint upper bounds (managed by Umpire, see note below)
+   * 
+   * @note HiOp's option `callback_mem_space` can be used to change the memory location of array parameters managaged by Umpire. 
+   * More specifically, when `callback_mem_space` is set to `host` (and `mem_space` is `device`), HiOp transfers the 
+   * arrays from device to host first, and then passes/returns pointers on host for the arrays managed by Umpire. These pointers
+   * can be then used in host memory space (without the need to rely on or use Umpire).
+   * 
+   */
+  virtual bool iterate_full_callback(const double* x,
+                                     const double* z_L,
+                                     const double* z_U,
+                                     const double* yc,
+                                     const double* yd,
+                                     const double* s,
+                                     const double* v_L,
+                                     const double* v_U)
+  {
+    return true;
+  }
+
   /**
    * A wildcard function used to change the primal variables.
    *
