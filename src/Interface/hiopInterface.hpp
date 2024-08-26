@@ -467,8 +467,8 @@ public:
   }
 
   /** 
-   * This method is used to provide an user all the hiop iterate
-   * procedure. @see solution_callback() for an explanation of the parameters.
+   * This method is used to provide user all the internal hiop iterates. @see solution_callback() 
+   * for an explanation of the parameters.
    * 
    * @param[in] x array of (local) entries of the primal variables (managed by Umpire, see note below)
    * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire, see note below)
@@ -497,6 +497,25 @@ public:
     return true;
   }
 
+  /**
+   * This method is called after each iteration and should be implemented by the user to instruct HiOp 
+   * to save a complete state of the algorithm to disk. An axom::sidre::DataStore will be used for IO, which 
+   * can be set by the user upon creation of the HiOp algorithm class. If not set, HiOp will used one.
+   * 
+   * This is feature is useful for IO checkpointing, for example; it allows the internal algorithm to be 
+   * restarted at the same state as before saving. @see hiop::hiopAlgorithm::tbd for the method to be used 
+   * to load a previously saved state.
+   * 
+   * The method provided by the user should return true if HiOp should save the state of the algorithm at
+   * at current iteration. The argument is passed by HiOp to indicate the current iterate number.
+   *
+   *  @param[in] iter the current iteration number
+   */
+  virtual bool save_state_iterate_callback(int iter)
+  {
+    return false;
+  }
+  
   /**
    * A wildcard function used to change the primal variables.
    *

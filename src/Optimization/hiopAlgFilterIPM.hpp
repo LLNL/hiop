@@ -117,6 +117,75 @@ public:
   { 
     return filter.contains(theta, logbar_obj); 
   }
+
+  //notes on checkpointing
+  // 1. need to allow user to pass axom::sidre::DataStore. HiOp will put all the info into a group
+  //  Question: should a DataStore be passed any time restarting is invoked (this is a bit cumbersome),
+  //            or just once, by calling the HiOp algorithm class
+  //
+  //  
+  //
+  //
+  // (for when checkpointing is used without the user setting a data store, so HiOp will create it and do the IO)
+  // 2. need to allow user to pass a string with the file where the DataStore will be
+  // writting to/reading from. A default name will be used for empty filename.
+  
+  /**
+   * Setter for the axom::sidre DataStore used to manage the data associated with the state of 
+   * NLP the algorithm. If the setter is not called by the user, the DataStore will be created
+   * internally by the iteration checkpointing object.
+   */
+  inline void set_state_data_manager(axom::sidre::DataStore& mng)
+  {
+    iter_chkpnt_.set_data_manger(mng);
+  }
+
+  /**
+   * The method saves the state of the algorithm in the axom::sidre::DataStore object that was
+   * previously provided by @set_checkpoint_data_manager. If this method has not been previously
+   * called, the HiOp will create such instance and will save it on disk under a default name.
+   */
+  inline void save_state()
+  {
+    iter_chkpnt_.save(this);
+  }
+
+  /**
+   * The method saves the state of the algorithm in the file specified by the string argument. If
+   * the string is empty, a file with a default name will be created. 
+   * 
+   * Internally, HiOp uses axom::sidre::DataStore object that is created internally and shares the 
+   * IO code with @save_state. This method disregards previous calls to @set_checkpoint_data_manager. 
+   */
+  inline void save_state(const std::string& filename)
+  {
+    iter_chkpnt_.save(filename, this);
+  }
+
+  
+  /**
+   * This method loads the state of the algorithm from a axom::sidre::DataStore that was previously 
+   * provided by @set_checkpoint_data_manager. This DataStore instance needs to be properly 
+   * initialized and have a group called "HiOpState".
+   */
+  inline void load_state()
+  {
+    iter_chkpnt_.load(this);
+  }
+
+  /**
+   * This method loads the state of the algorithm from the file whose name is passed as a string
+   * argument. HiOp expected that the file contains a axom::sidre::DataStore that was previously saved 
+   * using one of the @save_state methods above.
+   * 
+   */
+  inline void load_state(const std::string& filename)
+  {
+    iter_chkpnt_.load(filename, this);
+  }
+
+
+  /// Setter for the primal steplength.
   inline void set_alpha_primal(const double alpha_primal) { _alpha_primal = alpha_primal; }
 
 protected:
@@ -245,6 +314,9 @@ protected:
   hiopNlpFormulation* nlp;
   hiopFilter filter;
 
+  /// Helper for saving/loading algorithm state to disk. 
+  Checkpointing iter_chkpnt_;
+  
   hiopLogBarProblem* logbar;
 
   /* Iterate, search directions (managed by this (algorithm) class) */
