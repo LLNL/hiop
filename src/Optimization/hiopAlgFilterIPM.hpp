@@ -379,6 +379,11 @@ public:
 #endif // HIOP_USE_AXOM
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
+
+#ifdef HIOP_USE_AXOM  
+  ///@brief The options-based logic for saving checkpoint and the call to save_state().
+  void checkpointing_stuff();
+#endif  
 private:
   hiopNlpDenseConstraints* nlpdc;
 private:

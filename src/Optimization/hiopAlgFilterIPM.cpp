@@ -1106,6 +1106,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       solver_status_ = User_Stopped; break;
     }
 
+#ifdef HIOP_USE_AXOM    
+    //checkpointing - based on options provided by the user
+    checkpointing_stuff();
+#endif
+    
     /*************************************************
      * Termination check
      ************************************************/
@@ -1552,6 +1557,21 @@ void hiopAlgFilterIPMQuasiNewton::load_state_from_data_store(const sidre::DataSt
 
   const double* x = it_curr->get_x()->local_data_host();
   //destination = nlp_group->createViewAndAllocate("x", ::axom::sidre::DOUBLE_ID, size);
+}
+
+void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()
+{
+  if(nlp->options->GetString("checkpoint_save")=="no") {
+    return;
+  }
+  int chk_every_N = nlp->options->GetInteger("checkpoint_save_every_N_iter");
+  //check iteration
+  ::std::string path = nlp->options->GetString("checkpoint_file");
+
+
+  
+  // replace #
+  
 }
 #endif // HIOP_USE_AXOM
 
