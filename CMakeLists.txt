@@ -27,7 +27,8 @@ option(HIOP_USE_EIGEN "Build with Eigen support" ON)
 option(HIOP_USE_MPI "Build with MPI support" ON)
 option(HIOP_USE_GPU "Build with support for GPUs - CUDA or HIP libraries" OFF)
 option(HIOP_TEST_WITH_BSUB "Use `jsrun` instead of `mpirun` commands when running tests" OFF)
-option(HIOP_USE_RAJA   "Build with portability abstraction library RAJA" OFF)
+option(HIOP_USE_RAJA "Build with portability abstraction library RAJA" OFF)
+option(HIOP_USE_AXOM "Build with AXOM to use Sidre for scalable checkpointing" OFF)
 option(HIOP_DEEPCHECKS "Extra checks and asserts in the code with a high penalty on performance" OFF)
 option(HIOP_WITH_KRON_REDUCTION "Build Kron Reduction code (requires UMFPACK)" OFF)
 option(HIOP_DEVELOPER_MODE "Build with extended warnings and options" OFF)
@@ -288,6 +289,15 @@ if(HIOP_USE_RAJA)
   message(STATUS "Found RAJA pkg-config: ${RAJA_CONFIG}")
   message(STATUS "Found umpire pkg-config: ${umpire_CONFIG}")
 endif()
+
+if(HIOP_USE_AXOM)
+  find_package(AXOM CONFIG
+    PATHS ${AXOM_DIR} ${AXOM_DIR}/lib/cmake/
+    REQUIRED)
+  target_link_libraries(hiop_tpl INTERFACE axom)
+  message(STATUS "Found AXOM pkg-config: ${AXOM_CONFIG}")
+endif()
+  
 
 if(HIOP_WITH_KRON_REDUCTION)
   set(HIOP_UMFPACK_DIR CACHE PATH "Path to UMFPACK directory")

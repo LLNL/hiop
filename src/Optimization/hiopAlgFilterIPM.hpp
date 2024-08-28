@@ -67,6 +67,8 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopFactAcceptor.hpp"
 
+#include "Checkpointing.hpp"
+
 #include "hiopTimer.hpp"
 
 namespace hiop
@@ -117,73 +119,6 @@ public:
   { 
     return filter.contains(theta, logbar_obj); 
   }
-
-  //notes on checkpointing
-  // 1. need to allow user to pass axom::sidre::DataStore. HiOp will put all the info into a group
-  //  Question: should a DataStore be passed any time restarting is invoked (this is a bit cumbersome),
-  //            or just once, by calling the HiOp algorithm class
-  //
-  //  
-  //
-  //
-  // (for when checkpointing is used without the user setting a data store, so HiOp will create it and do the IO)
-  // 2. need to allow user to pass a string with the file where the DataStore will be
-  // writting to/reading from. A default name will be used for empty filename.
-  
-  /**
-   * Setter for the axom::sidre DataStore used to manage the data associated with the state of 
-   * NLP the algorithm. If the setter is not called by the user, the DataStore will be created
-   * internally by the iteration checkpointing object.
-   */
-  inline void set_state_data_manager(axom::sidre::DataStore& mng)
-  {
-    iter_chkpnt_.set_data_manger(mng);
-  }
-
-  /**
-   * The method saves the state of the algorithm in the axom::sidre::DataStore object that was
-   * previously provided by @set_checkpoint_data_manager. If this method has not been previously
-   * called, the HiOp will create such instance and will save it on disk under a default name.
-   */
-  inline void save_state()
-  {
-    iter_chkpnt_.save(this);
-  }
-
-  /**
-   * The method saves the state of the algorithm in the file specified by the string argument. If
-   * the string is empty, a file with a default name will be created. 
-   * 
-   * Internally, HiOp uses axom::sidre::DataStore object that is created internally and shares the 
-   * IO code with @save_state. This method disregards previous calls to @set_checkpoint_data_manager. 
-   */
-  inline void save_state(const std::string& filename)
-  {
-    iter_chkpnt_.save(filename, this);
-  }
-
-  
-  /**
-   * This method loads the state of the algorithm from a axom::sidre::DataStore that was previously 
-   * provided by @set_checkpoint_data_manager. This DataStore instance needs to be properly 
-   * initialized and have a group called "HiOpState".
-   */
-  inline void load_state()
-  {
-    iter_chkpnt_.load(this);
-  }
-
-  /**
-   * This method loads the state of the algorithm from the file whose name is passed as a string
-   * argument. HiOp expected that the file contains a axom::sidre::DataStore that was previously saved 
-   * using one of the @save_state methods above.
-   * 
-   */
-  inline void load_state(const std::string& filename)
-  {
-    iter_chkpnt_.load(filename, this);
-  }
-
 
   /// Setter for the primal steplength.
   inline void set_alpha_primal(const double alpha_primal) { _alpha_primal = alpha_primal; }
@@ -314,9 +249,6 @@ protected:
   hiopNlpFormulation* nlp;
   hiopFilter filter;
 
-  /// Helper for saving/loading algorithm state to disk. 
-  Checkpointing iter_chkpnt_;
-  
   hiopLogBarProblem* logbar;
 
   /* Iterate, search directions (managed by this (algorithm) class) */
@@ -411,6 +343,36 @@ public:
   virtual ~hiopAlgFilterIPMQuasiNewton();
 
   virtual hiopSolveStatus run();
+
+    //work in progress
+  virtual void save_state_to_data_store(void* sidre_data_store);
+  virtual void load_state_from_data_store(const void* sidre_data_store);
+
+  static constexpr char default_state_filename[] = "hiop_qn_state.sidre";
+  
+  /**
+   * @brief save the state of the algorithm to the file
+   * @param path   the name of the file
+   * 
+   * @details
+   * Internally, HiOp uses axom::sidre::DataStore, which is saved to the file.  If argument is the 
+   * empty string, HiOp will attempt saving the state to the path specified by default_state_filename
+   * static member.
+   */
+  void save_state_to_file(const ::std::string& path="");
+
+  /**
+   * @brief load the state of the algorithm from file
+   * @param path   the name of the file to load from
+   * 
+   * @details 
+   * The file should contains a axom::sidre::DataStore that was previously saved using save_state_to_file().
+   * If argument is the empty string, HiOp will attempt loading state from the path specified by
+   * default_state_filename static member.
+   * 
+   */
+  void load_state_from_file(const ::std::string& path="");
+
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
 private:
