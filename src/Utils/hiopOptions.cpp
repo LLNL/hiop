@@ -1289,6 +1289,8 @@ void hiopOptionsNLP::register_options()
                         "");
   }
 
+  // checkpointing and restarting
+  
 }
 
 void hiopOptionsNLP::ensure_consistence()

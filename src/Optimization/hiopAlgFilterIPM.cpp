@@ -66,6 +66,14 @@
 
 #include "hiopCppStdUtils.hpp"
 
+#ifdef HIOP_USE_AXOM
+#include <axom/sidre/core/DataStore.hpp>
+#include <axom/sidre/core/Group.hpp>
+#include <axom/sidre/core/View.hpp>
+#include <axom/sidre/spio/IOManager.hpp>
+using namespace axom;
+#endif
+
 #include <cmath>
 #include <cstring>
 #include <cassert>
@@ -74,6 +82,9 @@
 
 namespace hiop
 {
+//#ifdef HIOP_USE_AXOM
+
+//#ifdef HIOP_USE_AXOM
 
 hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const bool within_FR)
  : soc_dir(nullptr),
@@ -1485,6 +1496,8 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
   }
 }
 
+#ifdef HIOP_USE_AXOM
+
 //declaration required by C++14, not anymore by C++17 or after
 constexpr char hiopAlgFilterIPMQuasiNewton::default_state_filename[];
 
@@ -1492,14 +1505,14 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path_i
 {
   auto path = path_in=="" ? default_state_filename : path_in;
 
-  axom_sidre_DataStore* ds = new axom_sidre_DataStore(0);  
+  sidre::DataStore* ds = new sidre::DataStore();
 
   this->save_state_to_data_store(ds);
 
-  //::axom::sidre::IOManager writer(this->get_nlp()->get_comm());
-  //int num_files;
-  //MPI_Comm_size(this->get_nlp()->get_comm(), &num_files);
-  //writer.write(ds_->getRoot(), num_files, path.str(), ::axom::sidre::Group::getDefaultIOProtocol());
+  sidre::IOManager writer(this->get_nlp()->get_comm());
+  int n_files;
+  MPI_Comm_size(this->get_nlp()->get_comm(), &n_files);
+  writer.write(ds->getRoot(), n_files, path.c_str(), sidre::Group::getDefaultIOProtocol());
   
   delete ds;
 }
@@ -1510,7 +1523,28 @@ void hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path
   //todo
 }
 
-void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(void* ds)
+void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(::axom::sidre::DataStore* ds)
+{
+  using IndType = sidre::IndexType;
+  sidre::Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
+  
+  //create views for each member that needs to be saved
+
+  const double* x = it_curr->get_x()->local_data_host();
+  const IndType size = it_curr->get_x()->get_local_size();
+  sidre::View* dest = nlp_group->createViewAndAllocate("x", axom::sidre::DOUBLE_ID, size);
+  double *const dest_ptr(dest->getArray());
+  const auto stride(dest->getStride());
+  if(1==stride) {
+    ::std::copy(x, x+size, dest_ptr);
+  } else {
+    for(IndType i=0; i<size; ++i) {
+      dest_ptr[i*stride] = x[i];
+    }
+  }
+}
+
+void hiopAlgFilterIPMQuasiNewton::load_state_from_data_store(const sidre::DataStore* ds)
 {
   //Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
   
@@ -1519,17 +1553,7 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(void* ds)
   const double* x = it_curr->get_x()->local_data_host();
   //destination = nlp_group->createViewAndAllocate("x", ::axom::sidre::DOUBLE_ID, size);
 }
-
-void hiopAlgFilterIPMQuasiNewton::load_state_from_data_store(const void* ds)
-{
-  //Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
-  
-  //create views for each member that needs to be saved
-
-  const double* x = it_curr->get_x()->local_data_host();
-  //destination = nlp_group->createViewAndAllocate("x", ::axom::sidre::DOUBLE_ID, size);
-}
-
+#endif // HIOP_USE_AXOM
 
 /******************************************************************************************************
  * FULL NEWTON IPM

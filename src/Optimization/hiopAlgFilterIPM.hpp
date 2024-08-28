@@ -67,12 +67,14 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopFactAcceptor.hpp"
 
+#ifdef HIOP_USE_AXOM
+#include <axom/sidre/core/DataStore.hpp>
+#endif
+
 #include "hiopTimer.hpp"
 
 namespace hiop
 {
-//temporary dummy definition for axom::sidre::DataStore until axom is going to be included
-using axom_sidre_DataStore=double;
    
 class hiopAlgFilterIPMBase {
 public:
@@ -344,9 +346,11 @@ public:
 
   virtual hiopSolveStatus run();
 
-    //work in progress
-  virtual void save_state_to_data_store(void* sidre_data_store);
-  virtual void load_state_from_data_store(const void* sidre_data_store);
+  // note that checkpointing is only available with a axom-enabled build
+#ifdef HIOP_USE_AXOM
+  
+  virtual void save_state_to_data_store(::axom::sidre::DataStore* data_store);
+  virtual void load_state_from_data_store(const ::axom::sidre::DataStore* data_store);
 
   static constexpr char default_state_filename[] = "hiop_qn_state.sidre";
   
@@ -372,7 +376,7 @@ public:
    * 
    */
   void load_state_from_file(const ::std::string& path="");
-
+#endif // HIOP_USE_AXOM
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
 private:
