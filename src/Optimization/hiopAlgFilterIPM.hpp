@@ -67,13 +67,13 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopFactAcceptor.hpp"
 
-#include "Checkpointing.hpp"
-
 #include "hiopTimer.hpp"
 
 namespace hiop
 {
-
+//temporary dummy definition for axom::sidre::DataStore until axom is going to be included
+using axom_sidre_DataStore=double;
+   
 class hiopAlgFilterIPMBase {
 public:
   hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool within_FR = false);
