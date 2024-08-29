@@ -96,12 +96,14 @@ fi
 
 # Some clusters have compute nodes with slightly different hostnames, so we
 # set MY_CLUSTER appropriately
-if [[ $MY_CLUSTER =~ newell* ]]; then
+if [[ $MY_CLUSTER =~ ^newell.* ]]; then
   export MY_CLUSTER=newell
-elif [[ $MY_CLUSTER =~ dl* ]]; then
+elif [[ $MY_CLUSTER =~ ^dl.* ]]; then
   export MY_CLUSTER=marianas
-elif [[ $MY_CLUSTER =~ dmi* ]]; then
+elif [[ $MY_CLUSTER =~ ^dmi.* ]]; then
   export MY_CLUSTER=incline
+elif [[ $MY_CLUSTER =~ ^dane.* ]]; then
+  export MY_CLUSTER=dane
 fi
 
 module purge
