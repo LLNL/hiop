@@ -2,16 +2,20 @@ stages:
   - build
   - test
 
+include:
+  - project: 'lc-templates/id_tokens'
+    file: 'id_tokens.yml'
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-.quartz: 
+.dane: 
   tags:
     - shell
-    - quartz
+    - dane
   variables:
-    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab_ci/quartz/${CI_PIPELINE_ID}"
-    MY_CLUSTER: quartz
+    CUSTOM_CI_BUILDS_DIR: "/usr/workspace/hiop/gitlab_ci/dane/${CI_PIPELINE_ID}"
+    MY_CLUSTER: dane
 
 .lassen: 
   tags:
@@ -67,7 +71,7 @@ variables:
       echo "CUSTOM_CI_BUILDS_DIR = ${CUSTOM_CI_BUILDS_DIR}"
       set -xv
       cd "$CUSTOM_CI_BUILDS_DIR"
-      lalloc 1 -G hiop -W 35 -q pbatch ./BUILD.sh --test-only
+      lalloc 1 -W 35 -q pbatch ./BUILD.sh --test-only
       res=$?
       exit $res
   after_script:
@@ -76,18 +80,18 @@ variables:
       rm -rf "$CUSTOM_CI_BUILDS_DIR"
       rm -rf "scripts/$CI_RUNNER_SHORT_TOKEN"
       
-# For LLNL/quartz CI
-build_on_quartz:
+# For LLNL/dane CI
+build_on_dane:
   extends:
-    - .quartz
+    - .dane
     - .llnl_script_template
 
-# For LLNL/quartz CI
-test_on_quartz:
+# For LLNL/dane CI
+test_on_dane:
   extends:
-    - .quartz
+    - .dane
     - .llnl_test_script_template
-  needs: ['build_on_quartz']
+  needs: ['build_on_dane']
 
 # For LLNL/lassen CI
 build_on_lassen:
