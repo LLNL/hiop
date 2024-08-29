@@ -51,6 +51,15 @@ module load raja/0.14.0-linux-rhel8-icelake-tvdflyy
 # umpire@=6.0.0%gcc@=10.3.1~asan~backtrace~c~cuda~dev_benchmarks~device_alloc~deviceconst~examples~fortran~ipc_shmem~ipo~mpi~numa+openmp~openmp_target~rocm~sanitizer_tests~shared~sqlite_experimental~tools~werror build_system=cmake build_type=Release generator=make tests=none arch=linux-rhel8-icelake
 module load umpire/6.0.0-linux-rhel8-icelake-dlnf5u3
 
-
+[ -f $PWD/nvblas.conf ] && rm $PWD/nvblas.conf
+cat > $PWD/nvblas.conf <<-EOD
+NVBLAS_LOGFILE  nvblas.log
+NVBLAS_CPU_BLAS_LIB $OPENBLAS_LIBRARY_DIR/libopenblas.so
+NVBLAS_GPU_LIST ALL
+NVBLAS_TILE_DIM 2048
+NVBLAS_AUTOPIN_MEM_ENABLED
+EOD
+export NVBLAS_CONFIG_FILE=$PWD/nvblas.conf
+echo "Generated $PWD/nvblas.conf"
 
 export CMAKE_CACHE_SCRIPT=gcc-cpu.cmake
