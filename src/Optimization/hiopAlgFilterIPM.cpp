@@ -987,8 +987,29 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   nlp->runStats.tmOptimizTotal.start();
 
-  startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); //this also evaluates the nlp
-  _mu=mu0;
+  //
+  // starting point:
+  // - user provided (with slack adjustments and lsq eq. duals initialization
+  // or
+  // - loaded checkpoint
+  //
+  if(nlp->options->GetString("checkpoint_load_on_start") != "yes") {
+    //this also evaluates the nlp
+    startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
+    _mu=mu0;
+  } else {
+    //
+    //checkpoint load
+    //
+    //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
+    load_state_from_file(nlp->options->GetString("checkpoint_file"));
+    //additionally: need to evaluate the nlp
+    if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+      nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
+      return Error_In_User_Function;
+    }
+    solver_status_ = NlpSolve_SolveNotCalled;
+  }
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
@@ -1503,13 +1524,8 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
 
 #ifdef HIOP_USE_AXOM
 
-//declaration required by C++14, not anymore by C++17 or after
-constexpr char hiopAlgFilterIPMQuasiNewton::default_state_filename[];
-
-void hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path_in)
+void hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path)
 {
-  auto path = path_in=="" ? default_state_filename : path_in;
-
   sidre::DataStore* ds = new sidre::DataStore();
 
   this->save_state_to_data_store(ds);
@@ -1522,10 +1538,45 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path_i
   delete ds;
 }
 
-void hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path_in)
+void hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path)
 {
-  auto path = path_in=="" ? default_state_filename : path_in;
-  //todo
+  sidre::DataStore* ds = new sidre::DataStore();
+  sidre::IOManager reader(this->get_nlp()->get_comm());
+  reader.read(ds->getRoot(), path, false);
+  
+  this->load_state_from_data_store(ds);
+  
+  delete ds;
+}
+
+void hiopAlgFilterIPMQuasiNewton::
+copy_vec_to_new_view(const ::std::string& name, const hiopVector* vec, sidre::Group* nlp_group)
+{
+  using IndType = sidre::IndexType;
+  const IndType size = vec->get_local_size();
+  sidre::View* dest = nlp_group->createViewAndAllocate(name, sidre::DOUBLE_ID, size);
+  
+  const auto stride(dest->getStride());
+  double *const dest_ptr(dest->getArray());
+  const double* arr = vec->local_data_host_const();
+  if(1==stride) {
+    ::std::copy(arr, arr+size, dest_ptr);
+  } else {
+    for(IndType i=0; i<size; ++i) {
+      dest_ptr[i*stride] = arr[i];
+    }
+  }  
+}
+void hiopAlgFilterIPMQuasiNewton::
+copy_vec_from_view(const ::std::string& name, hiopVector* vec, const sidre::Group* nlp_group)
+{
+  const sidre::View* view = nlp_group->getView(name);
+  if(view) {
+
+  }
+  else {
+    nlp->log->printf(hovWarning, "Could not find view '%s' in checkpointing file.\n", name.c_str());
+  }
 }
 
 void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(::axom::sidre::DataStore* ds)
@@ -1534,29 +1585,43 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(::axom::sidre::DataSt
   sidre::Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
   
   //create views for each member that needs to be saved
+  copy_vec_to_new_view("x", it_curr->get_x(), nlp_group);
+  copy_vec_to_new_view("d", it_curr->get_d(), nlp_group);
+  copy_vec_to_new_view("sxl", it_curr->get_sxl(), nlp_group);
+  copy_vec_to_new_view("sxu", it_curr->get_sxu(), nlp_group);
+  copy_vec_to_new_view("sdl", it_curr->get_sdl(), nlp_group);
+  copy_vec_to_new_view("sdu", it_curr->get_sdu(), nlp_group);
+  copy_vec_to_new_view("yc", it_curr->get_yc(), nlp_group);
+  copy_vec_to_new_view("zl", it_curr->get_zl(), nlp_group);
+  copy_vec_to_new_view("zu", it_curr->get_zu(), nlp_group);
+  copy_vec_to_new_view("vl", it_curr->get_vl(), nlp_group);
+  copy_vec_to_new_view("vu", it_curr->get_vu(), nlp_group);
 
-  const double* x = it_curr->get_x()->local_data_host();
-  const IndType size = it_curr->get_x()->get_local_size();
-  sidre::View* dest = nlp_group->createViewAndAllocate("x", axom::sidre::DOUBLE_ID, size);
-  double *const dest_ptr(dest->getArray());
-  const auto stride(dest->getStride());
-  if(1==stride) {
-    ::std::copy(x, x+size, dest_ptr);
-  } else {
-    for(IndType i=0; i<size; ++i) {
-      dest_ptr[i*stride] = x[i];
-    }
-  }
+  //quasi-Newton Hessian approximation 
+  
+  //algorithmic parameters for this state
+  //mu, iteration number
+  const double alg_params[] = {_mu};
+  
 }
 
 void hiopAlgFilterIPMQuasiNewton::load_state_from_data_store(const sidre::DataStore* ds)
 {
-  //Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
-  
-  //create views for each member that needs to be saved
+  const sidre::Group* nlp_group = ds->getRoot()->getGroup("hiop solver");
 
-  const double* x = it_curr->get_x()->local_data_host();
-  //destination = nlp_group->createViewAndAllocate("x", ::axom::sidre::DOUBLE_ID, size);
+  copy_vec_from_view("x", it_curr->get_x(), nlp_group);
+  copy_vec_from_view("d", it_curr->get_d(), nlp_group);
+  copy_vec_from_view("sxl", it_curr->get_sxl(), nlp_group);
+  copy_vec_from_view("sxu", it_curr->get_sxu(), nlp_group);
+  copy_vec_from_view("sdl", it_curr->get_sdl(), nlp_group);
+  copy_vec_from_view("sdu", it_curr->get_sdu(), nlp_group);
+  copy_vec_from_view("yc", it_curr->get_yc(), nlp_group);
+  copy_vec_from_view("zl", it_curr->get_zl(), nlp_group);
+  copy_vec_from_view("zu", it_curr->get_zu(), nlp_group);
+  copy_vec_from_view("vl", it_curr->get_vl(), nlp_group);
+  copy_vec_from_view("vu", it_curr->get_vu(), nlp_group);
+
+
 }
 
 void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()
@@ -1566,12 +1631,20 @@ void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()
   }
   int chk_every_N = nlp->options->GetInteger("checkpoint_save_every_N_iter");
   //check iteration
-  ::std::string path = nlp->options->GetString("checkpoint_file");
+  if(iter_num>0 && iter_num % chk_every_N==0) {
+    using ::std::string;
+    // replace "#" in checkpointing file with iteration number
+    string path = nlp->options->GetString("checkpoint_file");
+    auto pos = path.find("#");
+    if(string::npos != pos) {
+      auto s_it_num = ::std::to_string(iter_num);
+      path.replace(pos, 1, s_it_num);
+    }
 
-
-  
-  // replace #
-  
+    nlp->log->printf(hovSummary, "Saving checkpoint at iter %d in '%s'.\n", iter_num, path.c_str());
+    //actual checkpointing via axom::sidre
+    save_state_to_file(path);
+  }
 }
 #endif // HIOP_USE_AXOM
 

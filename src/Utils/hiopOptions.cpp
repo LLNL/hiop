@@ -1301,7 +1301,7 @@ void hiopOptionsNLP::register_options()
     register_int_option("checkpoint_save_every_N_iter", 10, 1, 1e+6, msgcsN);
 
     constexpr char msgcf[] = "Path to checkpoint file. If present character '#' will be replaced "
-      "with iteration number.";
+      "with the iteration number.";
     register_str_option("checkpoint_file", "hiop_state_#.chk", msgcf);
 
     constexpr char msgclos[] = "On (re)start the NLP solver will load checkpoint file "

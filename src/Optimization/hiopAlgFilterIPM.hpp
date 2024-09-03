@@ -352,30 +352,24 @@ public:
   virtual void save_state_to_data_store(::axom::sidre::DataStore* data_store);
   virtual void load_state_from_data_store(const ::axom::sidre::DataStore* data_store);
 
-  static constexpr char default_state_filename[] = "hiop_qn_state.sidre";
-  
   /**
-   * @brief save the state of the algorithm to the file
+   * @brief Save the state of the algorithm to the file
    * @param path   the name of the file
    * 
    * @details
-   * Internally, HiOp uses axom::sidre::DataStore, which is saved to the file.  If argument is the 
-   * empty string, HiOp will attempt saving the state to the path specified by default_state_filename
-   * static member.
+   * Internally, HiOp uses axom::sidre::DataStore and sidre's scalable IO.
    */
-  void save_state_to_file(const ::std::string& path="");
+  void save_state_to_file(const ::std::string& path);
 
   /**
    * @brief load the state of the algorithm from file
    * @param path   the name of the file to load from
    * 
    * @details 
-   * The file should contains a axom::sidre::DataStore that was previously saved using save_state_to_file().
-   * If argument is the empty string, HiOp will attempt loading state from the path specified by
-   * default_state_filename static member.
-   * 
+   * The file should contains a axom::sidre::DataStore that was previously saved using 
+   * save_state_to_file().
    */
-  void load_state_from_file(const ::std::string& path="");
+  void load_state_from_file(const ::std::string& path);
 #endif // HIOP_USE_AXOM
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
@@ -383,7 +377,18 @@ private:
 #ifdef HIOP_USE_AXOM  
   ///@brief The options-based logic for saving checkpoint and the call to save_state().
   void checkpointing_stuff();
-#endif  
+
+  /**
+   * @brief Copy HiOp vector to a (new) axom::sidre::View.
+   *
+   * @details A new view is created/allocated within the sidre view. Pointer is managed by the DataStore.
+   */
+  void copy_vec_to_new_view(const ::std::string& name, const hiopVector* vec, ::axom::sidre::Group* nlp_group);
+
+  /// Copy content of the named sidre view into HiOp Vector.
+  void copy_vec_from_view(const ::std::string& name, hiopVector* vec, const axom::sidre::Group* nlp_group);
+#endif // HIOP_USE_AXOM
+
 private:
   hiopNlpDenseConstraints* nlpdc;
 private:
