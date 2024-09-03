@@ -1,0 +1,168 @@
+# https://spack.readthedocs.io/en/latest/binary_caches.html#spack-build-cache-for-github-actions
+name: Spack Builds (Ubuntu x86_64 Buildcache)
+
+on: [pull_request]
+
+env:
+  SPACK_COLOR: always
+  REGISTRY: ghcr.io/llnl
+  # Our repo name contains upper case characters, so we can't use ${{ github.repository }}
+  IMAGE_NAME: hiop
+  USERNAME: hiop-bot
+  BASE_VERSION: ubuntu-24.04-fortran
+
+jobs:
+  base_image_build:
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+
+    name: Build Custom Base Image
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Once we move submodule deps into spack, we can do some more builds
+          # Also need to change build script to use spack from base image
+          submodules: true
+
+      # No GHCR base image with skopeo, so this will do...
+      - name: "Set up skopeo"
+        uses: warjiang/setup-skopeo@v0.1.3
+        with:
+          version: latest
+
+      # Use skopeo to check for image for convenience
+      - name: Check for existing base images
+        run: |
+          set -e
+          CONTAINER_TAG=${{ env.BASE_VERSION }}
+          OCI_URL="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BASE_VERSION }}"
+          echo Checking for CONTAINER_TAG $CONTAINER_TAG
+          skopeo inspect \
+              docker://$OCI_URL \
+              --raw \
+              --creds "${{ env.USERNAME }}:${{ secrets.GITHUB_TOKEN }}" \
+            > /dev/null && echo "Image already exists. Please bump version." && exit 0
+          echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
+
+      # Need to build custom base image with gfortran
+      - name: Create Dockerfile heredoc
+        if: ${{ env.IMAGE_EXISTS == 'false' }}
+        run: |
+          cat << EOF > Dockerfile
+          FROM ubuntu:24.04
+          RUN apt-get update && \
+              apt-get install -y --no-install-recommends \
+                software-properties-common \
+                gpg-agent \
+                openssh-client \
+                openssh-server \
+              && rm -rf /var/lib/apt/lists/*
+          RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+              apt-get install -y --no-install-recommends \
+                gfortran \
+                gcc \
+                libstdc++6 \
+              && rm -rf /var/lib/apt/lists/*
+          EOF
+
+      # https://docs.github.com/en/actions/publishing-packages/publishing-docker-images
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.USERNAME }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        if: ${{ env.IMAGE_EXISTS == 'false' }}
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          labels: org.opencontainers.image.version=${{ env.BASE_VERSION }}
+
+      - name: Build and push Docker base image
+        if: ${{ env.IMAGE_EXISTS == 'false' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BASE_VERSION }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  hiop_spack_builds:
+    needs: base_image_build
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+      contents: read
+    container: spack/ubuntu-jammy:latest
+    strategy:
+      matrix:
+        spack_spec:
+          - hiop@develop+mpi~raja~shared~kron~sparse ^openmpi ^libevent~openssl
+          - hiop@develop~mpi~raja~shared~kron~sparse ^libevent~openssl
+          - hiop@develop~mpi+raja~shared~kron~sparse ^libevent~openssl
+
+            # We will need coinhsl for this, but what are the rules for using
+            # a coinhsl tarball?
+            # - hiop@develop~mpi~raja~shared~kron+sparse
+
+    name: Build HiOp with Spack
+
+    steps:
+      - name: Setup Spack
+        run: echo "/opt/spack/bin" >> "$GITHUB_PATH"
+
+      - name: Create heredoc spack.yaml
+        run: |
+          spack debug report
+          cat << EOF > spack.yaml
+          spack:
+            specs:
+            - ${{ matrix.spack_spec }} target=x86_64_v2
+            concretizer:
+              reuse: dependencies
+            config:
+              source_cache: $SPACK_CACHE/source_cache
+              misc_cache: $SPACK_CACHE/misc_cache
+              build_stage: $SPACK_CACHE/build_stage
+              install_tree:
+                root: /opt/spack
+                padded_length: False
+            mirrors:
+              local-buildcache: oci://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            # spack: https://binaries.spack.io/develop
+            packages:
+              all:
+                require: "%gcc"
+          EOF
+
+      - name: Configure GHCR mirror
+        run: spack -e . mirror set --oci-username ${{ env.USERNAME }} --oci-password "${{ secrets.GITHUB_TOKEN }}" local-buildcache
+
+      - name: Trust keys
+        run: spacke -e . buildcache keys --install --trust
+
+      - name: Find external packages
+        run: spack -e . external find --all --exclude python
+
+      - name: Spack develop HiOp
+        run: spack -e . develop --path=$(pwd) hiop@develop
+
+      - name: Concretize
+        run: spack -e . concretize --fresh
+
+      - name: Install
+        run: spack -e . install --no-check-signature --fail-fast --keep-stage
+
+      - name: Test Build
+        run: cd $(spack -e . location --build-dir hiop@develop) && ctest -VV
+
+      - name: Push binaries to buildcache
+        run: |
+          spack -e . buildcache push --force --base-image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BASE_VERSION }} --unsigned --update-index local-buildcache
+        if: ${{ !cancelled() }}
