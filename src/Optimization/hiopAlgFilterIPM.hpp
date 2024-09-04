@@ -348,28 +348,52 @@ public:
 
   // note that checkpointing is only available with a axom-enabled build
 #ifdef HIOP_USE_AXOM
-  
+  /**
+   * @brief Save state of HiOp algorithm to a sidre data store.
+   * @param data_store a pointer to DataStore
+   *
+   * @details 
+   * A new sidre::group "hiop solver" is create within data_store. Then a sidre::View is
+   * created for each of the algorithm's states and the states are copied in the 
+   * corresponding views. 
+   */
   virtual void save_state_to_data_store(::axom::sidre::DataStore* data_store);
+
+  /**
+   * @brief Load state of HiOp algorithm from a sidre data store.
+   * @param data_store a pointer to DataStore
+   *
+   * @details 
+   * Copies views from the data store sidre::group (named "hiop solver") to HiOp algorithm's
+   * state variables. The group should be created by first calling save_state_to_data_store 
+   * for a problem/NLP of the same sizes as the problem for which load_state_from_data_store
+   * is called. This ensures the views have the names and sizes expected by this method. 
+   * Otherwise a std::runtime_error exception is thrown.
+   */ 
   virtual void load_state_from_data_store(const ::axom::sidre::DataStore* data_store);
 
   /**
    * @brief Save the state of the algorithm to the file
    * @param path   the name of the file
+   * @return true if successful, false otherwise
    * 
    * @details
-   * Internally, HiOp uses axom::sidre::DataStore and sidre's scalable IO.
+   * Internally, HiOp uses axom::sidre::DataStore and sidre's scalable IO. A detailed
+   * error description is sent to the log if an error or exception is caught.
    */
-  void save_state_to_file(const ::std::string& path);
+  bool save_state_to_file(const ::std::string& path) noexcept;
 
   /**
    * @brief load the state of the algorithm from file
    * @param path   the name of the file to load from
+   * @return true if successful, false otherwise
    * 
    * @details 
    * The file should contains a axom::sidre::DataStore that was previously saved using 
-   * save_state_to_file().
+   * save_state_to_file(). A detailed error description is sent to the log if an error 
+   * or exception is caught.
    */
-  void load_state_from_file(const ::std::string& path);
+  bool load_state_from_file(const ::std::string& path) noexcept;
 #endif // HIOP_USE_AXOM
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);

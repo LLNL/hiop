@@ -79,6 +79,8 @@ using namespace axom;
 #include <cassert>
 #include <stdio.h>
 #include <ctype.h>
+#include <exception>
+#include <sstream>
 
 namespace hiop
 {
@@ -1002,12 +1004,20 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //checkpoint load
     //
     //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
-    load_state_from_file(nlp->options->GetString("checkpoint_file"));
-    //additionally: need to evaluate the nlp
-    if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
-      nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
-      return Error_In_User_Function;
+    auto chkpnt_ok = load_state_from_file(nlp->options->GetString("checkpoint_file"));
+    if(chkpnt_ok) {
+      //additionally: need to evaluate the nlp
+      if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+        nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
+        return Error_In_User_Function;
+      }
+    } else {
+      nlp->log->printf(hovWarning, "Using default starting procedure (no checkpoint load!).\n");
+      //this also evaluates the nlp
+      startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
+      _mu=mu0;     
     }
+    
     solver_status_ = NlpSolve_SolveNotCalled;
   }
 
@@ -1524,29 +1534,45 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
 
 #ifdef HIOP_USE_AXOM
 
-void hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path)
+bool hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path) noexcept
 {
-  sidre::DataStore* ds = new sidre::DataStore();
+  auto success = true;
+  sidre::DataStore* ds = nullptr;
+  try {
+    ds = new sidre::DataStore();
+    this->save_state_to_data_store(ds);
 
-  this->save_state_to_data_store(ds);
-
-  sidre::IOManager writer(this->get_nlp()->get_comm());
-  int n_files;
-  MPI_Comm_size(this->get_nlp()->get_comm(), &n_files);
-  writer.write(ds->getRoot(), n_files, path.c_str(), sidre::Group::getDefaultIOProtocol());
-  
+    sidre::IOManager writer(this->get_nlp()->get_comm());
+    int n_files;
+    MPI_Comm_size(this->get_nlp()->get_comm(), &n_files);
+    writer.write(ds->getRoot(), n_files, path.c_str(), sidre::Group::getDefaultIOProtocol());
+  } catch(const std::exception& exp) {
+    nlp->log->printf(hovError, "Error in saving checkpoint to file '%s'\n", path.c_str());
+    nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
+    success = false;    
+  }  
   delete ds;
+  return success;
 }
 
-void hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path)
+bool hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path) noexcept
 {
-  sidre::DataStore* ds = new sidre::DataStore();
-  sidre::IOManager reader(this->get_nlp()->get_comm());
-  reader.read(ds->getRoot(), path, false);
-  
-  this->load_state_from_data_store(ds);
-  
+  sidre::DataStore* ds = nullptr;
+  auto success = true;
+  try {
+    ds = new sidre::DataStore();
+    sidre::IOManager reader(this->get_nlp()->get_comm());
+    reader.read(ds->getRoot(), path, false);
+    
+    this->load_state_from_data_store(ds);
+    
+  } catch(const std::exception& exp) {
+    nlp->log->printf(hovError, "Error in loading checkpoint from file '%s'\n", path.c_str());
+    nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
+    success = false;
+  }
   delete ds;
+  return success;
 }
 
 void hiopAlgFilterIPMQuasiNewton::
@@ -1570,12 +1596,35 @@ copy_vec_to_new_view(const ::std::string& name, const hiopVector* vec, sidre::Gr
 void hiopAlgFilterIPMQuasiNewton::
 copy_vec_from_view(const ::std::string& name, hiopVector* vec, const sidre::Group* nlp_group)
 {
-  const sidre::View* view = nlp_group->getView(name);
-  if(view) {
-
+  const sidre::View* view_const = nlp_group->getView(name);
+  if(!view_const) {
+    ::std::stringstream ss;
+    ss << "Could not find view '" << name << "in sidre::Group.\n";
+    throw ::std::runtime_error(ss.str());
   }
-  else {
-    nlp->log->printf(hovWarning, "Could not find view '%s' in checkpointing file.\n", name.c_str());
+  // const_cast becase View does not have a const getArray()
+  sidre::View* view = const_cast<sidre::View*>(view_const);  
+  if(view) {
+    const hiop::size_type size = vec->get_local_size();
+    if(view->getNumElements() != size) {
+      ::std::stringstream ss;
+      ss << "Size mismatch for state/view '" << name << "' between hiop and sidre::View: " <<
+        " HiOp state is " << size << " doubles, while the view has " << view->getNumElements() <<
+        " double elements.\n";
+      throw ::std::runtime_error(ss.str());
+    }
+    double* arr_dest = vec->local_data_host();
+    const double *const arr_src = view->getArray();
+    const auto stride(view->getStride());
+    if(1==stride) {
+      ::std::copy(arr_src, arr_src+size, arr_dest);
+    } else {
+      for(hiop::index_type i=0; i<size; ++i) {
+        arr_dest[i] = arr_src[i*stride];
+      }
+    }    
+  } else {
+    assert(false && "const cast failed for Sidre::View");
   }
 }
 
