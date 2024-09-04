@@ -84,9 +84,6 @@ using namespace axom;
 
 namespace hiop
 {
-//#ifdef HIOP_USE_AXOM
-
-//#ifdef HIOP_USE_AXOM
 
 hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const bool within_FR)
  : soc_dir(nullptr),

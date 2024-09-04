@@ -353,9 +353,9 @@ public:
    * @param data_store a pointer to DataStore
    *
    * @details 
-   * A new sidre::group "hiop solver" is create within data_store. Then a sidre::View is
-   * created for each of the algorithm's states and the states are copied in the 
-   * corresponding views. 
+   * A new sidre::group "hiop solver" is created within data_store. Then a sidre::View 
+   * is created within the group for each of the algorithm's states and the states are
+   * copied in the corresponding views. 
    */
   virtual void save_state_to_data_store(::axom::sidre::DataStore* data_store);
 
@@ -405,11 +405,11 @@ private:
   /**
    * @brief Copy HiOp vector to a (new) axom::sidre::View.
    *
-   * @details A new view is created/allocated within the sidre view. Pointer is managed by the DataStore.
+   * @details A new view is created/allocated within the sidre group.
    */
   void copy_vec_to_new_view(const ::std::string& name, const hiopVector* vec, ::axom::sidre::Group* nlp_group);
 
-  /// Copy content of the named sidre view into HiOp Vector.
+  /// Copy content of the named sidre view from nlp_group into HiOp Vector.
   void copy_vec_from_view(const ::std::string& name, hiopVector* vec, const axom::sidre::Group* nlp_group);
 #endif // HIOP_USE_AXOM
 
