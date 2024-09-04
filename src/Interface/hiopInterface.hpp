@@ -496,26 +496,6 @@ public:
   {
     return true;
   }
-
-  /**
-   * This method is called after each iteration and should be implemented by the user to instruct HiOp 
-   * to save a complete state of the algorithm to disk. An axom::sidre::DataStore will be used for IO, which 
-   * can be set by the user upon creation of the HiOp algorithm class. If not set, HiOp will create one 
-   * internally. TODO: mention API methods  from the Alg class.
-   * 
-   * This feature is useful for IO checkpointing, for example; it allows the internal algorithm to be 
-   * restarted at the same state as before saving. @see hiop::hiopAlgorithm::tbd for the method to be used 
-   * to load a previously saved state.
-   * 
-   * The method provided by the user should return true if HiOp should save the state of the algorithm at
-   * at current iteration. The argument is passed HiOp to indicate the current iterate number.
-   *
-   *  @param[in] iter the current iteration number
-   */
-  virtual bool save_state_iterate_callback(int iter)
-  {
-    return false;
-  }
   
   /**
    * A wildcard function used to change the primal variables.
