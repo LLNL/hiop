@@ -148,7 +148,7 @@ jobs:
         run: spack -e . buildcache keys --install --trust
 
       - name: Find external packages
-        run: spack -e . external find --all --exclude python
+        run: spack -e . external find --all --exclude python --exclude curl
 
       - name: Spack develop HiOp
         run: spack -e . develop --path=$(pwd) hiop@develop
