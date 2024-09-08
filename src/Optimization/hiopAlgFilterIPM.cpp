@@ -991,6 +991,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //this also evaluates the nlp
     startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
     _mu=mu0;
+    iter_num = 0;
   } else {
     //
     //checkpoint load
@@ -1007,7 +1008,8 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->log->printf(hovWarning, "Using default starting procedure (no checkpoint load!).\n");
       //this also evaluates the nlp
       startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
-      _mu=mu0;     
+      _mu=mu0;
+      iter_num = 0;
     }
     solver_status_ = NlpSolve_SolveNotCalled;
   }
@@ -1020,7 +1022,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
 
-  iter_num=0; nlp->runStats.nIter=iter_num;
+  nlp->runStats.nIter = iter_num;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
   theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
@@ -1527,105 +1529,120 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
 
 bool hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path) noexcept
 {
-  auto success = true;
-  sidre::DataStore* ds = nullptr;
   try {
-    ds = new sidre::DataStore();
-    this->save_state_to_data_store(ds);
+    sidre::DataStore ds;
+    sidre::Group* group = ds.getRoot()->createGroup("HiOp quasi-Newton alg state");
+    this->save_state_to_sidre_group(*group);
 
     sidre::IOManager writer(this->get_nlp()->get_comm());
     int n_files;
     MPI_Comm_size(this->get_nlp()->get_comm(), &n_files);
-    writer.write(ds->getRoot(), n_files, path.c_str(), sidre::Group::getDefaultIOProtocol());
+    writer.write(ds.getRoot(), n_files, path, sidre::Group::getDefaultIOProtocol());
+    return true;
   } catch(const std::exception& exp) {
-    nlp->log->printf(hovError, "Error in saving checkpoint to file '%s'\n", path.c_str());
+    nlp->log->printf(hovError, "Error when saving checkpoint to file '%s'\n", path.c_str());
     nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
-    success = false;    
+    return false;    
   }  
-  delete ds;
-  return success;
 }
 
 bool hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path) noexcept
 {
-  sidre::DataStore* ds = nullptr;
-  auto success = true;
   try {
-    ds = new sidre::DataStore();
+    sidre::DataStore ds;
+
     sidre::IOManager reader(this->get_nlp()->get_comm());
-    reader.read(ds->getRoot(), path, false);
-    
-    this->load_state_from_data_store(ds);
-    
+    auto path2 = SidreHelper::check_path(path);
+    reader.read(ds.getRoot(), path2, false);
+    nlp->log->printf(hovScalars, "Loaded checkpoint file [%s].\n", path2.c_str());
+
+    const sidre::Group* group = ds.getRoot()->getGroup("HiOp quasi-Newton alg state");
+    this->load_state_from_sidre_group(*group);
+    return true;
   } catch(const std::exception& exp) {
     nlp->log->printf(hovError, "Error in loading checkpoint from file '%s'\n", path.c_str());
     nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
-    success = false;
+    return false;
   }
-  delete ds;
-  return success;
 }
 
-void hiopAlgFilterIPMQuasiNewton::save_state_to_data_store(::axom::sidre::DataStore* ds)
+void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group& group)
 {
   using IndType = sidre::IndexType;
-  sidre::Group* nlp_group = ds->getRoot()->createGroup("hiop solver");
 
   //metadata
 
   //iterate states
   //create views for each member that needs to be saved
-  SidreHelper::copy_vec_to_view(*nlp_group, "x", *it_curr->get_x());
-  SidreHelper::copy_vec_to_view(*nlp_group, "d", *it_curr->get_d());
-  SidreHelper::copy_vec_to_view(*nlp_group, "sxl", *it_curr->get_sxl());
-  SidreHelper::copy_vec_to_view(*nlp_group, "sxu", *it_curr->get_sxu());
-  SidreHelper::copy_vec_to_view(*nlp_group, "sdl", *it_curr->get_sdl());
-  SidreHelper::copy_vec_to_view(*nlp_group, "sdu", *it_curr->get_sdu());
-  SidreHelper::copy_vec_to_view(*nlp_group, "yc", *it_curr->get_yc());
-  SidreHelper::copy_vec_to_view(*nlp_group, "zl", *it_curr->get_zl());
-  SidreHelper::copy_vec_to_view(*nlp_group, "zu", *it_curr->get_zu());
-  SidreHelper::copy_vec_to_view(*nlp_group, "vl", *it_curr->get_vl());
-  SidreHelper::copy_vec_to_view(*nlp_group, "vu", *it_curr->get_vu());
+  SidreHelper::copy_vec_to_view(group, "x", *it_curr->get_x());
+  SidreHelper::copy_vec_to_view(group, "d", *it_curr->get_d());
+  SidreHelper::copy_vec_to_view(group, "sxl", *it_curr->get_sxl());
+  SidreHelper::copy_vec_to_view(group, "sxu", *it_curr->get_sxu());
+  SidreHelper::copy_vec_to_view(group, "sdl", *it_curr->get_sdl());
+  SidreHelper::copy_vec_to_view(group, "sdu", *it_curr->get_sdu());
+  SidreHelper::copy_vec_to_view(group, "yc", *it_curr->get_yc());
+  SidreHelper::copy_vec_to_view(group, "yd", *it_curr->get_yd());
+  SidreHelper::copy_vec_to_view(group, "zl", *it_curr->get_zl());
+  SidreHelper::copy_vec_to_view(group, "zu", *it_curr->get_zu());
+  SidreHelper::copy_vec_to_view(group, "vl", *it_curr->get_vl());
+  SidreHelper::copy_vec_to_view(group, "vu", *it_curr->get_vu());
   
-  //quasi-Newton Hessian approximation 
+  //state of quasi-Newton Hessian approximation 
   
   //algorithmic parameters for this state
-  //mu, iteration number
-  const double alg_params[] = {_mu, (double)iter_num};
+  //mu, iteration number, num MPI ranks
+  int nranks=1;
+#ifdef HIOP_USE_MPI  
+  MPI_Comm_size(get_nlp()->get_comm(), &nranks);
+#endif
+
+  const double alg_params[] = {_mu, (double)iter_num, (double)nranks};
   const size_type nparams = sizeof(alg_params) / sizeof(double);
   
-  SidreHelper::copy_array_to_view(*nlp_group, "alg_params", alg_params, nparams);
+  SidreHelper::copy_array_to_view(group, "alg_params", alg_params, nparams);
 }
 
-void hiopAlgFilterIPMQuasiNewton::load_state_from_data_store(const sidre::DataStore* ds)
+void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group& group)
 {
-  const sidre::Group* nlp_group = ds->getRoot()->getGroup("hiop solver");
-
   //metadata
-
-  //iterate states
-  SidreHelper::copy_vec_from_view(*nlp_group, "x", *it_curr->get_x());
-  SidreHelper::copy_vec_from_view(*nlp_group, "d", *it_curr->get_d());
-  SidreHelper::copy_vec_from_view(*nlp_group, "sxl", *it_curr->get_sxl());
-  SidreHelper::copy_vec_from_view(*nlp_group, "sxu", *it_curr->get_sxu());
-  SidreHelper::copy_vec_from_view(*nlp_group, "sdl", *it_curr->get_sdl());
-  SidreHelper::copy_vec_from_view(*nlp_group, "sdu", *it_curr->get_sdu());
-  SidreHelper::copy_vec_from_view(*nlp_group, "yc", *it_curr->get_yc());
-  SidreHelper::copy_vec_from_view(*nlp_group, "zl", *it_curr->get_zl());
-  SidreHelper::copy_vec_from_view(*nlp_group, "zu", *it_curr->get_zu());
-  SidreHelper::copy_vec_from_view(*nlp_group, "vl", *it_curr->get_vl());
-  SidreHelper::copy_vec_from_view(*nlp_group, "vu", *it_curr->get_vu());
-
-  //quasi-Newton Hessian approximation
 
   //algorithmic parameters
   //!!! dev note: nparams needs to match the nparams from save_state_to_data_store
-  const int nparams = 2; 
+  const int nparams = 3; 
   double alg_params[nparams];
-  SidreHelper::copy_array_from_view(*nlp_group, "alg_params", alg_params, nparams);
+  SidreHelper::copy_array_from_view(group, "alg_params", alg_params, nparams);
   //!!! dev note: match order in save_state_to_data_store
   _mu = alg_params[0];
   iter_num = alg_params[1];
+  
+  int nranks=1;
+#ifdef HIOP_USE_MPI  
+  MPI_Comm_size(get_nlp()->get_comm(), &nranks);
+#endif
+  if( (int)alg_params[2] != nranks ) {
+    ::std::stringstream ss;
+    ss << "Mismatch in the number of MPI ranks used to checkpoint. Checkpointing was " <<
+      "done on " << (int)alg_params[2] << " ranks while HiOp currently runs on " <<
+      nranks << " ranks.\n";
+    //throw std::runtime_error(ss.str());
+  }
+  
+  //iterate states
+  SidreHelper::copy_vec_from_view(group, "x", *it_curr->get_x());
+  SidreHelper::copy_vec_from_view(group, "d", *it_curr->get_d());
+  SidreHelper::copy_vec_from_view(group, "sxl", *it_curr->get_sxl());
+  SidreHelper::copy_vec_from_view(group, "sxu", *it_curr->get_sxu());
+  SidreHelper::copy_vec_from_view(group, "sdl", *it_curr->get_sdl());
+  SidreHelper::copy_vec_from_view(group, "sdu", *it_curr->get_sdu());
+  SidreHelper::copy_vec_from_view(group, "yc", *it_curr->get_yc());
+  SidreHelper::copy_vec_from_view(group, "yd", *it_curr->get_yd());
+  SidreHelper::copy_vec_from_view(group, "zl", *it_curr->get_zl());
+  SidreHelper::copy_vec_from_view(group, "zu", *it_curr->get_zu());
+  SidreHelper::copy_vec_from_view(group, "vl", *it_curr->get_vl());
+  SidreHelper::copy_vec_from_view(group, "vu", *it_curr->get_vu());
+
+  //state of quasi-Newton Hessian approximation
+
 }
 
 void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()

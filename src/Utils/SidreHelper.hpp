@@ -101,6 +101,7 @@ public:
         "has " << view->getNumElements() << " double elements.\n";
       throw ::std::runtime_error(ss.str());
     }
+
     const auto stride(view->getStride());
     double *const arr_dest(view->getArray());
     if(1==stride) {
@@ -153,7 +154,7 @@ public:
       ::std::stringstream ss;
       ss << "Size mismatch between HiOp state and sidre::View '" << view_name <<
         "' when copying from the view. HiOp state is " << size << " doubles, "<<
-        "while the view has " << view_const->getNumElements() << "double elements.\n";
+        "while the view has " << view_const->getNumElements() << " double elements.\n";
       throw ::std::runtime_error(ss.str());
     }
 
@@ -181,6 +182,16 @@ public:
     double* arr = vec.local_data_host();
     copy_array_from_view(group, view_name, arr, size);
     
+  }
+
+  /// Add '.root' extension if path is not a valid file
+  static ::std::string check_path(::std::string path)
+  {
+    ::std::ifstream f(path, ::std::ifstream::in);
+    //this hack is to trigger a failure (f.good() returns false) if 'path' exists but it
+    //is a directory.
+    f.seekg(0, ::std::ios::end);
+    return f.good() ? path : (path + ".root");
   }
 private:
   /**

@@ -68,7 +68,11 @@
 #include "hiopFactAcceptor.hpp"
 
 #ifdef HIOP_USE_AXOM
-#include <axom/sidre/core/DataStore.hpp>
+namespace axom {
+namespace sidre {
+class Group; // forward declaration
+}
+}
 #endif
 
 #include "hiopTimer.hpp"
@@ -349,31 +353,47 @@ public:
   // note that checkpointing is only available with a axom-enabled build
 #ifdef HIOP_USE_AXOM
   /**
-   * @brief Save state of HiOp algorithm to a sidre data store.
-   * @param data_store a pointer to DataStore
+   * @brief Save state of HiOp algorithm to a sidre::Group as a checkpoint.
+   *
+   * @param group a reference to the group where state will be saved to
+   *
+   * @exception std::runtime indicates the group contains a view whose size does not match
+   * the size of the corresponding HiOp algorithm state variable of parameter. 
    *
    * @details 
-   * A new sidre::group "hiop solver" is created within data_store. Then a sidre::View 
-   * is created within the group for each of the algorithm's states and the states are
-   * copied in the corresponding views. 
+   * Each state variable of each parameter of HiOp algorithm will be saved in a named 
+   * view within the group. A new view will be created within the group if it does not 
+   * already exist. If it exists, the view must have same number of elements as the 
+   * as the size of the corresponding state variable. This means that this method will
+   * throw an exception if an existing group is reused to save a problem that changed
+   * sizes since the group was created.
    */
-  virtual void save_state_to_data_store(::axom::sidre::DataStore* data_store);
+  virtual void save_state_to_sidre_group(::axom::sidre::Group& group);
 
   /**
-   * @brief Load state of HiOp algorithm from a sidre data store.
-   * @param data_store a pointer to DataStore
+   * @brief Load state of HiOp algorithm from a sidre::Group checkpoint.
+   *
+   * @param group a pointer to group containing the a prevously saved HiOp algorithm state.
+   *
+   * @exception std::runtime indicates the group does not contain a view expected by this 
+   * method or the view's number of elements mismatches the size of the corresponding HiOp
+   * state. The latter can occur if the file was saved with a different number of MPI ranks.
    *
    * @details 
-   * Copies views from the data store sidre::group (named "hiop solver") to HiOp algorithm's
-   * state variables. The group should be created by first calling save_state_to_data_store 
-   * for a problem/NLP of the same sizes as the problem for which load_state_from_data_store
-   * is called. This ensures the views have the names and sizes expected by this method. 
-   * Otherwise a std::runtime_error exception is thrown.
+   * Copies views from the sidre::Group passed as argument to HiOp algorithm's state variables
+   * and parameters. The group should be created by first calling save_state_to_sidre_group 
+   * for a problem/NLP of the same sizes as the problem for which this method is called. 
+   * The method expects views within the group with certain names. If one such view is not 
+   * found or has a number of elements different than the size of the corresponding HiOp state, 
+   * then a std::runtime_error exception is thrown. The latter can occur when the loading 
+   * occurs for a instance of HiOp that is not ran on the same number of MPI ranks used to
+   * save the file.
    */ 
-  virtual void load_state_from_data_store(const ::axom::sidre::DataStore* data_store);
+  virtual void load_state_from_sidre_group(const ::axom::sidre::Group& group);
 
   /**
-   * @brief Save the state of the algorithm to the file
+   * @brief Save the state of the algorithm to the file for checkpointing.
+   *
    * @param path   the name of the file
    * @return true if successful, false otherwise
    * 
@@ -384,7 +404,8 @@ public:
   bool save_state_to_file(const ::std::string& path) noexcept;
 
   /**
-   * @brief load the state of the algorithm from file
+   * @brief Load the state of the algorithm from checkpoint file.  
+   *
    * @param path   the name of the file to load from
    * @return true if successful, false otherwise
    * 
@@ -401,16 +422,6 @@ private:
 #ifdef HIOP_USE_AXOM  
   ///@brief The options-based logic for saving checkpoint and the call to save_state().
   void checkpointing_stuff();
-
-  /**
-   * @brief Copy HiOp vector to a (new) axom::sidre::View.
-   *
-   * @details A new view is created/allocated within the sidre group.
-   */
-  void copy_vec_to_new_view(const ::std::string& name, const hiopVector* vec, ::axom::sidre::Group* nlp_group);
-
-  /// Copy content of the named sidre view from nlp_group into HiOp Vector.
-  void copy_vec_from_view(const ::std::string& name, hiopVector* vec, const axom::sidre::Group* nlp_group);
 #endif // HIOP_USE_AXOM
 
 private:
