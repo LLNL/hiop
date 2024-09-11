@@ -394,7 +394,7 @@ public:
   /**
    * @brief Save the state of the algorithm to the file for checkpointing.
    *
-   * @param path   the name of the file
+   * @param path the name of the file
    * @return true if successful, false otherwise
    * 
    * @details
@@ -406,7 +406,7 @@ public:
   /**
    * @brief Load the state of the algorithm from checkpoint file.  
    *
-   * @param path   the name of the file to load from
+   * @param path the name of the file to load from
    * @return true if successful, false otherwise
    * 
    * @details 

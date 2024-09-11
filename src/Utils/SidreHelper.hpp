@@ -122,11 +122,45 @@ public:
     const double* arr = vec.local_data_host_const();
     copy_array_to_view(group, view_name, arr, size);
   }
+  
+  /**
+   * @brief Copy vectors of HiOp iterate to multiple sidre::View(s) in specified sidre::Group
+   *
+   * @params group contains the views where the vectors members of iterate will be copied to.
+   * @params view_name_prefix is the string prefixing the views' names for each vector
+   * @params it is the HiOp iterate object 
+   *
+   * @exception std::runtime indicates the group contains a view with a number of elements
+   * different than size apparent from the iterate's vector.
+   * 
+   * @details For each vector member of the iterate, a view will be created if does not 
+   * already exist. If exists, the view should have the same number of elements as the 
+   * corresponding (HiOp) vector member of iterate passed as argument. The name of view 
+   * is formed by appending the iterate's name ("x", "s", "y", etc.) to view_name_prefix.
+   */
+  static void copy_iterate_to_views(::axom::sidre::Group& group,
+                                    const ::std::string& view_name_prefix,
+                                    const hiopIterate& it)
+  {
+    copy_vec_to_view(group, view_name_prefix+"x", *it.get_x());
+    copy_vec_to_view(group, view_name_prefix+"d", *it.get_d());
+    copy_vec_to_view(group, view_name_prefix+"sxl", *it.get_sxl());
+    copy_vec_to_view(group, view_name_prefix+"sxu", *it.get_sxu());
+    copy_vec_to_view(group, view_name_prefix+"sdl", *it.get_sdl());
+    copy_vec_to_view(group, view_name_prefix+"sdu", *it.get_sdu());
+    copy_vec_to_view(group, view_name_prefix+"yc", *it.get_yc());
+    copy_vec_to_view(group, view_name_prefix+"yd", *it.get_yd());
+    copy_vec_to_view(group, view_name_prefix+"zl", *it.get_zl());
+    copy_vec_to_view(group, view_name_prefix+"zu", *it.get_zu());
+    copy_vec_to_view(group, view_name_prefix+"vl", *it.get_vl());
+    copy_vec_to_view(group, view_name_prefix+"vu", *it.get_vu());
+  }
+  
 
    /**
    * @brief Copy raw array from sidre::View within specified sidre::Group. 
    * 
-   * @params group contains the view where the copy should be made to.
+   * @params group contains the view that should be copied from
    * @params view_name is the name of the view where to copy 
    * @params arr_dest is the source double array
    * @params size is the number of elements of the array
@@ -184,6 +218,40 @@ public:
     
   }
 
+  /**
+   * @brief Copy iterate from multiple sidre::View(s) within specified sidre::Group. 
+   * 
+   * @params group contains the views where the copy should be made to.
+   * @params view_name_prefix is a string prefixing the views' name
+   * @params it is the HiOp iterate object where the views will be copied to.
+   *
+   * @exception std::runtime indicates the group contains a view with a number of elements
+   * different than expected size or that a view with the expected name does not exist.
+   * 
+   * @details All views must exist and have a number of elements identical to the size of
+   * corresponding vector from `it`. The views are located by their names, which are  
+   * expected to be view_name_prefix concatenated with the iterate's name, see method
+   * copy_vec_to_views.
+   */
+
+  static void copy_iterate_from_views(const ::axom::sidre::Group& group,
+                                      const ::std::string& view_name_prefix,
+                                      hiopIterate& it)
+  {
+    copy_vec_from_view(group, view_name_prefix+"x", *it.get_x());
+    copy_vec_from_view(group, view_name_prefix+"d", *it.get_d());
+    copy_vec_from_view(group, view_name_prefix+"sxl", *it.get_sxl());
+    copy_vec_from_view(group, view_name_prefix+"sxu", *it.get_sxu());
+    copy_vec_from_view(group, view_name_prefix+"sdl", *it.get_sdl());
+    copy_vec_from_view(group, view_name_prefix+"sdu", *it.get_sdu());
+    copy_vec_from_view(group, view_name_prefix+"yc", *it.get_yc());
+    copy_vec_from_view(group, view_name_prefix+"yd", *it.get_yd());
+    copy_vec_from_view(group, view_name_prefix+"zl", *it.get_zl());
+    copy_vec_from_view(group, view_name_prefix+"zu", *it.get_zu());
+    copy_vec_from_view(group, view_name_prefix+"vl", *it.get_vl());
+    copy_vec_from_view(group, view_name_prefix+"vu", *it.get_vu());
+  }
+  
   /// Add '.root' extension if path is not a valid file
   static ::std::string check_path(::std::string path)
   {
