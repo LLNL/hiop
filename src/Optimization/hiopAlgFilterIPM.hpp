@@ -265,7 +265,11 @@ protected:
 
   hiopResidual* resid, *resid_trial;
 
-  int iter_num;
+  /// Iteration number maintained internally by the algorithm and reset at each solve/run 
+  int iter_num_;
+  /// Total iteration number over multiple solves/restarts using checkpoints.
+  int iter_num_total_;
+  
   double _err_nlp_optim, _err_nlp_feas, _err_nlp_complem;//not scaled by sd, sc, and sc
   double _err_nlp_optim0,_err_nlp_feas0,_err_nlp_complem0;//initial errors, not scaled by sd, sc, and sc
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
