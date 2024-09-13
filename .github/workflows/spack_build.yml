@@ -168,7 +168,7 @@ jobs:
         run: spack -e . concretize --fresh
 
       - name: Install
-        run: spack -e . install --no-check-signature --fail-fast --keep-stage
+        run: spack -e . install --no-check-signature --fail-fast --keep-stage --show-log-on-error --verbose
 
       - name: Test Build
         run: cd $(spack -e . location --build-dir hiop@develop) && ctest -VV
