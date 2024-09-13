@@ -113,14 +113,16 @@ jobs:
     name: Build HiOp with Spack
 
     steps:
-      - name: Setup Spack
+      - name: Clone Spack
         run: |
           # TODO: Move back to spack@develop once patch in in develop
           git clone https://github.com/cameronrutherford/spack.git
-          cd spack
+          pushd spack
           git checkout 9bbf4405306ba85ed66907c4e1cd3a2ce980dd38
-          cd -
-          source ./spack/share/spack/setup-env.sh
+          popd
+
+      - name: Setup Spack
+        run: echo "$PWD/spack/bin" >> "$GITHUB_PATH"
 
       - name: Create heredoc spack.yaml
         run: |
