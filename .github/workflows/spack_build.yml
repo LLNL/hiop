@@ -120,7 +120,7 @@ jobs:
           cd spack
           git checkout 9bbf4405306ba85ed66907c4e1cd3a2ce980dd38
           cd -
-          echo $(pwd)/spack/opt/spack/bin >> "$GITHUB_PATH"
+          source ./spack/share/spack/setup-env.sh
 
       - name: Create heredoc spack.yaml
         run: |
