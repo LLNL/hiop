@@ -922,7 +922,8 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_in,
                                                          const bool within_FR)
-  : hiopAlgFilterIPMBase(nlp_in, within_FR)
+  : hiopAlgFilterIPMBase(nlp_in, within_FR),
+    load_state_api_called_(false)
 {
   nlpdc = nlp_in;
   reload_options();
@@ -984,36 +985,38 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   nlp->runStats.tmOptimizTotal.start();
 
   iter_num_ = 0;
-  iter_num_total_ = 0;
 
   //
   // starting point:
   // - user provided (with slack adjustments and lsq eq. duals initialization)
-  // or
-  // - loaded checkpoint
+  // - load checkpoint API (method load_state_from_sidre_group) called before calling this method
+  // - checkpoint from file (option "checkpoint_load_on_start")
   //
-  if(nlp->options->GetString("checkpoint_load_on_start") != "yes") {
+  if(nlp->options->GetString("checkpoint_load_on_start") != "yes" && !load_state_api_called_) {
     //this also evaluates the nlp
     startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
     _mu=mu0;
+    iter_num_total_ = 0;
   } else {
-    //
-    //checkpoint load
-    //
-    //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
-    auto chkpnt_ok = load_state_from_file(nlp->options->GetString("checkpoint_file"));
-    if(chkpnt_ok) {
-      //additionally: need to evaluate the nlp
-      if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
-        nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
-        return Error_In_User_Function;
+    if(!load_state_api_called_) {
+      //
+      //checkpoint load from file
+      //
+      //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
+      auto chkpnt_ok = load_state_from_file(nlp->options->GetString("checkpoint_file"));
+      if(!chkpnt_ok) {
+        nlp->log->printf(hovWarning, "Using default starting procedure (no checkpoint load!).\n");
+        iter_num_total_ = 0;
+        //fall back on the default starting procedure (it also evaluates the nlp)
+        startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
+        _mu=mu0;
+        iter_num_total_ = 0;
       }
-    } else {
-      nlp->log->printf(hovWarning, "Using default starting procedure (no checkpoint load!).\n");
-      iter_num_total_ = 0;
-      //fall back on the default starting procedure (it also evaluates the nlp)
-      startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
-      _mu=mu0;
+    }
+    //additionally: need to evaluate the nlp
+    if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+      nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
+      return Error_In_User_Function;
     }
     solver_status_ = NlpSolve_SolveNotCalled;
   }
@@ -1641,6 +1644,8 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group
 
 void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group& group)
 {
+  load_state_api_called_ = true;
+  
   //metadata
 
   //algorithmic parameters

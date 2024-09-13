@@ -16,6 +16,17 @@
 #define MPI_Comm int
 #endif
 
+#ifdef HIOP_USE_AXOM
+namespace axom {
+namespace sidre {
+// forward declarations
+class DataStore;
+class Group; 
+}
+}
+#endif
+
+
 #include <iostream>
 
 /* Example 1: a simple infinite-dimensional QP in the optimiz. function variable x:[0,1]->R
@@ -78,7 +89,7 @@ protected:
   MPI_Comm comm;
   int my_rank, comm_size;
   index_type* col_partition;
-
+  
   friend class DiscretizedFunction;
 
 private: 
@@ -112,7 +123,9 @@ class DenseConsEx1 : public hiop::hiopInterfaceDenseConstraints
 {
 public: 
   DenseConsEx1(int n_mesh_elem=100, double mesh_ratio=1.0)
-    : n_vars(n_mesh_elem), comm(MPI_COMM_WORLD)
+    : n_vars(n_mesh_elem),
+      comm(MPI_COMM_WORLD),
+      solver_(nullptr)
   {
     //create the members
     _mesh = new Ex1Meshing1D(0.0,1.0, n_vars, mesh_ratio, comm);
@@ -218,6 +231,31 @@ public:
     }
     return true;
   }
+
+  inline void set_solver(hiop::hiopAlgFilterIPM* alg_obj)
+  {
+    solver_ = alg_obj;
+  }
+
+  bool iterate_callback(int iter,
+                        double obj_value,
+                        double logbar_obj_value,
+                        int n,
+                        const double* x,
+                        const double* z_L,
+                        const double* z_U,
+                        int m_ineq,
+                        const double* s,
+                        int m,
+                        const double* g,
+                        const double* lambda,
+                        double inf_pr,
+                        double inf_du,
+                        double onenorm_pr,
+                        double mu,
+                        double alpha_du,
+                        double alpha_pr,
+                        int ls_trials);
 private:
   int n_vars;
   MPI_Comm comm;
@@ -228,6 +266,10 @@ private:
   DiscretizedFunction* c;
   DiscretizedFunction* x; //proxy for taking hiop's variable in and working with it as a function
 
+  /// Pointer to the solver, to be used to checkpoint
+  hiop::hiopAlgFilterIPM* solver_;
+
+private:
   //populates the linear term c
   void set_c();
 };

@@ -4,6 +4,14 @@
 #include <cstdio>
 #include <cassert>
 
+#ifdef HIOP_USE_AXOM
+#include <axom/sidre/core/DataStore.hpp>
+#include <axom/sidre/core/Group.hpp>
+#include <axom/sidre/core/View.hpp>
+#include <axom/sidre/spio/IOManager.hpp>
+using namespace axom;
+#endif
+
 using namespace hiop;
 
 Ex1Meshing1D::Ex1Meshing1D(double a, double b, size_type glob_n, double r, MPI_Comm comm_)
@@ -178,9 +186,58 @@ void DiscretizedFunction::setFunctionValue(index_type i_global, const double& va
   this->data_[i_local]=value;
 }
 
-
-
 /* DenseConsEx1 class implementation */
+
+bool DenseConsEx1::iterate_callback(int iter,
+                                    double obj_value,
+                                    double logbar_obj_value,
+                                    int n,
+                                    const double* x,
+                                    const double* z_L,
+                                    const double* z_U,
+                                    int m_ineq,
+                                    const double* s,
+                                    int m,
+                                    const double* g,
+                                    const double* lambda,
+                                    double inf_pr,
+                                    double inf_du,
+                                    double onenorm_pr,
+                                    double mu,
+                                    double alpha_du,
+                                    double alpha_pr,
+                                    int ls_trials)
+{
+#ifdef HIOP_USE_AXOM
+  //save state to sidre::Group every 5 iterations if a solver/algorithm object was provided
+  if(iter > 0 && (iter % 5 == 0) &&nullptr!=solver_) {
+    //    
+    //Example of how to save HiOp state to axom::sidre::Group
+    //
+
+    //We first manufacture a Group. User code supposedly already has one.
+    sidre::DataStore ds;
+    sidre::Group* group = ds.getRoot()->createGroup("hiop state ex1");
+
+    //the actual saving of state to group
+    try {
+      solver_->save_state_to_sidre_group(*group);
+    } catch(::std::runtime_error& e) {
+      //user chooses action when an error occured in saving the state...
+      //we choose to stop HiOp
+      return false;
+    }
+
+    //User code can further inspect the Group or add addtl info to DataStore, with the end goal
+    //of saving it to file before HiOp starts next iteration. Here we just save it.
+    sidre::IOManager writer(comm);
+    int n_files;
+    MPI_Comm_size(comm, &n_files);
+    writer.write(ds.getRoot(), n_files, "hiop_state_ex1", sidre::Group::getDefaultIOProtocol());
+  }
+#endif
+  return true;
+}
 
 /*set c to  
  *    c(t) = 1-10*t, for 0<=t<=1/10,

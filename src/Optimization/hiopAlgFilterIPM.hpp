@@ -430,6 +430,11 @@ private:
 
 private:
   hiopNlpDenseConstraints* nlpdc;
+#ifdef HIOP_USE_AXOM  
+  ///@brief Indicates whether load checkpoint API was called previous to run method.
+  bool load_state_api_called_;
+#endif // HIOP_USE_AXOM
+
 private:
   hiopAlgFilterIPMQuasiNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMQuasiNewton(const hiopAlgFilterIPMQuasiNewton& ) : hiopAlgFilterIPMBase(NULL){};
