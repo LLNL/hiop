@@ -184,8 +184,8 @@ static bool do_load_checkpoint_test(const size_type& mesh_size,
 
   //Supposedly, the user code should have the group in hand before asking HiOp to load from it.
   //We will manufacture it by loading a sidre checkpoint file. Here the checkpoint file
-  // "hiop_state_ex1.root" was created from the interface class' iterate_callback method
-  // (saved every 5 iterations)
+  //"hiop_state_ex1.root" was created from the interface class' iterate_callback method
+  //(saved every 5 iterations)
   sidre::DataStore ds;
 
   try {
@@ -199,7 +199,7 @@ static bool do_load_checkpoint_test(const size_type& mesh_size,
 
   //the actual API call
   try {
-    const sidre::Group* group = ds.getRoot()->getGroup("hiop state ex11");
+    const sidre::Group* group = ds.getRoot()->getGroup("hiop state ex1");
     solver.load_state_from_sidre_group(*group);
   } catch(std::runtime_error& e) {
     printf("Failed to load from sidre::group. Error: [%s]", e.what());

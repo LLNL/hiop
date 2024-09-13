@@ -16,17 +16,6 @@
 #define MPI_Comm int
 #endif
 
-#ifdef HIOP_USE_AXOM
-namespace axom {
-namespace sidre {
-// forward declarations
-class DataStore;
-class Group; 
-}
-}
-#endif
-
-
 #include <iostream>
 
 /* Example 1: a simple infinite-dimensional QP in the optimiz. function variable x:[0,1]->R

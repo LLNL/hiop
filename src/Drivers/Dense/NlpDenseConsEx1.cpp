@@ -210,7 +210,7 @@ bool DenseConsEx1::iterate_callback(int iter,
 {
 #ifdef HIOP_USE_AXOM
   //save state to sidre::Group every 5 iterations if a solver/algorithm object was provided
-  if(iter > 0 && (iter % 5 == 0) &&nullptr!=solver_) {
+  if(iter > 0 && (iter % 5 == 0) && nullptr!=solver_) {
     //    
     //Example of how to save HiOp state to axom::sidre::Group
     //
@@ -222,7 +222,7 @@ bool DenseConsEx1::iterate_callback(int iter,
     //the actual saving of state to group
     try {
       solver_->save_state_to_sidre_group(*group);
-    } catch(::std::runtime_error& e) {
+    } catch(std::runtime_error& e) {
       //user chooses action when an error occured in saving the state...
       //we choose to stop HiOp
       return false;
