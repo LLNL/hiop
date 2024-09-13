@@ -1729,10 +1729,11 @@ void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()
     using ::std::string;
     // replace "#" in checkpointing file with iteration number
     string path = nlp->options->GetString("checkpoint_file");
+    const auto s_it_num = ::std::to_string(iter_num_);
     auto pos = path.find("#");
-    if(string::npos != pos) {
-      auto s_it_num = ::std::to_string(iter_num_);
+    while(string::npos != pos) {
       path.replace(pos, 1, s_it_num);
+      pos = path.find("#", pos);
     }
 
     nlp->log->printf(hovSummary, "Saving checkpoint at iter %d in '%s'.\n", iter_num_, path.c_str());
