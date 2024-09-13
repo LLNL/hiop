@@ -99,7 +99,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-    container: spack/ubuntu-jammy:latest
     strategy:
       matrix:
         spack_spec:
@@ -115,7 +114,13 @@ jobs:
 
     steps:
       - name: Setup Spack
-        run: echo "/opt/spack/bin" >> "$GITHUB_PATH"
+        run: |
+          # TODO: Move back to spack@develop once patch in in develop
+          git clone https://github.com/cameronrutherford/spack.git
+          cd spack
+          git checkout 9bbf4405306ba85ed66907c4e1cd3a2ce980dd38
+          cd -
+          echo $(pwd)/spack/opt/spack/bin >> "$GITHUB_PATH"
 
       - name: Create heredoc spack.yaml
         run: |
