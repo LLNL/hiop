@@ -6,6 +6,10 @@ on: [pull_request]
 env:
   SPACK_COLOR: always
   REGISTRY: ghcr.io/llnl
+  SPACK_CACHE: /opt/spack-cache
+  tempdir: /opt/spack-cache
+  TMP: /opt/spack-cache
+  TMPDIR: /opt/spack-cache
   # Our repo name contains upper case characters, so we can't use ${{ github.repository }}
   IMAGE_NAME: hiop
   USERNAME: hiop-bot
