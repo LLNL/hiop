@@ -1002,6 +1002,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       //
       //checkpoint load from file
       //
+#ifdef HIOP_USE_AXOM      
       //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
       auto chkpnt_ok = load_state_from_file(nlp->options->GetString("checkpoint_file"));
       if(!chkpnt_ok) {
@@ -1012,6 +1013,11 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         _mu=mu0;
         iter_num_total_ = 0;
       }
+#else
+      nlp->log->printf(hovWarning,
+                       "Unexpected checkpoint misconfiguration. "
+                       "Will use user-provided starting point.\n"); 
+#endif
     }
     //additionally: need to evaluate the nlp
     if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {

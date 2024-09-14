@@ -423,8 +423,8 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   const size_t buffsize=l*l*sizeof(double);
   memcpy(_buff1_lxlx3, DpYtDhInvY.local_data(), buffsize);
 #else
-  DpYtDhInvY.addDiagonal(1., *D);
-  V->copyBlockFromMatrix(l,l,DpYtDhInvY);
+  DpYtDhInvY.addDiagonal(1., *D_);
+  V_->copyBlockFromMatrix(l,l,DpYtDhInvY);
 #endif
 
   //-- block (1,2)
@@ -436,9 +436,9 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   memcpy(_buff1_lxlx3+l*l, StB0DhInvYmL.local_data(), buffsize);
 #else
   //substract L
-  StB0DhInvYmL.addMatrix(-1.0, *L);
+  StB0DhInvYmL.addMatrix(-1.0, *L_);
   // (1,2) block in V
-  V->copyBlockFromMatrix(0,l,StB0DhInvYmL);
+  V_->copyBlockFromMatrix(0,l,StB0DhInvYmL);
 #endif
 
   //-- block (2,2)
@@ -450,7 +450,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 #ifdef HIOP_USE_MPI
   memcpy(_buff1_lxlx3+2*l*l, DpYtDhInvY.local_data(), buffsize);
 #else
-  V->copyBlockFromMatrix(0,0,StDS);
+  V_->copyBlockFromMatrix(0,0,StDS);
 #endif
 
 
