@@ -199,7 +199,7 @@ static bool do_load_checkpoint_test(const size_type& mesh_size,
 
   //the actual API call
   try {
-    const sidre::Group* group = ds.getRoot()->getGroup("hiop state ex1");
+    const sidre::Group* group = ds.getRoot()->getGroup("HiOp quasi-Newton alg state");
     solver.load_state_from_sidre_group(*group);
   } catch(std::runtime_error& e) {
     printf("Failed to load from sidre::group. Error: [%s]", e.what());

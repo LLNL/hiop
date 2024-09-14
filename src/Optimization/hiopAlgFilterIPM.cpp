@@ -1581,8 +1581,6 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group
 {
   using IndType = sidre::IndexType;
 
-  //metadata
-
   //iterate state
   //create views for each member that needs to be saved
   SidreHelper::copy_iterate_to_views(group, "alg_iterate_", *it_curr);
@@ -1637,20 +1635,32 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group
 #ifdef HIOP_USE_MPI  
   MPI_Comm_size(get_nlp()->get_comm(), &nranks);
 #endif
-  const double alg_params[] = {_mu, (double)iter_num_total_, (double)nranks};
+  constexpr double version =  HIOP_VERSION_MAJOR*100 + HIOP_VERSION_MINOR*10 + HIOP_VERSION_PATCH;
+  const double alg_params[] = {_mu, (double)iter_num_total_, (double)nranks, version};
   const size_type nparams = sizeof(alg_params) / sizeof(double);
   SidreHelper::copy_array_to_view(group, "alg_params", alg_params, nparams);
+
+  nlp->log->printf(hovScalars,
+                   "Saved checkpoint to sidre::Group : ver %d.%d.%d on %d MPI ranks at "
+                   "mu=%12.5e from iter=%d.\n",
+                   HIOP_VERSION_MAJOR,
+                   HIOP_VERSION_MINOR,
+                   HIOP_VERSION_PATCH,
+                   nranks,
+                   _mu,
+                   iter_num_total_);
+
 }
 
 void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group& group)
 {
   load_state_api_called_ = true;
-  
-  //metadata
 
+  //
   //algorithmic parameters
+  //
   //!!!note: nparams needs to match the nparams from save_state_to_data_store
-  const int nparams = 3; 
+  const int nparams = 4; 
   double alg_params[nparams];
   SidreHelper::copy_array_from_view(group, "alg_params", alg_params, nparams);
   //!!! dev note: match order in save_state_to_data_store
@@ -1666,13 +1676,29 @@ void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group
     ss << "Mismatch in the number of MPI ranks used to checkpoint. Checkpointing was " <<
       "done on " << (int)alg_params[2] << " ranks while HiOp currently runs on " <<
       nranks << " ranks.\n";
-    //throw std::runtime_error(ss.str());
+    throw std::runtime_error(ss.str());
   }
-  
+  const int ver_major = ((int)alg_params[3] / 100);
+  const int ver_minor = ((int)alg_params[3] - ver_major*100)/10;
+  const int ver_patch = (int)alg_params[3] - ver_major*100 - ver_minor*10;
+  nlp->log->printf(hovScalars,
+                   "Loaded checkpoint from sidre::Group. Found ver %d.%d.%d on %d MPI ranks at "
+                   "mu=%12.5e from iter=%d.\n",
+                   ver_major,
+                   ver_minor,
+                   ver_patch,
+                   nranks,
+                   _mu,
+                   iter_num_total_);
+
+  //
   //iterate states
+  //
   SidreHelper::copy_iterate_from_views(group, "alg_iterate_", *it_curr);
 
+  //
   //state of quasi-Newton Hessian approximation
+  //
   hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
   //!!!note: nparams needs to match the # of params from save_state_to_sidre_group
   const int nhqn_params = 5;

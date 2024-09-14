@@ -217,7 +217,7 @@ bool DenseConsEx1::iterate_callback(int iter,
 
     //We first manufacture a Group. User code supposedly already has one.
     sidre::DataStore ds;
-    sidre::Group* group = ds.getRoot()->createGroup("hiop state ex1");
+    sidre::Group* group = ds.getRoot()->createGroup("HiOp quasi-Newton alg state");
 
     //the actual saving of state to group
     try {
