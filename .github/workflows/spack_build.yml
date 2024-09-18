@@ -167,8 +167,13 @@ jobs:
       - name: Concretize
         run: spack -e . concretize --fresh
 
-      - name: Install
-        run: spack -e . install --no-check-signature --fail-fast --keep-stage --show-log-on-error --verbose
+      - name: Install Dependencies
+        run: spack -e . install --no-check-signature --fail-fast --show-log-on-error --verbose --only dependencies
+
+      - name: Install HiOp
+        run: |
+          ls -al
+          spack -d -e . install  --keep-stage --verbose --show-log-on-error --only package
 
       - name: Test Build
         run: cd $(spack -e . location --build-dir hiop@develop) && ctest -VV
