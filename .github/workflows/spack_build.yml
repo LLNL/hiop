@@ -119,10 +119,7 @@ jobs:
 
       - name: Clone Spack
         run: |
-          # TODO: Move back to spack@develop once patch in in develop
-          git clone https://github.com/cameronrutherford/spack.git
-          pushd spack
-          git checkout 838f2b6708a28cae7b1c1de1f1e1f29a1bf2ee0d
+          git clone https://github.com/spack/spack.git
           popd
 
       - name: Setup Spack
