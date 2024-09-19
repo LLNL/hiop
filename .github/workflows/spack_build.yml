@@ -162,7 +162,7 @@ jobs:
         run: spack -e . external find --all --exclude python --exclude curl --exclude openssl
 
       - name: Spack develop HiOp
-        run: spack -e . develop --path=$(pwd) hiop@develop
+        run: spack -e . develop --path=$(pwd) hiop@develop@git."${{ github.head_ref || github.ref_name }}"=develop
 
       - name: Concretize
         run: spack -e . concretize --fresh
@@ -176,7 +176,11 @@ jobs:
           spack -d -e . install  --keep-stage --verbose --show-log-on-error --only package
 
       - name: Test Build
-        run: cd $(spack -e . location --build-dir hiop@develop) && ctest -VV
+        run: |
+          # Not all pipelines have `+mpi`, so this command might fail
+          spack -e . load openmpi || true
+          cd $(spack -e . location --build-dir hiop@develop)
+          ctest -VV
 
       - name: Push binaries to buildcache
         run: |
