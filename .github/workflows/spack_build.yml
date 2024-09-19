@@ -178,7 +178,7 @@ jobs:
       - name: Test Build
         run: |
           # Not all pipelines have `+mpi`, so this command might fail
-          spack -e . load openmpi || true
+          spack -e . load --sh openmpi || true
           cd $(spack -e . location --build-dir hiop@develop)
           ctest -VV
 
