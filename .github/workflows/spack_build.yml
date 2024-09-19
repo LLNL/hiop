@@ -162,7 +162,7 @@ jobs:
         run: spack -e . external find --all --exclude python --exclude curl --exclude openssl
 
       - name: Spack develop HiOp
-        run: spack -e . develop --path=$(pwd) hiop@develop@git."${{ github.head_ref || github.ref_name }}"=develop
+        run: spack -e . develop --path=$(pwd) hiop@git."${{ github.head_ref || github.ref_name }}"=develop
 
       - name: Concretize
         run: spack -e . concretize --fresh
