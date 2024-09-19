@@ -116,7 +116,7 @@ jobs:
           # Once we move submodule deps into spack, we can do some more builds
           # Also need to change build script to use spack from base image
           submodules: true
-        
+
       - name: Clone Spack
         run: |
           # TODO: Move back to spack@develop once patch in in develop
@@ -178,7 +178,9 @@ jobs:
       - name: Test Build
         run: |
           # Not all pipelines have `+mpi`, so this command might fail
-          spack -e . load --sh openmpi || true
+          # Command also only prints shell commands, need to source
+          spack -e . load --sh openmpi > env.txt || [ rm env.txt || true ]
+          source env.txt || true
           cd $(spack -e . location --build-dir hiop@develop)
           ctest -VV
 
