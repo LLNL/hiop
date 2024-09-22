@@ -423,16 +423,16 @@ This option takes double values in $[0, 10^{20}]$ and has a default value $10^{-
 \medskip
 
 
-\subsubsection{Checkpointing of the solver state and restarting}
-\Hi can save/load its internal state to/from disk. This can be helphul when running a job on a cluster that enforces limits on the job's running time. This functionality is currently available only for the quasi-Newton algorithm. The checkpointing is done using Axom's scalable Sidre data manager and IO (see \url{https://axom.readthedocs.io/en/develop/axom/sidre/docs/sphinx/index.html}) and requires an Axom-enabled build (use ``-DHIOP_USE_AXOM=ON'' with cmake). 
+\subsubsection{Checkpointing of the solver state and restarting}\label{sec:checkpoint}
+As detailed in Section~\ref{sec:checkpoint_API}, \Hi can save/load its internal state to/from disk. All the options in this section require an Axom-enabled build (use ``-DHIOP\_USE\_AXOM=ON'' with cmake) and are supported only by the quasi-Newton IPM solver (\texttt{hiopAlgFilterIPMQuasiNewton} class) for the \texttt{hiopInterfaceDenseConstraints} NLP formulation/interface.
 
 \noindent \textbf{checkpoint\_save}: Save state of NLP solver to file indicated by value of option ``checkpoint\_file''. String values ``yes'' or ``no'', default ``no''.
 
-\noindent \textbf{checkpoint\_load\_on\_start} On (re)start the NLP solver will load checkpoint file specified by ``checkpoint_file`` option. String values ``yes'' or ``no'', default ``no''.
+\noindent \textbf{checkpoint\_load\_on\_start} On (re)start the NLP solver will load checkpoint file specified by ``checkpoint\_file`` option. String values ``yes'' or ``no'', default ``no''.
 
-\noindent \textbf{checkpoint\_file} Path to checkpoint file to load from or save to. If present, the character ``\#'' is replaced with the iteration number at which the checkpointing is saved (but \textit{not} when loaded). \Hi adds a ``.root'' extension internally if the value of the option is a directory. If this option is not specified and loading or saving checkpoints is enabled, \Hi will use a file named ``hiop_state_chk''.
+\noindent \textbf{checkpoint\_file} Path to checkpoint file to load from or save to. If present, the character ``\#'' is replaced with the iteration number at which the checkpointing is saved (but \textit{not} when loaded). \Hi adds a ``.root'' extension internally if the value of the option is a directory. If this option is not specified and loading or saving checkpoints is enabled, \Hi will use a file named ``hiop\_state\_chk''.
 
-\noindent \textbf{checkpoint\_save\_every\_N\_iter} Iteration frequency of saving checkpoints to disk if ``checkpoint_save'' is ``yes''. Takes positive integer values with a default value $10$.
+\noindent \textbf{checkpoint\_save\_every\_N\_iter} Iteration frequency of saving checkpoints to disk if ``checkpoint\_save'' is ``yes''. Takes positive integer values with a default value $10$.
 
 
 \subsubsection{Miscellaneous options}
