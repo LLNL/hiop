@@ -89,12 +89,12 @@ hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const boo
     soc_dir(nullptr),
     resid(nullptr),
     resid_trial(nullptr),
+    iter_num_(0),
+    iter_num_total_(0),
     onenorm_pr_curr_(0.0),
     c_soc(nullptr),
     d_soc(nullptr),
-    within_FR_{within_FR},
-    iter_num_(0),
-    iter_num_total_(0),
+    within_FR_(within_FR),
     pd_perturb_(nullptr),
     fact_acceptor_(nullptr)
 {
