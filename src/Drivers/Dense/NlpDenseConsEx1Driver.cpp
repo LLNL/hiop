@@ -19,10 +19,11 @@ using namespace axom;
 using namespace hiop;
 
 static bool self_check(size_type n, double obj_value);
+#ifdef HIOP_USE_AXOM
 static bool do_load_checkpoint_test(const size_type& mesh_size,
                                     const double& ratio,
                                     const double& obj_val_expected);
-
+#endif
 static bool parse_arguments(int argc, char **argv, size_type& n, double& distortion_ratio, bool& self_check)
 {
   n = 20000; distortion_ratio=1.; self_check=false; //default options
@@ -162,6 +163,7 @@ static bool self_check(size_type n, double objval)
   return true;
 }
 
+#ifdef HIOP_USE_AXOM
 /** 
  * An illustration on how to use load_state_from_sidre_group API method of HiOp's algorithm class.
  * 
@@ -171,7 +173,6 @@ static bool do_load_checkpoint_test(const size_type& mesh_size,
                                     const double& ratio,
                                     const double& obj_val_expected)
 {
-#ifdef HIOP_USE_AXOM
   //Pretend this is new job and recreate the HiOp objects.
   DenseConsEx1 problem(mesh_size, ratio);
   hiop::hiopNlpDenseConstraints nlp(problem);
@@ -211,8 +212,6 @@ static bool do_load_checkpoint_test(const size_type& mesh_size,
   if(obj_val != obj_val_expected) {
     return false;
   }
-
-#endif
-
   return true;
 }
+#endif // HIOP_USE_AXOM
