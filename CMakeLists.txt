@@ -291,11 +291,15 @@ if(HIOP_USE_RAJA)
 endif()
 
 if(HIOP_USE_AXOM)
-  find_package(AXOM CONFIG
-    PATHS ${AXOM_DIR} ${AXOM_DIR}/lib/cmake/
-    REQUIRED)
-  target_link_libraries(hiop_tpl INTERFACE axom)
-  message(STATUS "Found AXOM pkg-config: ${AXOM_CONFIG}")
+  if(HIOP_USE_MPI)
+    find_package(AXOM CONFIG
+      PATHS ${AXOM_DIR} ${AXOM_DIR}/lib/cmake/
+      REQUIRED)
+    target_link_libraries(hiop_tpl INTERFACE axom)
+    message(STATUS "Found AXOM pkg-config: ${AXOM_CONFIG}")
+  elseif(HIOP_USE_MPI)
+    message(FATAL_ERROR "Error: HIOP_USE_MPI is required when HIOP_USE_AXOM is ON")
+  endif()
 endif()
   
 

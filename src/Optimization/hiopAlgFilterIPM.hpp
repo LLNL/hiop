@@ -79,7 +79,7 @@ class Group; // forward declaration
 
 namespace hiop
 {
-   
+
 class hiopAlgFilterIPMBase {
 public:
   hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_, const bool within_FR = false);
