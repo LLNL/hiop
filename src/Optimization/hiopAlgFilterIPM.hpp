@@ -67,6 +67,14 @@
 #include "hiopPDPerturbation.hpp"
 #include "hiopFactAcceptor.hpp"
 
+#ifdef HIOP_USE_AXOM
+namespace axom {
+namespace sidre {
+class Group; // forward declaration
+}
+}
+#endif
+
 #include "hiopTimer.hpp"
 
 namespace hiop
@@ -117,6 +125,8 @@ public:
   { 
     return filter.contains(theta, logbar_obj); 
   }
+
+  /// Setter for the primal steplength.
   inline void set_alpha_primal(const double alpha_primal) { _alpha_primal = alpha_primal; }
 
 protected:
@@ -255,7 +265,11 @@ protected:
 
   hiopResidual* resid, *resid_trial;
 
-  int iter_num;
+  /// Iteration number maintained internally by the algorithm and reset at each solve/run 
+  int iter_num_;
+  /// Total iteration number over multiple solves/restarts using checkpoints.
+  int iter_num_total_;
+  
   double _err_nlp_optim, _err_nlp_feas, _err_nlp_complem;//not scaled by sd, sc, and sc
   double _err_nlp_optim0,_err_nlp_feas0,_err_nlp_complem0;//initial errors, not scaled by sd, sc, and sc
   double _err_log_optim, _err_log_feas, _err_log_complem;//not scaled by sd, sc, and sc
@@ -339,10 +353,86 @@ public:
   virtual ~hiopAlgFilterIPMQuasiNewton();
 
   virtual hiopSolveStatus run();
+
+  // note that checkpointing is only available with a axom-enabled build
+#ifdef HIOP_USE_AXOM
+  /**
+   * @brief Save state of HiOp algorithm to a sidre::Group as a checkpoint.
+   *
+   * @param group a reference to the group where state will be saved to
+   *
+   * @exception std::runtime indicates the group contains a view whose size does not match
+   * the size of the corresponding HiOp algorithm state variable of parameter. 
+   *
+   * @details 
+   * Each state variable of each parameter of HiOp algorithm will be saved in a named 
+   * view within the group. A new view will be created within the group if it does not 
+   * already exist. If it exists, the view must have same number of elements as the 
+   * as the size of the corresponding state variable. This means that this method will
+   * throw an exception if an existing group is reused to save a problem that changed
+   * sizes since the group was created.
+   */
+  virtual void save_state_to_sidre_group(::axom::sidre::Group& group);
+
+  /**
+   * @brief Load state of HiOp algorithm from a sidre::Group checkpoint.
+   *
+   * @param group a pointer to group containing the a prevously saved HiOp algorithm state.
+   *
+   * @exception std::runtime indicates the group does not contain a view expected by this 
+   * method or the view's number of elements mismatches the size of the corresponding HiOp
+   * state. The latter can occur if the file was saved with a different number of MPI ranks.
+   *
+   * @details 
+   * Copies views from the sidre::Group passed as argument to HiOp algorithm's state variables
+   * and parameters. The group should be created by first calling save_state_to_sidre_group 
+   * for a problem/NLP of the same sizes as the problem for which this method is called. 
+   * The method expects views within the group with certain names. If one such view is not 
+   * found or has a number of elements different than the size of the corresponding HiOp state, 
+   * then a std::runtime_error exception is thrown. The latter can occur when the loading 
+   * occurs for a instance of HiOp that is not ran on the same number of MPI ranks used to
+   * save the file.
+   */ 
+  virtual void load_state_from_sidre_group(const ::axom::sidre::Group& group);
+
+  /**
+   * @brief Save the state of the algorithm to the file for checkpointing.
+   *
+   * @param path the name of the file
+   * @return true if successful, false otherwise
+   * 
+   * @details
+   * Internally, HiOp uses axom::sidre::DataStore and sidre's scalable IO. A detailed
+   * error description is sent to the log if an error or exception is caught.
+   */
+  bool save_state_to_file(const ::std::string& path) noexcept;
+
+  /**
+   * @brief Load the state of the algorithm from checkpoint file.  
+   *
+   * @param path the name of the file to load from
+   * @return true if successful, false otherwise
+   * 
+   * @details 
+   * The file should contains a axom::sidre::DataStore that was previously saved using 
+   * save_state_to_file(). A detailed error description is sent to the log if an error 
+   * or exception is caught.
+   */
+  bool load_state_from_file(const ::std::string& path) noexcept;
+#endif // HIOP_USE_AXOM
 private:
   virtual void outputIteration(int lsStatus, int lsNum, int use_soc = 0, int use_fr = 0);
+
+#ifdef HIOP_USE_AXOM  
+  ///@brief The options-based logic for saving checkpoint and the call to save_state().
+  void checkpointing_stuff();
+#endif // HIOP_USE_AXOM
+
 private:
   hiopNlpDenseConstraints* nlpdc;
+  ///@brief Indicates whether load checkpoint API was called previous to run method.
+  bool load_state_api_called_;
+
 private:
   hiopAlgFilterIPMQuasiNewton() : hiopAlgFilterIPMBase(NULL) {};
   hiopAlgFilterIPMQuasiNewton(const hiopAlgFilterIPMQuasiNewton& ) : hiopAlgFilterIPMBase(NULL){};

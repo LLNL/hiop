@@ -133,7 +133,7 @@ backgroundcolor=\color{lbcolor},
 \vspace{3cm}
 
   {\huge\bfseries \Hi\ -- User Guide} \\[14pt]
-  {\large\bfseries version 1.03}
+  {\large\bfseries version 1.1.0}
 
 \vspace{3cm}
 
@@ -155,7 +155,7 @@ Lawrence Livermore National Laboratory}}}\\[10pt]
 \vspace{4.75cm}
 
  \textcolor{violet}{{\large\bfseries Oct 15, 2017} \\
-{\large\bfseries Updated Feb 5, 2024}}
+{\large\bfseries Updated Sept 22, 2024}}
 
 \vspace{0.75cm}
 
@@ -473,6 +473,29 @@ hiopSolveStatus getSolveStatus() const;
 int getNumIterations() const;
 \end{lstlisting} 
 The standalone drivers \texttt{NlpDenseConsEx1}, \texttt{NlpDenseConsEx2}, and \texttt{NlpDenseConsEx3} inside directory \texttt{src/Drivers/} under the \Hi's root directory contain more detailed examples of the use of \Hi.
+
+\subsubsection{Checkpointing}\label{sec:checkpoint_API}
+File checkpointing is available for \Hi's quasi-Newton IPM solver, which is used exclusively to solve \texttt{hiopInterfaceDenseConstraints} formulation. This can be helpful when running a job on
+a cluster that enforces limits on the job’s running time.
+Later, this feature will also be provided for other solvers, such as the Newton IPM (used exclusively with sparse NLP) and HiOp-PriDec.
+
+The checkpointing I/O is based on Axom's scalable Sidre data manager (see \url{https://axom.readthedocs.io/en/develop/axom/sidre/docs/sphinx/index.html} for more information) and, thus, requires an Axom-enabled build (use ``-DHIOP\_USE\_AXOM=ON'' with cmake).
+
+There are two ways to use \Hi's checkpointing. The first is via the quasi-Newton solver's API, namely, the methods
+\begin{lstlisting} 
+void load_state_from_sidre_group(const ::axom::sidre::Group& group);
+void save_state_to_sidre_group(::axom::sidre::Group& group);
+\end{lstlisting}
+of \texttt{hiopAlgFilterIPMQuasiNewton} solver class. New Sidre views will be created (or reused) within the group passed as argument to load / save state variables of the quasi-Newton solver. Alternatively, \texttt{hiopAlgFilterIPMQuasiNewton} solver class offers similar methods to work directly with a file, namely,
+\begin{lstlisting} 
+bool load_state_from_file(const ::std::string& path) noexcept;
+bool save_state_to_file(const ::std::string& path) noexcept;
+\end{lstlisting}
+These two methods will create the Sidre group internally and checkpoint to/from it using the first two methods.
+
+A second avenue to checkpoint is via user options. This is detailed in Section~\ref{sec:checkpoint}.
+
+ \warningcp{Note:} A couple of particularities stemming from the use of Sidre must be acknowledged. First, a checkpoint file should be loaded using HiOp with the same number of MPI ranks as when it was saved. Second, checkpointing is not available for non-MPI builds due to Axom having MPI as a dependency. Finally, when loading from or saving to a checkpoint file, the sizes of the file's variables (Sidre views) must match the sizes of the HiOp variables to which the data is loaded or saved, meaning \Hi will throw an exception if an existing file is (re)used to load or save a algorithm state for a problem that changed sizes since the file was created.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

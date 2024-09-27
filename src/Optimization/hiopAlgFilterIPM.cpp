@@ -66,6 +66,11 @@
 
 #include "hiopCppStdUtils.hpp"
 
+#ifdef HIOP_USE_AXOM
+#include "SidreHelper.hpp"
+using namespace axom;
+#endif
+
 #include <cmath>
 #include <cstring>
 #include <cassert>
@@ -76,15 +81,23 @@ namespace hiop
 {
 
 hiopAlgFilterIPMBase::hiopAlgFilterIPMBase(hiopNlpFormulation* nlp_in, const bool within_FR)
- : soc_dir(nullptr),
-   onenorm_pr_curr_{0.0},
-   c_soc(nullptr),
-   d_soc(nullptr),
-   within_FR_{within_FR},
-   pd_perturb_{nullptr},
-   fact_acceptor_{nullptr}
+  : nlp(nlp_in),
+    logbar(nullptr),
+    it_curr(nullptr),
+    it_trial(nullptr),
+    dir(nullptr),
+    soc_dir(nullptr),
+    resid(nullptr),
+    resid_trial(nullptr),
+    iter_num_(0),
+    iter_num_total_(0),
+    onenorm_pr_curr_(0.0),
+    c_soc(nullptr),
+    d_soc(nullptr),
+    within_FR_(within_FR),
+    pd_perturb_(nullptr),
+    fact_acceptor_(nullptr)
 {
-  nlp = nlp_in;
   //force completion of the nlp's initialization
   nlp->finalizeInitialization();
 }
@@ -915,7 +928,8 @@ void hiopAlgFilterIPMBase::displayTerminationMsg()
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 hiopAlgFilterIPMQuasiNewton::hiopAlgFilterIPMQuasiNewton(hiopNlpDenseConstraints* nlp_in,
                                                          const bool within_FR)
-  : hiopAlgFilterIPMBase(nlp_in, within_FR)
+  : hiopAlgFilterIPMBase(nlp_in, within_FR),
+    load_state_api_called_(false)
 {
   nlpdc = nlp_in;
   reload_options();
@@ -976,8 +990,48 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   nlp->runStats.tmOptimizTotal.start();
 
-  startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); //this also evaluates the nlp
-  _mu=mu0;
+  iter_num_ = 0;
+
+  //
+  // starting point:
+  // - user provided (with slack adjustments and lsq eq. duals initialization)
+  // - load checkpoint API (method load_state_from_sidre_group) called before calling this method
+  // - checkpoint from file (option "checkpoint_load_on_start")
+  //
+  if(nlp->options->GetString("checkpoint_load_on_start") != "yes" && !load_state_api_called_) {
+    //this also evaluates the nlp
+    startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
+    _mu=mu0;
+    iter_num_total_ = 0;
+  } else {
+    if(!load_state_api_called_) {
+      //
+      //checkpoint load from file
+      //
+#ifdef HIOP_USE_AXOM      
+      //load from file: will populate it_curr, _Hess_lagr, and algorithmic parameters
+      auto chkpnt_ok = load_state_from_file(nlp->options->GetString("checkpoint_file"));
+      if(!chkpnt_ok) {
+        nlp->log->printf(hovWarning, "Using default starting procedure (no checkpoint load!).\n");
+        iter_num_total_ = 0;
+        //fall back on the default starting procedure (it also evaluates the nlp)
+        startingProcedure(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d); 
+        _mu=mu0;
+        iter_num_total_ = 0;
+      }
+#else
+      nlp->log->printf(hovWarning,
+                       "Unexpected checkpoint misconfiguration. "
+                       "Will use user-provided starting point.\n"); 
+#endif
+    }
+    //additionally: need to evaluate the nlp
+    if(!this->evalNlp_noHess(*it_curr, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d)) {
+      nlp->log->printf(hovError, "Failure in evaluating user NLP functions at loaded checkpoint.");
+      return Error_In_User_Function;
+    }
+    solver_status_ = NlpSolve_SolveNotCalled;
+  }
 
   //update log bar
   logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
@@ -987,7 +1041,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
 
-  iter_num=0; nlp->runStats.nIter=iter_num;
+  nlp->runStats.nIter = iter_num_;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
   theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
@@ -1074,7 +1128,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     }
 
     //user callback
-    if(!nlp->user_callback_iterate(iter_num,
+    if(!nlp->user_callback_iterate(iter_num_,
                                    _f_nlp,
                                    logbar->f_logbar,
                                    *it_curr->get_x(),
@@ -1095,10 +1149,15 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       solver_status_ = User_Stopped; break;
     }
 
+#ifdef HIOP_USE_AXOM    
+    //checkpointing - based on options provided by the user
+    checkpointing_stuff();
+#endif
+    
     /*************************************************
      * Termination check
      ************************************************/
-    if(checkTermination(_err_nlp, iter_num, solver_status_)) {
+    if(checkTermination(_err_nlp, iter_num_, solver_status_)) {
       break;
     }
     if(NlpSolve_Pending!=solver_status_) break; //failure of the line search or user stopped.
@@ -1112,7 +1171,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       if(!mu_updated) {
         break;
       }
-      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num_, _mu, _tau);
 
       //update only logbar problem  and residual (the NLP didn't change)
       logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
@@ -1143,7 +1202,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
         break;
       }
     }
-    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
+    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num_, logbar->f_logbar,_mu);
     /****************************************************
      * Search direction calculation
      ***************************************************/
@@ -1152,7 +1211,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     nlp->runStats.kkt.start_optimiz_iteration();
 
-    //first update the Hessian and kkt system
+    //update the Hessian and kkt system
     Hess->update(*it_curr,*_grad_f,*_Jac_c,*_Jac_d);
     if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr)) {
       nlp->log->write("Unrecoverable error in step computation (factorization) [1]. Will exit here.",
@@ -1164,7 +1223,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     auto* fact_acceptor_ic = dynamic_cast<hiopFactAcceptorIC*> (fact_acceptor_);
     if(fact_acceptor_ic) {
       //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
-      if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
+      if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num_)) {
         delete kkt;
         return solver_status_ = Err_Step_Computation;
       }
@@ -1172,7 +1231,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       auto* fact_acceptor_dwd = dynamic_cast<hiopFactAcceptorInertiaFreeDWD*> (fact_acceptor_);
       assert(fact_acceptor_dwd);
       //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
-      if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
+      if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num_)) {
         //it failed under safe mode
         delete kkt;
         return solver_status_ = Err_Step_Computation;
@@ -1184,7 +1243,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
       nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
     }
 
-    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);
+    nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num_);
     nlp->log->write("", *dir, hovIteration);
     /***************************************************************
      * backtracking line search
@@ -1325,7 +1384,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
     //post line-search stuff
     //filter is augmented whenever the switching condition or Armijo rule do not hold for the trial point that was just accepted
-    if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
+    if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num_ == 1) {
       use_fr = apply_feasibility_restoration(kkt);
       if(use_fr) {
         // continue iterations if FR is accepted
@@ -1385,10 +1444,14 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     }
 
     nlp->log->printf(hovScalars,
-                     "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n", iter_num, _alpha_primal,
+                     "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n",
+                     iter_num_,
+                     _alpha_primal,
                      _alpha_dual);
-    iter_num++;
-    nlp->runStats.nIter=iter_num;
+    nlp->log->printf(hovScalars, "Finished iter[%d]  global iter[%d]\n.", iter_num_, iter_num_total_);
+    iter_num_++;
+    iter_num_total_++;
+    nlp->runStats.nIter = iter_num_;
 
     // fr problem has already updated dual, slacks and NLP functions
     if(!use_fr) {
@@ -1420,7 +1483,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //update current iterate (do a fast swap of the pointers)
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
 
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num);
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num_);
     nlp->log->write("", *it_curr, hovIteration);
     nlp->runStats.tmSolverInternal.stop(); //-----
 
@@ -1431,7 +1494,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
-    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num);
+    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num_);
     nlp->log->write("", *resid, hovIteration);
   }
 
@@ -1457,12 +1520,12 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
 
 void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int use_soc, int use_fr)
 {
-  if(iter_num/10*10==iter_num)
+  if(iter_num_/10*10==iter_num_)
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     iter_num_total_, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal);
   else {
     char stepType[2];
@@ -1480,11 +1543,248 @@ void hiopAlgFilterIPMQuasiNewton::outputIteration(int lsStatus, int lsNum, int u
     }
 
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     iter_num_total_, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
   }
 }
 
+#ifdef HIOP_USE_AXOM
+
+bool hiopAlgFilterIPMQuasiNewton::save_state_to_file(const ::std::string& path) noexcept
+{
+  try {
+    sidre::DataStore ds;
+    sidre::Group* group = ds.getRoot()->createGroup("HiOp quasi-Newton alg state");
+    this->save_state_to_sidre_group(*group);
+
+    sidre::IOManager writer(this->get_nlp()->get_comm());
+    int n_files;
+    MPI_Comm_size(this->get_nlp()->get_comm(), &n_files);
+    writer.write(ds.getRoot(), n_files, path, sidre::Group::getDefaultIOProtocol());
+    return true;
+  } catch(const std::exception& exp) {
+    nlp->log->printf(hovError, "Error when saving checkpoint to file '%s'\n", path.c_str());
+    nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
+    return false;    
+  }  
+}
+
+bool hiopAlgFilterIPMQuasiNewton::load_state_from_file(const ::std::string& path) noexcept
+{
+  try {
+    sidre::DataStore ds;
+
+    sidre::IOManager reader(this->get_nlp()->get_comm());
+    auto path2 = SidreHelper::check_path(path);
+    reader.read(ds.getRoot(), path2, false);
+    nlp->log->printf(hovScalars, "Loaded checkpoint file [%s].\n", path2.c_str());
+
+    const sidre::Group* group = ds.getRoot()->getGroup("HiOp quasi-Newton alg state");
+    this->load_state_from_sidre_group(*group);
+    return true;
+  } catch(const std::exception& exp) {
+    nlp->log->printf(hovError, "Error in loading checkpoint from file '%s'\n", path.c_str());
+    nlp->log->printf(hovError,  "  Addtl info: %s\n", exp.what());
+    return false;
+  }
+}
+
+void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group& group)
+{
+  using IndType = sidre::IndexType;
+
+  //iterate state
+  //create views for each member that needs to be saved
+  SidreHelper::copy_iterate_to_views(group, "alg_iterate_", *it_curr);
+  
+  //state of quasi-Newton Hessian approximation
+  hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
+  const double hqn_params[] = {(double)hqn.l_max,
+                               (double)hqn.l_curr,
+                               hqn.sigma,
+                               hqn.sigma0,
+                               (double)hqn.matrixChanged};
+  const size_type nhqn_params = sizeof(hqn_params) / sizeof(double);
+  SidreHelper::copy_array_to_view(group, "Hess_quasiNewton_params", hqn_params, nhqn_params);
+
+  //quasi-Newton Hessian stores the previous iterate and corresponding derivatives
+  SidreHelper::copy_iterate_to_views(group, "Hess_quasiNewton_prev_iter", *hqn.it_prev_);
+  SidreHelper::copy_vec_to_view(group, "Hess_quasiNewton_prev_grad", *hqn.grad_f_prev_);
+  
+  auto* Jac_c = hqn.Jac_c_prev_;
+  SidreHelper::copy_array_to_view(group,
+                                  "Hess_quasiNewton_prev_Jacc",
+                                  Jac_c->local_data_const(),
+                                  Jac_c->get_local_size_n() * Jac_c->get_local_size_m());
+                                  
+  
+  auto* Jac_d = hqn.Jac_d_prev_;
+  SidreHelper::copy_array_to_view(group,
+                                  "Hess_quasiNewton_prev_Jacd",
+                                  Jac_d->local_data_const(),
+                                  Jac_d->get_local_size_n() * Jac_d->get_local_size_m());
+
+  //quasi-Newton Hessian internal states
+  //memory matrices and internal representation
+  SidreHelper::copy_array_to_view(group,
+                                  "Hess_quasiNewton_St",
+                                  hqn.St_->local_data_const(),
+                                  hqn.St_->get_local_size_n() * hqn.St_->get_local_size_m());
+  SidreHelper::copy_array_to_view(group,
+                                  "Hess_quasiNewton_Yt",
+                                  hqn.Yt_->local_data_const(),
+                                  hqn.Yt_->get_local_size_n() * hqn.Yt_->get_local_size_m());
+  SidreHelper::copy_vec_to_view(group, "Hess_quasiNewton_D", *hqn.D_);
+  SidreHelper::copy_array_to_view(group,
+                                  "Hess_quasiNewton_L",
+                                  hqn.L_->local_data_const(),
+                                  hqn.L_->get_local_size_n() * hqn.L_->get_local_size_m());
+  
+  
+  //algorithmic parameters for this state
+  //mu, iteration number, num MPI ranks
+  int nranks=1;
+#ifdef HIOP_USE_MPI  
+  MPI_Comm_size(get_nlp()->get_comm(), &nranks);
+#endif
+  constexpr double version =  HIOP_VERSION_MAJOR*100 + HIOP_VERSION_MINOR*10 + HIOP_VERSION_PATCH;
+  const double alg_params[] = {_mu, (double)iter_num_total_, (double)nranks, version};
+  const size_type nparams = sizeof(alg_params) / sizeof(double);
+  SidreHelper::copy_array_to_view(group, "alg_params", alg_params, nparams);
+
+  nlp->log->printf(hovScalars,
+                   "Saved checkpoint to sidre::Group : ver %d.%d.%d on %d MPI ranks at "
+                   "mu=%12.5e from iter=%d.\n",
+                   HIOP_VERSION_MAJOR,
+                   HIOP_VERSION_MINOR,
+                   HIOP_VERSION_PATCH,
+                   nranks,
+                   _mu,
+                   iter_num_total_);
+
+}
+
+void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group& group)
+{
+  load_state_api_called_ = true;
+
+  //
+  //algorithmic parameters
+  //
+  //!!!note: nparams needs to match the nparams from save_state_to_data_store
+  const int nparams = 4; 
+  double alg_params[nparams];
+  SidreHelper::copy_array_from_view(group, "alg_params", alg_params, nparams);
+  //!!! dev note: match order in save_state_to_data_store
+  _mu = alg_params[0];
+  iter_num_total_ = alg_params[1];
+  
+  int nranks=1;
+#ifdef HIOP_USE_MPI  
+  MPI_Comm_size(get_nlp()->get_comm(), &nranks);
+#endif
+  if( (int)alg_params[2] != nranks ) {
+    ::std::stringstream ss;
+    ss << "Mismatch in the number of MPI ranks used to checkpoint. Checkpointing was " <<
+      "done on " << (int)alg_params[2] << " ranks while HiOp currently runs on " <<
+      nranks << " ranks.\n";
+    throw std::runtime_error(ss.str());
+  }
+  const int ver_major = ((int)alg_params[3] / 100);
+  const int ver_minor = ((int)alg_params[3] - ver_major*100)/10;
+  const int ver_patch = (int)alg_params[3] - ver_major*100 - ver_minor*10;
+  nlp->log->printf(hovScalars,
+                   "Loaded checkpoint from sidre::Group. Found ver %d.%d.%d on %d MPI ranks at "
+                   "mu=%12.5e from iter=%d.\n",
+                   ver_major,
+                   ver_minor,
+                   ver_patch,
+                   nranks,
+                   _mu,
+                   iter_num_total_);
+
+  //
+  //iterate states
+  //
+  SidreHelper::copy_iterate_from_views(group, "alg_iterate_", *it_curr);
+
+  //
+  //state of quasi-Newton Hessian approximation
+  //
+  hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
+  //!!!note: nparams needs to match the # of params from save_state_to_sidre_group
+  const int nhqn_params = 5;
+  double hqn_params[nhqn_params];
+  SidreHelper::copy_array_from_view(group, "Hess_quasiNewton_params", hqn_params, nhqn_params);
+
+  const size_type lim_mem_length = (size_type) hqn_params[1];
+  //ensure the internals are allocated for this mem length
+  hqn.alloc_for_limited_mem(lim_mem_length);
+  
+  hqn.l_max = (size_type) hqn_params[0];
+  hqn.l_curr = lim_mem_length;
+  hqn.sigma = hqn_params[2];
+  hqn.sigma0 = hqn_params[3];
+  hqn.matrixChanged = hqn_params[4];
+
+  assert(hqn.it_prev_);
+  //quasi-Newton Hessian stores the previous iterate and corresponding derivatives
+  SidreHelper::copy_iterate_from_views(group, "Hess_quasiNewton_prev_iter", *hqn.it_prev_);
+  SidreHelper::copy_vec_from_view(group, "Hess_quasiNewton_prev_grad", *hqn.grad_f_prev_);
+  
+  auto* Jac_c = hqn.Jac_c_prev_;
+  SidreHelper::copy_array_from_view(group,
+                                    "Hess_quasiNewton_prev_Jacc",
+                                    Jac_c->local_data(),
+                                    Jac_c->get_local_size_n() * Jac_c->get_local_size_m());
+
+  auto* Jac_d = hqn.Jac_d_prev_;
+  SidreHelper::copy_array_from_view(group,
+                                    "Hess_quasiNewton_prev_Jacd",
+                                    Jac_d->local_data(),
+                                    Jac_d->get_local_size_n() * Jac_d->get_local_size_m());
+
+  //quasi-Newton Hessian internal states
+  //memory matrices
+  SidreHelper::copy_array_from_view(group,
+                                    "Hess_quasiNewton_St",
+                                    hqn.St_->local_data(),
+                                    hqn.St_->get_local_size_n() * hqn.St_->get_local_size_m());
+  SidreHelper::copy_array_from_view(group,
+                                    "Hess_quasiNewton_Yt",
+                                    hqn.Yt_->local_data(),
+                                    hqn.Yt_->get_local_size_n() * hqn.Yt_->get_local_size_m());
+  SidreHelper::copy_vec_from_view(group, "Hess_quasiNewton_D", *hqn.D_);
+  SidreHelper::copy_array_from_view(group,
+                                  "Hess_quasiNewton_L",
+                                  hqn.L_->local_data(),
+                                  hqn.L_->get_local_size_n() * hqn.L_->get_local_size_m());
+}
+
+void hiopAlgFilterIPMQuasiNewton::checkpointing_stuff()
+{
+  if(nlp->options->GetString("checkpoint_save")=="no") {
+    return;
+  }
+  int chk_every_N = nlp->options->GetInteger("checkpoint_save_every_N_iter");
+  //check iteration
+  if(iter_num_>0 && iter_num_ % chk_every_N==0) {
+    using ::std::string;
+    // replace "#" in checkpointing file with iteration number
+    string path = nlp->options->GetString("checkpoint_file");
+    const auto s_it_num = ::std::to_string(iter_num_);
+    auto pos = path.find("#");
+    while(string::npos != pos) {
+      path.replace(pos, 1, s_it_num);
+      pos = path.find("#", pos);
+    }
+
+    nlp->log->printf(hovSummary, "Saving checkpoint at iter %d in '%s'.\n", iter_num_, path.c_str());
+    //actual checkpointing via axom::sidre
+    save_state_to_file(path);
+  }
+}
+#endif // HIOP_USE_AXOM
 
 /******************************************************************************************************
  * FULL NEWTON IPM
@@ -1850,7 +2150,9 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
   nlp->log->write("First residual-------------", *resid, hovIteration);
 
-  iter_num=0; nlp->runStats.nIter=iter_num;
+  iter_num_ = 0;
+  iter_num_total_ = 0;
+  nlp->runStats.nIter = iter_num_;
   bool disableLS = nlp->options->GetString("accept_every_trial_step")=="yes";
 
   theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
@@ -1952,7 +2254,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     }
 
     //user callback
-    if(!nlp->user_callback_iterate(iter_num, _f_nlp,
+    if(!nlp->user_callback_iterate(iter_num_,
+                                   _f_nlp,
                                    logbar->f_logbar,
                                    *it_curr->get_x(),
                                    *it_curr->get_zl(),
@@ -1975,7 +2278,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     /*************************************************
      * Termination check
      ************************************************/    
-    if(checkTermination(_err_nlp, iter_num, solver_status_)) {
+    if(checkTermination(_err_nlp, iter_num_, solver_status_)) {
       break;
     }
     if(NlpSolve_Pending!=solver_status_) break; //failure of the line search or user stopped.
@@ -1989,7 +2292,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       if(!mu_updated) {
         break;
       }
-      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num, _mu, _tau);
+      nlp->log->printf(hovScalars, "Iter[%d] barrier params reduced: mu=%g tau=%g\n", iter_num_, _mu, _tau);
         
       //update only logbar problem  and residual (the NLP didn't change)
       logbar->updateWithNlpInfo(*it_curr, _mu, _f_nlp, *_c, *_d, *_grad_f, *_Jac_c, *_Jac_d);
@@ -2023,7 +2326,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         break;
       }
     }
-    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num, logbar->f_logbar,_mu);
+    nlp->log->printf(hovScalars, "Iter[%d] logbarObj=%23.17e (mu=%12.5e)\n", iter_num_, logbar->f_logbar,_mu);
     /****************************************************
      * Search direction calculation
      ***************************************************/
@@ -2055,7 +2358,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           bool switched;
           kkt = switch_to_fast_KKT(kkt,
                                    _mu,
-                                   iter_num,
+                                   iter_num_,
                                    linsol_safe_mode_on,
                                    linsol_safe_mode_max_iters,
                                    linsol_safe_mode_last_iter_switched_on,
@@ -2079,7 +2382,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       bool switched;
       kkt = switch_to_safer_KKT(kkt,
                                 _mu,
-                                iter_num,
+                                iter_num_,
                                 linsol_safe_mode_on,
                                 linsol_safe_mode_max_iters,
                                 linsol_safe_mode_last_iter_switched_on,
@@ -2119,7 +2422,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
           nlp->log->printf(hovWarning,
                           "Requesting additional accuracy and stability from the KKT linear system "
                           "at iteration %d (safe mode ON) [1]\n",
-                           iter_num);
+                           iter_num_);
           continue;
         }
       } // end of if(!kkt->update(it_curr, _grad_f, _Jac_c, _Jac_d, _Hess_Lagr))
@@ -2128,7 +2431,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
       if(fact_acceptor_ic) {
         bool linsol_safe_mode_on_before = linsol_safe_mode_on;
         //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
-        if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
+        if(!compute_search_direction(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num_)) {
 
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it fails under safe mode, this is fatal
@@ -2143,7 +2446,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         assert(fact_acceptor_dwd);
         bool linsol_safe_mode_on_before = linsol_safe_mode_on;
         //compute_search_direction call below updates linsol safe mode flag and linsol_safe_mode_lastiter
-        if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num)) {
+        if(!compute_search_direction_inertia_free(kkt, linsol_safe_mode_on, linsol_forcequick, iter_num_)) {
           if(linsol_safe_mode_on_before || linsol_forcequick) {
             //it failed under safe mode
             delete kkt;
@@ -2160,7 +2463,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
         nlp->log->printf(hovSummary, "%s", nlp->runStats.kkt.get_summary_last_iter().c_str());
       }
 
-      nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num);
+      nlp->log->printf(hovIteration, "Iter[%d] full search direction -------------\n", iter_num_);
       nlp->log->write("", *dir, hovIteration);
       /***************************************************************
        * backtracking line search
@@ -2300,7 +2603,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
       // post line-search: filter is augmented whenever the switching condition or Armijo rule do not
       // hold for the trial point that was just accepted
-      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num == 1) {
+      if(nlp->options->GetString("force_resto")=="yes" && !within_FR_ && iter_num_ == 1) {
         use_fr = apply_feasibility_restoration(kkt);
         if(use_fr) {
           // continue iterations if FR is accepted
@@ -2382,7 +2685,8 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
           nlp->log->printf(hovWarning,
                            "Requesting additional accuracy and stability from the KKT linear system "
-                           "at iteration %d (safe mode ON) [2]\n", iter_num);
+                           "at iteration %d (safe mode ON) [2]\n",
+                           iter_num_);
 
           // repeat linear solve (compute_search_direction) in safe mode (meaning additional accuracy
           // and stability is requested)
@@ -2402,10 +2706,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
     nlp->log->printf(hovScalars,
                      "Iter[%d] -> accepted step primal=[%17.11e] dual=[%17.11e]\n",
-                     iter_num,_alpha_primal,
+                     iter_num_,
+                     _alpha_primal,
                      _alpha_dual);
-    iter_num++;
-    nlp->runStats.nIter=iter_num;
+    iter_num_++;
+    iter_num_total_++;
+    nlp->runStats.nIter = iter_num_;
 
     // fr problem has already updated dual, slacks and NLP functions
     if(!use_fr) {
@@ -2439,7 +2745,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     //
     hiopIterate* pit=it_curr; it_curr=it_trial; it_trial=pit;
 
-    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num);
+    nlp->log->printf(hovIteration, "Iter[%d] -> full iterate:", iter_num_);
     nlp->log->write("", *it_curr, hovIteration);
     nlp->runStats.tmSolverInternal.stop(); //-----
 
@@ -2450,7 +2756,7 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
     //update residual
     resid->update(*it_curr,_f_nlp, *_c, *_d,*_grad_f,*_Jac_c,*_Jac_d, *logbar);
 
-    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num);
+    nlp->log->printf(hovIteration, "Iter[%d] full residual:-------------\n", iter_num_);
     nlp->log->write("", *resid, hovIteration);
   }
 
@@ -2476,12 +2782,12 @@ hiopSolveStatus hiopAlgFilterIPMNewton::run()
 
 void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_soc, int use_fr)
 {
-  if(iter_num/10*10==iter_num)
+  if(iter_num_/10*10==iter_num_)
     nlp->log->printf(hovSummary, "iter    objective     inf_pr     inf_du   lg(mu)  alpha_du   alpha_pr linesrch\n");
 
   if(lsStatus==-1)
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  -(-)\n",
-                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     iter_num_total_, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal);
   else {
     char stepType[2];
@@ -2500,7 +2806,7 @@ void hiopAlgFilterIPMNewton::outputIteration(int lsStatus, int lsNum, int use_so
     }
 
     nlp->log->printf(hovSummary, "%4d %14.7e %7.3e  %7.3e %6.2f  %7.3e  %7.3e  %d(%s)\n",
-                     iter_num, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
+                     iter_num_total_, _f_nlp/nlp->get_obj_scale(), _err_nlp_feas, _err_nlp_optim,
                      log10(_mu), _alpha_dual, _alpha_primal, lsNum, stepType);
   }
 }
@@ -2794,7 +3100,7 @@ bool hiopAlgFilterIPMBase::apply_feasibility_restoration(hiopKKTLinSys* kkt)
     // FR problem inside a FR problem, see equation (33)
     // use wildcard function to update primal variables x
     it_trial->copyFrom(*it_curr);
-    if(!nlp->user_force_update(iter_num,
+    if(!nlp->user_force_update(iter_num_,
                                _f_nlp,
                                *it_trial->get_x(),
                                *it_trial->get_zl(),

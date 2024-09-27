@@ -467,8 +467,8 @@ public:
   }
 
   /** 
-   * This method is used to provide an user all the hiop iterate
-   * procedure. @see solution_callback() for an explanation of the parameters.
+   * This method is used to provide user all the internal hiop iterates. @see solution_callback() 
+   * for an explanation of the parameters.
    * 
    * @param[in] x array of (local) entries of the primal variables (managed by Umpire, see note below)
    * @param[in] z_L array of (local) entries of the dual variables for lower bounds (managed by Umpire, see note below)
@@ -496,7 +496,7 @@ public:
   {
     return true;
   }
-
+  
   /**
    * A wildcard function used to change the primal variables.
    *

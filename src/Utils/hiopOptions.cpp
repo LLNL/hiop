@@ -1289,8 +1289,25 @@ void hiopOptionsNLP::register_options()
                         "");
   }
 
-}
+  // checkpointing and restarting
+  //  - currently only for IPM Quasi-Newton solver
+  //  - only available with HIOP_USE_AXOM
+  {
+    vector<string> range = {"yes", "no"};
+    constexpr char msgcs[] = "Save state of NLP solver to file indicated by 'checkpoint_file'.";
+    register_str_option("checkpoint_save", range[1], range, msgcs);
+    
+    constexpr char msgcsN[] = "Iteration frequency of saving checkpoints to disk.";
+    register_int_option("checkpoint_save_every_N_iter", 10, 1, 1e+6, msgcsN);
 
+    constexpr char msgcf[] = "Path to checkpoint file to load from or save to.";
+    register_str_option("checkpoint_file", "hiop_state_chk", msgcf);
+
+    constexpr char msgclos[] = "On (re)start the NLP solver will load checkpoint file "
+      "specified by 'checkpoint_file' option.";
+    register_str_option("checkpoint_load_on_start", range[1], range, msgclos);
+  }
+}
 void hiopOptionsNLP::ensure_consistence()
 {
   //check that the values of different options are consistent
@@ -1551,6 +1568,26 @@ void hiopOptionsNLP::ensure_consistence()
     }
     set_val("moving_lim_rel", 0.);
   }
+
+#ifndef HIOP_USE_AXOM
+  const vector<string> chkpnt_opts = {"checkpoint_save",
+                                      "checkpoint_save_every_N_iter",
+                                      "checkpoint_file",
+                                      "checkpoint_load_on_start"};
+  for(string opt : chkpnt_opts) {
+    if(is_user_defined(opt.c_str())) {
+      log_printf(hovWarning,
+                 "Checkpointing not available since HiOp was not built with AXOM. All checkpointing options "
+                 "are ignored.\n");
+      //reset them to as not being user defined to avoid triggering the message. 
+      for(auto opt2 : chkpnt_opts) {
+        mOptions_[opt2]->specifiedInFile = false;
+        mOptions_[opt2]->specifiedAtRuntime = false;
+      }
+      break;
+    }
+  }
+#endif  
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

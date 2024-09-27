@@ -7,10 +7,23 @@
 #include <cstdlib>
 #include <string>
 
+#ifdef HIOP_USE_AXOM
+#include <axom/sidre/core/DataStore.hpp>
+#include <axom/sidre/core/Group.hpp>
+#include <axom/sidre/core/View.hpp>
+#include <axom/sidre/spio/IOManager.hpp>
+using namespace axom;
+#endif
+
+
 using namespace hiop;
 
 static bool self_check(size_type n, double obj_value);
-
+#ifdef HIOP_USE_AXOM
+static bool do_load_checkpoint_test(const size_type& mesh_size,
+                                    const double& ratio,
+                                    const double& obj_val_expected);
+#endif
 static bool parse_arguments(int argc, char **argv, size_type& n, double& distortion_ratio, bool& self_check)
 {
   n = 20000; distortion_ratio=1.; self_check=false; //default options
@@ -67,24 +80,27 @@ int main(int argc, char **argv)
   err = MPI_Init(&argc, &argv);                  assert(MPI_SUCCESS==err);
   err = MPI_Comm_rank(MPI_COMM_WORLD,&rank);     assert(MPI_SUCCESS==err);
   err = MPI_Comm_size(MPI_COMM_WORLD,&numRanks); assert(MPI_SUCCESS==err);
-  if(0==rank) printf("Support for MPI is enabled\n");
+  if(0==rank) {
+    printf("Support for MPI is enabled\n");
+  }
 #endif
-  bool selfCheck; size_type mesh_size; double ratio;
-  if(!parse_arguments(argc, argv, mesh_size, ratio, selfCheck)) { usage(argv[0]); return 1;}
-  
-  DenseConsEx1 problem(mesh_size, ratio);
-  //if(rank==0) printf("interface created\n");
-  hiop::hiopNlpDenseConstraints nlp(problem);
-  //if(rank==0) printf("nlp formulation created\n");
+  bool selfCheck;
+  size_type mesh_size;
+  double ratio;
+  double objective = 0.;
+  if(!parse_arguments(argc, argv, mesh_size, ratio, selfCheck)) {
+    usage(argv[0]);
+    return 1;
+  }
 
-  //nlp.options->SetIntegerValue("verbosity_level", 4);
-  //nlp.options->SetNumericValue("tolerance", 1e-4);
-  //nlp.options->SetStringValue("duals_init",  "zero");
-  //nlp.options->SetIntegerValue("max_iter", 2);
+  DenseConsEx1 problem(mesh_size, ratio);
+  hiop::hiopNlpDenseConstraints nlp(problem);
   
   hiop::hiopAlgFilterIPM solver(&nlp);
+  problem.set_solver(&solver);
+  
   hiop::hiopSolveStatus status = solver.run();
-  double objective = solver.getObjective();
+  objective = solver.getObjective();
 
   //this is used for testing when the driver is called with -selfcheck
   if(selfCheck) {
@@ -97,7 +113,19 @@ int main(int argc, char **argv)
     }
   }
 
-  if(0==rank) printf("Objective: %18.12e\n", objective);
+  if(0==rank) {
+    printf("Objective: %18.12e\n", objective);
+  }
+
+#ifdef HIOP_USE_AXOM
+  // example/test for HiOp's load checkpoint API.
+  if(!do_load_checkpoint_test(mesh_size, ratio, objective)) {
+    if(rank==0) {
+      printf("Load checkpoint and restart test failed.");
+    }
+    return -1;
+  }
+#endif  
 #ifdef HIOP_USE_MPI
   MPI_Finalize();
 #endif
@@ -134,3 +162,56 @@ static bool self_check(size_type n, double objval)
 
   return true;
 }
+
+#ifdef HIOP_USE_AXOM
+/** 
+ * An illustration on how to use load_state_from_sidre_group API method of HiOp's algorithm class.
+ * 
+ * 
+ */
+static bool do_load_checkpoint_test(const size_type& mesh_size,
+                                    const double& ratio,
+                                    const double& obj_val_expected)
+{
+  //Pretend this is new job and recreate the HiOp objects.
+  DenseConsEx1 problem(mesh_size, ratio);
+  hiop::hiopNlpDenseConstraints nlp(problem);
+  
+  hiop::hiopAlgFilterIPM solver(&nlp);
+
+  //
+  // example of how to use load_state_sidre_group to warm-start
+  //
+
+  //Supposedly, the user code should have the group in hand before asking HiOp to load from it.
+  //We will manufacture it by loading a sidre checkpoint file. Here the checkpoint file
+  //"hiop_state_ex1.root" was created from the interface class' iterate_callback method
+  //(saved every 5 iterations)
+  sidre::DataStore ds;
+
+  try {
+    sidre::IOManager reader(MPI_COMM_WORLD);
+    reader.read(ds.getRoot(), "hiop_state_ex1.root", false);
+  } catch(std::exception& e) {
+    printf("Failed to read checkpoint file. Error: [%s]", e.what());
+    return false;
+  }
+  
+
+  //the actual API call
+  try {
+    const sidre::Group* group = ds.getRoot()->getGroup("HiOp quasi-Newton alg state");
+    solver.load_state_from_sidre_group(*group);
+  } catch(std::runtime_error& e) {
+    printf("Failed to load from sidre::group. Error: [%s]", e.what());
+    return false;
+  }
+  
+  hiop::hiopSolveStatus status = solver.run();
+  double obj_val = solver.getObjective();
+  if(obj_val != obj_val_expected) {
+    return false;
+  }
+  return true;
+}
+#endif // HIOP_USE_AXOM

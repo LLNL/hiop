@@ -947,7 +947,6 @@ bool hiopKKTLinSys::compute_directions_w_IR(const hiopResidual* resid, hiopItera
   bool bret = bicgIR_->solve(dir, resid);
 
   nlp_->runStats.kkt.nIterRefinInner += bicgIR_->get_sol_num_iter();
-  nlp_->runStats.kkt.tmSolveInner.stop();
   if(!bret) {
     nlp_->log->printf(hovWarning, "%s", bicgIR_->get_convergence_info().c_str());
 
