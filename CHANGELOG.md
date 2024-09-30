@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to HiOp are documented in this file.
 
+## Version 1.1.0: Checkpointing, advanced restarts, and misc fixes
+* Checkpointing for quasi-Newton solver: new API for load and saving checkpoints, user options for rollover restarts, and scalable I/O via axom::sidre.
+* New function for advanced warmstarts.
+* Updated spack build with build cache.
+
 ## Version 1.0.3: Moving limits and misc fixes
 * Update modules for CI tests on LLNL LC by @nychiang in #679
 * Update cmake build system to require RAJA when GPU compute mode is used by @nychiang in #676
