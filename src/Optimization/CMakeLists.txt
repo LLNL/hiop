@@ -5,7 +5,8 @@ set(hiopOptimization_SRC
   hiopResidual.cpp 
   hiopFilter.cpp 
   hiopAlgFilterIPM.cpp 
-  hiopKKTLinSys.cpp 
+  hiopKKTLinSys.cpp
+  KktLinSysLowRank.cpp
   hiopKKTLinSysMDS.cpp 
   hiopHessianLowRank.cpp 
   hiopDualsUpdater.cpp 

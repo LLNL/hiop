@@ -56,6 +56,7 @@
 #include "hiopAlgFilterIPM.hpp"
 
 #include "hiopKKTLinSys.hpp"
+#include "KktLinSysLowRank.hpp"
 #include "hiopKKTLinSysDense.hpp"
 #include "hiopKKTLinSysMDS.hpp"
 #include "hiopKKTLinSysSparse.hpp"
@@ -1047,7 +1048,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   theta_max = theta_max_fact_*fmax(1.0,resid->get_theta());
   theta_min = theta_min_fact_*fmax(1.0,resid->get_theta());
 
-  hiopKKTLinSysLowRank* kkt=new hiopKKTLinSysLowRank(nlp);
+  KktLinSysLowRank* kkt = new KktLinSysLowRank(nlp);
   assert(kkt != nullptr);
 
   // assign an Null pd_perturb, i.e., all the deltas = 0.0
