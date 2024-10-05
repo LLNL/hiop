@@ -435,7 +435,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
   //-- block (2,2)
   hiopMatrixDense& DpYtDhInvY = new_lxl_mat1(l);
-  symmMatTimesDiagTimesMatTrans_local(0.0, DpYtDhInvY, 1.0,*Yt_,*DhInv_);
+  sym_mat_times_diag_times_mattrans_local(0.0, DpYtDhInvY, 1.0,*Yt_,*DhInv_);
 #ifdef HIOP_USE_MPI
   const size_t buffsize=l*l*sizeof(double);
   memcpy(buff1_lxlx3_, DpYtDhInvY.local_data(), buffsize);
@@ -449,7 +449,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   hiopVector& B0DhInv = new_n_vec1(n);
   B0DhInv.copyFrom(*DhInv_);
   B0DhInv.scale(sigma_);
-  matTimesDiagTimesMatTrans_local(StB0DhInvYmL, *St_, B0DhInv, *Yt_);
+  mat_times_diag_times_mattrans_local(StB0DhInvYmL, *St_, B0DhInv, *Yt_);
 #ifdef HIOP_USE_MPI
   memcpy(buff1_lxlx3_+l*l, StB0DhInvYmL.local_data(), buffsize);
 #else
@@ -464,7 +464,7 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   theDiag.addConstant(-1.0); //at this point theDiag=DhInv*B0-I
   theDiag.scale(sigma_);
   hiopMatrixDense& StDS = DpYtDhInvY; //a rename
-  symmMatTimesDiagTimesMatTrans_local(0.0, StDS, 1.0, *St_, theDiag);
+  sym_mat_times_diag_times_mattrans_local(0.0, StDS, 1.0, *St_, theDiag);
 #ifdef HIOP_USE_MPI
   memcpy(buff1_lxlx3_+2*l*l, DpYtDhInvY.local_data(), buffsize);
 #else
@@ -569,11 +569,10 @@ void hiopHessianLowRank::solve(const hiopVector& rhsx, hiopVector& x)
  * W is kxk, S,Y are nxl, DhInv,B0 are n, V is 2lx2l
  * X is kxn
  */ 
-void hiopHessianLowRank::
-symMatTimesInverseTimesMatTrans(double beta,
-                                hiopMatrixDense& W, 
-				double alpha,
-                                const hiopMatrixDense& X)
+void hiopHessianLowRank::sym_mat_times_inverse_times_mattrans(double beta,
+                                                              hiopMatrixDense& W, 
+                                                              double alpha,
+                                                              const hiopMatrixDense& X)
 {
   if(matrix_changed_) {
     updateInternalBFGSRepresentation();
@@ -585,19 +584,19 @@ symMatTimesInverseTimesMatTrans(double beta,
   assert(X.n()==n);
 
 #ifdef HIOP_DEEPCHECKS
-   nlp_->log->write("symMatTimesInverseTimesMatTrans: X is: ", X, hovMatrices);
+   nlp_->log->write("sym_mat_times_inverse_times_mattrans: X is: ", X, hovMatrices);
 #endif 
 
   //1. compute W=beta*W + alpha*X*DhInv*X'
 #ifdef HIOP_USE_MPI
   if(0==nlp_->get_rank()) {
-    symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv_);
+    sym_mat_times_diag_times_mattrans_local(beta,W,alpha,X,*DhInv_);
   } else {
-    symmMatTimesDiagTimesMatTrans_local(0.0, W,alpha,X,*DhInv_);
+    sym_mat_times_diag_times_mattrans_local(0.0, W,alpha,X,*DhInv_);
   }
   //W will be MPI_All_reduced later
 #else
-  symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv_);
+  sym_mat_times_diag_times_mattrans_local(beta,W,alpha,X,*DhInv_);
 #endif
   //2. compute S1=X*DhInv*B0*S and Y1=X*DhInv*Y
   auto& S1 = new_S1(X, *St_);
@@ -605,8 +604,8 @@ symMatTimesInverseTimesMatTrans(double beta,
   hiopVector& B0DhInv = new_n_vec1(n);
   B0DhInv.copyFrom(*DhInv_);
   B0DhInv.scale(sigma_);
-  matTimesDiagTimesMatTrans_local(S1, X, B0DhInv, *St_);
-  matTimesDiagTimesMatTrans_local(Y1, X, *DhInv_,  *Yt_);
+  mat_times_diag_times_mattrans_local(S1, X, B0DhInv, *St_);
+  mat_times_diag_times_mattrans_local(Y1, X, *DhInv_,  *Yt_);
 
   //3. reduce W, S1, and Y1 (dimensions: kxk, kxl, kxl)
   hiopMatrixDense& S2Y2 = new_kx2l_mat1(k,l);  //Initialy S2Y2 = [Y1 S1]
@@ -625,7 +624,7 @@ symMatTimesInverseTimesMatTrans(double beta,
   Y1.copyFromMatrixBlock(S2Y2, 0,l);
 #endif
 #ifdef HIOP_DEEPCHECKS
-  nlp_->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
+  nlp_->log->write("sym_mat_times_inverse_times_mattrans: W first term is: ", W, hovMatrices);
 #endif 
   //4. [S2] = V \ [S1^T]
   //   [Y2]       [Y1^T]
@@ -646,15 +645,13 @@ symMatTimesInverseTimesMatTrans(double beta,
   Y2.copyFromMatrixBlock(S2Y2, 0, l);
   Y1.timesMatTrans_local(1.0, W, alpha, Y2);
 
-  //nlp_->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
-  //nlp_->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
-  //nlp_->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
+  //nlp_->log->write("sym_mat_times_inverse_times_mattrans: Y1 is : ", Y1, hovMatrices);
+  //nlp_->log->write("sym_mat_times_inverse_times_mattrans: Y2 is : ", Y2, hovMatrices);
+  //nlp_->log->write("sym_mat_times_inverse_times_mattrans: W is : ", W, hovMatrices);
 #ifdef HIOP_DEEPCHECKS
-  nlp_->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
+  nlp_->log->write("sym_mat_times_inverse_times_mattrans: final matrix is : ", W, hovMatrices);
 #endif 
-
 }
-
 
 void hiopHessianLowRank::factorizeV()
 {
@@ -1032,16 +1029,16 @@ hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiop
 }
 #ifdef HIOP_DEEPCHECKS
 
-void hiopHessianLowRank::timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x)
+void hiopHessianLowRank::times_vec_no_logbar_term(double beta, hiopVector& y, double alpha, const hiopVector&x)
 {
-  this->timesVecCmn(beta, y, alpha, x, false);
+  this->times_vec_common(beta, y, alpha, x, false);
 }
 
 #endif //HIOP_DEEPCHECKS
 
 
 void hiopHessianLowRank::
-timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) const
+times_vec_common(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) const
 {
   size_type n=St_->n();
   assert(l_curr_==St_->m());
@@ -1053,7 +1050,7 @@ timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool 
 
   bool print=false;
   if(print) {
-    nlp_->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
+    nlp_->log->printf(hovMatrices, "---hiopHessianLowRank::times_vec \n");
     nlp_->log->write("S=", *St_, hovMatrices);
     nlp_->log->write("Y=", *Yt_, hovMatrices);
     nlp_->log->write("DhInv=", *DhInv_, hovMatrices);
@@ -1130,14 +1127,14 @@ timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool 
 
 }
 
-void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x)
+void hiopHessianLowRank::times_vec(double beta, hiopVector& y, double alpha, const hiopVector&x)
 {
-  this->timesVecCmn(beta, y, alpha, x);
+  this->times_vec_common(beta, y, alpha, x);
 }
 
 void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const
 {
-  this->timesVecCmn(beta, y, alpha, x);
+  this->times_vec_common(beta, y, alpha, x);
 }
 
 /**************************************************************************
@@ -1148,10 +1145,11 @@ void hiopHessianLowRank::timesVec(double beta, hiopVector& y, double alpha, cons
  * W is kxk local, X is kxn distributed and Diag is n, distributed
  * The ops are perform locally. The reduce is done separately/externally to decrease comm
  */
-void hiopHessianLowRank::
-symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
-				    double alpha, const hiopMatrixDense& X,
-				    const hiopVector& d)
+void hiopHessianLowRank::sym_mat_times_diag_times_mattrans_local(double beta,
+                                                                 hiopMatrixDense& W,
+                                                                 double alpha,
+                                                                 const hiopMatrixDense& X,
+                                                                 const hiopVector& d)
 {
   size_type k=W.m();
   size_type n_local=X.get_local_size_n();
@@ -1188,8 +1186,10 @@ symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W,
 }
 
 /* W=S*D*X^T, where S is lxn, D is diag nxn, and X is kxn */
-void hiopHessianLowRank::
-matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, const hiopVector& d, const hiopMatrixDense& X)
+void hiopHessianLowRank::mat_times_diag_times_mattrans_local(hiopMatrixDense& W,
+                                                             const hiopMatrixDense& S,
+                                                             const hiopVector& d,
+                                                             const hiopMatrixDense& X)
 {
 #ifdef HIOP_DEEPCHECKS
   assert(S.n()==d.get_size());

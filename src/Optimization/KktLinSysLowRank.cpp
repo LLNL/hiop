@@ -163,7 +163,7 @@ bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
 
   //N =  J*(Hess\J')
   //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
-  HessLowRank->symMatTimesInverseTimesMatTrans(0.0, *N, 1.0, J);
+  HessLowRank->sym_mat_times_inverse_times_mattrans(0.0, *N, 1.0, J);
 
   //subdiag of N += 1., Dd_inv
   N->addSubDiagonal(1., nlp_->m_eq(), *Dd_inv_);

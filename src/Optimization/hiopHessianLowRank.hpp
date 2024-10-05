@@ -109,21 +109,21 @@ public:
   /* W = beta*W + alpha*X*inverse(this)*X^T (a more efficient version of solve)
    * This is performed as W = beta*W + alpha*X*(this\X^T)
    */ 
-  virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W, double alpha, const hiopMatrixDense& X);
+  virtual void sym_mat_times_inverse_times_mattrans(double beta, hiopMatrixDense& W, double alpha, const hiopMatrixDense& X);
 #ifdef HIOP_DEEPCHECKS
   /* same as above but without the Dx term in H */
-  virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
+  virtual void times_vec_no_logbar_term(double beta, hiopVector& y, double alpha, const hiopVector&x);
   virtual void print(FILE* f, hiopOutVerbosity v, const char* msg) const;
 #endif
 
-  /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
+  /* Computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
-  virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
+  virtual void times_vec(double beta, hiopVector& y, double alpha, const hiopVector&x);
 
   /* code shared by the above two methods*/
-  virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm = false) const;
+  virtual void times_vec_common(double beta, hiopVector& y, double alpha, const hiopVector&x, bool add_logbar = false) const;
 
 protected:
   friend class hiopAlgFilterIPMQuasiNewton;  
@@ -148,7 +148,7 @@ protected:
 private:
   // Vector for (B0+Dk)^{-1}
   hiopVector* DhInv_; 
-  // Dx_ is needed in timesVec (for residual checking in solveCompressed). Can be recomputed from DhInv, but I decided to
+  // Dx_ is needed in times_vec (for residual checking in solveCompressed). Can be recomputed from DhInv, but I decided to
   //store it instead to avoid round-off errors
   hiopVector* Dx_;
   
@@ -263,16 +263,16 @@ private:
   void alloc_for_limited_mem(const size_type& mem_length);
 
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
-  static void symmMatTimesDiagTimesMatTrans_local(double beta,
-                                                  hiopMatrixDense& W_,
-                                                  double alpha,
-                                                  const hiopMatrixDense& X_,
-                                                  const hiopVector& d);
+  static void sym_mat_times_diag_times_mattrans_local(double beta,
+                                                      hiopMatrixDense& W_,
+                                                      double alpha,
+                                                      const hiopMatrixDense& X_,
+                                                      const hiopVector& d);
   /* W=S*Diag*X^T */
-  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W,
-                                              const hiopMatrixDense& S, 
-					      const hiopVector& d,
-                                              const hiopMatrixDense& X);
+  static void mat_times_diag_times_mattrans_local(hiopMatrixDense& W,
+                                                  const hiopMatrixDense& S, 
+                                                  const hiopVector& d,
+                                                  const hiopMatrixDense& X);
   /* members and utilities related to V matrix: factorization and solve */
   hiopVector* V_work_vec_;
   int V_ipiv_size_;
