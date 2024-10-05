@@ -75,94 +75,110 @@ using namespace std;
 namespace hiop
 {
 
-  hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_in, int max_mem_len)
-  : l_max(max_mem_len), l_curr(-1), sigma(1.), sigma0(1.), nlp(nlp_in), matrixChanged(false)
+hiopHessianLowRank::hiopHessianLowRank(hiopNlpDenseConstraints* nlp_in, int max_mem_len)
+  : l_max_(max_mem_len),
+    l_curr_(-1),
+    sigma_(1.),
+    sigma0_(1.),
+    nlp_(nlp_in),
+    matrix_changed_(false)
 {
-  DhInv = nlp->alloc_primal_vec();
-  St_ = nlp->alloc_multivector_primal(0, l_max);
-  Yt_ = St_->alloc_clone(); //faster than nlp->alloc_multivector_primal(...);
+  DhInv_ = nlp_->alloc_primal_vec();
+  St_ = nlp_->alloc_multivector_primal(0, l_max_);
+  Yt_ = St_->alloc_clone(); //faster than nlp_->alloc_multivector_primal(...);
   //these are local
   L_  = LinearAlgebraFactory::create_matrix_dense("DEFAULT", 0, 0);
   D_  = LinearAlgebraFactory::create_vector("DEFAULT", 0);
   V_  = LinearAlgebraFactory::create_matrix_dense("DEFAULT", 0, 0);
 
-  //the previous iteration's objects are set to NULL
-  it_prev_ = new hiopIterate(nlp);
-  grad_f_prev_ = nlp->alloc_primal_vec();
-  Jac_c_prev_ = nlp->alloc_Jac_c();
-  Jac_d_prev_ = nlp->alloc_Jac_d();
+  //the previous iteration
+  it_prev_ = new hiopIterate(nlp_);
+  grad_f_prev_ = nlp_->alloc_primal_vec();
+  Jac_c_prev_ = nlp_->alloc_Jac_c();
+  Jac_d_prev_ = nlp_->alloc_Jac_d();
 
   //internal buffers for memory pool (none of them should be in n)
 #ifdef HIOP_USE_MPI
-  _buff_kxk    = new double[nlp->m() * nlp->m()];
-  _buff_2lxk   = new double[nlp->m() * 2*l_max];
-  _buff1_lxlx3 = new double[3*l_max*l_max];
-  _buff2_lxlx3 = new double[3*l_max*l_max];
+  buff_kxk_    = new double[nlp_->m() * nlp_->m()];
+  buff_2lxk_   = new double[nlp_->m() * 2*l_max_];
+  buff1_lxlx3_ = new double[3*l_max_*l_max_];
+  buff2_lxlx3_ = new double[3*l_max_*l_max_];
 #else
    //not needed in non-MPI mode
-  _buff_kxk  = NULL;
-  _buff_2lxk = NULL;
-  _buff1_lxlx3 = _buff2_lxlx3 = NULL;
+  buff_kxk_  = nullptr;
+  buff_2lxk_ = nullptr;
+  buff1_lxlx3_ = nullptr;
+  buff2_lxlx3_ = nullptr;
 #endif
 
   //auxiliary objects/buffers
-  _S1=_Y1=NULL;
-  _lxl_mat1=_kxl_mat1=_kx2l_mat1=NULL;
-  _l_vec1 = _l_vec2 = _2l_vec1 = NULL;
-  _n_vec1 = DhInv->alloc_clone();
-  _n_vec2 = DhInv->alloc_clone();
+  S1_ = nullptr;
+  Y1_ = nullptr;
+  lxl_mat1_ = nullptr;
+  kxl_mat1_ = nullptr;
+  kx2l_mat1_ = nullptr;
+  l_vec1_ = nullptr;
+  l_vec2_ = nullptr;
+  twol_vec1_ = nullptr;
+  n_vec1_ = DhInv_->alloc_clone();
+  n_vec2_ = DhInv_->alloc_clone();
 
-  _V_work_vec=LinearAlgebraFactory::create_vector("DEFAULT", 0);
-  _V_ipiv_vec=NULL; _V_ipiv_size=-1;
-
+  V_work_vec_ = LinearAlgebraFactory::create_vector("DEFAULT", 0);
+  V_ipiv_vec_ = nullptr;
+  V_ipiv_size_ = -1;
   
-  sigma0 = nlp->options->GetNumeric("sigma0");
-  sigma=sigma0;
+  sigma0_ = nlp_->options->GetNumeric("sigma0");
+  sigma_ = sigma0_;
 
-  string sigma_strategy = nlp->options->GetString("sigma_update_strategy");
+  string sigma_strategy = nlp_->options->GetString("sigma_update_strategy");
   transform(sigma_strategy.begin(), sigma_strategy.end(), sigma_strategy.begin(), ::tolower);
-  sigma_update_strategy = SIGMA_STRATEGY3;
-  if(sigma_strategy=="sty")
-    sigma_update_strategy=SIGMA_STRATEGY1;
-  else if(sigma_strategy=="sty_inv")
-    sigma_update_strategy=SIGMA_STRATEGY2;
-  else if(sigma_strategy=="snrm_ynrm")
-    sigma_update_strategy=SIGMA_STRATEGY3;
-  else if(sigma_strategy=="sty_srnm_ynrm")
-    sigma_update_strategy=SIGMA_STRATEGY4;
-  else if(sigma_strategy=="sigma0")
-    sigma_update_strategy=SIGMA_CONSTANT;
-  else assert(false && "sigma_update_strategy option not recognized");
+  sigma_update_strategy_ = SIGMA_STRATEGY3;
+  if(sigma_strategy=="sty") {
+    sigma_update_strategy_=SIGMA_STRATEGY1;
+  } else if(sigma_strategy=="sty_inv") {
+    sigma_update_strategy_=SIGMA_STRATEGY2;
+  } else if(sigma_strategy=="snrm_ynrm") {
+    sigma_update_strategy_=SIGMA_STRATEGY3;
+  } else if(sigma_strategy=="sty_srnm_ynrm") {
+    sigma_update_strategy_=SIGMA_STRATEGY4;
+  } else if(sigma_strategy=="sigma0") {
+    sigma_update_strategy_=SIGMA_CONSTANT;
+  } else {
+    assert(false && "sigma_update_strategy option not recognized");
+  }
 
-  sigma_safe_min=1e-8;
-  sigma_safe_max=1e+8;
-  nlp->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma);
-  nlp->log->printf(hovScalars, "Hessian Low Rank: sigma update strategy is %d [%s]\n", sigma_update_strategy, sigma_strategy.c_str());
+  sigma_safe_min_ = 1e-8;
+  sigma_safe_max_ = 1e+8;
+  nlp_->log->printf(hovScalars, "Hessian Low Rank: initial sigma is %g\n", sigma_);
+  nlp_->log->printf(hovScalars,
+                    "Hessian Low Rank: sigma update strategy is %d [%s]\n",
+                    sigma_update_strategy_,
+                    sigma_strategy.c_str());
 
-  _Dx   = DhInv->alloc_clone();
+  Dx_   = DhInv_->alloc_clone();
 #ifdef HIOP_DEEPCHECKS
-  _Vmat = V_->alloc_clone();
+  Vmat_ = V_->alloc_clone();
 #endif
 
-  yk = nlp->alloc_primal_vec();
-  sk = nlp->alloc_primal_vec();
+  yk = nlp_->alloc_primal_vec();
+  sk = nlp_->alloc_primal_vec();
 
 }  
 
 hiopHessianLowRank::~hiopHessianLowRank()
 {
-  if(DhInv) delete DhInv;
-  delete _Dx;
+  delete DhInv_;
+  delete Dx_;
 
   delete St_;
   delete Yt_;
   delete L_;
   delete D_;
   delete V_;
-  if(yk) delete yk;
-  if(sk) delete sk;
+  delete yk;
+  delete sk;
 #ifdef HIOP_DEEPCHECKS
-  delete _Vmat;
+  delete Vmat_;
 #endif
 
 
@@ -171,24 +187,24 @@ hiopHessianLowRank::~hiopHessianLowRank()
   delete Jac_c_prev_;
   delete Jac_d_prev_;
 
-  if(_buff_kxk)    delete[] _buff_kxk;
-  if(_buff_2lxk)   delete[] _buff_2lxk;
-  if(_buff1_lxlx3) delete[] _buff1_lxlx3;
-  if(_buff2_lxlx3) delete[] _buff2_lxlx3;
+  delete[] buff_kxk_;
+  delete[] buff_2lxk_;
+  delete[] buff1_lxlx3_;
+  delete[] buff2_lxlx3_;
 
-  if(_S1) delete _S1;
-  if(_Y1) delete _Y1;
-  if(_lxl_mat1)    delete _lxl_mat1;
-  if(_kxl_mat1)    delete _kxl_mat1; 
-  if(_kx2l_mat1)   delete _kx2l_mat1;
+  delete S1_;
+  delete Y1_;
+  delete lxl_mat1_;
+  delete kxl_mat1_; 
+  delete kx2l_mat1_;
 
-  if(_l_vec1) delete _l_vec1;
-  if(_l_vec2) delete _l_vec2;
-  if(_n_vec1) delete _n_vec1;
-  if(_n_vec2) delete _n_vec2;
-  if(_2l_vec1) delete _2l_vec1;
-  if(_V_ipiv_vec) delete[] _V_ipiv_vec;
-  if(_V_work_vec) delete _V_work_vec;
+  delete l_vec1_;
+  delete l_vec2_;
+  delete n_vec1_;
+  delete n_vec2_;
+  delete twol_vec1_;
+  delete[] V_ipiv_vec_;
+  delete V_work_vec_;
 
   for(auto* it: a) {
     delete it;
@@ -201,16 +217,16 @@ hiopHessianLowRank::~hiopHessianLowRank()
 
 void hiopHessianLowRank::alloc_for_limited_mem(const size_type& mem_length)
 {
-  //note: St_ and Yt_ always have l_curr rows
-  if(l_curr == mem_length) {
-    assert(D_->get_size() == l_curr);
+  //note: St_ and Yt_ always have l_curr_ rows
+  if(l_curr_ == mem_length) {
+    assert(D_->get_size() == l_curr_);
     return;
   }
   delete D_;
   delete L_;
   delete Yt_;
   delete St_;
-  St_ = nlp->alloc_multivector_primal(mem_length, l_max);
+  St_ = nlp_->alloc_multivector_primal(mem_length, l_max_);
   Yt_ = St_->alloc_clone();
 
   //these are local
@@ -220,15 +236,15 @@ void hiopHessianLowRank::alloc_for_limited_mem(const size_type& mem_length)
 
 bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
 {
-  DhInv->setToConstant(sigma);
-  DhInv->axpy(1.0,Dx);
-  _Dx->copyFrom(Dx);
+  DhInv_->setToConstant(sigma_);
+  DhInv_->axpy(1.0,Dx);
+  Dx_->copyFrom(Dx);
 #ifdef HIOP_DEEPCHECKS
-  assert(DhInv->allPositive());
+  assert(DhInv_->allPositive());
 #endif
-  DhInv->invert();
-  nlp->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv, hovMatrices);
-  matrixChanged=true;
+  DhInv_->invert();
+  nlp_->log->write("hiopHessianLowRank: inverse diag DhInv:", *DhInv_, hovMatrices);
+  matrix_changed_ = true;
   return true;
 }
 
@@ -237,23 +253,23 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
 {
   fprintf(f, "%s\n", msg);
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("Dx", *_Dx, v);
+  nlp_->log->write("Dx", *Dx_, v);
 #else
   fprintf(f, "Dx is not stored in this class, but it can be computed from Dx=DhInv^(1)-sigma");
 #endif
-  nlp->log->printf(v, "sigma=%22.16f;\n", sigma);
-  nlp->log->write("DhInv", *DhInv, v);
-  nlp->log->write("S_trans", *St_, v);
-  nlp->log->write("Y_trans", *Yt_, v);
+  nlp_->log->printf(v, "sigma=%22.16f;\n", sigma_);
+  nlp_->log->write("DhInv", *DhInv_, v);
+  nlp_->log->write("S_trans", *St_, v);
+  nlp_->log->write("Y_trans", *Yt_, v);
 
   fprintf(f, " [[Internal representation]]\n");
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("V", *_Vmat, v);
+  nlp_->log->write("V", *Vmat_, v);
 #else
   fprintf(f, "V matrix is available at this point (only its LAPACK factorization). Print it in updateInternalBFGSRepresentation() instead, before factorizeV()\n");
 #endif
-  nlp->log->write("L", *L_, v);
-  nlp->log->write("D", *D_, v);
+  nlp_->log->write("L", *L_, v);
+  nlp_->log->write("D", *D_, v);
 }
 #endif
 
@@ -262,19 +278,19 @@ void hiopHessianLowRank::print(FILE* f, hiopOutVerbosity v, const char* msg) con
 bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& grad_f_curr_,
 				const hiopMatrix& Jac_c_curr_, const hiopMatrix& Jac_d_curr_)
 {
-  nlp->runStats.tmSolverInternal.start();
+  nlp_->runStats.tmSolverInternal.start();
 
   const hiopMatrixDense& Jac_c_curr = dynamic_cast<const hiopMatrixDense&>(Jac_c_curr_);
   const hiopMatrixDense& Jac_d_curr = dynamic_cast<const hiopMatrixDense&>(Jac_d_curr_);
 
 #ifdef HIOP_DEEPCHECKS
-  assert(it_curr.zl->matchesPattern(nlp->get_ixl()));
-  assert(it_curr.zu->matchesPattern(nlp->get_ixu()));
-  assert(it_curr.sxl->matchesPattern(nlp->get_ixl()));
-  assert(it_curr.sxu->matchesPattern(nlp->get_ixu()));
+  assert(it_curr.zl->matchesPattern(nlp_->get_ixl()));
+  assert(it_curr.zu->matchesPattern(nlp_->get_ixu()));
+  assert(it_curr.sxl->matchesPattern(nlp_->get_ixl()));
+  assert(it_curr.sxu->matchesPattern(nlp_->get_ixu()));
 #endif
-  //on first call l_curr=-1
-  if(l_curr>=0) {
+  //on first call l_curr_=-1
+  if(l_curr_>=0) {
     size_type n=grad_f_curr_.get_size();
     //compute s_new = x_curr-x_prev
     hiopVector& s_new = new_n_vec1(n);
@@ -289,7 +305,7 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       y_new.copyFrom(grad_f_curr_); 
       y_new.axpy(-1., *grad_f_prev_);
       Jac_c_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yc);
-      //!opt if nlp->Jac_c_isLinear no need for the multiplications
+      //!opt if nlp_->Jac_c_isLinear no need for the multiplications
       Jac_c_prev_->transTimesVec(1.0, y_new,-1.0, *it_curr.yc);
       //!opt same here
       Jac_d_curr.transTimesVec  (1.0, y_new, 1.0, *it_curr.yd); 
@@ -298,79 +314,81 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
       double sTy = s_new.dotProductWith(y_new), s_nrm2=s_new.twonorm(), y_nrm2=y_new.twonorm();
 
 #ifdef HIOP_DEEPCHECKS
-      nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
-      nlp->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
-      nlp->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
+      nlp_->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: s^T*y=%20.14e ||s||=%20.14e ||y||=%20.14e\n", sTy, s_nrm2, y_nrm2);
+      nlp_->log->write("hiopHessianLowRank s_new",s_new, hovIteration);
+      nlp_->log->write("hiopHessianLowRank y_new",y_new, hovIteration);
 #endif
       if(sTy>s_nrm2*y_nrm2*sqrt(std::numeric_limits<double>::epsilon())) { //sTy far away from zero
 
-        if(l_max>0) {
+        if(l_max_>0) {
           //compute the new row in L, update S and Y (either augment them or shift cols and add s_new and y_new)
-          hiopVector& YTs = new_l_vec1(l_curr);
+          hiopVector& YTs = new_l_vec1(l_curr_);
           Yt_->timesVec(0.0, YTs, 1.0, s_new);
           //update representation
-          if(l_curr<l_max) {
+          if(l_curr_<l_max_) {
             //just grow/augment the matrices
             St_->appendRow(s_new);
             Yt_->appendRow(y_new);
-            growL(l_curr, l_max, YTs);
-            growD(l_curr, l_max, sTy);
-            l_curr++;
+            growL(l_curr_, l_max_, YTs);
+            growD(l_curr_, l_max_, sTy);
+            l_curr_++;
           } else {
             //shift
             St_->shiftRows(-1);
             Yt_->shiftRows(-1);
-            St_->replaceRow(l_max-1, s_new);
-            Yt_->replaceRow(l_max-1, y_new);
+            St_->replaceRow(l_max_-1, s_new);
+            Yt_->replaceRow(l_max_-1, y_new);
             updateL(YTs,sTy);
             updateD(sTy);
-            l_curr=l_max;
+            l_curr_ = l_max_;
           }
-        } //end of l_max>0
+        } //end of l_max_>0
 #ifdef HIOP_DEEPCHECKS
-        nlp->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
-        nlp->log->write("L", *L_, hovMatrices);
-        nlp->log->write("D", *D_, hovMatrices);
-        nlp->log->printf(hovMatrices, "\n");
+        nlp_->log->printf(hovMatrices, "\nhiopHessianLowRank: these are L and D from the BFGS compact representation\n");
+        nlp_->log->write("L", *L_, hovMatrices);
+        nlp_->log->write("D", *D_, hovMatrices);
+        nlp_->log->printf(hovMatrices, "\n");
 #endif
         //update B0 (i.e., sigma)
-        switch (sigma_update_strategy ) {
+        switch (sigma_update_strategy_ ) {
         case SIGMA_STRATEGY1:
-          sigma=sTy/(s_nrm2*s_nrm2);
+          sigma_ = sTy/(s_nrm2*s_nrm2);
           break;
         case SIGMA_STRATEGY2:
-          sigma=y_nrm2*y_nrm2/sTy;
+          sigma_ = y_nrm2*y_nrm2/sTy;
           break;
         case SIGMA_STRATEGY3:
-          sigma=sqrt(s_nrm2*s_nrm2 / y_nrm2 / y_nrm2);
+          sigma_ = sqrt(s_nrm2*s_nrm2 / y_nrm2 / y_nrm2);
           break;
         case SIGMA_STRATEGY4:
-          sigma=0.5*(sTy/(s_nrm2*s_nrm2)+y_nrm2*y_nrm2/sTy);
+          sigma_ = 0.5*(sTy/(s_nrm2*s_nrm2)+y_nrm2*y_nrm2/sTy);
           break;
         case SIGMA_CONSTANT:
-          sigma=sigma0;
+          sigma_ = sigma0_;
           break;
         default:
           assert(false && "Option value for sigma_update_strategy was not recognized.");
           break;
         } // else of the switch
         //safe guard it
-        sigma=fmax(fmin(sigma_safe_max, sigma), sigma_safe_min);
-        nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma);
+        sigma_ = fmax(fmin(sigma_safe_max_, sigma_), sigma_safe_min_);
+        nlp_->log->printf(hovLinAlgScalars, "hiopHessianLowRank: sigma was updated to %22.16e\n", sigma_);
       } else { //sTy is too small or negative -> skip
-        nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n", sTy);
+        nlp_->log->printf(hovLinAlgScalars,
+                          "hiopHessianLowRank: s^T*y=%12.6e not positive enough... skipping the Hessian update\n",
+                          sTy);
       }
     } else {// norm of s_new is too small -> skip
-      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n", s_infnorm);
+      nlp_->log->printf(hovLinAlgScalars,
+                        "hiopHessianLowRank: ||s_new||=%12.6e too small... skipping the Hessian update\n",
+                        s_infnorm);
     }
-
     //save this stuff for next update
     it_prev_->copyFrom(it_curr);
     grad_f_prev_->copyFrom(grad_f_curr_);
     Jac_c_prev_->copyFrom(Jac_c_curr);
     Jac_d_prev_->copyFrom(Jac_d_curr);
-    nlp->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: storing the iteration info as 'previous'\n", s_infnorm);
-
+    nlp_->log->printf(hovLinAlgScalarsVerb, "hiopHessianLowRank: storing the iteration info as 'previous'\n", s_infnorm);
   } else {
     //this is the first optimization iterate, just save the iterate and exit
     it_prev_->copyFrom(it_curr);
@@ -378,12 +396,11 @@ bool hiopHessianLowRank::update(const hiopIterate& it_curr, const hiopVector& gr
     Jac_c_prev_->copyFrom(Jac_c_curr);
     Jac_d_prev_->copyFrom(Jac_d_curr);
 
-    nlp->log->printf(hovLinAlgScalarsVerb, "HessianLowRank on first update, just saving iteration\n");
+    nlp_->log->printf(hovLinAlgScalarsVerb, "HessianLowRank on first update, just saving iteration\n");
 
-    l_curr++;
+    l_curr_++;
   }
-
-  nlp->runStats.tmSolverInternal.stop();
+  nlp_->runStats.tmSolverInternal.stop();
   return true;
 }
 
@@ -418,10 +435,10 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
   //-- block (2,2)
   hiopMatrixDense& DpYtDhInvY = new_lxl_mat1(l);
-  symmMatTimesDiagTimesMatTrans_local(0.0, DpYtDhInvY, 1.0,*Yt_,*DhInv);
+  symmMatTimesDiagTimesMatTrans_local(0.0, DpYtDhInvY, 1.0,*Yt_,*DhInv_);
 #ifdef HIOP_USE_MPI
   const size_t buffsize=l*l*sizeof(double);
-  memcpy(_buff1_lxlx3, DpYtDhInvY.local_data(), buffsize);
+  memcpy(buff1_lxlx3_, DpYtDhInvY.local_data(), buffsize);
 #else
   DpYtDhInvY.addDiagonal(1., *D_);
   V_->copyBlockFromMatrix(l,l,DpYtDhInvY);
@@ -430,10 +447,11 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   //-- block (1,2)
   hiopMatrixDense& StB0DhInvYmL = DpYtDhInvY; //just a rename
   hiopVector& B0DhInv = new_n_vec1(n);
-  B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
+  B0DhInv.copyFrom(*DhInv_);
+  B0DhInv.scale(sigma_);
   matTimesDiagTimesMatTrans_local(StB0DhInvYmL, *St_, B0DhInv, *Yt_);
 #ifdef HIOP_USE_MPI
-  memcpy(_buff1_lxlx3+l*l, StB0DhInvYmL.local_data(), buffsize);
+  memcpy(buff1_lxlx3_+l*l, StB0DhInvYmL.local_data(), buffsize);
 #else
   //substract L
   StB0DhInvYmL.addMatrix(-1.0, *L_);
@@ -444,11 +462,11 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
   //-- block (2,2)
   hiopVector& theDiag = B0DhInv; //just a rename, also reuses values
   theDiag.addConstant(-1.0); //at this point theDiag=DhInv*B0-I
-  theDiag.scale(sigma);
+  theDiag.scale(sigma_);
   hiopMatrixDense& StDS = DpYtDhInvY; //a rename
   symmMatTimesDiagTimesMatTrans_local(0.0, StDS, 1.0, *St_, theDiag);
 #ifdef HIOP_USE_MPI
-  memcpy(_buff1_lxlx3+2*l*l, DpYtDhInvY.local_data(), buffsize);
+  memcpy(buff1_lxlx3_+2*l*l, DpYtDhInvY.local_data(), buffsize);
 #else
   V_->copyBlockFromMatrix(0,0,StDS);
 #endif
@@ -456,32 +474,33 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
 
 #ifdef HIOP_USE_MPI
   int ierr;
-  ierr = MPI_Allreduce(_buff1_lxlx3, _buff2_lxlx3, 3*l*l, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(buff1_lxlx3_, buff2_lxlx3_, 3*l*l, MPI_DOUBLE, MPI_SUM, nlp_->get_comm());
+  assert(ierr==MPI_SUCCESS);
 
   // - block (2,2)
-  DpYtDhInvY.copyFrom(_buff2_lxlx3);
+  DpYtDhInvY.copyFrom(buff2_lxlx3_);
   DpYtDhInvY.addDiagonal(1., *D_);
-  V_->copyBlockFromMatrix(l,l,DpYtDhInvY);
+  V_->copyBlockFromMatrix(l, l, DpYtDhInvY);
 
   // - block (1,2)
-  StB0DhInvYmL.copyFrom(_buff2_lxlx3+l*l);
+  StB0DhInvYmL.copyFrom(buff2_lxlx3_+l*l);
   StB0DhInvYmL.addMatrix(-1.0, *L_);
-  V_->copyBlockFromMatrix(0,l,StB0DhInvYmL);
+  V_->copyBlockFromMatrix(0, l, StB0DhInvYmL);
 
   // - block (1,1)
-  StDS.copyFrom(_buff2_lxlx3+2*l*l);
-  V_->copyBlockFromMatrix(0,0,StDS);
+  StDS.copyFrom(buff2_lxlx3_ + 2*l*l);
+  V_->copyBlockFromMatrix(0, 0, StDS);
 #endif
 #ifdef HIOP_DEEPCHECKS
-  delete _Vmat;
-  _Vmat = V_->new_copy();
-  _Vmat->overwriteLowerTriangleWithUpper();
+  delete Vmat_;
+  Vmat_ = V_->new_copy();
+  Vmat_->overwriteLowerTriangleWithUpper();
 #endif
 
   //finally, factorize V
   factorizeV();
 
-  matrixChanged=false;
+  matrix_changed_ = false;
 }
 
 /* Solves this*x = res as x = this^{-1}*res
@@ -494,29 +513,33 @@ void hiopHessianLowRank::updateInternalBFGSRepresentation()
  */  
 void hiopHessianLowRank::solve(const hiopVector& rhsx, hiopVector& x)
 {
-  if(matrixChanged) updateInternalBFGSRepresentation();
+  if(matrix_changed_) {
+    updateInternalBFGSRepresentation();
+  }
 
   size_type n=St_->n(), l=St_->m();
 #ifdef HIOP_DEEPCHECKS
   assert(rhsx.get_size()==n);
   assert(x.get_size()==n);
-  assert(DhInv->get_size()==n);
-  assert(DhInv->isfinite_local() && "inf or nan entry detected");
+  assert(DhInv_->get_size()==n);
+  assert(DhInv_->isfinite_local() && "inf or nan entry detected");
   assert(rhsx.isfinite_local() && "inf or nan entry detected in rhs");
 #endif
 
   //1. x = DhInv*res
   x.copyFrom(rhsx);
-  x.componentMult(*DhInv);
+  x.componentMult(*DhInv_);
 
   //2. stx= S^T*B0*DhInv*res and ytx=Y^T*DhInv*res
-  hiopVector&stx=new_l_vec1(l), &ytx=new_l_vec2(l);
-  stx.setToZero(); ytx.setToZero();
-  Yt_->timesVec(0.0,ytx,1.0,x);
+  hiopVector& stx = new_l_vec1(l);
+  hiopVector& ytx = new_l_vec2(l);
+  stx.setToZero();
+  ytx.setToZero();
+  Yt_->timesVec(0.0, ytx, 1.0, x);
 
   hiopVector& B0DhInvx = new_n_vec1(n);
   B0DhInvx.copyFrom(x); //it contains DhInv*res
-  B0DhInvx.scale(sigma); //B0*(DhInv*res) 
+  B0DhInvx.scale(sigma_); //B0*(DhInv*res) 
   St_->timesVec(0.0, stx, 1.0, B0DhInvx);
 
   //3. solve with V
@@ -527,9 +550,9 @@ void hiopHessianLowRank::solve(const hiopVector& rhsx, hiopVector& x)
   // result = DhInv*(B0*S*spart + Y*ypart)
   hiopVector&  result = new_n_vec1(n);
   St_->transTimesVec(0.0, result, 1.0, spart);
-  result.scale(sigma);
+  result.scale(sigma_);
   Yt_->transTimesVec(1.0, result, 1.0, ypart);
-  result.componentMult(*DhInv);
+  result.componentMult(*DhInv_);
 
   //5. x = first term - second term = x_computed_in_1 - result 
   x.axpy(-1.0,result);
@@ -552,7 +575,9 @@ symMatTimesInverseTimesMatTrans(double beta,
 				double alpha,
                                 const hiopMatrixDense& X)
 {
-  if(matrixChanged) updateInternalBFGSRepresentation();
+  if(matrix_changed_) {
+    updateInternalBFGSRepresentation();
+  }
 
   size_type n=St_->n(), l=St_->m();
   size_type k=W.m(); 
@@ -560,26 +585,28 @@ symMatTimesInverseTimesMatTrans(double beta,
   assert(X.n()==n);
 
 #ifdef HIOP_DEEPCHECKS
-   nlp->log->write("symMatTimesInverseTimesMatTrans: X is: ", X, hovMatrices);
+   nlp_->log->write("symMatTimesInverseTimesMatTrans: X is: ", X, hovMatrices);
 #endif 
 
   //1. compute W=beta*W + alpha*X*DhInv*X'
 #ifdef HIOP_USE_MPI
-  if(0==nlp->get_rank())
-    symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv);
-  else
-    symmMatTimesDiagTimesMatTrans_local(0.0, W,alpha,X,*DhInv);
+  if(0==nlp_->get_rank()) {
+    symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv_);
+  } else {
+    symmMatTimesDiagTimesMatTrans_local(0.0, W,alpha,X,*DhInv_);
+  }
   //W will be MPI_All_reduced later
 #else
-  symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv);
+  symmMatTimesDiagTimesMatTrans_local(beta,W,alpha,X,*DhInv_);
 #endif
   //2. compute S1=X*DhInv*B0*S and Y1=X*DhInv*Y
-  auto& S1=new_S1(X,*St_);
-  auto& Y1=new_Y1(X,*Yt_); //both are kxl
+  auto& S1 = new_S1(X, *St_);
+  auto& Y1 = new_Y1(X, *Yt_); //both are kxl
   hiopVector& B0DhInv = new_n_vec1(n);
-  B0DhInv.copyFrom(*DhInv); B0DhInv.scale(sigma);
+  B0DhInv.copyFrom(*DhInv_);
+  B0DhInv.scale(sigma_);
   matTimesDiagTimesMatTrans_local(S1, X, B0DhInv, *St_);
-  matTimesDiagTimesMatTrans_local(Y1, X, *DhInv,  *Yt_);
+  matTimesDiagTimesMatTrans_local(Y1, X, *DhInv_,  *Yt_);
 
   //3. reduce W, S1, and Y1 (dimensions: kxk, kxl, kxl)
   hiopMatrixDense& S2Y2 = new_kx2l_mat1(k,l);  //Initialy S2Y2 = [Y1 S1]
@@ -587,16 +614,18 @@ symMatTimesInverseTimesMatTrans(double beta,
   S2Y2.copyBlockFromMatrix(0,l,Y1);
 #ifdef HIOP_USE_MPI
   int ierr;
-  ierr = MPI_Allreduce(S2Y2.local_data(), _buff_2lxk, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  ierr = MPI_Allreduce(W.local_data(),    _buff_kxk,  k*k,   MPI_DOUBLE, MPI_SUM, nlp->get_comm()); assert(ierr==MPI_SUCCESS);
-  S2Y2.copyFrom(_buff_2lxk);
-  W.copyFrom(_buff_kxk);
+  ierr = MPI_Allreduce(S2Y2.local_data(), buff_2lxk_, 2*l*k, MPI_DOUBLE, MPI_SUM, nlp_->get_comm());
+  assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Allreduce(W.local_data(),    buff_kxk_,  k*k,   MPI_DOUBLE, MPI_SUM, nlp_->get_comm());
+  assert(ierr==MPI_SUCCESS);
+  S2Y2.copyFrom(buff_2lxk_);
+  W.copyFrom(buff_kxk_);
   //also copy S1 and Y1
   S1.copyFromMatrixBlock(S2Y2, 0,0);
   Y1.copyFromMatrixBlock(S2Y2, 0,l);
 #endif
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
+  nlp_->log->write("symMatTimesInverseTimesMatTrans: W first term is: ", W, hovMatrices);
 #endif 
   //4. [S2] = V \ [S1^T]
   //   [Y2]       [Y1^T]
@@ -617,14 +646,11 @@ symMatTimesInverseTimesMatTrans(double beta,
   Y2.copyFromMatrixBlock(S2Y2, 0, l);
   Y1.timesMatTrans_local(1.0, W, alpha, Y2);
 
-  //nlp->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
-  //nlp->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
-  //nlp->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
-
-  //we're done here
-
+  //nlp_->log->write("symMatTimesInverseTimesMatTrans: Y1 is : ", Y1, hovMatrices);
+  //nlp_->log->write("symMatTimesInverseTimesMatTrans: Y2 is : ", Y2, hovMatrices);
+  //nlp_->log->write("symMatTimesInverseTimesMatTrans: W is : ", W, hovMatrices);
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
+  nlp_->log->write("symMatTimesInverseTimesMatTrans: final matrix is : ", W, hovMatrices);
 #endif 
 
 }
@@ -640,36 +666,48 @@ void hiopHessianLowRank::factorizeV()
   }
 
 #ifdef HIOP_DEEPCHECKS
-    nlp->log->write("factorizeV:  V is ", *V_, hovMatrices);
+    nlp_->log->write("factorizeV:  V is ", *V_, hovMatrices);
 #endif
 
   char uplo='L'; //V is upper in C++ so it's lower in fortran
 
-  if(_V_ipiv_vec==NULL) _V_ipiv_vec=new int[N];
-  else if(_V_ipiv_size!=N) { delete[] _V_ipiv_vec; _V_ipiv_vec=new int[N]; _V_ipiv_size=N; }
+  if(V_ipiv_vec_==nullptr) {
+    V_ipiv_vec_ = new int[N];
+  }
+  else {
+    if(V_ipiv_size_!=N) {
+      delete[] V_ipiv_vec_;
+      V_ipiv_vec_ = new int[N];
+      V_ipiv_size_ = N;
+    }
+  }
 
   int lwork=-1;//inquire sizes
   double Vwork_tmp;
-  DSYTRF(&uplo, &N, V_->local_data(), &lda, _V_ipiv_vec, &Vwork_tmp, &lwork, &info);
+  DSYTRF(&uplo, &N, V_->local_data(), &lda, V_ipiv_vec_, &Vwork_tmp, &lwork, &info);
   assert(info==0);
 
   lwork=(int)Vwork_tmp;
-  if(lwork != _V_work_vec->get_size()) {
-    if(_V_work_vec!=NULL) {
-      delete _V_work_vec;
+  if(lwork != V_work_vec_->get_size()) {
+    if(V_work_vec_!=nullptr) {
+      delete V_work_vec_;
     }
-    _V_work_vec = LinearAlgebraFactory::create_vector("DEFAULT", lwork);
-  } else assert(_V_work_vec);
+    V_work_vec_ = LinearAlgebraFactory::create_vector("DEFAULT", lwork);
+  } else assert(V_work_vec_);
 
-  DSYTRF(&uplo, &N, V_->local_data(), &lda, _V_ipiv_vec, _V_work_vec->local_data(), &lwork, &info);
+  DSYTRF(&uplo, &N, V_->local_data(), &lda, V_ipiv_vec_, V_work_vec_->local_data(), &lwork, &info);
   
-  if(info<0)
-    nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d argument to dsytrf has an illegal value\n", -info);
-  else if(info>0)
-    nlp->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d entry in the factorization's diagonal is exactly zero. Division by zero will occur if it a solve is attempted.\n", info);
+  if(info<0) {
+    nlp_->log->printf(hovError, "hiopHessianLowRank::factorizeV error: %d arg to dsytrf has an illegal value\n", -info);
+  } else if(info>0) {
+    nlp_->log->printf(hovError,
+                     "hiopHessianLowRank::factorizeV error: %d entry in the factorization's diagonal is exactly zero. "
+                     "Division by zero will occur if a solve is attempted.\n",
+                     info);
+  }
   assert(info==0);
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("factorizeV:  factors of V: ", *V_, hovMatrices);
+  nlp_->log->write("factorizeV:  factors of V: ", *V_, hovMatrices);
 #endif
 
 }
@@ -684,8 +722,8 @@ void hiopHessianLowRank::solveWithV(hiopVector& rhs_s, hiopVector& rhs_y)
   int l = rhs_s.get_size();
 
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
-  nlp->log->write("hiopHessianLowRank::solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
+  nlp_->log->write("hiopHessianLowRank::solveWithV: RHS IN 's' part: ", rhs_s, hovMatrices);
+  nlp_->log->write("hiopHessianLowRank::solveWithV: RHS IN 'y' part: ", rhs_y, hovMatrices);
   hiopVector* rhs_saved= LinearAlgebraFactory::create_vector("DEFAULT", rhs_s.get_size()+rhs_y.get_size());
   rhs_saved->copyFromStarting(0, rhs_s);
   rhs_saved->copyFromStarting(l, rhs_y);
@@ -700,9 +738,11 @@ void hiopHessianLowRank::solveWithV(hiopVector& rhs_s, hiopVector& rhs_y)
   rhs.copyFromStarting(0, rhs_s);
   rhs.copyFromStarting(l, rhs_y);
 
-  DSYTRS(&uplo, &N, &one, V_->local_data(), &lda, _V_ipiv_vec, rhs.local_data(), &N, &info);
+  DSYTRS(&uplo, &N, &one, V_->local_data(), &lda, V_ipiv_vec_, rhs.local_data(), &N, &info);
 
-  if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
+  if(info<0) {
+    nlp_->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d arg to dsytrf has an illegal value\n", -info);
+  }
   assert(info==0);
 
   //copy back the solution
@@ -710,17 +750,18 @@ void hiopHessianLowRank::solveWithV(hiopVector& rhs_s, hiopVector& rhs_y)
   rhs.copyToStarting(l,rhs_y);
 
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("solveWithV: SOL OUT 's' part: ", rhs_s, hovMatrices);
-  nlp->log->write("solveWithV: SOL OUT 'y' part: ", rhs_y, hovMatrices);
+  nlp_->log->write("solveWithV: SOL OUT 's' part: ", rhs_s, hovMatrices);
+  nlp_->log->write("solveWithV: SOL OUT 'y' part: ", rhs_y, hovMatrices);
 
   //residual calculation
   double nrmrhs=rhs_saved->infnorm();
-  _Vmat->timesVec(1.0, *rhs_saved, -1.0, rhs);
+  Vmat_->timesVec(1.0, *rhs_saved, -1.0, rhs);
   double nrmres=rhs_saved->infnorm();
-  //nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
-  nlp->log->printf(hovScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
-  if(nrmres>1e-8)
-    nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV large residual=%g\n", nrmres);
+  //nlp_->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  nlp_->log->printf(hovScalars, "hiopHessianLowRank::solveWithV 1rhs: rel resid norm=%g\n", nrmres/(1+nrmrhs));
+  if(nrmres>1e-8) {
+    nlp_->log->printf(hovWarning, "hiopHessianLowRank::solveWithV large residual=%g\n", nrmres);
+  }
   delete rhs_saved;
 #endif
 
@@ -734,7 +775,7 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
   }
 
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("solveWithV: RHS IN: ", rhs, hovMatrices);
+  nlp_->log->write("solveWithV: RHS IN: ", rhs, hovMatrices);
   hiopMatrixDense* rhs_saved = rhs.new_copy();
 #endif
 
@@ -745,12 +786,14 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
 #ifdef HIOP_DEEPCHECKS
   assert(N==rhs.n()); 
 #endif
-  DSYTRS(&uplo, &N, &nrhs, V_->local_data(), &lda, _V_ipiv_vec, rhs.local_data(), &ldb, &info);
+  DSYTRS(&uplo, &N, &nrhs, V_->local_data(), &lda, V_ipiv_vec_, rhs.local_data(), &ldb, &info);
 
-  if(info<0) nlp->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d argument to dsytrf has an illegal value\n", -info);
+  if(info<0) {
+    nlp_->log->printf(hovError, "hiopHessianLowRank::solveWithV error: %d arg to dsytrf has an illegal value\n", -info);
+  }
   assert(info==0);
 #ifdef HIOP_DEEPCHECKS
-  nlp->log->write("solveWithV: SOL OUT: ", rhs, hovMatrices);
+  nlp_->log->write("solveWithV: SOL OUT: ", rhs, hovMatrices);
   
   hiopMatrixDense& sol = rhs; //matrix of solutions
   /// TODO: get rid of these uses of specific hiopVector implementation
@@ -762,13 +805,19 @@ void hiopHessianLowRank::solveWithV(hiopMatrixDense& rhs)
     rhs_saved->getRow(k, *r);
     sol.getRow(k,*x);
     double nrmrhs = r->infnorm();//nrmrhs=.0;
-    _Vmat->timesVec(1.0, *r, -1.0, *x);
+    Vmat_->timesVec(1.0, *r, -1.0, *x);
     double nrmres = r->infnorm();
-    if(nrmres>1e-8)
-      nlp->log->printf(hovWarning, "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large resid norm=%g\n", k, nrmres);
-    if(nrmres/(nrmrhs+1)>resnorm) resnorm=nrmres/(nrmrhs+1);
+    if(nrmres>1e-8) {
+      nlp_->log->printf(hovWarning,
+                        "hiopHessianLowRank::solveWithV mult-rhs: rhs number %d has large resid norm=%g\n",
+                        k,
+                        nrmres);
+    }
+    if(nrmres/(nrmrhs+1)>resnorm) {
+      resnorm=nrmres/(nrmrhs+1);
+    }
   }
-  nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV mult-rhs: rel resid norm=%g\n", resnorm);
+  nlp_->log->printf(hovLinAlgScalars, "hiopHessianLowRank::solveWithV mult-rhs: rel resid norm=%g\n", resnorm);
   delete x;
   delete r;
   delete rhs_saved;
@@ -791,14 +840,18 @@ void hiopHessianLowRank::growL(const int& lmem_curr, const int& lmem_max, const 
   //copy from L to newL
   newL->copyBlockFromMatrix(0,0, *L_);
 
-  double* newL_mat=newL->local_data(); //doing the rest here
-  const double* YTs_vec=YTs.local_data_const();
+  double* newL_mat = newL->local_data(); //doing the rest here
+  const double* YTs_vec = YTs.local_data_const();
   //for(int j=0; j<l; j++) newL_mat[l][j] = YTs_vec[j];
-  for(int j=0; j<l; j++) newL_mat[l*(l+1)+j] = YTs_vec[j];
+  for(int j=0; j<l; j++) {
+    newL_mat[l*(l+1)+j] = YTs_vec[j];
+  }
 
   //and the zero entries of the last column
   //for(int i=0; i<l+1; i++) newL_mat[i][l] = 0.0;
-  for(int i=0; i<l+1; i++) newL_mat[i*(l+1)+l] = 0.0;
+  for(int i=0; i<l+1; i++) {
+    newL_mat[i*(l+1)+l] = 0.0;
+  }
 
   //swap the pointers
   delete L_;
@@ -811,10 +864,10 @@ void hiopHessianLowRank::growD(const int& lmem_curr, const int& lmem_max, const 
   assert(l==lmem_curr);
   assert(lmem_max>=l);
 
-  hiopVector* Dnew=LinearAlgebraFactory::create_vector("DEFAULT", l+1);
-  double* Dnew_vec=Dnew->local_data();
+  hiopVector* Dnew = LinearAlgebraFactory::create_vector("DEFAULT", l+1);
+  double* Dnew_vec = Dnew->local_data();
   memcpy(Dnew_vec, D_->local_data_const(), l*sizeof(double));
-  Dnew_vec[l]=sTy;
+  Dnew_vec[l] = sTy;
 
   delete D_;
   D_ = Dnew;
@@ -829,8 +882,8 @@ void hiopHessianLowRank::updateL(const hiopVector& YTs, const double& sTy)
   assert(l==L_->m());
   assert(l==L_->n());
 #ifdef HIOP_DEEPCHECKS
-  assert(l_curr==l);
-  assert(l_curr==l_max);
+  assert(l_curr_==l);
+  assert(l_curr_==l_max_);
 #endif
   const int lm1=l-1;
   double* L_mat=L_->local_data();
@@ -850,116 +903,132 @@ void hiopHessianLowRank::updateL(const hiopVector& YTs, const double& sTy)
   //first entry in YTs corresponds to y_to_be_discarded_since_it_is_the_oldest'* s_new and is discarded
   for(int j=0; j<lm1; j++) {
     //L_mat[lm1][j]=yts_vec[j+1];
-    L_mat[lm1*l+j]=yts_vec[j+1];
+    L_mat[lm1*l+j] = yts_vec[j+1];
     
   }
 
   //L_mat[lm1][lm1]=0.0;
-  L_mat[lm1*l+lm1]=0.0;
+  L_mat[lm1*l+lm1] = 0.0;
 }
 void hiopHessianLowRank::updateD(const double& sTy)
 {
   int l=D_->get_size();
   double* D_vec = D_->local_data();
-  for(int i=0; i<l-1; i++)
-    D_vec[i]=D_vec[i+1];
-  D_vec[l-1]=sTy;
+  for(int i=0; i<l-1; i++) {
+    D_vec[i] = D_vec[i+1];
+  }
+  D_vec[l-1] = sTy;
 }
-
 
 hiopVector&  hiopHessianLowRank::new_l_vec1(int l)
 {
-  if(_l_vec1!=NULL && _l_vec1->get_size()==l) return *_l_vec1;
-  
-  if(_l_vec1!=NULL) {
-    delete _l_vec1;
+  if(l_vec1_!=nullptr && l_vec1_->get_size()==l) {
+    return *l_vec1_;
   }
-  _l_vec1= LinearAlgebraFactory::create_vector("DEFAULT", l);
-  return *_l_vec1;
+  if(l_vec1_!=nullptr) {
+    delete l_vec1_;
+  }
+  l_vec1_= LinearAlgebraFactory::create_vector("DEFAULT", l);
+  return *l_vec1_;
 }
+
 hiopVector&  hiopHessianLowRank::new_l_vec2(int l)
 {
-  if(_l_vec2!=NULL && _l_vec2->get_size()==l) return *_l_vec2;
-  
-  if(_l_vec2!=NULL) {
-    delete _l_vec2;
+  if(l_vec2_!=nullptr && l_vec2_->get_size()==l) {
+    return *l_vec2_;
   }
-  _l_vec2= LinearAlgebraFactory::create_vector("DEFAULT", l);
-  return *_l_vec2;
+  if(l_vec2_!=nullptr) {
+    delete l_vec2_;
+  }
+  l_vec2_= LinearAlgebraFactory::create_vector("DEFAULT", l);
+  return *l_vec2_;
 }
 
 hiopMatrixDense& hiopHessianLowRank::new_lxl_mat1(int l)
 {
-  if(_lxl_mat1!=NULL) {
-    if( l==_lxl_mat1->m() ) {
-      return *_lxl_mat1;
+  if(lxl_mat1_!=nullptr) {
+    if(l==lxl_mat1_->m()) {
+      return *lxl_mat1_;
     } else {
-      delete _lxl_mat1; 
-      _lxl_mat1=NULL;
+      delete lxl_mat1_; 
+      lxl_mat1_=nullptr;
     }
   }
-  _lxl_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, l);
-  return *_lxl_mat1;
+  lxl_mat1_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", l, l);
+  return *lxl_mat1_;
 }
+
 hiopMatrixDense& hiopHessianLowRank::new_kx2l_mat1(int k, int l)
 {
-  int twol=2*l;
-  if(NULL!=_kx2l_mat1) {
-    assert(_kx2l_mat1->m()==k);
-    if( twol==_kx2l_mat1->n() ) {
-      return *_kx2l_mat1;
+  const int twol=2*l;
+  if(nullptr!=kx2l_mat1_) {
+    assert(kx2l_mat1_->m()==k);
+    if(twol==kx2l_mat1_->n()) {
+      return *kx2l_mat1_;
     } else {
-      delete _kx2l_mat1; 
-      _kx2l_mat1=NULL;
+      delete kx2l_mat1_; 
+      kx2l_mat1_=nullptr;
     }
   }
-  _kx2l_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, twol);
-  
-  return *_kx2l_mat1;
+  kx2l_mat1_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, twol);
+  return *kx2l_mat1_;
 }
+
 hiopMatrixDense& hiopHessianLowRank::new_kxl_mat1(int k, int l)
 {
-  if(_kxl_mat1!=NULL) {
-    assert(_kxl_mat1->m()==k);
-    if( l==_kxl_mat1->n() ) {
-      return *_kxl_mat1;
+  if(kxl_mat1_!=nullptr) {
+    assert(kxl_mat1_->m()==k);
+    if( l==kxl_mat1_->n() ) {
+      return *kxl_mat1_;
     } else {
-      delete _kxl_mat1; 
-      _kxl_mat1=NULL;
+      delete kxl_mat1_; 
+      kxl_mat1_=nullptr;
     }
   }
-  _kxl_mat1 = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
-  return *_kxl_mat1;
+  kxl_mat1_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
+  return *kxl_mat1_;
 }
+
 hiopMatrixDense& hiopHessianLowRank::new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St)
 {
   //S1 is X*some_diag*S  (kxl). Here St=S^T is lxn and X is kxn (l BFGS memory size, k number of constraints)
-  size_type k=X.m(), l=St.m();
+  size_type k = X.m();
+  size_type l = St.m();
 #ifdef HIOP_DEEPCHECKS
   assert(St.n()==X.n());
-  if(_S1!=NULL) 
-    assert(_S1->m()==k);
+  if(S1_!=nullptr) { 
+    assert(S1_->m()==k);
+  }
 #endif
-  if(NULL!=_S1 && _S1->n()!=l) { delete _S1; _S1=NULL; }
-  
-  if(NULL==_S1) _S1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
-
-  return *_S1;
+  if(nullptr!=S1_ && S1_->n()!=l) {
+    delete S1_;
+    S1_=nullptr;
+  }
+  if(nullptr==S1_) {
+    S1_=LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
+  }
+  return *S1_;
 }
 
 hiopMatrixDense& hiopHessianLowRank::new_Y1(const hiopMatrixDense& X, const hiopMatrixDense& Yt)
 {
   //Y1 is X*somediag*Y (kxl). Here Yt=Y^T is lxn,  X is kxn
-  size_type k=X.m(), l=Yt.m();
+  size_type k = X.m();
+  size_type l = Yt.m();
 #ifdef HIOP_DEEPCHECKS
   assert(X.n()==Yt.n());
-  if(_Y1!=NULL) assert(_Y1->m()==k);
+  if(Y1_!=nullptr) {
+    assert(Y1_->m()==k);
+  }
 #endif
-
-  if(NULL!=_Y1 && _Y1->n()!=l) { delete _Y1; _Y1=NULL; }
-
-  if(NULL==_Y1) _Y1=LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
-  return *_Y1;
+  if(nullptr!=Y1_ && Y1_->n()!=l) {
+    delete Y1_;
+    Y1_ = nullptr;
+  }
+  if(nullptr==Y1_) {
+    Y1_ = LinearAlgebraFactory::create_matrix_dense("DEFAULT", k, l);
+  }
+  return *Y1_;
 }
 #ifdef HIOP_DEEPCHECKS
 
@@ -975,47 +1044,50 @@ void hiopHessianLowRank::
 timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool addLogTerm) const
 {
   size_type n=St_->n();
-  assert(l_curr==St_->m());
+  assert(l_curr_==St_->m());
   assert(y.get_size()==n);
   assert(St_->get_local_size_n() == Yt_->get_local_size_n());
 
   //we have B+=B-B*s*B*s'/(s'*B*s)+yy'/(y'*s)
-  //B0 is sigma*I. There is an additional diagonal log-barrier term _Dx
+  //B0 is sigma*I. There is an additional diagonal log-barrier term Dx_
 
   bool print=false;
   if(print) {
-    nlp->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
-    nlp->log->write("S=", *St_, hovMatrices);
-    nlp->log->write("Y=", *Yt_, hovMatrices);
-    nlp->log->write("DhInv=", *DhInv, hovMatrices);
-    nlp->log->printf(hovMatrices, "sigma=%22.16e;  addLogTerm=%d;\n", sigma, addLogTerm);
-    if(addLogTerm)
-      nlp->log->write("Dx=", *_Dx, hovMatrices);
-    nlp->log->printf(hovMatrices, "y=beta*y + alpha*this*x : beta=%g alpha=%g\n", beta, alpha);
-    nlp->log->write("x_in=", x, hovMatrices);
-    nlp->log->write("y_in=", y, hovMatrices);
+    nlp_->log->printf(hovMatrices, "---hiopHessianLowRank::timesVec \n");
+    nlp_->log->write("S=", *St_, hovMatrices);
+    nlp_->log->write("Y=", *Yt_, hovMatrices);
+    nlp_->log->write("DhInv=", *DhInv_, hovMatrices);
+    nlp_->log->printf(hovMatrices, "sigma=%22.16e;  addLogTerm=%d;\n", sigma_, addLogTerm);
+    if(addLogTerm) {
+      nlp_->log->write("Dx=", *Dx_, hovMatrices);
+    }
+    nlp_->log->printf(hovMatrices, "y=beta*y + alpha*this*x : beta=%g alpha=%g\n", beta, alpha);
+    nlp_->log->write("x_in=", x, hovMatrices);
+    nlp_->log->write("y_in=", y, hovMatrices);
   }
 
   //allocate and compute a_k and b_k
   //! make sure the pointers within these std::vectors are deallocated
-  a.resize(l_curr, nullptr);
-  b.resize(l_curr, nullptr);
+  a.resize(l_curr_, nullptr);
+  b.resize(l_curr_, nullptr);
   int n_local = Yt_->get_local_size_n();
-  for(int k=0; k<l_curr; k++) {
+  for(int k=0; k<l_curr_; k++) {
     //bk=yk/sqrt(yk'*sk)
     yk->copyFrom(Yt_->local_data() + k*n_local);
     sk->copyFrom(St_->local_data() + k*n_local);
     double skTyk=yk->dotProductWith(*sk);
     
     if(skTyk < std::numeric_limits<double>::epsilon()) {
-      nlp->log->printf(hovLinAlgScalars, "hiopHessianLowRank: ||s_k^T*y_k||=%12.6e too small..."
-                       " set it to machine precision = %12.6e \n", skTyk, std::numeric_limits<double>::epsilon());
+      nlp_->log->printf(hovLinAlgScalars,
+                        "hiopHessianLowRank: ||s_k^T*y_k||=%12.6e too small and was set it to mach eps = %12.6e \n",
+                        skTyk,
+                        std::numeric_limits<double>::epsilon());
       skTyk = std::numeric_limits<double>::epsilon();
     }
 
     if(a[k] == nullptr && b[k] == nullptr) {
-      b[k] = nlp->alloc_primal_vec();
-      a[k] = nlp->alloc_primal_vec();
+      b[k] = nlp_->alloc_primal_vec();
+      a[k] = nlp_->alloc_primal_vec();
     }
     
     b[k]->copyFrom(*yk);
@@ -1023,7 +1095,7 @@ timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool 
 
     //compute ak by an inner loop
     a[k]->copyFrom(*sk);
-    a[k]->scale(sigma);
+    a[k]->scale(sigma_);
 
     for(int i=0; i<k; i++) {
       double biTsk = b[i]->dotProductWith(*sk);
@@ -1040,11 +1112,11 @@ timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool 
   //y = beta*y+alpha*(B0+Dx)*x + alpha* sum { bk'x bk - ak'x ak : k=0,1,...,l_curr-1}
   y.scale(beta);
   if(addLogTerm) 
-    y.axzpy(alpha,x,*_Dx);
+    y.axzpy(alpha, x, *Dx_);
 
-  y.axpy(alpha*sigma, x); 
+  y.axpy(alpha*sigma_, x); 
 
-  for(int k=0; k<l_curr; k++) {
+  for(int k=0; k<l_curr_; k++) {
     double bkTx = b[k]->dotProductWith(x);
     double akTx = a[k]->dotProductWith(x);
     
@@ -1053,7 +1125,7 @@ timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector& x, bool 
   }
 
   if(print) {
-    nlp->log->write("y_out=", y, hovMatrices);
+    nlp_->log->write("y_out=", y, hovMatrices);
   }
 
 }
