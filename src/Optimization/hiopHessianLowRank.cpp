@@ -234,7 +234,7 @@ void hiopHessianLowRank::alloc_for_limited_mem(const size_type& mem_length)
   D_  = LinearAlgebraFactory::create_vector("DEFAULT", mem_length);
 }
 
-bool hiopHessianLowRank::updateLogBarrierDiagonal(const hiopVector& Dx)
+bool hiopHessianLowRank::update_logbar_diag(const hiopVector& Dx)
 {
   DhInv_->setToConstant(sigma_);
   DhInv_->axpy(1.0,Dx);

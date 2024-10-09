@@ -101,7 +101,7 @@ public:
                       const hiopMatrix& Jac_d_curr);
 
   /* updates the logBar diagonal term from the representation */
-  virtual bool updateLogBarrierDiagonal(const hiopVector& Dx);
+  virtual bool update_logbar_diag(const hiopVector& Dx);
 
   /* solves this*x=res */
   virtual void solve(const hiopVector& rhs, hiopVector& x);

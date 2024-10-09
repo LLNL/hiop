@@ -148,23 +148,18 @@ protected:
   /// @brief perform y=beta*y+alpha*H*x without the log barrier term from H
   void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
   {
-    hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess_);
-    assert(nullptr != HessLowR);
-    if(HessLowR) {
-      HessLowR->times_vec_no_logbar_term(beta, y, alpha, x);
-    }
+    hiopHessianLowRank* hesslowrank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+    assert(nullptr != hesslowrank);
+    hesslowrank->times_vec_no_logbar_term(beta, y, alpha, x);
   }
 #endif
 
 private:
-  hiopNlpDenseConstraints* nlpD;
-  hiopHessianLowRank* HessLowRank;
-
   /// The kxk reduced matrix
-  hiopMatrixDense* N; 
+  hiopMatrixDense* N_; 
 #ifdef HIOP_DEEPCHECKS
   /// A copy of the above to compute the residual
-  hiopMatrixDense* Nmat; 
+  hiopMatrixDense* Nmat_; 
 #endif
   //internal buffers: k is usually 2 x quasi-Newton memory; n is the size of primal variable vector
   hiopMatrixDense* kxn_mat_; 

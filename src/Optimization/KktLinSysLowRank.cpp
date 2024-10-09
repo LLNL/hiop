@@ -60,42 +60,41 @@ namespace hiop
 KktLinSysLowRank::KktLinSysLowRank(hiopNlpFormulation* nlp)
   : hiopKKTLinSysCompressedXYcYd(nlp)
 {
-  nlpD = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
+  auto* nlpd = dynamic_cast<hiopNlpDenseConstraints*>(nlp_);
 
-  kxn_mat_ = nlpD->alloc_multivector_primal(nlpD->m()); 
-  assert("DEFAULT" == toupper(nlpD->options->GetString("mem_space")));
-  N = LinearAlgebraFactory::create_matrix_dense(nlpD->options->GetString("mem_space"),
-                                                nlpD->m(),
-                                                nlpD->m());
+  kxn_mat_ = nlpd->alloc_multivector_primal(nlpd->m()); 
+  assert("DEFAULT" == toupper(nlpd->options->GetString("mem_space")));
+  N_ = LinearAlgebraFactory::create_matrix_dense(nlpd->options->GetString("mem_space"),
+                                                 nlpd->m(),
+                                                 nlpd->m());
 #ifdef HIOP_DEEPCHECKS
-  Nmat=N->alloc_clone();
+  Nmat_ = N_->alloc_clone();
 #endif
-  k_vec1_ = dynamic_cast<hiopVector*>(nlpD->alloc_dual_vec());
+  k_vec1_ = nlpd->alloc_dual_vec();
 }
 
 KktLinSysLowRank::~KktLinSysLowRank()
 {
-  if(N)         delete N;
+  delete N_;
 #ifdef HIOP_DEEPCHECKS
-  if(Nmat)      delete Nmat;
+  delete Nmat_;
 #endif
-  if(kxn_mat_)  delete kxn_mat_;
-  if(k_vec1_)   delete k_vec1_;
+  delete kxn_mat_;
+  delete k_vec1_;
 }
 
 bool KktLinSysLowRank::update(const hiopIterate* iter,
                               const hiopVector* grad_f,
                               const hiopMatrixDense* Jac_c,
                               const hiopMatrixDense* Jac_d,
-                              hiopHessianLowRank* Hess)
+                              hiopHessianLowRank* hess_low_rank)
 {
   nlp_->runStats.tmSolverInternal.start();
 
-  iter_=iter;
+  iter_ = iter;
   grad_f_ = dynamic_cast<const hiopVector*>(grad_f);
   Jac_c_ = Jac_c; Jac_d_ = Jac_d;
-  //Hess = dynamic_cast<hiopHessianInvLowRank*>(Hess_);
-  Hess_=HessLowRank=Hess;
+  Hess_ = hess_low_rank;
 
   //compute the diagonals
   //Dx=(Sxl)^{-1}Zl + (Sxu)^{-1}Zu
@@ -104,7 +103,7 @@ bool KktLinSysLowRank::update(const hiopIterate* iter,
   Dx_->axdzpy_w_pattern(1.0, *iter_->zu, *iter_->sxu, nlp_->get_ixu());
   nlp_->log->write("Dx in KKT", *Dx_, hovMatrices);
 
-  HessLowRank->updateLogBarrierDiagonal(*Dx_);
+  hess_low_rank->update_logbar_diag(*Dx_);
 
   //Dd=(Sdl)^{-1}Vu + (Sdu)^{-1}Vu
   Dd_inv_->setToZero();
@@ -161,23 +160,25 @@ bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
   J.copyRowsFrom(*Jac_c_de, nlp_->m_eq(), 0); //!opt
   J.copyRowsFrom(*Jac_d_de, nlp_->m_ineq(), nlp_->m_eq());//!opt
 
+  auto* hess_low_rank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+  
   //N =  J*(Hess\J')
   //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
-  HessLowRank->sym_mat_times_inverse_times_mattrans(0.0, *N, 1.0, J);
+  hess_low_rank->sym_mat_times_inverse_times_mattrans(0.0, *N_, 1.0, J);
 
   //subdiag of N += 1., Dd_inv
-  N->addSubDiagonal(1., nlp_->m_eq(), *Dd_inv_);
+  N_->addSubDiagonal(1., nlp_->m_eq(), *Dd_inv_);
 #ifdef HIOP_DEEPCHECKS
   assert(J.isfinite());
-  nlp_->log->write("solveCompressed: N is", *N, hovMatrices);
+  nlp_->log->write("solveCompressed: N is", *N_, hovMatrices);
   nlp_->log->write("solveCompressed: rx is", rx, hovMatrices);
   nlp_->log->printf(hovLinAlgScalars, "inf norm of Dd_inv is %g\n", Dd_inv_->infnorm());
-  N->assertSymmetry(1e-10);
+  N_->assertSymmetry(1e-10);
 #endif
 
   //compute the rhs of the lin sys involving N
   //  1. first compute (H+Dx)^{-1} rx_tilde and store it temporarily in dx
-  HessLowRank->solve(rx, dx);
+  hess_low_rank->solve(rx, dx);
 #ifdef HIOP_DEEPCHECKS
   assert(rx.isfinite_local() && "Something bad happened: nan or inf value");
   assert(dx.isfinite_local() && "Something bad happened: nan or inf value");
@@ -193,14 +194,14 @@ bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
 #ifdef HIOP_DEEPCHECKS
   nlp_->log->write("solveCompressed: dx sol is", dx, hovMatrices);
   nlp_->log->write("solveCompressed: rhs for N is", rhs, hovMatrices);
-  Nmat->copyFrom(*N);
+  Nmat_->copyFrom(*N_);
   hiopVector* r=rhs.new_copy(); //save the rhs to check the norm of the residual
 #endif
 
   //
   //solve N * dyc_dyd = rhs
   //
-  int ierr = solveWithRefin(*N,rhs);
+  int ierr = solveWithRefin(*N_,rhs);
   //int ierr = solve(*N,rhs);
 
   hiopVector& dyc_dyd= rhs;
@@ -211,7 +212,7 @@ bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
   //first rx = -(Jc^T*dyc+Jd^T*dyd - rx)
   J.transTimesVec(1.0, rx, -1.0, dyc_dyd);
   //then dx = (H+Dx)^{-1} rx
-  HessLowRank->solve(rx, dx);
+  hess_low_rank->solve(rx, dx);
 
 #ifdef HIOP_DEEPCHECKS
   //some outputing
@@ -459,12 +460,13 @@ double KktLinSysLowRank::errorCompressedLinsys(const hiopVector& rx,
                                                const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "KktLinSysLowRank::errorCompressedLinsys residuals norm:\n");
-
+  auto* hess_low_rank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+  
   double derr = -1.;
   double aux;
   hiopVector* RX = rx.new_copy();
   //RX=rx-H*dx-J'c*dyc-J'*dyd
-  HessLowRank->timesVec(1.0, *RX, -1.0, dx);
+  hess_low_rank->timesVec(1.0, *RX, -1.0, dx);
   //RX->axzpy(-1.0,*Dx,dx);
   Jac_c_->transTimesVec(1.0, *RX, -1.0, dyc);
   Jac_d_->transTimesVec(1.0, *RX, -1.0, dyd);
