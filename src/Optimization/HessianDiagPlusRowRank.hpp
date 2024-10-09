@@ -57,17 +57,17 @@
 namespace hiop
 {
 
-/* Class for storing and solving with the low-rank Hessian 
+/* Class for storing and solving with the identity plus low-rank Hessian. 
  *
- * Stores the Hessian wrt x as Hk=Dk+Bk, where 
+ * Stores the Hessian (w.r.t. x) approximation as Hk=Dk+Bk, where 
  *  - Dk is the log barrier diagonal
- *  - Bk=B0 - M*N^{-1}*M^T is the secant approximation for the Hessian of the Lagrangian
- * in the compact representation of  Byrd, Nocedal, and Schnabel (1994)
+ *  - Bk = B0 - M*N^{-1}*M^T is the secant approximation for the Hessian of the Lagrangian
+ * in the limited-memory compact representation of  Byrd, Nocedal, and Schnabel (1994)
  * Reference: Byrd, Nocedal, and Schnabel, "Representations of quasi-Newton matrices and
  * and there use in limited memory methods", Math. Programming 63 (1994), p. 129-156.
  * 
  * M=[B0*Sk Yk] is nx2l, and N is 2lx2l, where n=dim(x) and l is the length of the memory of secant 
- * approximation. This class is for when n>>k (l=O(10)).
+ * approximation. This class is for when n>>k and l=O(10).
  * 
  * This class provides functionality to KKT linear system class for updating the secant approximation 
  * and solving with Hk=Dk+Bk.
@@ -88,73 +88,88 @@ namespace hiop
  * Parallel computations: Dk, B0 are distributed vectors, M is distributed 
  * column-wise, and N is local (stored on all processors).
  */
-class hiopHessianLowRank : public hiopMatrix
+class HessianDiagPlusRowRank : public hiopMatrix
 {
 public:
-  hiopHessianLowRank(hiopNlpDenseConstraints* nlp_in, int max_memory_length);
-  virtual ~hiopHessianLowRank();
+  HessianDiagPlusRowRank(hiopNlpDenseConstraints* nlp_in, int max_memory_length);
+  virtual ~HessianDiagPlusRowRank();
 
-  /* return false if the update destroys hereditary positive definitness and the BFGS update is not taken*/
-  virtual bool update(const hiopIterate& x_curr, const hiopVector& grad_f_curr,
-		      const hiopMatrix& Jac_c_curr, const hiopMatrix& Jac_d_curr);
+  /// Updates Hessian if hereditary positive definitness is maintained and returns true, otherwise false.
+  virtual bool update(const hiopIterate& x_curr,
+                      const hiopVector& grad_f_curr,
+		      const hiopMatrix& Jac_c_curr,
+                      const hiopMatrix& Jac_d_curr);
 
   /* updates the logBar diagonal term from the representation */
-  virtual bool updateLogBarrierDiagonal(const hiopVector& Dx);
+  virtual bool update_logbar_diag(const hiopVector& Dx);
 
   /* solves this*x=res */
   virtual void solve(const hiopVector& rhs, hiopVector& x);
+  
   /* W = beta*W + alpha*X*inverse(this)*X^T (a more efficient version of solve)
    * This is performed as W = beta*W + alpha*X*(this\X^T)
    */ 
-  virtual void symMatTimesInverseTimesMatTrans(double beta, hiopMatrixDense& W_, 
-					       double alpha, const hiopMatrixDense& X);
+  virtual void sym_mat_times_inverse_times_mattrans(double beta, hiopMatrixDense& W, double alpha, const hiopMatrixDense& X);
 #ifdef HIOP_DEEPCHECKS
   /* same as above but without the Dx term in H */
-  virtual void timesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector&x);
+  virtual void times_vec_no_logbar_term(double beta, hiopVector& y, double alpha, const hiopVector&x);
   virtual void print(FILE* f, hiopOutVerbosity v, const char* msg) const;
 #endif
 
-  /* computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
+  /* Computes the product of the Hessian with a vector: y=beta*y+alpha*H*x.
    * The function is supposed to use the underlying ***recursive*** definition of the 
    * quasi-Newton Hessian and is used for checking/testing/error calculation.
    */
-  virtual void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x);
+  virtual void times_vec(double beta, hiopVector& y, double alpha, const hiopVector&x);
 
   /* code shared by the above two methods*/
-  virtual void timesVecCmn(double beta, hiopVector& y, double alpha, const hiopVector&x, bool addLogBarTerm = false) const;
+  virtual void times_vec_common(double beta, hiopVector& y, double alpha, const hiopVector&x, bool add_logbar = false) const;
 
 protected:
   friend class hiopAlgFilterIPMQuasiNewton;  
-  int l_max; //max memory size
-  int l_curr; //number of pairs currently stored
-  double sigma; //initial scaling factor of identity
-  double sigma0; //default scaling factor of identity
-  int sigma_update_strategy;
-  double sigma_safe_min, sigma_safe_max; //min and max safety thresholds for sigma
-  hiopNlpDenseConstraints* nlp;
+  int l_max_; //max memory size
+  int l_curr_; //number of pairs currently stored
+  double sigma_; //initial scaling factor of identity
+  double sigma0_; //default scaling factor of identity
+
+  //Integer for the sigma update strategy
+  int sigma_update_strategy_;
+  //Min safety thresholds for sigma
+  double sigma_safe_min_;
+  //Max safety thresholds for sigma
+  double sigma_safe_max_;
+  //Pointer to the NLP formulation
+  hiopNlpDenseConstraints* nlp_;
+  
   mutable std::vector<hiopVector*> a;
   mutable std::vector<hiopVector*> b;
   hiopVector* yk;
   hiopVector* sk;
 private:
-  hiopVector* DhInv; //(B0+Dk)^{-1}
-  // needed in timesVec (for residual checking in solveCompressed.
-  // can be recomputed from DhInv decided to store it instead to avoid round-off errors
-  hiopVector* _Dx;
-  bool matrixChanged;
-  //these are matrices from the compact representation; they are updated at each iteration.
-  // more exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]
-  //                                 [  L'      -D] [Yt   ]
-  //transpose of S and T are store to easily access columns
+  // Vector for (B0+Dk)^{-1}
+  hiopVector* DhInv_; 
+  // Dx_ is needed in times_vec (for residual checking in solveCompressed). Can be recomputed from DhInv, but I decided to
+  //store it instead to avoid round-off errors
+  hiopVector* Dx_;
+  
+  bool matrix_changed_;
+
+  //These are matrices from the compact representation; they are updated at each iteration.
+  //More exactly Bk=B0-[B0*St' Yt']*[St*B0*St'  L]*[St*B0]
+  //                                [  L'      -D] [Yt   ]
+  //Transpose of S and T are store to easily access columns
   hiopMatrixDense* St_;
-  hiopMatrixDense* Yt_; 
-  hiopMatrixDense* L_;     //lower triangular from the compact representation
-  hiopVector* D_;       //diag 
-  //these are matrices from the representation of the inverse
+  hiopMatrixDense* Yt_;
+
+  /// Lower triangular matrix from the compact representation
+  hiopMatrixDense* L_;
+  /// Diagonal matrix from the compact representation
+  hiopVector* D_; 
+  // Matrix V from the representation of the inverse
   hiopMatrixDense* V_;    
 #ifdef HIOP_DEEPCHECKS
-  //copy of the matrix - needed to check the residual
-   hiopMatrixDense* _Vmat; 
+  //copy of the V matrix - needed to check the residual
+   hiopMatrixDense* Vmat_; 
 #endif
   void growL(const int& lmem_curr, const int& lmem_max, const hiopVector& YTs);
   void growD(const int& l_curr, const int& l_max, const double& sTy);
@@ -170,43 +185,76 @@ private:
   void updateInternalBFGSRepresentation();
 
   //internals buffers, mostly for MPIAll_reduce
-  double* _buff_kxk; // size = num_constraints^2 
-  double* _buff_2lxk; // size = 2 x q-Newton mem size x num_constraints
-  double *_buff1_lxlx3, *_buff2_lxlx3;
-  //auxiliary objects
-  hiopMatrixDense *_S1, *_Y1, *_lxl_mat1, *_kx2l_mat1, *_kxl_mat1; //preallocated matrices 
-  //holds X*D*S
+  double* buff_kxk_; // size = num_constraints^2 
+  double* buff_2lxk_; // size = 2 x q-Newton mem size x num_constraints
+  double* buff1_lxlx3_;
+  double* buff2_lxlx3_;
+  
+  // auxiliary objects preallocated and used in internally in various computation blocks
+
+  /// See new_S1
+  hiopMatrixDense* S1_;
+  /// See new_Y1
+  hiopMatrixDense* Y1_;
+  
+  hiopMatrixDense* lxl_mat1_;
+  hiopMatrixDense* kx2l_mat1_;
+  hiopMatrixDense* kxl_mat1_;
+  
+  /**
+   * (Re)Allocates S1_ of size kxl to store is X*D*S, where D is a diagonal matrix. S comes in 
+   * as St=S^T (lxn) and X comes in as kxn, where l is the BFGS memory size and k number of 
+   * constraints. S1_ is allocated only if not already allocated or realocated only if it does 
+   * not have the right dimesions to store X*D*S.
+   */
   hiopMatrixDense& new_S1(const hiopMatrixDense& X, const hiopMatrixDense& St);
-  //holds X*D*Y
+
+  /**
+   * (Re)Allocates Y1_ of size kxl to store is X*D*Y, where D is a diagonal matrix. Y comes in 
+   * as Yt=Y^T (lxn) and X comes in as kxn, where l is the BFGS memory size and k number of 
+   * constraints. Y1_ is allocated only if not already allocated or reallocated only if it does 
+   * not have the right dimesions to store X*D*Y.
+   */
   hiopMatrixDense& new_Y1(const hiopMatrixDense& X, const hiopMatrixDense& Yt);
+  
   hiopMatrixDense& new_lxl_mat1 (int l);
   hiopMatrixDense& new_kxl_mat1 (int k, int l);
   hiopMatrixDense& new_kx2l_mat1(int k, int l);
   
-  hiopVector *_l_vec1, *_l_vec2, *_n_vec1, *_n_vec2, *_2l_vec1;
+  hiopVector* l_vec1_;
+  hiopVector* l_vec2_;
+  hiopVector* n_vec1_;
+  hiopVector* n_vec2_;
+  hiopVector* twol_vec1_;
   hiopVector& new_l_vec1(int l);
   hiopVector& new_l_vec2(int l);
   inline hiopVector& new_n_vec1(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec1!=NULL);
-    assert(_n_vec1->get_size()==n);
+    assert(n_vec1_!=nullptr);
+    assert(n_vec1_->get_size()==n);
 #endif
-    return *_n_vec1;
+    return *n_vec1_;
   }
   inline hiopVector& new_n_vec2(size_type n)
   {
 #ifdef HIOP_DEEPCHECKS
-    assert(_n_vec2!=NULL);
-    assert(_n_vec2->get_size()==n);
+    assert(n_vec2_!=nullptr);
+    assert(n_vec2_->get_size()==n);
 #endif
-    return *_n_vec2;
+    return *n_vec2_;
   }
-  inline hiopVector& new_2l_vec1(int l) {
-    if(_2l_vec1!=NULL && _2l_vec1->get_size()==2*l) return *_2l_vec1;
-    if(_2l_vec1!=NULL) delete _2l_vec1;
-    _2l_vec1=LinearAlgebraFactory::create_vector(nlp->options->GetString("mem_space"), 2*l);
-    return *_2l_vec1;
+  inline hiopVector& new_2l_vec1(int l)
+  {
+    if(twol_vec1_!=nullptr && twol_vec1_->get_size()==2*l) {
+      return *twol_vec1_;
+    }
+    if(twol_vec1_!=nullptr)
+    {
+      delete twol_vec1_;
+    }
+    twol_vec1_=LinearAlgebraFactory::create_vector(nlp_->options->GetString("mem_space"), 2*l);
+    return *twol_vec1_;
   }
 private:
   //utilities
@@ -215,34 +263,40 @@ private:
   void alloc_for_limited_mem(const size_type& mem_length);
 
   /* symmetric multiplication W = beta*W + alpha*X*Diag*X^T */
-  static void symmMatTimesDiagTimesMatTrans_local(double beta, hiopMatrixDense& W_,
-					   double alpha, const hiopMatrixDense& X_,
-					   const hiopVector& d);
+  static void sym_mat_times_diag_times_mattrans_local(double beta,
+                                                      hiopMatrixDense& W_,
+                                                      double alpha,
+                                                      const hiopMatrixDense& X_,
+                                                      const hiopVector& d);
   /* W=S*Diag*X^T */
-  static void matTimesDiagTimesMatTrans_local(hiopMatrixDense& W, const hiopMatrixDense& S, 
-					      const hiopVector& d, const hiopMatrixDense& X);
+  static void mat_times_diag_times_mattrans_local(hiopMatrixDense& W,
+                                                  const hiopMatrixDense& S, 
+                                                  const hiopVector& d,
+                                                  const hiopMatrixDense& X);
   /* members and utilities related to V matrix: factorization and solve */
-  hiopVector *_V_work_vec;
-  int _V_ipiv_size; int* _V_ipiv_vec;
+  hiopVector* V_work_vec_;
+  int V_ipiv_size_;
+  int* V_ipiv_vec_;
+  
   void factorizeV();
   void solveWithV(hiopVector& rhs_s, hiopVector& rhs_y);
   void solveWithV(hiopMatrixDense& rhs);
 private:
-  hiopHessianLowRank() {};
-  hiopHessianLowRank(const hiopHessianLowRank&) {};
-  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {return *this;};
+  HessianDiagPlusRowRank() {};
+  HessianDiagPlusRowRank(const HessianDiagPlusRowRank&) {};
+  HessianDiagPlusRowRank& operator=(const HessianDiagPlusRowRank&) {return *this;};
 
   /* methods that need to be implemented as the class inherits from hiopMatrix*/
 public:
   virtual hiopMatrix* alloc_clone() const
   {
     assert(false && "not provided because it is not needed");
-    return NULL;
+    return nullptr;
   }
   virtual hiopMatrix* new_copy() const
   {
     assert(false && "not provided because it is not needed");
-    return NULL;
+    return nullptr;
   }
 
   virtual void setToZero()
@@ -257,8 +311,7 @@ public:
   void timesVec(double beta, hiopVector& y, double alpha, const hiopVector&x) const;
 
   /** y = beta * y + alpha * this^T * x */
-  virtual void transTimesVec(double beta,   hiopVector& y,
-			     double alpha,  const hiopVector& x ) const
+  virtual void transTimesVec(double beta, hiopVector& y, double alpha,  const hiopVector& x ) const
   {
     assert(false && "not provided because it is not needed");
   }
@@ -293,8 +346,11 @@ public:
   /* add to the diagonal of 'this' (destination) starting at 'start_on_dest_diag' elements of
    * 'd_' (source) starting at index 'start_on_src_vec'. The number of elements added is 'num_elems' 
    * when num_elems>=0, or the remaining elems on 'd_' starting at 'start_on_src_vec'. */
-  virtual void addSubDiagonal(int start_on_dest_diag, const double& alpha, 
-			      const hiopVector& d_, int start_on_src_vec, int num_elems=-1)
+  virtual void addSubDiagonal(int start_on_dest_diag,
+                              const double& alpha, 
+			      const hiopVector& d_,
+                              int start_on_src_vec,
+                              int num_elems=-1)
   {
     assert(false && "not needed / implemented");
   }
@@ -302,7 +358,6 @@ public:
   {
     assert(false && "not needed / implemented");
   }
-
   
   /* this += alpha*X */
   virtual void addMatrix(double alpah, const hiopMatrix& X)
@@ -318,8 +373,7 @@ public:
   {
     assert(false && "not needed; should not be used");
   }
-  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, 
-						     double alpha, hiopMatrixDense& W) const
+  void addUpperTriangleToSymDenseMatrixUpperTriangle(int diag_start, double alpha, hiopMatrixDense& W) const
   {
     assert(false && "not needed; should not be used");
   }
@@ -358,15 +412,23 @@ public:
   * given by the value of 'maxRows' will be printed. If this value is negative, all
   * elements will be printed.
   */
-  virtual void print(FILE* f=NULL, const char* msg=NULL, int maxRows=-1, int maxCols=-1, int rank=-1) const
+  virtual void print(FILE* f=nullptr, const char* msg=nullptr, int maxRows=-1, int maxCols=-1, int rank=-1) const
   {
     assert(false && "not provided because it is not needed");
   }
 
   /* number of rows */
-  virtual size_type m() const { assert(false && "not provided because it is not needed"); return 0; }
+  virtual size_type m() const
+  {
+    assert(false && "method is not provided because it is not needed");
+    return 0;
+  }
   /* number of columns */
-  virtual size_type n() const { assert(false && "not provided because it is not needed"); return 0; }
+  virtual size_type n() const
+  {
+    assert(false && "method is not provided because it is not needed");
+    return 0;
+  }
 #ifdef HIOP_DEEPCHECKS
   /* check symmetry */
   virtual bool assertSymmetry(double tol=1e-16) const { return true; }

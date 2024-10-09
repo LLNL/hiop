@@ -51,7 +51,7 @@
 
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
-#include "hiopHessianLowRank.hpp"
+#include "HessianDiagPlusRowRank.hpp"
 #include "hiopPDPerturbation.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"
@@ -382,82 +382,7 @@ protected:
 #endif
 };
 
-class hiopKKTLinSysLowRank : public hiopKKTLinSysCompressedXYcYd
-{
-public:
-  hiopKKTLinSysLowRank(hiopNlpFormulation* nlp);
-  virtual ~hiopKKTLinSysLowRank();
 
-  bool update(const hiopIterate* iter,
-	      const hiopVector* grad_f,
-	      const hiopMatrix* Jac_c, const hiopMatrix* Jac_d,
-	      hiopMatrix* Hess)
-  {
-    const hiopMatrixDense* Jac_c_ = dynamic_cast<const hiopMatrixDense*>(Jac_c);
-    const hiopMatrixDense* Jac_d_ = dynamic_cast<const hiopMatrixDense*>(Jac_d);
-    hiopHessianLowRank* Hess_ = dynamic_cast<hiopHessianLowRank*>(Hess);
-    if(Jac_c_==NULL || Jac_d_==NULL || Hess_==NULL) {
-      assert(false);
-      return false;
-    }
-    return update(iter, grad_f_, Jac_c_, Jac_d_, Hess_);
-  }
-
-  virtual bool update(const hiopIterate* iter,
-		      const hiopVector* grad_f,
-		      const hiopMatrixDense* Jac_c, const hiopMatrixDense* Jac_d,
-		      hiopHessianLowRank* Hess);
-
-  virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg)
-  {
-    assert(false && "not yet implemented");
-    return false;
-  }
-
-  /* Solves the system corresponding to directions for x, yc, and yd, namely
-   * [ H_BFGS + Dx   Jc^T  Jd^T   ] [ dx]   [ rx_tilde ]
-   * [    Jc          0     0     ] [dyc] = [   ryc    ]
-   * [    Jd          0   -Dd^{-1}] [dyd]   [ ryd_tilde]
-   *
-   * This is done by forming and solving
-   * [ Jc*(H+Dx)^{-1}*Jc^T   Jc*(H+Dx)^{-1}*Jd^T          ] [dyc] = [ Jc(H+Dx)^{-1} rx - ryc ]
-   * [ Jd*(H+Dx)^{-1}*Jc^T   Jd*(H+Dx)^{-1}*Jd^T + Dd^{-1}] [dyd]   [ Jd(H+dx)^{-1} rx - ryd ]
-   * and then solving for dx from
-   *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
-   *
-   */
-  virtual bool solveCompressed(hiopVector& rx, hiopVector& ryc, hiopVector& ryd,
-                               hiopVector& dx, hiopVector& dyc, hiopVector& dyd);
-
-  //LAPACK wrappers
-  int solve(hiopMatrixDense& M, hiopVector& rhs);
-  int solveWithRefin(hiopMatrixDense& M, hiopVector& rhs);
-#ifdef HIOP_DEEPCHECKS
-  static double solveError(const hiopMatrixDense& M,  const hiopVector& x, hiopVector& rhs);
-  double errorCompressedLinsys(const hiopVector& rx, const hiopVector& ryc, const hiopVector& ryd,
-			       const hiopVector& dx, const hiopVector& dyc, const hiopVector& dyd);
-protected:
-  //y=beta*y+alpha*H*x
-  void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
-  {
-    hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess_);
-    assert(NULL != HessLowR);
-    if(HessLowR) HessLowR->timesVec_noLogBarrierTerm(beta, y, alpha, x);
-  }
-#endif
-
-private:
-  hiopNlpDenseConstraints* nlpD;
-  hiopHessianLowRank* HessLowRank;
-
-  hiopMatrixDense* N; //the kxk reduced matrix
-#ifdef HIOP_DEEPCHECKS
-  hiopMatrixDense* Nmat; //a copy of the above to compute the residual
-#endif
-  //internal buffers
-  hiopMatrixDense* _kxn_mat; //!opt (work directly with the Jacobian)
-  hiopVector* _k_vec1;
-};
 
 
 /*

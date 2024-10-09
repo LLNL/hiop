@@ -461,7 +461,7 @@ public:
   virtual hiopMatrixDense* alloc_Jac_c();
   virtual hiopMatrixDense* alloc_Jac_d();
   virtual hiopMatrixDense* alloc_Jac_cons();
-  //returns hiopHessianLowRank which (fakely) inherits from hiopMatrix
+  //returns HessianDiagPlusRowRank which (fakely) inherits from hiopMatrix
   virtual hiopMatrix* alloc_Hess_Lagr();
 
   /* this is in general for a dense matrix with n_vars cols and a small number of 

@@ -5,9 +5,10 @@ set(hiopOptimization_SRC
   hiopResidual.cpp 
   hiopFilter.cpp 
   hiopAlgFilterIPM.cpp 
-  hiopKKTLinSys.cpp 
+  hiopKKTLinSys.cpp
+  KktLinSysLowRank.cpp
   hiopKKTLinSysMDS.cpp 
-  hiopHessianLowRank.cpp 
+  HessianDiagPlusRowRank.cpp 
   hiopDualsUpdater.cpp 
   hiopNlpTransforms.cpp
   hiopPDPerturbation.cpp
@@ -27,7 +28,7 @@ set(hiopOptimization_INTERFACE_HEADERS
   hiopDualsUpdater.hpp
   hiopFactAcceptor.hpp
   hiopFilter.hpp
-  hiopHessianLowRank.hpp
+  HessianDiagPlusRowRank.hpp
   hiopIterate.hpp
   hiopKKTLinSys.hpp
   hiopKKTLinSysDense.hpp
