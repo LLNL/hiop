@@ -68,8 +68,8 @@ namespace hiop
  * by low-rank matrix plus a multiple of identity and the number of the constraints is not
  * too large. 
  * 
- * It works with Hessian being a HessianLowRank class and the constraints Jacobian being
- * hiopMatrixDense. 
+ * It works with Hessian being a HessianDiagPlusLowRank class and the constraints Jacobian 
+ * being hiopMatrixDense. 
  *
  * This class solves the XYcYd compression of the full KKT. See solveCompressed method 
  * for details on the approach used to solve the linear system. 
@@ -90,7 +90,7 @@ public:
   {
     const hiopMatrixDense* Jac_c_ = dynamic_cast<const hiopMatrixDense*>(Jac_c);
     const hiopMatrixDense* Jac_d_ = dynamic_cast<const hiopMatrixDense*>(Jac_d);
-    hiopHessianLowRank* Hess_ = dynamic_cast<hiopHessianLowRank*>(Hess);
+    HessianDiagPlusRowRank* Hess_ = dynamic_cast<HessianDiagPlusRowRank*>(Hess);
     if(Jac_c_==nullptr || Jac_d_==nullptr || Hess_==nullptr) {
       assert(false);
       return false;
@@ -103,7 +103,7 @@ public:
 		      const hiopVector* grad_f,
 		      const hiopMatrixDense* Jac_c,
                       const hiopMatrixDense* Jac_d,
-		      hiopHessianLowRank* Hess);
+		      HessianDiagPlusRowRank* Hess);
 
   virtual bool build_kkt_matrix(const hiopPDPerturbation& pdreg)
   {
@@ -148,7 +148,7 @@ protected:
   /// @brief perform y=beta*y+alpha*H*x without the log barrier term from H
   void HessianTimesVec_noLogBarrierTerm(double beta, hiopVector& y, double alpha, const hiopVector& x)
   {
-    hiopHessianLowRank* hesslowrank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+    HessianDiagPlusRowRank* hesslowrank = dynamic_cast<HessianDiagPlusRowRank*>(Hess_);
     assert(nullptr != hesslowrank);
     hesslowrank->times_vec_no_logbar_term(beta, y, alpha, x);
   }

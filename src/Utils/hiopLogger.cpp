@@ -50,7 +50,7 @@
 
 #include "hiopVector.hpp"
 #include "hiopResidual.hpp"
-#include "hiopHessianLowRank.hpp"
+#include "HessianDiagPlusRowRank.hpp"
 #include "hiopFilter.hpp"
 #include "hiopOptions.hpp"
 
@@ -97,7 +97,10 @@ void hiopLogger::write(const char* msg, const hiopIterate& it, hiopOutVerbosity 
 }
 
 #ifdef HIOP_DEEPCHECKS
-void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid/*=0*/)
+void hiopLogger::write(const char* msg,
+                       const HessianDiagPlusRowRank& Hess,
+                       hiopOutVerbosity v,
+                       int loggerid/*=0*/)
 {
   if(master_rank_ != my_rank_) return;
   hiopOutVerbosity _verb = (hiopOutVerbosity) options_->GetInteger("verbosity_level");
@@ -106,7 +109,7 @@ void hiopLogger::write(const char* msg, const hiopHessianLowRank& Hess, hiopOutV
 }
 #endif
 
-void hiopLogger::write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid/*=0*/)
+void hiopLogger::write(const char* msg, const hiopOptions& options, hiopOutVerbosity v, int loggerid/*=0*/)
 {
   if(master_rank_ != my_rank_) return;
   hiopOutVerbosity _verb = (hiopOutVerbosity) options_->GetInteger("verbosity_level");

@@ -971,7 +971,7 @@ hiopSolveStatus hiopAlgFilterIPMQuasiNewton::run()
   resetSolverStatus();
 
   //types of linear algebra objects are known now
-  hiopHessianLowRank* Hess = dynamic_cast<hiopHessianLowRank*>(_Hess_Lagr);
+  auto* Hess = dynamic_cast<HessianDiagPlusRowRank*>(_Hess_Lagr);
 
   nlp->runStats.initialize();
   nlp->runStats.kkt.initialize();
@@ -1599,7 +1599,7 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group
   SidreHelper::copy_iterate_to_views(group, "alg_iterate_", *it_curr);
   
   //state of quasi-Newton Hessian approximation
-  hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
+  HessianDiagPlusRowRank& hqn = dynamic_cast<HessianDiagPlusRowRank&>(*_Hess_Lagr);
   const double hqn_params[] = {(double)hqn.l_max_,
                                (double)hqn.l_curr_,
                                hqn.sigma_,
@@ -1712,7 +1712,7 @@ void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group
   //
   //state of quasi-Newton Hessian approximation
   //
-  hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
+  HessianDiagPlusRowRank& hqn = dynamic_cast<HessianDiagPlusRowRank&>(*_Hess_Lagr);
   //!!!note: nparams needs to match the # of params from save_state_to_sidre_group
   const int nhqn_params = 5;
   double hqn_params[nhqn_params];

@@ -166,7 +166,7 @@ public:
   friend class hiopKKTLinSysDenseXYcYd;
   friend class hiopKKTLinSysDenseXDYcYd;
   friend class KktLinSysLowRank;
-  friend class hiopHessianLowRank;
+  friend class HessianDiagPlusRowRank;
   friend class hiopKKTLinSysCompressedMDSXYcYd;
   friend class hiopHessianInvLowRank_obsolette;
   friend class hiopKKTLinSysSparse;

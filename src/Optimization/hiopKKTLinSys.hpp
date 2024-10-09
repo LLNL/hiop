@@ -51,7 +51,7 @@
 
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
-#include "hiopHessianLowRank.hpp"
+#include "HessianDiagPlusRowRank.hpp"
 #include "hiopPDPerturbation.hpp"
 #include "hiopLinSolver.hpp"
 #include "hiopFactAcceptor.hpp"

@@ -54,7 +54,7 @@
  */
 
 #include "hiopNlpFormulation.hpp"
-#include "hiopHessianLowRank.hpp"
+#include "HessianDiagPlusRowRank.hpp"
 #include "hiopVector.hpp"
 #include "LinAlgFactory.hpp"
 #include "hiopLogger.hpp"
@@ -1636,7 +1636,7 @@ hiopMatrixDense* hiopNlpDenseConstraints::alloc_Jac_cons()
 
 hiopMatrix* hiopNlpDenseConstraints::alloc_Hess_Lagr()
 {
-  return new hiopHessianLowRank(this, this->options->GetInteger("secant_memory_len"));
+  return new HessianDiagPlusRowRank(this, this->options->GetInteger("secant_memory_len"));
 }
 
 hiopMatrixDense* hiopNlpDenseConstraints::alloc_multivector_primal(int nrows, int maxrows/*=-1*/) const

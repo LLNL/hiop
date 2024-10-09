@@ -87,7 +87,7 @@ bool KktLinSysLowRank::update(const hiopIterate* iter,
                               const hiopVector* grad_f,
                               const hiopMatrixDense* Jac_c,
                               const hiopMatrixDense* Jac_d,
-                              hiopHessianLowRank* hess_low_rank)
+                              HessianDiagPlusRowRank* hess_low_rank)
 {
   nlp_->runStats.tmSolverInternal.start();
 
@@ -133,7 +133,7 @@ bool KktLinSysLowRank::update(const hiopIterate* iter,
  * and then solving for dx from
  *  dx = - (H+Dx)^{-1}*(Jc^T*dyc+Jd^T*dyd - rx)
  *
- * Note that ops H+Dx are provided by hiopHessianLowRank
+ * Note that ops H+Dx are provided by HessianDiagPlusRowRank
  */
 bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
                                        hiopVector& ryc,
@@ -160,7 +160,7 @@ bool KktLinSysLowRank::solveCompressed(hiopVector& rx,
   J.copyRowsFrom(*Jac_c_de, nlp_->m_eq(), 0); //!opt
   J.copyRowsFrom(*Jac_d_de, nlp_->m_ineq(), nlp_->m_eq());//!opt
 
-  auto* hess_low_rank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+  auto* hess_low_rank = dynamic_cast<HessianDiagPlusRowRank*>(Hess_);
   
   //N =  J*(Hess\J')
   //Hess->symmetricTimesMat(0.0, *N, 1.0, J);
@@ -460,7 +460,7 @@ double KktLinSysLowRank::errorCompressedLinsys(const hiopVector& rx,
                                                const hiopVector& dyd)
 {
   nlp_->log->printf(hovLinAlgScalars, "KktLinSysLowRank::errorCompressedLinsys residuals norm:\n");
-  auto* hess_low_rank = dynamic_cast<hiopHessianLowRank*>(Hess_);
+  auto* hess_low_rank = dynamic_cast<HessianDiagPlusRowRank*>(Hess_);
   
   double derr = -1.;
   double aux;

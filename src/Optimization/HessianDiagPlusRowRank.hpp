@@ -88,11 +88,11 @@ namespace hiop
  * Parallel computations: Dk, B0 are distributed vectors, M is distributed 
  * column-wise, and N is local (stored on all processors).
  */
-class hiopHessianLowRank : public hiopMatrix
+class HessianDiagPlusRowRank : public hiopMatrix
 {
 public:
-  hiopHessianLowRank(hiopNlpDenseConstraints* nlp_in, int max_memory_length);
-  virtual ~hiopHessianLowRank();
+  HessianDiagPlusRowRank(hiopNlpDenseConstraints* nlp_in, int max_memory_length);
+  virtual ~HessianDiagPlusRowRank();
 
   /// Updates Hessian if hereditary positive definitness is maintained and returns true, otherwise false.
   virtual bool update(const hiopIterate& x_curr,
@@ -282,9 +282,9 @@ private:
   void solveWithV(hiopVector& rhs_s, hiopVector& rhs_y);
   void solveWithV(hiopMatrixDense& rhs);
 private:
-  hiopHessianLowRank() {};
-  hiopHessianLowRank(const hiopHessianLowRank&) {};
-  hiopHessianLowRank& operator=(const hiopHessianLowRank&) {return *this;};
+  HessianDiagPlusRowRank() {};
+  HessianDiagPlusRowRank(const HessianDiagPlusRowRank&) {};
+  HessianDiagPlusRowRank& operator=(const HessianDiagPlusRowRank&) {return *this;};
 
   /* methods that need to be implemented as the class inherits from hiopMatrix*/
 public:

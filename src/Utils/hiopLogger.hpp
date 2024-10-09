@@ -62,7 +62,7 @@ class hiopVector;
 class hiopResidual;
 class hiopIterate;
 class hiopMatrix;
-class hiopHessianLowRank;
+class HessianDiagPlusRowRank;
 class hiopNlpFormulation;
 class hiopOptions;
 class hiopFilter;
@@ -105,7 +105,7 @@ public:
   void write(const char* msg, const hiopIterate& r,           hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopMatrix& M,            hiopOutVerbosity v, int loggerid=0);
 #ifdef HIOP_DEEPCHECKS
-  void write(const char* msg, const hiopHessianLowRank& Hess, hiopOutVerbosity v, int loggerid=0);
+  void write(const char* msg, const HessianDiagPlusRowRank& Hess, hiopOutVerbosity v, int loggerid=0);
 #endif
   void write(const char* msg, const hiopNlpFormulation& nlp,  hiopOutVerbosity v, int loggerid=0);
   void write(const char* msg, const hiopOptions& options,     hiopOutVerbosity v, int loggerid=0);

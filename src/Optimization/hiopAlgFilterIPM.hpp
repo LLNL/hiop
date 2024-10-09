@@ -60,7 +60,7 @@
 #include "hiopIterate.hpp"
 #include "hiopResidual.hpp"
 #include "hiopFilter.hpp"
-#include "hiopHessianLowRank.hpp"
+#include "HessianDiagPlusRowRank.hpp"
 #include "hiopKKTLinSys.hpp"
 #include "hiopLogBarProblem.hpp"
 #include "hiopDualsUpdater.hpp"
