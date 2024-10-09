@@ -1600,11 +1600,11 @@ void hiopAlgFilterIPMQuasiNewton::save_state_to_sidre_group(::axom::sidre::Group
   
   //state of quasi-Newton Hessian approximation
   hiopHessianLowRank& hqn = dynamic_cast<hiopHessianLowRank&>(*_Hess_Lagr);
-  const double hqn_params[] = {(double)hqn.l_max,
-                               (double)hqn.l_curr,
-                               hqn.sigma,
-                               hqn.sigma0,
-                               (double)hqn.matrixChanged};
+  const double hqn_params[] = {(double)hqn.l_max_,
+                               (double)hqn.l_curr_,
+                               hqn.sigma_,
+                               hqn.sigma0_,
+                               (double)hqn.matrix_changed_};
   const size_type nhqn_params = sizeof(hqn_params) / sizeof(double);
   SidreHelper::copy_array_to_view(group, "Hess_quasiNewton_params", hqn_params, nhqn_params);
 
@@ -1722,11 +1722,11 @@ void hiopAlgFilterIPMQuasiNewton::load_state_from_sidre_group(const sidre::Group
   //ensure the internals are allocated for this mem length
   hqn.alloc_for_limited_mem(lim_mem_length);
   
-  hqn.l_max = (size_type) hqn_params[0];
-  hqn.l_curr = lim_mem_length;
-  hqn.sigma = hqn_params[2];
-  hqn.sigma0 = hqn_params[3];
-  hqn.matrixChanged = hqn_params[4];
+  hqn.l_max_ = (size_type) hqn_params[0];
+  hqn.l_curr_ = lim_mem_length;
+  hqn.sigma_ = hqn_params[2];
+  hqn.sigma0_ = hqn_params[3];
+  hqn.matrix_changed_ = hqn_params[4];
 
   assert(hqn.it_prev_);
   //quasi-Newton Hessian stores the previous iterate and corresponding derivatives

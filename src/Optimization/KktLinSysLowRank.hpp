@@ -151,7 +151,7 @@ protected:
     hiopHessianLowRank* HessLowR = dynamic_cast<hiopHessianLowRank*>(Hess_);
     assert(nullptr != HessLowR);
     if(HessLowR) {
-      HessLowR->timesVec_noLogBarrierTerm(beta, y, alpha, x);
+      HessLowR->times_vec_no_logbar_term(beta, y, alpha, x);
     }
   }
 #endif
