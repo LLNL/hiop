@@ -20,7 +20,7 @@ import os
 class BOAlgorithmBase:
   def __init__(self):
     self.acquisition_type = "LCB" # Type of acquisition function (default = "LCB")
-    self.batch_type = "KB"        # strategy for qEI
+    self.batch_type = "KB"        # Batched BO strategy
     self.xtrain = None            # Training data
     self.ytrain = None            # Training data
     self.init_ntrain = 0          # Initial (prior to BO optimization) number of GP training pts 
@@ -42,6 +42,8 @@ class BOAlgorithmBase:
   # Sets the acquisition function type and batch size
   def setAcquisitionType(self, acquisition_type, batch_size=1):
     self.acquisition_type = acquisition_type
+    assert isinstance(batch_size, int), f"batch_size {batch_size} not an integer"
+    assert batch_size > 0, f"batch_size {batch_size} is not strictly positive"
     self.batch_size = batch_size
 
   # Sets the training data
@@ -97,8 +99,6 @@ class BOAlgorithm(BOAlgorithmBase):
     assert acquisition_type in ["LCB", "EI"], f"Invalid acquisition_type: {acquisition_type}"
 
     batch_size = options.get('batch_size', 1)
-    assert isinstance(batch_size, int), f"batch_size {batch_size} not an integer"
-    assert batch_size > 0, f"batch_size {batch_size} is not strictly positive"
 
     self.setAcquisitionType(acquisition_type, batch_size)
 
