@@ -239,7 +239,7 @@ class BOAlgorithm(BOAlgorithmBase):
     self.logger.iterations(f"Best UNCONSTRAINED objective from {np.size(x_train, 0)} initial samples: {np.min(y_train):.4e} ")
 
     # determine which initial training points are feasible
-    fea_idxs = self.prob.if_feasible(x_train, y_train) # determine which points are feasible
+    fea_idxs = self.prob.if_feasible(x_train) # determine which points are feasible
     y_train_fea = y_train[fea_idxs] 
     x_train_fea = x_train[fea_idxs]
 
