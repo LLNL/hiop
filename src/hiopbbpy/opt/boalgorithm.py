@@ -251,15 +251,8 @@ class BOAlgorithm(BOAlgorithmBase):
       best_constrained_train_y = y_train_fea[best_fea_idx][0]
       best_constrained_train_x = x_train_fea[best_fea_idx]
       
-      count = 0
-      train_idx_opt = -1
-      for i, is_feasible in enumerate(fea_idxs):
-        if is_feasible:
-          if count == best_fea_idx:
-            train_idx_opt = i
-          count = count + 1
-      assert train_idx_opt >= 0, "error, contact developer"
-
+      feasible_train_indices = np.flatnonzero(fea_idxs)
+      train_idx_opt = int(feasible_train_indices[best_fea_idx])
 
       self.logger.info(
           f"Best objective: {best_constrained_train_y:.4e} from {y_train_fea.size} feasible initial training points"
