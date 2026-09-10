@@ -253,12 +253,12 @@ class BOAlgorithm(BOAlgorithmBase):
       assert len(matching_idxs) > 0, "error, contact developer"
       train_idx_opt = matching_idxs[0]
       self.logger.info(
-            f"Best CONSTRAINED objective from {y_train_fea.size} feasible initial samples: {best_constrained_train_y:.4e}"
+          f"Best objective: {best_constrained_train_y:.4e} from {y_train_fea.size} feasible initial training points"
         )
 
     else:
       best_constrained_train_y = np.inf
-      self.logger.info("No feasible samples found.")
+      self.logger.info("No feasible initial training points.")
 
     self.x_hist = []
     self.y_hist = []
