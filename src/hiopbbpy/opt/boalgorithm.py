@@ -79,8 +79,8 @@ class BOAlgorithm(BOAlgorithmBase):
     super().__init__()
     assert isinstance(gpsurrogate, GaussianProcess)
     assert len(xtrain) == len(ytrain), "xtrain, ytrain must be the same length"
-    assert len(ytrain.shape) == 2 and ytrain.shape[1] == 1, "ytrain must be a (n, 1) array"
-    assert len(xtrain.shape), "xtrain must be a (n, d) array"
+    assert ytrain.ndim == 2 and ytrain.shape[1] == 1, "ytrain must be a (n, 1) array"
+    assert xtrain.ndim == 2, "xtrain must be a (n, d) array"
     self.setTrainingData(xtrain, ytrain)
     self.init_ntrain = len(ytrain)
     self.prob = prob
