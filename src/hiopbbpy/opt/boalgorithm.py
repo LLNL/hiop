@@ -354,6 +354,7 @@ class BOAlgorithm(BOAlgorithmBase):
       self.x_opt = best_constrained_train_x
       self.y_opt = best_constrained_train_y
     self.logger.critical("===================================")
+    self.y_opt = np.array([self.y_opt])
 
 
 class minimizer_wrapper:
