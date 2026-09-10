@@ -33,9 +33,10 @@ class BOAlgorithmBase:
     # save some internal member train
     self.y_hist = None            # History of evaluations
     self.x_hist = None            # History of evaluations
-    self.x_opt = None             # Best observed point
-    self.y_opt = None             # Best observed value
-    self.idx_opt = None           # Index of the best observed value in the history
+    self.x_BO_opt = None          # Best point generated via BO
+    self.y_BO_opt = None          # Best objective value generated via BO
+    self.x_opt = None             # Best feasible point  (BO + feasible initial training points)
+    self.y_opt = None             # Best objective value (BO + feasible initial training points) 
     self.logger = Logger()        # logger
 
   # Sets the acquisition function type and batch size
@@ -237,21 +238,32 @@ class BOAlgorithm(BOAlgorithmBase):
     y_train = self.ytrain
     self.logger.iterations(f"Best UNCONSTRAINED objective from {np.size(x_train, 0)} initial samples: {np.min(y_train):.4e} ")
 
-    # filter feasible points
-    fea_idx = self.prob.if_feasible(x_train, y_train)
-    y_fea = y_train[fea_idx]
-    if y_fea.size > 0:
-      best_constrained = np.min(y_fea)
+    # determine which initial training points are feasible
+    fea_idxs = self.prob.if_feasible(x_train, y_train) # determine which points are feasible
+    y_train_fea = y_train[fea_idxs] 
+    x_train_fea = x_train[fea_idxs]
+
+    # determine the most optimal objective value from the set of feasible initial training points
+    if y_train_fea.size > 0:
+      best_fea_idx = np.argmin(y_train_fea)
+      best_constrained_train_y = y_train_fea[best_fea_idx][0]
+      best_constrained_train_x = x_train_fea[best_fea_idx]
+      
+      matching_idxs = np.where((x_train == best_constrained_train_x).all(axis=1))[0]
+      assert len(matching_idxs) > 0, "error, contact developer"
+      train_idx_opt = matching_idxs[0]
       self.logger.info(
-            f"Best CONSTRAINED objective from {y_fea.size} feasible initial samples: {np.min(y_fea):.4e}"
+            f"Best CONSTRAINED objective from {y_train_fea.size} feasible initial samples: {best_constrained_train_y:.4e}"
         )
+
     else:
+      best_constrained_train_y = np.inf
       self.logger.info("No feasible samples found.")
 
     self.x_hist = []
     self.y_hist = []
     
-    prev_best_y = np.inf
+    prev_best_y = best_constrained_train_y
     for i in range(self.bo_maxiter):
       self.logger.critical(f"*****************************")
       self.logger.critical(f"Iteration {i+1}/{self.bo_maxiter}")
@@ -286,7 +298,7 @@ class BOAlgorithm(BOAlgorithmBase):
       self.logger.debug(f"Feasible samples: {np.sum(feas_new)}/{self.batch_size}")
 
       min_y_new = np.min(y_new)
-      curr_best_y = np.minimum(prev_best_y, min_y_new)
+      curr_best_y = np.min([prev_best_y, min_y_new])
 
       self.logger.iterations(f"Best objective found in this iteration: {min_y_new:.4e} ")
       self.logger.scalars(f"Training set size is now {x_train.shape[0]}")
@@ -315,27 +327,32 @@ class BOAlgorithm(BOAlgorithmBase):
 
       prev_best_y = curr_best_y
 
-    # Save the optimal results and all the training data
-    self.idx_opt = np.argmin(self.y_hist)
-    self.x_opt = self.x_hist[self.idx_opt]
-    self.y_opt = self.y_hist[self.idx_opt]
     self.setTrainingData(x_train, y_train)
-
+    
+    # Save the BO optimal (excluding initial training pts) results
+    idx_BO_opt = np.argmin(self.y_hist)
+    self.x_BO_opt = self.x_hist[idx_BO_opt]
+    self.y_BO_opt = self.y_hist[idx_BO_opt][0]
+    
     self.logger.critical("===================================")
     self.logger.critical("Bayesian Optimization completed")
-    self.logger.critical(f"Total evaluations for initial samples: {len(self.ytrain)-len(self.y_hist)}")
-    self.logger.critical(f"Total evaluations for BO iterations: {len(self.y_hist)}")
-    train_idx_opt = np.argmin(self.ytrain[:self.init_ntrain])
-    x_train_opt = self.xtrain[train_idx_opt]
-    y_train_opt = self.ytrain[train_idx_opt][0]
-    if self.y_opt < y_train_opt:    
-      self.logger.critical(f"Optimal at BO iteration: {self.idx_opt//self.batch_size+1} ")
-      self.logger.critical(f"Best point: {self.x_opt.flatten()}")
-      self.logger.critical(f"Best objective value: {self.y_opt[0]}")
+    self.logger.critical(f"Total objective evaluations for initial samples: {self.init_ntrain}")
+    self.logger.critical(f"Total objective evaluations for BO iterations: {len(self.y_hist)}")
+    if self.y_BO_opt < best_constrained_train_y:
+      self.logger.critical(f"Optimal at BO iteration: {idx_BO_opt//self.batch_size+1} ")
+    else:
+      self.logger.critical(f"BO did not generate points more optimal than initial training points")
+    self.logger.critical(f"Best (BO) point: {self.x_BO_opt.flatten()}")
+    self.logger.critical(f"Best (BO) objective value: {self.y_BO_opt}")
+    if self.y_BO_opt < best_constrained_train_y:
+      self.x_opt = self.x_BO_opt
+      self.y_opt = self.y_BO_opt
     else:
       self.logger.critical(f"Optimal at training point: {train_idx_opt}")
-      self.logger.critical(f"Best (training) point: {x_train_opt}")
-      self.logger.critical(f"Best (training) point objective value: {y_train_opt}")
+      self.logger.critical(f"Best (training) point: {best_constrained_train_x.flatten()}")
+      self.logger.critical(f"Best (training) point objective value: {best_constrained_train_y}")
+      self.x_opt = best_constrained_train_x
+      self.y_opt = best_constrained_train_y
     self.logger.critical("===================================")
 
 
