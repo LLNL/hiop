@@ -23,28 +23,6 @@ import math
 import warnings
 import sys
 
-# define the variance upper bound problem
-# these problems are in the form
-# \max_{z} 1/2 z^T A z + b^T z + c
-# s.t. kl <= C z <= ku
-# where A is negative semi-definite
-# here the evaluate function is flipped negative in order that we can use ipopt minimization
-class variance_U_problem:
-  def __init__(self, A, b, c, C):
-    self.A = A
-    self.b = b
-    self.c = c
-    self.C = C 
-  # objective 1/2 x^T A x + b^T x + c
-  def evaluate(self, z):
-    return -1. * (np.inner(z, 0.5 * self.A.dot(z) + self.b) + self.c)
-  def evaluate_grad(self, z):
-    return -1. * (self.A.dot(z) + self.b)
-  def constraint(self, z):
-    return self.C.dot(z)
-  def constraintJacobian(self, z):
-    return self.C[:,:]
-
 class _BatchKrigingCovariance:
   """Lazy covariance for the current scalar, continuous SMT KRG.
 
@@ -1496,7 +1474,6 @@ class GPBoundComputationCommon:
                                                                   zetaL=zetaL, zetaU=zetaU, importance=Ai,
                                                                   max_pairs=int(c1 * ntrain), log_tol=1.e-10,
                                                                   path_screen=True)
-
           if rows:
             src, dst, a, b = zip(*rows)
             src = np.asarray(src, dtype=np.int64)
@@ -1507,90 +1484,6 @@ class GPBoundComputationCommon:
             # One vector constraint containing the selected two-nonzero rows.
             cons.append(cp.multiply(a, zetavar[dst]) <= cp.multiply(b, zetavar[src]))
             
-        # pairs = np.asarray(list(self.nearest_neighbor_pairs), dtype=int).reshape(-1, 2)
-
-        # if pairs.shape[0]:
-        #   # --------------------------------------------------------
-        #   # Pair selection: scores remain in physical k units.
-        #   # --------------------------------------------------------
-        #   x_ref = l + 0.5*(u - l)
-
-        #   grad_k, _, _, _, _ = lcb_gradient_at_single_reference(self, x_ref)
-        #   abs_grad = np.abs(np.asarray(grad_k, dtype=float).ravel())
-        #   sensitivity = abs_grad / max(float(abs_grad.max()), np.finfo(float).eps)
-
-        #   with np.errstate(under="ignore"):
-        #     Ei_exp = np.exp(-qL) * unit_expsec_gap(loss_width)
-        #   Ai = Ei_exp * (0.05 + 0.95*sensitivity)
-        #   distances = np.array([self.pairs_dist[i, r] for i, r in pairs], dtype=float)
-          
-        #   # The floor also handles coincident samples.
-        #   scores = (Ai[pairs[:, 0]] + Ai[pairs[:, 1]]) / np.maximum(distances, np.finfo(float).eps)
-
-        #   c1 = 1
-        #   order = np.argsort(scores)[::-1][:min(len(pairs), c1*ntrain)]
-
-        #   # --------------------------------------------------------
-        #   # Pair bounds and scaled ratio rows.
-        #   # --------------------------------------------------------
-        #   for pair_index in order:
-        #     i_idx, r_idx = map(int, pairs[pair_index])
-
-        #     if self.kernel_spec == "pow_exp":
-        #       # Existing endpoint construction for SE and Matern 1/2,
-        #       # evaluated through the positive-loss helper.
-        #       endpoint_differences = []
-
-        #       for endpoint in (l, u):
-        #         loss_i = gp_coordinate_loss(np.abs(endpoint - training_x[i_idx]) / scale, th, self.kernel_spec, self.p)
-        #         loss_r = gp_coordinate_loss(np.abs(endpoint - training_x[r_idx]) / scale, th, self.kernel_spec, self.p)
-        #         # lambda_i - lambda_r = loss_r - loss_i.
-        #         endpoint_differences.append(loss_r - loss_i)
-
-        #       at_l, at_u = endpoint_differences
-        #       lir_min = float(np.minimum(at_l, at_u).sum())
-        #       lir_max = float(np.maximum(at_l, at_u).sum())
-
-        #     else:
-        #       # Preserve the existing Matern pair-bound algorithms.
-        #       pair_bound = dphir_minmax_threehalves if self.kernel_spec == "matern32" else dphir_minmax_fivehalves
-
-        #       lir_min, lir_max = 0.0, 0.0
-
-        #       for j in range(dimx):
-        #         if th[j] == 0.0:
-        #           continue
-
-        #         centers = training_x[[i_idx, r_idx], j]
-
-        #         if l[j] == u[j]:
-        #           values = gp_coordinate_loss(np.abs(l[j] - centers) / scale[j], th[j], self.kernel_spec)
-        #           lo_j = hi_j = float(values[1] - values[0])
-
-        #         else:
-        #           _, _, lo_j, hi_j = pair_bound(float(l[j]), float(u[j]), float(th[j] / scale[j]), centers.tolist())
-
-        #         lir_min += float(lo_j)
-        #         lir_max += float(hi_j)
-
-        #     # log(zeta_i/zeta_r)   = log(k_i/k_r) + scale_shift_i - scale_shift_r.
-        #     shift = scale_shift[i_idx] - scale_shift[r_idx]
-
-        #     add_ratio_constraints(cons, zetavar[i_idx], zetavar[r_idx], lir_min + shift, lir_max + shift,)  
-        #     #add_ratio_constraints(cons, kvec[i_idx], kvec[r_idx], lir_min, lir_max)
-            
-        #     #add_mccormick_ratio_constraints(cons=cons, ki=kvec[i_idx], kr=kvec[r_idx], lam_i=lamvar[i_idx], lam_r=lamvar[r_idx],
-        #     #                                lir_min=lir_min, lir_max=lir_max, ki_min=kL[i_idx],
-        #     #                                ki_max=kU[i_idx], kr_min=kL[r_idx], kr_max=kU[r_idx], name=f"{i_idx}_{r_idx}")
-            
-
-        #     #sir_min, sir_max = compute_sigma_ir_bounds(l=l, u=u, theta=th, x_scale=self.X_scale, x_i=self.x[i_idx], x_r=self.x[r_idx],
-        #     #                                           kernel_spec=self.kernel_spec, p=getattr(self, "p", 2.0))
-        #     #add_ratio_informed_product_constraints(cons=cons, ki=kvec[i_idx], kr=kvec[r_idx], dirL=lir_min, dirU=lir_max, sirL=sir_min, sirU=sir_max)
-        #     #add_mccormick_sum_product_constraints(cons, kvec[i_idx], kvec[r_idx], lamvar[i_idx], lamvar[r_idx], kL[i_idx], kU[i_idx],
-        #     #                                      kL[r_idx], kU[r_idx], sir_min, sir_max)
-        #     #add_product_constraints(cons, kvec[i_idx], kvec[r_idx], sir_min, sir_max)
-
     opt_tol = 1.e-8
     opt_rel_tol = 1.e-8
     for i in range(3):
