@@ -41,15 +41,10 @@ def _smt_se_geometry(gpsurrogate):
   power = float(_smt_option(sm.options, "pow_exp_power", 2.0))
 
   if corr not in ("pow_exp", "squar_exp"):
-    raise NotImplementedError(
-        f"Clustering diagnostics currently assume an SE kernel; corr={corr}"
-    )
+    raise NotImplementedError(f"Clustering diagnostics currently assume an SE kernel; corr={corr}")
 
   if corr == "pow_exp" and not np.isclose(power, 2.0):
-    raise NotImplementedError(
-        f"Clustering diagnostics currently assume pow_exp_power=2; "
-        f"got {power}"
-    )
+    raise NotImplementedError(f"Clustering diagnostics currently assume pow_exp_power=2; got {power}")
 
   theta = getattr(sm, "optimal_theta", None)
   if theta is None:
@@ -541,6 +536,9 @@ class BOAlgorithm(BOAlgorithmBase):
 
     self._train_surrogate(x_train, y_train, full_retrain=True)
 
+    corr = str(_smt_option(self.gpsurrogate.surrogatesmt.options, "corr", "pow_exp")).lower()
+    power = float(_smt_option(self.gpsurrogate.surrogatesmt.options, "pow_exp_power", 2.0))
+    
     #
     # filter feasible points
     #
@@ -572,31 +570,30 @@ class BOAlgorithm(BOAlgorithmBase):
       self.logger.critical(f"*****************************")
       self.logger.critical(f"Iteration {i+1}/{self.bo_maxiter}")
 
+      bo_iteration_number = i + 1
       #
       # Diagnostics code
       #
-      bo_iteration_number = i + 1
-
-      sample_metrics = _sample_set_clustering_metrics(self.gpsurrogate, x_train)
-
-      self.logger.scalars(f"Sample-set clustering (Euclidean distance) at start of BO iteration {bo_iteration_number}: ")
-      self.logger.scalars(f"  domain_nn_min={sample_metrics['domain_nn_min']:.6e}, "
-                          f"domain_nn_p01="
-                          f"{sample_metrics['domain_nn_p01']:.6e}, "
-                          f"domain_nn_p05="
-                          f"{sample_metrics['domain_nn_p05']:.6e}, "
-                          f"domain_nn_p50="
-                          f"{sample_metrics['domain_nn_p50']:.6e}")
-
-      self.logger.scalars(f"Sample-set kernel (theta-weighted) distance and GP correlation at start of BO iteration {bo_iteration_number}: ")
-      self.logger.scalars(f"  kernel_nn_min="
-                          f"{sample_metrics['kernel_nn_min']:.6e}, "
-                          f"corr_max_offdiag="
-                          f"{sample_metrics['corr_max_offdiag']:.6e}, "
-                          f"pairs_corr_ge_0p95="
-                          f"{sample_metrics['pairs_corr_ge_0p95']}, "
-                          f"pairs_corr_ge_0p99="
-                          f"{sample_metrics['pairs_corr_ge_0p99']}")
+      if corr == "pow_exp" and np.isclose(power, 2.0):
+        sample_metrics = _sample_set_clustering_metrics(self.gpsurrogate, x_train)
+        self.logger.scalars(f"Sample-set clustering (Euclidean distance) at start of BO iteration {bo_iteration_number}: ")
+        self.logger.scalars(f"  domain_nn_min={sample_metrics['domain_nn_min']:.6e}, "
+                            f"domain_nn_p01="
+                            f"{sample_metrics['domain_nn_p01']:.6e}, "
+                            f"domain_nn_p05="
+                            f"{sample_metrics['domain_nn_p05']:.6e}, "
+                            f"domain_nn_p50="
+                            f"{sample_metrics['domain_nn_p50']:.6e}")
+        
+        self.logger.scalars(f"Sample-set kernel (theta-weighted) distance and GP correlation at start of BO iteration {bo_iteration_number}: ")
+        self.logger.scalars(f"  kernel_nn_min="
+                            f"{sample_metrics['kernel_nn_min']:.6e}, "
+                            f"corr_max_offdiag="
+                            f"{sample_metrics['corr_max_offdiag']:.6e}, "
+                            f"pairs_corr_ge_0p95="
+                            f"{sample_metrics['pairs_corr_ge_0p95']}, "
+                            f"pairs_corr_ge_0p99="
+                            f"{sample_metrics['pairs_corr_ge_0p99']}")
 
       selected_point_metrics = []
       q_batch = self.batch_size      

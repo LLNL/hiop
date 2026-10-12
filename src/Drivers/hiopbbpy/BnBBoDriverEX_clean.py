@@ -381,7 +381,7 @@ if __name__ == "__main__":
   gp_model = smtKRG(theta, problem.xlimits, nx, corr=corr, pow_exp_power=pow_exp_power, eval_noise=eval_noise, fix_theta=fix_theta, theta_bounds=theta_bounds, hyper_opt=hyper_opt, nugget=nugget)
   gp_model.train(x_train, y_train)
 
-  beta = 1
+  beta = 3
   if acquisition_type == 'LCB':
     acqf = LCBacquisition(gp_model, beta=beta)
   else:
