@@ -595,7 +595,7 @@ class BOAlgorithm(BOAlgorithmBase):
                             f"pairs_corr_ge_0p99="
                             f"{sample_metrics['pairs_corr_ge_0p99']}")
 
-      selected_point_metrics = []
+      #selected_point_metrics = []
       q_batch = self.batch_size      
       y_train_virtual = y_train.copy() # old training + batch_size num of virtual points
       if self.opt_solver != "BnB":
@@ -604,7 +604,7 @@ class BOAlgorithm(BOAlgorithmBase):
           self.logger.scalars(f"In batch {j+1}/{self.batch_size}")
           x_new = self._find_best_point(x_train, y_train_virtual, BOit=i)
 
-          selected_point_metrics.append(_new_point_clustering_metrics(self.gpsurrogate, x_train, x_new))
+          #selected_point_metrics.append(_new_point_clustering_metrics(self.gpsurrogate, x_train, x_new))
           
           # Update training sample points
           x_train = np.vstack([x_train, x_new])
@@ -732,14 +732,14 @@ class BOAlgorithm(BOAlgorithmBase):
 
         q_batch = len(x_new)
         x_eval = np.asarray(x_new, dtype=float)
-        
-        diagnostic_old_x = np.array(x_train, copy=True)
-        for point in x_new:
-          selected_point_metrics.append(_new_point_clustering_metrics(self.gpsurrogate, diagnostic_old_x, point))
 
-          # For batch_size > 1, later points are also compared
-          # with points selected earlier in this batch.
-          diagnostic_old_x = np.vstack([diagnostic_old_x, point])
+        if corr == "pow_exp" and np.isclose(power, 2.0):
+          diagnostic_old_x = np.array(x_train, copy=True)
+          for point in x_new:
+            selected_point_metrics.append(_new_point_clustering_metrics(self.gpsurrogate, diagnostic_old_x, point))
+            # For batch_size > 1, later points are also compared
+            # with points selected earlier in this batch.
+            diagnostic_old_x = np.vstack([diagnostic_old_x, point])
         
         if self.bnb_warm_start:
           # Update queue in order to warm-start BnB at next BO step
