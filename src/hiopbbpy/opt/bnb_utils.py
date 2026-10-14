@@ -64,6 +64,8 @@ def polynomial_multiply(c1, c2):
   c3 = c3_rev[::-1]
   return c3
 
+# note: the function is not needed anymore since the extreme points are at the endpoints
+#       if enabled back, Xbrl should be sorted 
 
 # find min and max of phi_{3/2,ij}(t) - phi_{3/2,rj}(t)
 #              over interval l u
@@ -115,6 +117,9 @@ def dphir_minmax_threehalves(l, u, thj, Xir):
   y_min = yroots[i_min]
   return x_min, x_max, y_min, y_max
     
+
+# note: the function is not needed anymore since the extreme points are at the endpoints
+#       if enabled back, Xbrl should be sorted 
 
 # find min and max of phi_{5/2,ij}(t) - phi_{5/2,rj}(t)
 #              over interval l u
@@ -217,36 +222,56 @@ class matern_phi:
     for i in range(self.p):
       beta = np.zeros(self.p)
       beta[i] = -1.0
-      alpha = (self.evaluate_i(u, i) - self.evaluate_i(l, i)) / (u - l)
-      Djsec.append([alpha, beta])
+      phi_l = self.evaluate_i(l, i)
+      phi_u = self.evaluate_i(u, i)
+      alpha = (phi_u - phi_l) / (u - l)
+      rm = alpha * l - phi_l
+      Djsec.append([alpha, beta, rm])
     return Djsec
   def generate_Djtan(self, l, u):
-    midpt = (l + u) / 2.
-    Xbrk = [l, midpt, u] # "break points"
-    for x in self.X:
-      if x > l and x < u and not np.isclose(x, midpt, rtol=0.):
-        Xbrk.append(x)
+    midpt = 0.5 * (l + u)
     Djtan = [] # list of cut directions (alpha, beta)
     for i in range(self.p):
+      Xbrk = [l, midpt, u]
+      xi = self.X[i]
+      if xi > l and xi < u and not np.isclose(xi, midpt, rtol=0.):
+        Xbrk.append(xi)
       for t in Xbrk:
-        alpha = -1.0 * self.evaluate_deriv_i(t, i)
+        alpha = -self.evaluate_deriv_i(t, i)
         beta = np.zeros(self.p)
         beta[i] = 1.0
-        Djtan.append([alpha, beta])
+        rm = alpha * t + self.evaluate_i(t, i)
+        Djtan.append([alpha, beta, rm])
     return Djtan
+  def generate_Djadj(self, l, u):
+    order = np.argsort(np.asarray(self.X), kind="stable")
+    phi_l = np.array([self.evaluate_i(l, i) for i in range(self.p)])
+    phi_u = np.array([self.evaluate_i(u, i) for i in range(self.p)])
+    Dj = []
+    for k in range(self.p - 1):
+      i, r = int(order[k]), int(order[k + 1])
+      if np.isclose(self.X[i], self.X[r], atol=1e-6, rtol=0.):
+        continue
+      beta = np.zeros(self.p)
+      beta[i], beta[r] = 1., -1.
+      dh = (phi_u[i] - phi_u[r]) - (phi_l[i] - phi_l[r])
+      alpha = -dh / (u - l)
+      Dj.append([alpha, beta])
+      if abs(alpha) > 1e-4:
+        Dj.append([0., beta.copy()])
+    return Dj  
   def generate_alpha_beta_r(self, l, u):
     Djsec = self.generate_Djsec(l, u)
     Djtan = self.generate_Djtan(l, u)
-    Dj = Djsec + Djtan
-    abrs = []
-    for k in range(len(Dj)):
-      alpham = Dj[k][0]
-      betam  = Dj[k][1]
+    abrs = Djsec + Djtan
+    Djadj = self.generate_Djadj(l, u)
+    for alpha, beta in Djadj:
       if self.nu == 1.5:
-        _, _, _, rm = Fjmax_threehalves(l, u, self.X, self.th, alpham, betam)
+        _, _, ymin, ymax = Fjmax_threehalves(l, u, self.X, self.th, alpha, beta)
       else:
-        _, _, _, rm = Fjmax_fivehalves(l, u, self.X, self.th, alpham, betam)
-      abrs.append([alpham, betam, rm])
+        _, _, ymin, ymax = Fjmax_fivehalves(l, u, self.X, self.th, alpha, beta)
+      abrs.append([alpha, beta, ymax])
+      abrs.append([-alpha, -beta, -ymin])
     return abrs
    
 
@@ -258,8 +283,18 @@ class matern_phi:
 # alpha a scalar
 # beta an array of length X
 def Fjmax_threehalves(lj, uj, X, thj, alpha, beta):
-  n = len(X)
-  assert len(beta) == n, "beta not appropriate dimension"
+  X = np.asarray(X, dtype=float)
+  beta = np.asarray(beta, dtype=float)
+  assert beta.size == X.size, "beta not appropriate dimension"
+  #sparsify X and beta to reduce support -> less polyroots
+  active = np.flatnonzero(beta != 0.)
+  X, beta = X[active], beta[active]
+  n = X.size
+
+  if n==0:
+    yl, yu = alpha * lj, alpha * uj
+    return (lj, uj, yl, yu) if yl <= yu else (uj, lj, yu, yl)
+    
   def phiii(s, i):
     assert i in range(n), "i out of range for phii call"
     z = np.sqrt(3.) * thj * np.abs(s - X[i])
@@ -271,31 +306,30 @@ def Fjmax_threehalves(lj, uj, X, thj, alpha, beta):
     return y
   # need to determine all breakpoints on interval [lj, uj]
   # data points for GP + end points
-  Xbrkpts = [lj, uj]
-  for x in X:
-    if x > lj and x < uj:
-      Xbrkpts.append(x)
+  Xbrkpts = np.unique(np.concatenate(([lj], X[(X > lj) & (X < uj)], [uj])))
   # need to do global maximization over each subinterval
-  nintervals = len(Xbrkpts) - 1 
   xroots = []
-  for i in range(nintervals): # for each interval between two (training + end) points
+  for i in range(len(Xbrkpts) - 1):
+    # for each interval between two (training + end) points
     xl = Xbrkpts[i]
     xu = Xbrkpts[i+1]
-    omega = np.zeros(n)
-    for k in range(n):
-      # take midpoint to determine sign
-      omega[k] = np.sign((xl + xu) / 2. - X[k]) / (np.sqrt(3.0) * thj)
+    midpt = 0.5 * (xl + xu)
+    # take midpoint to determine sign
+    omega = np.sign(midpt - X) / (np.sqrt(3.) * thj)
+
     alphap = alpha - np.inner(beta, 1. / omega)
     sigma = X - omega
     coeffs = alphap * basis_conversion(sigma)
     for k in range(n):
       s_temp = np.array([sig for idx, sig in enumerate(sigma) if idx != k])
       coeffs[1:] += beta[k] * basis_conversion(s_temp)
+
     roots = np.polynomial.polynomial.polyroots(coeffs[::-1])
     for root in roots:
       if np.allclose(root.imag, 0.0) and root.real > xl and root.real < xu:
         xroots.append(root.real)
-  xroots = np.array(xroots + [lj, uj] + X)
+        
+  xroots = np.asarray(xroots + Xbrkpts.tolist())
   yroots = Fj(xroots)
   i_min = np.argmin(yroots)
   i_max = np.argmax(yroots)
@@ -305,10 +339,6 @@ def Fjmax_threehalves(lj, uj, X, thj, alpha, beta):
   y_min = yroots[i_min]
   return x_min, x_max, y_min, y_max
 
-
-
-
-
 # maximize Fj (\nu=5/2) on 1d interval [lj, uj]
 # lj, uj scalars
 # X a list
@@ -316,8 +346,18 @@ def Fjmax_threehalves(lj, uj, X, thj, alpha, beta):
 # alpha a scalar
 # beta an array of length X
 def Fjmax_fivehalves(lj, uj, X, thj, alpha, beta):
-  n = len(X)
-  assert len(beta) == n, "beta not appropriate dimension"
+  X = np.asarray(X, dtype=float)
+  beta = np.asarray(beta, dtype=float)
+  assert beta.size == X.size, "beta not appropriate dimension"
+  active = np.flatnonzero(beta != 0.)
+  #sparsify beta and x
+  X, beta = X[active], beta[active]
+  n = X.size
+
+  if n == 0:
+    yl, yu = alpha * lj, alpha * uj
+    return (lj, uj, yl, yu) if yl <= yu else (uj, lj, yu, yl)
+
   def phii(s, i):
     z = np.sqrt(5.) * thj * np.abs(s - X[i])
     return np.log(1. + z + (z**2.) / 3.) - z
@@ -328,30 +368,27 @@ def Fjmax_fivehalves(lj, uj, X, thj, alpha, beta):
     return y    
   # need to determine all breakpoints on interval [lj, uj]
   # data points for GP + end points
-  Xbrkpts = [lj, uj]
-  for x in X:
-    if x > lj and x < uj:
-      Xbrkpts.append(x)
+  Xbrkpts = np.unique(np.concatenate(([lj], X[(X > lj) & (X < uj)], [uj])))
   xroots = [] 
   # need to do global maximization over each subinterval
-  nintervals = len(Xbrkpts) - 1 
-  for i in range(nintervals):
+  for i in range(len(Xbrkpts) - 1):
     xl = Xbrkpts[i]
     xu = Xbrkpts[i+1]
-    omega = np.zeros(n)
-    zeta = np.zeros(n)
-    for k in range(n):
-      # take midpoint to determine sign
-      omega[k] = np.sign((xl + xu) / 2. - X[k]) / (np.sqrt(5.0) * thj)
-      zeta[k] = 5. / 3. * thj**2. * omega[k]
+    midpt = 0.5 * (xl + xu)
+    # take midpoint to determine sign
+    omega = np.sign(midpt - X) / (np.sqrt(5.) * thj)
+    zeta = 5. / 3. * thj**2. * omega
+
     alphap = alpha - np.inner(beta, 1. / omega) # alpha "prime"
     # Step 1: build up P(s) coeffs
     coeffs = [1.] # initialize as constant function
     for k in range(n):
       c_temp = basis_conversion_2(X[k], 0., [zeta[k], 1., omega[k]])
       coeffs = polynomial_multiply(coeffs, c_temp)  
+
     # Step 2: Scale P(s) by alpha'
-    coeffs *= alphap 
+    coeffs = np.asarray(coeffs, dtype=float) * alphap
+    
     # Step 3: for each k: add 2 zeta_k * beta_k P_k(s) * (s - x_k + 1 / (2*zeta_k))
     for k in range(n):
       # initialize Pk as constant function
@@ -372,7 +409,7 @@ def Fjmax_fivehalves(lj, uj, X, thj, alpha, beta):
     for root in roots:
       if np.allclose(root.imag, 0.0) and root.real > xl and root.real < xu:
         xroots.append(root.real)
-  xroots = np.array(xroots + [lj, uj] + X)
+  xroots = np.asarray(xroots + Xbrkpts.tolist())
   yroots = Fj(xroots)
   i_min = np.argmin(yroots)
   i_max = np.argmax(yroots)

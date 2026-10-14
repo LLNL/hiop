@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import uniform
 import cvxpy as cp
 import heapq
-from scipy import linalg
+from scipy import linalg, sparse
 from scipy.stats import qmc
 from .acquisition import EIacquisition, LCBacquisition
 from ..utils.util import Evaluator, MPIEvaluator, Logger
@@ -10,6 +10,9 @@ from .bnb_utils import *
 from .opt_utils import minimizer_wrapper, fit_common_se_point_from_ratios
 from .async_bnb import BnBNode, BranchResult, RestartResult, CloseReason, LeafState, initialize_async_search, run_async_search
 from itertools import count
+
+from scipy.spatial import cKDTree
+
 try:
   from mpi4py import MPI
 except ImportError:
@@ -20,6 +23,117 @@ import math
 import warnings
 import sys
 
+class _BatchKrigingCovariance:
+  """Lazy covariance for the current scalar, continuous SMT KRG.
+
+  Covariances are divided by sigma2 internally. The GP is not refitted.
+  """
+
+  def __init__(self, bnb, X):
+    sm = bnb.gpsurrogate.surrogatesmt
+    if sm.options["poly"] != "constant":
+      raise NotImplementedError("Batch covariance requires poly='constant'")
+    if not getattr(sm, "is_continuous", True):
+      raise NotImplementedError("Continuous inputs are required")
+    if "is_ri" in sm.options and sm.options["is_ri"]:
+      raise NotImplementedError("Reinterpolating KRG is not supported")
+
+    par = sm.optimal_par
+    scale = np.asarray(par["sigma2"], dtype=float).reshape(-1)
+    if (scale.size != 1 or not np.isfinite(scale[0]) or scale[0] <= 0.0):
+      raise ValueError("A positive scalar SMT process variance is required")
+
+    self.sigma2 = float(scale[0])
+    self.kind = bnb.kernel_spec
+    self.power = getattr(bnb, "p", 1.0)
+    self.theta = np.broadcast_to(np.asarray(bnb.theta, dtype=float).reshape(-1), (X.shape[1],))
+    self.Z = (X - bnb.X_offset) / bnb.X_scale
+
+    # W[:, i] = C^{-1} k(Xtrain, X[i]).
+    self.W = linalg.solve_triangular(par["C"], self.kernel(bnb.Xc, self.Z), lower=True)
+
+    # Constant-trend correction, matching SMT's variance formula.
+    self.H = linalg.solve_triangular(par["G"].T, par["Ft"].T @ self.W - np.ones((1, len(X))), lower=True)
+
+    self.diag = 1.0 - np.sum(self.W**2, axis=0) + np.sum(self.H**2, axis=0)
+    self.roundoff = 1.e-9 * max(1.0, float(np.max(np.abs(self.diag))))
+    if (not np.all(np.isfinite(self.diag)) or np.min(self.diag) < -self.roundoff):
+      raise FloatingPointError("Invalid posterior covariance diagonal")
+    self.diag = np.maximum(self.diag, 0.0)
+
+    # Detect kernel, scaling, or SMT API mismatches.
+    ii = np.unique(np.linspace(0, len(X) - 1, min(16, len(X)), dtype=int))
+    reference = np.asarray(bnb.gpsurrogate.variance(X[ii])).reshape(-1)
+    if not np.allclose(self.sigma2 * self.diag[ii], reference, rtol=1.e-6, atol=1.e-10 * self.sigma2,):
+      raise RuntimeError("Batch covariance does not match SMT variances")
+
+  def kernel(self, A, B):
+    """Correlation in SMT coordinates; product-form Matern kernels."""
+    logk = np.zeros((len(A), len(B)))
+    for j, theta in enumerate(self.theta):
+      distance = np.abs(A[:, j, None] - B[None, :, j])
+
+      if self.kind == "pow_exp":
+        logk -= theta * distance**self.power
+      elif self.kind in ("matern32", "matern52"):
+        root = np.sqrt(3.0 if self.kind == "matern32" else 5.0)
+        t = root * theta * distance
+        polynomial_minus_one = (t if self.kind == "matern32" else t + t*t/3.0)
+        logk += np.log1p(polynomial_minus_one) - t
+      else:
+        raise NotImplementedError(self.kind)
+
+    return np.exp(logk)
+
+  def column(self, j):
+    """Return C_t(X, X[j]) / sigma2 without forming C_t(X, X)."""
+    col = self.kernel(self.Z, self.Z[j:j+1]).ravel() - self.W.T @ self.W[:, j] + self.H.T @ self.H[:, j]        
+    col[j] = self.diag[j]
+    return col
+
+
+def _greedy_condvar(cov, q, noise_variance=0.0, variance_rtol=1.e-10):
+  """Select index zero first, then maximize residual latent variance.
+
+  Constructs the full candidate-by-candidate covariance matrix.
+  """
+  m = len(cov.diag)
+  q = min(q, m)
+  residual = cov.diag.copy()
+  available = np.ones(m, dtype=bool)
+  
+  # Columns encode successive covariance reductions.
+  factors = np.zeros((m, q))
+  selected, selected_var = [], []
+  floor = variance_rtol * float(np.max(residual))
+  noise = noise_variance / cov.sigma2
+  
+  for j in range(q):
+    p = (0 if j == 0 else int(np.argmax(np.where(available, residual, -np.inf))))
+    if j > 0 and residual[p] <= floor:
+      break
+
+    selected.append(p)
+    selected_var.append(cov.sigma2 * residual[p])
+    available[p] = False
+
+    if j + 1 == q:
+      break
+
+    denominator = residual[p] + noise
+    # A zero-variance noiseless observation adds no information.
+    if denominator > 0.0:
+      col = (cov.column(p) - factors[:, :j] @ factors[p, :j])
+      factors[:, j] = col / np.sqrt(denominator)
+      residual -= factors[:, j]**2
+      
+      if (not np.all(np.isfinite(residual)) or np.any(residual[available] < -cov.roundoff)):
+        raise FloatingPointError("Unstable conditional-variance update")
+      residual = np.maximum(residual, 0.0)
+      
+      
+  return np.asarray(selected, dtype=int), np.asarray(selected_var)
+  
 def dist_to_corner(l, u, x):
   box = np.array([l, u])
   return np.linalg.norm(np.min(np.abs(box - x), axis=0))
@@ -773,6 +887,244 @@ def unit_expsec_gap(width):
 
   return np.maximum(result, 0.0)
 
+def build_mode6_pair_candidates(owner, nneighbors=3, include_mst=False):
+  """
+  Returns candidate pairs and their kernel dissimilarities.
+
+  Includes closest 'nneighbors' and, optionally, edges of the minimum spanning tree.
+  The closest neighbors capture close kernels (within local clusters), while MST 
+  captures additional non-local connections between kernels.
+  """
+  X = np.asarray(owner.x, dtype=float)
+  if X.ndim != 2 or not np.all(np.isfinite(X)):
+    raise ValueError("Training inputs must be a finite 2-D array")
+  if not isinstance(nneighbors, (int, np.integer)) or nneighbors < 0:
+    raise ValueError("nneighbors must be a nonnegative integer")
+
+  n, dim = X.shape
+  if n < 2:
+    return np.empty((0, 2), dtype=np.int64), {}
+
+  scale = np.broadcast_to(np.asarray(owner.X_scale, float).ravel(), (dim,))
+  theta = np.broadcast_to(np.asarray(owner.theta, float).ravel(), (dim,))
+  if not np.all(np.isfinite(scale)) or np.any(scale <= 0.0):
+    raise ValueError("Invalid input normalization scales")
+
+  p = getattr(owner, "p", 2.0)
+
+  # D[i,r] = -log K(x_i,x_r).
+  # Construct once per training-set/kernel update, not once per BnB node.
+  # Keep zero distances: coincident samples are legitimate candidates.
+  D = np.full((n, n), np.inf)
+  for i in range(n - 1):
+    dx = np.abs(X[i + 1:] - X[i]) / scale
+    values = gp_coordinate_loss(dx, theta, owner.kernel_spec, p).sum(axis=1)
+    if not np.all(np.isfinite(values)):
+      raise FloatingPointError("Nonfinite kernel dissimilarities")
+    D[i, i + 1:] = values
+    D[i + 1:, i] = values
+
+  edges = set()
+  m = min(nneighbors, n - 1)
+  for i in range(n):
+    for r in np.argsort(D[i], kind="stable")[:m]:
+      edges.add((min(i, int(r)), max(i, int(r))))
+
+  if include_mst:
+    # Prim algorithm - also handles zero-weight edges.
+    used = np.zeros(n, dtype=bool)
+    best = np.full(n, np.inf)
+    parent = np.full(n, -1, dtype=int)
+    best[0] = 0.0
+
+    for _ in range(n):
+      v = int(np.argmin(np.where(used, np.inf, best)))
+      if parent[v] >= 0:
+        r = int(parent[v])
+        edges.add((min(v, r), max(v, r)))
+
+      used[v] = True
+      improve = (~used) & (D[v] < best)
+      best[improve] = D[v, improve]
+      parent[improve] = v
+
+  pairs = np.asarray(sorted(edges), dtype=np.int64).reshape(-1, 2)
+  distances = {(int(i), int(r)): float(D[i, r]) for i, r in pairs}
+  return pairs, distances
+
+def mode6_scaled_logratio_bounds(owner, l, u, pairs, scale_shift):
+  """Endpoint bounds on log(zeta_i/zeta_r), for all four kernels."""
+  X = np.asarray(owner.x, dtype=float)
+  n, dim = X.shape
+  l = np.asarray(l, float).ravel()
+  u = np.asarray(u, float).ravel()
+  pairs = np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+  shift = np.asarray(scale_shift, float).reshape(n)
+
+  scale = np.broadcast_to(np.asarray(owner.X_scale, float).ravel(), (dim,))
+  theta = np.broadcast_to(np.asarray(owner.theta, float).ravel(), (dim,))
+  if(l.shape != (dim,) or u.shape != (dim,) or np.any(l > u)
+     or np.any(scale <= 0.0) or not np.all(np.isfinite(shift))):
+    raise ValueError("Invalid box, scales, or scaling shift")
+
+  p = getattr(owner, "p", 2.0)
+  at_l = gp_coordinate_loss(np.abs(l - X) / scale, theta, owner.kernel_spec, p)
+  at_u = gp_coordinate_loss(np.abs(u - X) / scale, theta, owner.kernel_spec, p)
+
+  i, r = pairs.T
+
+  # lambda_i - lambda_r = loss_r - loss_i.
+  dl = at_l[r] - at_l[i]
+  du = at_u[r] - at_u[i]
+  lo = np.minimum(dl, du).sum(axis=1) + shift[i] - shift[r]
+  hi = np.maximum(dl, du).sum(axis=1) + shift[i] - shift[r]
+
+  # Practical outward padding, including losses that cancel in differences.
+  # This is not an interval-arithmetic certificate for kernel evaluation.
+  magnitude = (at_l[i] + at_l[r] + at_u[i] + at_u[r]).sum(axis=1)
+  magnitude += np.abs(shift[i]) + np.abs(shift[r])
+  pad = (64.0 * np.finfo(float).eps * max(1, dim) * (1.0 + magnitude))
+
+  return (np.nextafter(lo - pad, -np.inf), np.nextafter(hi + pad, np.inf))
+
+def select_mode6_ratio_rows(pairs, deltaL, deltaU, zetaL, zetaU, importance,
+                            max_pairs, log_tol=1.e-10, path_screen=True):
+  """Return (src, dst, a, b) rows: a*zeta[dst] <= b*zeta[src]. 
+
+  Ratio constraints are one-sided for easier processing.
+
+  Only retained rows enter the implication graph. No connectivity,
+  acyclicity, or degree restriction is imposed on the selected pairs.
+  """
+  pairs = np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+  # deltas are lower and upper bounds on the scaled log ratio log(zeta_i/zeta_r)
+  deltaL = np.asarray(deltaL, float)
+  deltaU = np.asarray(deltaU, float)
+  L, U, A = [np.asarray(v, float).ravel() for v in (zetaL, zetaU, importance)]
+  n, m = A.size, len(pairs)
+
+  if (L.size != n or U.size != n
+      or deltaL.shape != (m,) or deltaU.shape != (m,)
+      or not np.all(np.isfinite(np.r_[L, U, A]))
+      or np.any(L < 0.0) or np.any(U <= 0.0)
+      or np.any(L > U) or np.any(A < 0.0)
+      or np.any(pairs < 0) or np.any(pairs >= n)
+      or np.any(pairs[:, 0] >= pairs[:, 1])):
+    raise ValueError("Invalid mode-6 selection data")
+
+  if (not isinstance(max_pairs, (int, np.integer))
+      or max_pairs < 0
+      or not np.isfinite(log_tol) or log_tol < 0.0):
+    raise ValueError("Invalid pair budget or log tolerance")
+
+  stats = dict(candidates=m, tested_pairs=0, kept_pairs=0, kept_rows=0,
+               box_skips=0, path_skips=0, numeric_skips=0, cycle_skips=0)
+  rows = []
+  if m == 0 or max_pairs == 0:
+    return rows, stats
+
+  logL = np.full(n, -np.inf)
+  positive = L > 0.0
+  logL[positive] = np.nextafter(np.log(L[positive]), -np.inf)
+  logU = np.nextafter(np.log(U), np.inf)
+
+  P = None
+  if path_screen:
+    # Fixed reference vertex n represents zeta[n] = 1.
+    # P[a,b] bounds log(zeta[b]/zeta[a]).
+    # Infinity denotes an unavailable bound.
+    lo = np.r_[logL, 0.0]
+    hi = np.r_[logU, 0.0]
+    P = np.nextafter(hi[None, :] - lo[:, None], np.inf)
+    np.fill_diagonal(P, 0.0)
+
+  # Additive importance score; deterministic index-based tie breaking.
+  scores = A[pairs[:, 0]] + A[pairs[:, 1]]
+  order = np.lexsort((pairs[:, 1], pairs[:, 0], -scores))
+
+  for index in order:
+    if stats["kept_pairs"] >= max_pairs:
+      break
+    stats["tested_pairs"] += 1
+
+    i, r = map(int, pairs[index])
+    dL, dU = float(deltaL[index]), float(deltaU[index])
+    if not np.isfinite(dL) or not np.isfinite(dU) or dL > dU:
+      stats["numeric_skips"] += 2
+      continue
+
+    before = len(rows)
+
+    # Lower ratio: zeta_r <= exp(-dL)*zeta_i.
+    # Upper ratio: zeta_i <= exp( dU)*zeta_r.
+    for src, dst, w in ((i, r, -dL), (r, i, dU)):
+
+      # avoid constructing exp(w) as it may become very large
+      # construct coeffs a and b to be at most one 
+      with np.errstate(under="ignore"):
+        small = float(np.exp(-abs(w)))
+
+      if small < np.finfo(float).tiny:
+        # do not let underflow enable a zero-forcing inequality
+        #
+        # skips zeta_i <= e^w \zeta_r for large w since it would
+        # numerically become zeta_i<=0 and would exclude positive
+        # kernels
+        stats["numeric_skips"] += 1
+        continue
+
+      # Normalize and round float/double toward a weaker inequality and
+      # have a and b be at most 1 by rescaling
+      if w >= 0.0:
+        a = float(np.nextafter(small, 0.0))
+        b = 1.0
+      else:
+        a = 1.0
+        b = min(1.0, float(np.nextafter(small, np.inf)))
+
+      if min(a, b) < np.finfo(float).tiny:
+        # similar as for the other numeric skip
+        stats["numeric_skips"] += 1
+        continue
+
+      # Graph weight uses the emitted coefficients, rather than
+      # the unrounded input bound.
+      #   weight = log(b/a) + padding
+      weight = float(np.log(b) - np.log(a))
+      weight += (8.0 * np.finfo(float).eps * (1.0 + abs(weight)))
+      tol = log_tol * max(1.0, abs(weight))
+
+      # Individual bounds imply:
+      # zeta_dst / zeta_src <= U[dst] / L[src].
+      independent = np.nextafter(logU[dst] - logL[src], np.inf)
+      if independent <= weight + tol:
+        # the inequality is implied by the variable bounds
+        stats["box_skips"] += 1
+        continue
+
+      # Here the matrix P stores the implied ratio bounds:
+      #  P_{uv} records bound \zeta_v\leq P_{uv}\zeta_u
+      if P is not None and P[src, dst] <= weight + tol:
+        stats["path_skips"] += 1
+        continue
+
+      if P is not None and P[dst, src] + weight < 0.0:
+        # A negative cycle signals inconsistent numerical bounds.
+        # Omit this optional cut; do not propagate the inconsistency.
+        stats["cycle_skips"] += 1
+        continue
+      rows.append((src, dst, a, b))
+      # update all implied bounds after retaining a row
+      if P is not None:
+        # Incremental all-pairs closure, O(n^2) per retained row.
+        left = np.nextafter(P[:, src] + weight, np.inf)
+        via = np.nextafter(left[:, None] + P[dst, :][None, :], np.inf,)
+        np.minimum(P, via, out=P)
+
+    stats["kept_pairs"] += int(len(rows) > before)
+
+  stats["kept_rows"] = len(rows)
+  return rows, stats
 #################################################################################
 ### Wrapper for "convex_relaxation" code
 #################################################################################
@@ -1083,87 +1435,69 @@ class GPBoundComputationCommon:
           component_phi = matern_phi(centers.tolist(), float(th[j] / scale[j]), nu)
           support_rows = component_phi.generate_alpha_beta_r(lj, uj)
 
-          for alpha, beta, rhs in support_rows:
-            alpha, rhs = float(alpha), float(rhs)
-            beta = np.asarray(beta, dtype=float).reshape(ntrain)
+          if support_rows:
+            alphas = np.asarray([row[0] for row in support_rows], dtype=float)
+            rhs = np.asarray([row[2] for row in support_rows], dtype=float)
+            beta_mat = sparse.csr_matrix(np.asarray([row[1] for row in support_rows], dtype=float))
 
-            if (not np.isfinite(alpha) or not np.isfinite(rhs) or not np.all(np.isfinite(beta))):
+            if not np.all(np.isfinite(alphas)) or not np.all(np.isfinite(rhs)) or not np.all(np.isfinite(beta_mat.data)):
               raise FloatingPointError("Nonfinite Matern support row")
 
-            # Old support row:
-            #   alpha*x_j + beta @ eta[:,j] <= rhs
+            # Vectorized support rows:
+            #   alphas*x_j + beta_mat @ eta[:,j] <= rhs
             #
             # Substitute eta = -loss_parts.
-            cons.append(alpha*xvar[j] - beta @ loss_parts[:, j] <= rhs)
+            cons.append(cp.multiply(alphas, xvar[j]) - beta_mat @ loss_parts[:, j] <= rhs)
+            
+          # for alpha, beta, rhs in support_rows:
+          #   alpha, rhs = float(alpha), float(rhs)
+          #   beta = np.asarray(beta, dtype=float).reshape(ntrain)
+
+          #   if (not np.isfinite(alpha) or not np.isfinite(rhs) or not np.all(np.isfinite(beta))):
+          #     raise FloatingPointError("Nonfinite Matern support row")
+
+          #   # Old support row:
+          #   #   alpha*x_j + beta @ eta[:,j] <= rhs
+          #   #
+          #   # Substitute eta = -loss_parts.
+          #   cons.append(alpha*xvar[j] - beta @ loss_parts[:, j] <= rhs)
       else:
         raise ValueError(f"Unsupported kernel: {self.kernel_spec}")
 
       # add constraints based on downselected nearest neighbor pairs
       # downselect on available pairs
       if opt_mode == 6:
-        pairs = np.asarray(list(self.nearest_neighbor_pairs), dtype=int).reshape(-1, 2)
+        pairs = np.asarray(self.nearest_neighbor_pairs, dtype=np.int64).reshape(-1, 2)
 
-        if pairs.shape[0]:
-          # --------------------------------------------------------
-          # Pair selection: scores remain in physical k units.
-          # --------------------------------------------------------
-          x_ref = l + 0.5*(u - l)
+        self._mode6_ratio_stats = None
 
-          grad_k, _, _, _, _ = lcb_gradient_at_single_reference(self, x_ref)
-          abs_grad = np.abs(np.asarray(grad_k, dtype=float).ravel())
-          sensitivity = abs_grad / max(float(abs_grad.max()), np.finfo(float).eps)
+        if len(pairs):
+          # Preserve full LCB importance weights in physical k units.
+          reference = l + 0.5 * (u - l)
+          gradient = lcb_gradient_at_single_reference(self, reference)[0]
+          magnitude = np.abs(np.asarray(gradient, float).ravel())
+          sensitivity = magnitude / max(float(magnitude.max()), np.finfo(float).eps)
 
           with np.errstate(under="ignore"):
-            Ei_exp = np.exp(-qL) * unit_expsec_gap(loss_width)
-          Ai = Ei_exp * (0.05 + 0.95*sensitivity)
-          distances = np.array([self.pairs_dist[i, r] for i, r in pairs], dtype=float)
-          
-          # The floor also handles coincident samples.
-          scores = (Ai[pairs[:, 0]] + Ai[pairs[:, 1]]) / np.maximum(distances, np.finfo(float).eps)
+            Ai = (np.exp(-qL) * unit_expsec_gap(loss_width) * (0.05 + 0.95 * sensitivity))
+
+          deltaL, deltaU = mode6_scaled_logratio_bounds(self, l, u, pairs, scale_shift)
 
           c1 = 1
-          order = np.argsort(scores)[::-1][:min(len(pairs), c1*ntrain)]
+          rows, self._mode6_ratio_stats = select_mode6_ratio_rows(pairs=pairs, deltaL=deltaL, deltaU=deltaU,
+                                                                  zetaL=zetaL, zetaU=zetaU, importance=Ai,
+                                                                  max_pairs=int(c1 * ntrain), log_tol=1.e-10,
+                                                                  path_screen=True)
+          if rows:
+            src, dst, a, b = zip(*rows)
+            src = np.asarray(src, dtype=np.int64)
+            dst = np.asarray(dst, dtype=np.int64)
+            a = np.asarray(a, dtype=float)
+            b = np.asarray(b, dtype=float)
 
-          # --------------------------------------------------------
-          # Pair bounds and scaled ratio rows.
-          # --------------------------------------------------------
-          for pair_index in order:
-            i_idx, r_idx = map(int, pairs[pair_index])
-
-            # Existing endpoint construction for SE, Matern 1/2,
-            # Matern 3/2, and Matern 5/2
-            # evaluated through the positive-loss helper.
-            endpoint_differences = []
-
-            for endpoint in (l, u):
-              loss_i = gp_coordinate_loss(np.abs(endpoint - training_x[i_idx]) / scale, th, self.kernel_spec, self.p)
-              loss_r = gp_coordinate_loss(np.abs(endpoint - training_x[r_idx]) / scale, th, self.kernel_spec, self.p)
-              # lambda_i - lambda_r = loss_r - loss_i.
-              endpoint_differences.append(loss_r - loss_i)
-
-            at_l, at_u = endpoint_differences
-            lir_min = float(np.minimum(at_l, at_u).sum())
-            lir_max = float(np.maximum(at_l, at_u).sum())
-
-
-            # log(zeta_i/zeta_r)   = log(k_i/k_r) + scale_shift_i - scale_shift_r.
-            shift = scale_shift[i_idx] - scale_shift[r_idx]
-
-            add_ratio_constraints(cons, zetavar[i_idx], zetavar[r_idx], lir_min + shift, lir_max + shift,)  
-            #add_ratio_constraints(cons, kvec[i_idx], kvec[r_idx], lir_min, lir_max)
+            # One vector constraint containing the selected two-nonzero rows.
+            cons.append(cp.multiply(a, zetavar[dst]) <= cp.multiply(b, zetavar[src]))
             
-            #add_mccormick_ratio_constraints(cons=cons, ki=kvec[i_idx], kr=kvec[r_idx], lam_i=lamvar[i_idx], lam_r=lamvar[r_idx],
-            #                                lir_min=lir_min, lir_max=lir_max, ki_min=kL[i_idx],
-            #                                ki_max=kU[i_idx], kr_min=kL[r_idx], kr_max=kU[r_idx], name=f"{i_idx}_{r_idx}")
-            
-
-            #sir_min, sir_max = compute_sigma_ir_bounds(l=l, u=u, theta=th, x_scale=self.X_scale, x_i=self.x[i_idx], x_r=self.x[r_idx],
-            #                                           kernel_spec=self.kernel_spec, p=getattr(self, "p", 2.0))
-            #add_ratio_informed_product_constraints(cons=cons, ki=kvec[i_idx], kr=kvec[r_idx], dirL=lir_min, dirU=lir_max, sirL=sir_min, sirU=sir_max)
-            #add_mccormick_sum_product_constraints(cons, kvec[i_idx], kvec[r_idx], lamvar[i_idx], lamvar[r_idx], kL[i_idx], kU[i_idx],
-            #                                      kL[r_idx], kU[r_idx], sir_min, sir_max)
-            #add_product_constraints(cons, kvec[i_idx], kvec[r_idx], sir_min, sir_max)
-
     opt_tol = 1.e-8
     opt_rel_tol = 1.e-8
     for i in range(3):
@@ -1176,6 +1510,7 @@ class GPBoundComputationCommon:
       if i == 2:
         opt_rel_tol = 1.e-4
         verbose = False
+
       try:
         if mode == 0:
           prob = cp.Problem(cp.Minimize(self.obj2), cons)
@@ -1190,7 +1525,7 @@ class GPBoundComputationCommon:
             print("is not DCP")
             raise RuntimeError("LCB relaxation is not DCP")
 
-          acqf_L = prob.solve(solver=cp.CLARABEL, verbose=verbose, tol_gap_abs=opt_tol, tol_gap_rel=opt_rel_tol, max_iter=max_iters)
+          acqf_L = prob.solve(solver=cp.CLARABEL, canon_backend=cp.CPP_CANON_BACKEND, verbose=verbose, tol_gap_abs=opt_tol, tol_gap_rel=opt_rel_tol, max_iter=max_iters)
           #acqf_L = cp.Problem(cp.Minimize(self.obj2), cons).solve(solver=cp.SCS, verbose=verbose, eps_abs=opt_tol, max_iters=max_iters)
 
           if prob.status != cp.OPTIMAL:
@@ -1207,6 +1542,10 @@ class GPBoundComputationCommon:
             
             diagnostics_output = stats_lcb_relaxation_gap(owner=self, xvar=xvar, relaxation_value=acqf_L) + diagnostics_output
 
+            ratio_stats = getattr(self, "_mode6_ratio_stats", None)
+            if ratio_stats is not None:
+              diagnostics_output += f"Mode-6 ratio selection: {ratio_stats}\n"
+              
           if opt_mode in (5,6):
             assert mode == 0
             self.save_expsec_weights(cons, lamvar, lamL, lamU)
@@ -1469,50 +1808,86 @@ class GPBoundComputationCommon:
       # Relax tolerance for dual infeasibility/norm of gradient of the Lagrangian
       if self.acqf_UB_solver == "IPOPT": 
         opt_solver_options = {
-          'max_iter': 100,
-          'tol': 1.e-5,
+          'max_iter': 20,
+          'tol': 1.e-3,
           'honor_original_bounds': 'yes',
           'print_level': 0,
           'sb': 'yes',
           'acceptable_iter': 5,
-          'acceptable_tol': 5e-4,
+          'acceptable_tol': 1e-2,
         }
       else: #SLSQP
         opt_solver_options = {'maxiter' : 100, 'tol' : 1.e-5}
+
       acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
       alpha = 0.5 #0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
       x0 = [alpha * l + (1. - alpha) * u]
       opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
-      if not (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)):
-        print(f"optimizer {opt_sol[0]} not within prescribed bounds: {l}, {u}")
-      assert (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)), f"acqf minimizer not within bounds"
-      msg = opt_sol[3]
-      acqf_solve_success = opt_sol[2]
-      if not acqf_solve_success:
-        print(self.acqf_UB_solver + " did not converge on BOX ... trying again with more verbosity and at another initial point", flush=True)
-        print(self.acqf_UB_solver + " message: ", msg, flush=True)
-        if self.acqf_UB_solver == "IPOPT":
-          opt_solver_options = {
-            'max_iter': 200,
-            'tol': 1.e-3,
-            'honor_original_bounds': 'yes',
-            'print_level': 0,
-            'sb': 'yes',
-            'acceptable_iter': 5,
-            'acceptable_tol': 1e-2
-          }
-        else: # SLSQP
-          opt_solver_options = {'maxiter' : 200, 'tol' : 1.e-3, 'disp' : True}
+
+      # Retain the retry for other optimizers, but not IPOPT.
+      if self.acqf_UB_solver != "IPOPT" and not opt_sol[2]:
+        print(f"{self.acqf_UB_solver} did not converge: {opt_sol[3]}", flush=True)
+        opt_solver_options = {'maxiter': 200, 'tol': 1.e-3, 'disp': True}
         acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
-        alpha = 0.5# 0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
-        x0 = [alpha * l + (1. - alpha) * u]
         opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
-        acqf_solve_success = opt_sol[2]
-        if not acqf_solve_success:
-          print(self.acqf_UB_solver + " failed a second time. Will take the minimum of a small number of acqf function evaluations", flush=True)
+
+      # Check primal feasibility with respect to the original box - need to be computed since it is not returned by cyipopt
+      xopt = np.asarray(opt_sol[0], dtype=float).ravel()
+      box_inf_pr = np.inf
+      if xopt.size == l.size and np.all(np.isfinite(xopt)):
+        box_inf_pr = float(np.max(np.maximum(np.maximum(l - xopt, xopt - u), 0.0)))
+
+      ub_feas_tol = 1.e-6
+      acqf_solve_success = box_inf_pr <= ub_feas_tol
+      if self.acqf_UB_solver != "IPOPT":
+        acqf_solve_success &= bool(opt_sol[2])
+
+      # An IPOPT iterate is acceptable regardless of optimality status.
       if acqf_solve_success:
-        acqf_U = self.acqf.evaluate(np.atleast_2d(opt_sol[0])).flatten()[0]
-        acqf_U_x = opt_sol[0]
+        acqf_U_x = np.clip(xopt, l, u)
+        try:
+          acqf_U = float(np.asarray(self.acqf.evaluate(acqf_U_x[None, :])).ravel()[0])
+          acqf_solve_success = np.isfinite(acqf_U)
+        except (FloatingPointError, ValueError, RuntimeError):
+          acqf_solve_success = False
+
+      if not acqf_solve_success:
+        print(f"{self.acqf_UB_solver} UB rejected (box_inf_pr={box_inf_pr:.2e}): "
+              f"{opt_sol[3]}; using MINEVAL", flush=True)
+
+
+      # if not (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)):
+      #   print(f"optimizer {opt_sol[0]} not within prescribed bounds: {l}, {u}")
+      # assert (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)), f"acqf minimizer not within bounds"
+      # msg = opt_sol[3]
+      # acqf_solve_success = opt_sol[2]
+      # if not acqf_solve_success:
+      #   print(self.acqf_UB_solver + " did not converge on BOX ... trying again with more verbosity and at another initial point", flush=True)
+      #   print(self.acqf_UB_solver + " message: ", msg, flush=True)
+      #   if self.acqf_UB_solver == "IPOPT":
+      #     opt_solver_options = {
+      #       'max_iter': 200,
+      #       'tol': 1.e-3,
+      #       'honor_original_bounds': 'yes',
+      #       'print_level': 0,
+      #       'sb': 'yes',
+      #       'acceptable_iter': 5,
+      #       'acceptable_tol': 1e-2
+      #     }
+      #   else: # SLSQP
+      #     opt_solver_options = {'maxiter' : 200, 'tol' : 1.e-3, 'disp' : True}
+      #   acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
+      #   alpha = 0.5# 0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
+      #   x0 = [alpha * l + (1. - alpha) * u]
+      #   opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
+      #   acqf_solve_success = opt_sol[2]
+      #   if not acqf_solve_success:
+      #     print(self.acqf_UB_solver + " failed a second time. Will take the minimum of a small number of acqf function evaluations", flush=True)
+      # if acqf_solve_success:
+      #   acqf_U = self.acqf.evaluate(np.atleast_2d(opt_sol[0])).flatten()[0]
+      #   acqf_U_x = opt_sol[0]
+
+
     # evaluate the acquisition over a skeleton of the box
     # and choose the smallest value as the upper bound
     # of the minimum over the box
@@ -2173,37 +2548,40 @@ class BnBAlgorithm(GPBoundComputationCommon, BnBAlgorithmBase):
     self.obj3 = self.b_obj3.T @ self.X + self.c_obj3
 
 
-    # constants for choosing number of "k ratio" constraints
-    # first constraints are determined via nearest neighbor search
-    # the kernel distances will be based on the forms of the kernels
-    # for SE th * ((x - x^(i)) / X_scale))^2 is used
-    # for all other kenels th * |(x - x^(i)) / X_scale| is used
-    # for this reason the distance metric will be
-    # || \sqrt(th) / X_scale * (x^(i) - x^(r))||_2 for SE
-    # and || th / X_scale * (x^(i) - x^(r)||_1 for all other kernels
-    distance_mat = np.zeros((ntrain,ntrain))
-    theta = self.theta.ravel()
-    # only go over the upper triangle
-    self.pairs_dist = []
-    for i in range(ntrain):
-      for j in range(i+1, ntrain):
-        if self.kernel_spec == "pow_exp" and self.p == 2.0:
-          self.pairs_dist.append((np.linalg.norm(np.sqrt(theta) * (self.x[i] - self.x[j]) / self.X_scale), i, j))
-        else:
-          self.pairs_dist.append((np.linalg.norm(theta * (self.x[i] - self.x[j]) / self.X_scale, ord=1), i, j))
-    # now extract smallest-distance pairs
-    ##print("pairs     :" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist))
-    self.pairs_dist.sort(key=lambda entry: entry[0])
-    ##print("pairs sort:" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist))
-    self.c0 = 2
-    npairs = min(self.c0 * ntrain, len(self.pairs_dist))
-    ##print("pairs slct:" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist[:npairs]))
-    self.nearest_neighbor_pairs = np.asarray([(i, r) for _, i, r in self.pairs_dist[:npairs]], dtype=np.int64).reshape(-1, 2)
+    # # constants for choosing number of "k ratio" constraints
+    # # first constraints are determined via nearest neighbor search
+    # # the kernel distances will be based on the forms of the kernels
+    # # for SE th * ((x - x^(i)) / X_scale))^2 is used
+    # # for all other kenels th * |(x - x^(i)) / X_scale| is used
+    # # for this reason the distance metric will be
+    # # || \sqrt(th) / X_scale * (x^(i) - x^(r))||_2 for SE
+    # # and || th / X_scale * (x^(i) - x^(r)||_1 for all other kernels
+    # distance_mat = np.zeros((ntrain,ntrain))
+    # theta = self.theta.ravel()
+    # # only go over the upper triangle
+    # self.pairs_dist = []
+    # for i in range(ntrain):
+    #   for j in range(i+1, ntrain):
+    #     if self.kernel_spec == "pow_exp" and self.p == 2.0:
+    #       self.pairs_dist.append((np.linalg.norm(np.sqrt(theta) * (self.x[i] - self.x[j]) / self.X_scale), i, j))
+    #     else:
+    #       self.pairs_dist.append((np.linalg.norm(theta * (self.x[i] - self.x[j]) / self.X_scale, ord=1), i, j))
+    # # now extract smallest-distance pairs
+    # ##print("pairs     :" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist))
+    # self.pairs_dist.sort(key=lambda entry: entry[0])
+    # ##print("pairs sort:" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist))
+    # self.c0 = 2
+    # npairs = min(self.c0 * ntrain, len(self.pairs_dist))
+    # ##print("pairs slct:" + " ".join(f"({i:2d},{j:2d},{val:12.5e})" for val, i, j in self.pairs_dist[:npairs]))
+    # self.nearest_neighbor_pairs = np.asarray([(i, r) for _, i, r in self.pairs_dist[:npairs]], dtype=np.int64).reshape(-1, 2)
 
-    # repurpose pairs_dist
-    pairs = self.pairs_dist
-    self.pairs_dist = {(i, j): dist for dist, i, j in pairs}
+    # # repurpose pairs_dist
+    # pairs = self.pairs_dist
+    # self.pairs_dist = {(i, j): dist for dist, i, j in pairs}
+    self.nearest_neighbor_pairs, self.pairs_dist = build_mode6_pair_candidates(self, nneighbors=3, include_mst=True)
 
+    self.collect_batch_candidates = options.get("collect_batch_candidates", False)
+    self._batch_candidates = {}
 
   # For minimization, we find a feasible function value as the upper bound on the minimum value of the acquisition function.
   def compute_acqf_upper_bound(self, l, u):
@@ -2247,6 +2625,153 @@ class BnBAlgorithm(GPBoundComputationCommon, BnBAlgorithmBase):
     """Return leaves useful for batching, excluding only pruned leaves."""
     return self.leaf_partition.candidate_nodes()
 
+  def _remember_batch_candidates(self, nodes):
+    """Store points only; acquisition values are recomputed later."""
+    if not self.collect_batch_candidates:
+      return
+
+    for node in nodes:
+      if node.aq_U_x is None or not np.isfinite(node.aq_U):
+        continue
+      x = np.asarray(node.aq_U_x, dtype=float).reshape(-1)
+      if np.all(np.isfinite(x)):
+        self._batch_candidates[tuple(x)] = x.copy()
+
+  def select_batch_condvar(self, q, *, delta=None, noise_variance=0.0, duplicate_tol=1.e-8,
+                           variance_rtol=1.e-10, exclude_training=True, is_feasible=None,
+                           exclude_points=None, require_full=False):
+    """Return (X_batch, diagnostics) after a completed LCB BnB search.
+
+    Out of the BnB candidates within some BnB optimality gap (see delta), namely, 
+      Cdelta = { x | x in a BnB box with at most delta optimality gap}
+    selects q candidates z1, z2, ..., zq that maximize conditional posterior variance:
+      zj = argmax \sigma_{t|Zj}(x) s.t. x in Cdeltat \ {z1, z2, \ldots, zj-1}.
+    Here t represents the BO iteration number.
+
+    Arguments: 
+    delta:
+        Allowed LCB excess above the incumbent, in objective units.
+        None uses the final absolute BnB gap.
+    noise_variance:
+        Prospective observation variance, in original y-units squared.
+        Use zero for deterministic evaluations.
+    duplicate_tol:
+        Infinity-norm tolerance in domain-normalized coordinates.
+    require_full:
+        Raise rather than return fewer than q eligible points.
+    """
+    if not isinstance(self.acqf, LCBacquisition):
+      raise TypeError("Conditional-variance batching requires LCB")
+    if (isinstance(q, bool) or not isinstance(q, (int, np.integer)) or q < 1):
+      raise ValueError("q must be a positive integer")
+    if any(not np.isfinite(v) or v < 0.0 for v in (noise_variance, duplicate_tol, variance_rtol)):
+      raise ValueError("Noise and tolerances must be finite and nonnegative")
+
+    store = self.leaf_partition
+    if store.inflight:
+      raise RuntimeError("Finish/drain BnB before selecting the BO batch")
+    if store.incumbent_x is None:
+      raise RuntimeError("BnB has no feasible incumbent")
+
+    # Include stored parents and every final leaf, including pruned leaves.
+    points = [np.asarray(store.incumbent_x, dtype=float).reshape(-1)]
+    points += list(getattr(self, "_batch_candidates", {}).values())
+    points += [np.asarray(n.aq_U_x, dtype=float).reshape(-1) for n in store.leaves.values() if n.aq_U_x is not None and np.isfinite(n.aq_U)]
+    X = np.vstack(points)
+
+    # Remove exact duplicates, retaining incumbent at index zero.
+    _, ii = np.unique(X, axis=0, return_index=True)
+    X = X[np.sort(ii)]
+
+    bounds = np.asarray(self.gpsurrogate.xlimits, dtype=float)
+    lo, hi = bounds[:, 0], bounds[:, 1]
+    valid = np.all(np.isfinite(X) & (X >= lo) & (X <= hi), axis=1)
+    if not valid[0]:
+      raise RuntimeError("Invalid BnB incumbent")
+    X = X[valid]
+
+    # Chunk SMT predictions to limit temporary storage.
+    # LCB acquisition is evaluated 
+    values = np.concatenate([np.asarray(self.acqf.evaluate(X[k:k+512]), dtype=float).reshape(-1) for k in range(0, len(X), 512)])
+    U = float(values[0])
+    L = float(store.global_lower_bound())
+    if not np.isfinite(U):
+      raise RuntimeError("Nonfinite incumbent LCB")
+
+    if delta is None:
+      if not np.isfinite(L) or L > U:
+        raise ValueError("Set delta explicitly; no consistent finite BnB gap")
+      delta = U - L
+    delta = float(delta)
+    if not np.isfinite(delta) or delta < 0.0:
+      raise ValueError("delta must be finite and nonnegative")
+
+    keep = np.isfinite(values) & (values <= U + delta)
+    if is_feasible is not None:
+      feasible = np.asarray(is_feasible(X), dtype=bool).reshape(-1)
+      if feasible.size != len(X):
+        raise ValueError("is_feasible must return one Boolean per point")
+      keep &= feasible
+
+    # Domain-normalized coordinates are used only for duplicate checks.
+    width = np.where(hi > lo, hi - lo, 1.0)
+    Xunit = (X - lo) / width
+    #if exclude_training:
+    #  # exclude anything within duplicate_tol from a training point
+    #  old = np.asarray(self.gpsurrogate.training_x, dtype=float)
+    #  distance, _ = cKDTree((old - lo) / width).query(Xunit, p=np.inf)
+    #  keep &= distance > duplicate_tol
+    if exclude_training:
+      old = np.asarray(self.gpsurrogate.training_x, dtype=float)
+
+      # Exclude points that were evaluated previously but were deliberately
+      # not assimilated into the active GP.
+      if exclude_points is not None:
+        extra = np.atleast_2d(np.asarray(exclude_points, dtype=float))
+        if extra.shape[1] != X.shape[1]:
+          raise ValueError("exclude_points has incompatible dimension")
+        old = np.vstack([old, extra])
+
+      distance, _ = cKDTree((old - lo) / width).query(Xunit, p=np.inf)
+      keep &= distance > duplicate_tol
+      # The BnB incumbent is the LCB BO decision and must always remain in the batch.
+      keep[0] = True
+      
+    # Prefer incumbent; otherwise start with the best eligible LCB.
+    order = np.flatnonzero(keep)
+    order = order[np.argsort(values[order], kind="stable")]
+    if keep[0]:
+      order = np.r_[0, order[order != 0]]
+    if order.size == 0:
+      raise RuntimeError("No eligible near-optimal points; increase delta")
+
+    # Remove near-duplicates, preferring incumbent, then lower LCB.
+    tree = cKDTree(Xunit[order])
+    blocked = np.zeros(len(order), dtype=bool)
+    unique = []
+    for i in range(len(order)):
+      if not blocked[i]:
+        unique.append(int(order[i]))
+        neighbors = tree.query_ball_point(Xunit[order[i]], duplicate_tol, p=np.inf)
+        blocked[neighbors] = True
+
+    pool = np.asarray(unique, dtype=int)
+    cov = _BatchKrigingCovariance(self, X[pool])
+    selected, conditional_var = _greedy_condvar(cov, q, noise_variance, variance_rtol)
+    chosen = pool[selected]
+
+    if require_full and len(chosen) < q:
+      raise RuntimeError(f"Only {len(chosen)} nonredundant points "
+                         f"for requested q={q}; increase delta")
+
+    # These certificates rely on validity of the existing BnB bound.
+    bounds_valid = (np.isfinite(L) and L <= np.min(values[np.isfinite(values)]))
+    info = dict(candidate_count=len(X), pool_size=len(pool), requested=q, returned=len(chosen),
+                delta=delta, incumbent_lcb=U, lower_bound=L, incumbent_in_batch=bool(keep[0]),
+                lcb=values[chosen].copy(), conditional_variance=conditional_var,
+                lcb_suboptimality_bound=(values[chosen] - L if bounds_valid else np.full(len(chosen), np.nan)))
+    return X[chosen].copy(), info
+  
   def optimize(self):
     opt = self.bnboptimize(self.gpsurrogate.xlimits[:,0], self.gpsurrogate.xlimits[:,1])
     lopt = opt[0]
@@ -2260,16 +2785,18 @@ class BnBAlgorithm(GPBoundComputationCommon, BnBAlgorithmBase):
   def initialize(self, l0=None, u0=None, queue=None, partition=None, transfer_lower_bound=None):
     """Initialize a root or reclassify a full leaf partition from previous iteration."""
     restart_worker = None
+    # reset batch candidates as well
+    self._batch_candidates = {}
     if partition is not None:
       restart_worker = branching_wrapper(self.acqf, LUB=np.inf, epsilon_prune=self.epsilon_prune,
                                          acqf_UB_solver=self.acqf_UB_solver, random_seed=self.random_seed,
                                          opt_mode=self.opt_mode, nearest_neighbor_pairs=self.nearest_neighbor_pairs,
                                          diagnostics=self.diagnostics, restart_lower_bound=transfer_lower_bound,
                                          pairs_dist=self.pairs_dist)
-      
-    return initialize_async_search(self, l0=l0, u0=u0, queue=queue, partition=partition,
+    ret =  initialize_async_search(self, l0=l0, u0=u0, queue=queue, partition=partition,
                                    transfer_lower_bound=transfer_lower_bound, restart_worker=restart_worker)
-
+    self._remember_batch_candidates(self.leaf_partition.leaves.values())
+    return ret
   def bnboptimize(self, l_init, u_init):
     """Run the certified asynchronous leaf-partition event loop."""
     return run_async_search(self, branching_wrapper, l_init, u_init)
