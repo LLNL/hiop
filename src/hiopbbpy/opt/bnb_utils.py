@@ -64,6 +64,8 @@ def polynomial_multiply(c1, c2):
   c3 = c3_rev[::-1]
   return c3
 
+# note: the function is not needed anymore since the extreme points are at the endpoints
+#       if enabled back, Xbrl should be sorted 
 
 # find min and max of phi_{3/2,ij}(t) - phi_{3/2,rj}(t)
 #              over interval l u
@@ -115,6 +117,9 @@ def dphir_minmax_threehalves(l, u, thj, Xir):
   y_min = yroots[i_min]
   return x_min, x_max, y_min, y_max
     
+
+# note: the function is not needed anymore since the extreme points are at the endpoints
+#       if enabled back, Xbrl should be sorted 
 
 # find min and max of phi_{5/2,ij}(t) - phi_{5/2,rj}(t)
 #              over interval l u
@@ -245,12 +250,14 @@ class matern_phi:
     Dj = []
     for k in range(self.p - 1):
       i, r = int(order[k]), int(order[k + 1])
+      if np.isclose(self.X[i], self.X[r], atol=1e-6, rtol=0.):
+        continue
       beta = np.zeros(self.p)
       beta[i], beta[r] = 1., -1.
       dh = (phi_u[i] - phi_u[r]) - (phi_l[i] - phi_l[r])
       alpha = -dh / (u - l)
       Dj.append([alpha, beta])
-      if alpha != 0.:
+      if abs(alpha) > 1e-4:
         Dj.append([0., beta.copy()])
     return Dj  
   def generate_alpha_beta_r(self, l, u):

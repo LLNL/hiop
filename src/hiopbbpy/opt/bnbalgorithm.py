@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import uniform
 import cvxpy as cp
 import heapq
-from scipy import linalg
+from scipy import linalg, sparse
 from scipy.stats import qmc
 from .acquisition import EIacquisition, LCBacquisition
 from ..utils.util import Evaluator, MPIEvaluator, Logger
@@ -1435,18 +1435,32 @@ class GPBoundComputationCommon:
           component_phi = matern_phi(centers.tolist(), float(th[j] / scale[j]), nu)
           support_rows = component_phi.generate_alpha_beta_r(lj, uj)
 
-          for alpha, beta, rhs in support_rows:
-            alpha, rhs = float(alpha), float(rhs)
-            beta = np.asarray(beta, dtype=float).reshape(ntrain)
+          if support_rows:
+            alphas = np.asarray([row[0] for row in support_rows], dtype=float)
+            rhs = np.asarray([row[2] for row in support_rows], dtype=float)
+            beta_mat = sparse.csr_matrix(np.asarray([row[1] for row in support_rows], dtype=float))
 
-            if (not np.isfinite(alpha) or not np.isfinite(rhs) or not np.all(np.isfinite(beta))):
+            if not np.all(np.isfinite(alphas)) or not np.all(np.isfinite(rhs)) or not np.all(np.isfinite(beta_mat.data)):
               raise FloatingPointError("Nonfinite Matern support row")
 
-            # Old support row:
-            #   alpha*x_j + beta @ eta[:,j] <= rhs
+            # Vectorized support rows:
+            #   alphas*x_j + beta_mat @ eta[:,j] <= rhs
             #
             # Substitute eta = -loss_parts.
-            cons.append(alpha*xvar[j] - beta @ loss_parts[:, j] <= rhs)
+            cons.append(cp.multiply(alphas, xvar[j]) - beta_mat @ loss_parts[:, j] <= rhs)
+            
+          # for alpha, beta, rhs in support_rows:
+          #   alpha, rhs = float(alpha), float(rhs)
+          #   beta = np.asarray(beta, dtype=float).reshape(ntrain)
+
+          #   if (not np.isfinite(alpha) or not np.isfinite(rhs) or not np.all(np.isfinite(beta))):
+          #     raise FloatingPointError("Nonfinite Matern support row")
+
+          #   # Old support row:
+          #   #   alpha*x_j + beta @ eta[:,j] <= rhs
+          #   #
+          #   # Substitute eta = -loss_parts.
+          #   cons.append(alpha*xvar[j] - beta @ loss_parts[:, j] <= rhs)
       else:
         raise ValueError(f"Unsupported kernel: {self.kernel_spec}")
 
@@ -1496,6 +1510,7 @@ class GPBoundComputationCommon:
       if i == 2:
         opt_rel_tol = 1.e-4
         verbose = False
+
       try:
         if mode == 0:
           prob = cp.Problem(cp.Minimize(self.obj2), cons)
@@ -1510,7 +1525,7 @@ class GPBoundComputationCommon:
             print("is not DCP")
             raise RuntimeError("LCB relaxation is not DCP")
 
-          acqf_L = prob.solve(solver=cp.CLARABEL, verbose=verbose, tol_gap_abs=opt_tol, tol_gap_rel=opt_rel_tol, max_iter=max_iters)
+          acqf_L = prob.solve(solver=cp.CLARABEL, canon_backend=cp.CPP_CANON_BACKEND, verbose=verbose, tol_gap_abs=opt_tol, tol_gap_rel=opt_rel_tol, max_iter=max_iters)
           #acqf_L = cp.Problem(cp.Minimize(self.obj2), cons).solve(solver=cp.SCS, verbose=verbose, eps_abs=opt_tol, max_iters=max_iters)
 
           if prob.status != cp.OPTIMAL:
@@ -1793,50 +1808,86 @@ class GPBoundComputationCommon:
       # Relax tolerance for dual infeasibility/norm of gradient of the Lagrangian
       if self.acqf_UB_solver == "IPOPT": 
         opt_solver_options = {
-          'max_iter': 100,
-          'tol': 1.e-5,
+          'max_iter': 20,
+          'tol': 1.e-3,
           'honor_original_bounds': 'yes',
           'print_level': 0,
           'sb': 'yes',
           'acceptable_iter': 5,
-          'acceptable_tol': 5e-4,
+          'acceptable_tol': 1e-2,
         }
       else: #SLSQP
         opt_solver_options = {'maxiter' : 100, 'tol' : 1.e-5}
+
       acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
       alpha = 0.5 #0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
       x0 = [alpha * l + (1. - alpha) * u]
       opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
-      if not (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)):
-        print(f"optimizer {opt_sol[0]} not within prescribed bounds: {l}, {u}")
-      assert (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)), f"acqf minimizer not within bounds"
-      msg = opt_sol[3]
-      acqf_solve_success = opt_sol[2]
-      if not acqf_solve_success:
-        print(self.acqf_UB_solver + " did not converge on BOX ... trying again with more verbosity and at another initial point", flush=True)
-        print(self.acqf_UB_solver + " message: ", msg, flush=True)
-        if self.acqf_UB_solver == "IPOPT":
-          opt_solver_options = {
-            'max_iter': 200,
-            'tol': 1.e-3,
-            'honor_original_bounds': 'yes',
-            'print_level': 0,
-            'sb': 'yes',
-            'acceptable_iter': 5,
-            'acceptable_tol': 1e-2
-          }
-        else: # SLSQP
-          opt_solver_options = {'maxiter' : 200, 'tol' : 1.e-3, 'disp' : True}
+
+      # Retain the retry for other optimizers, but not IPOPT.
+      if self.acqf_UB_solver != "IPOPT" and not opt_sol[2]:
+        print(f"{self.acqf_UB_solver} did not converge: {opt_sol[3]}", flush=True)
+        opt_solver_options = {'maxiter': 200, 'tol': 1.e-3, 'disp': True}
         acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
-        alpha = 0.5# 0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
-        x0 = [alpha * l + (1. - alpha) * u]
         opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
-        acqf_solve_success = opt_sol[2]
-        if not acqf_solve_success:
-          print(self.acqf_UB_solver + " failed a second time. Will take the minimum of a small number of acqf function evaluations", flush=True)
+
+      # Check primal feasibility with respect to the original box - need to be computed since it is not returned by cyipopt
+      xopt = np.asarray(opt_sol[0], dtype=float).ravel()
+      box_inf_pr = np.inf
+      if xopt.size == l.size and np.all(np.isfinite(xopt)):
+        box_inf_pr = float(np.max(np.maximum(np.maximum(l - xopt, xopt - u), 0.0)))
+
+      ub_feas_tol = 1.e-6
+      acqf_solve_success = box_inf_pr <= ub_feas_tol
+      if self.acqf_UB_solver != "IPOPT":
+        acqf_solve_success &= bool(opt_sol[2])
+
+      # An IPOPT iterate is acceptable regardless of optimality status.
       if acqf_solve_success:
-        acqf_U = self.acqf.evaluate(np.atleast_2d(opt_sol[0])).flatten()[0]
-        acqf_U_x = opt_sol[0]
+        acqf_U_x = np.clip(xopt, l, u)
+        try:
+          acqf_U = float(np.asarray(self.acqf.evaluate(acqf_U_x[None, :])).ravel()[0])
+          acqf_solve_success = np.isfinite(acqf_U)
+        except (FloatingPointError, ValueError, RuntimeError):
+          acqf_solve_success = False
+
+      if not acqf_solve_success:
+        print(f"{self.acqf_UB_solver} UB rejected (box_inf_pr={box_inf_pr:.2e}): "
+              f"{opt_sol[3]}; using MINEVAL", flush=True)
+
+
+      # if not (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)):
+      #   print(f"optimizer {opt_sol[0]} not within prescribed bounds: {l}, {u}")
+      # assert (np.all(opt_sol[0] >= l) and np.all(opt_sol[0] <= u)), f"acqf minimizer not within bounds"
+      # msg = opt_sol[3]
+      # acqf_solve_success = opt_sol[2]
+      # if not acqf_solve_success:
+      #   print(self.acqf_UB_solver + " did not converge on BOX ... trying again with more verbosity and at another initial point", flush=True)
+      #   print(self.acqf_UB_solver + " message: ", msg, flush=True)
+      #   if self.acqf_UB_solver == "IPOPT":
+      #     opt_solver_options = {
+      #       'max_iter': 200,
+      #       'tol': 1.e-3,
+      #       'honor_original_bounds': 'yes',
+      #       'print_level': 0,
+      #       'sb': 'yes',
+      #       'acceptable_iter': 5,
+      #       'acceptable_tol': 1e-2
+      #     }
+      #   else: # SLSQP
+      #     opt_solver_options = {'maxiter' : 200, 'tol' : 1.e-3, 'disp' : True}
+      #   acqf_minimizer = minimizer_wrapper(acqf_callback, self.acqf_UB_solver, box_bounds, constraints, opt_solver_options)
+      #   alpha = 0.5# 0.05 + 0.9 * self.rng.random(len(u)) # rand numbers in [0.05, 0.95)
+      #   x0 = [alpha * l + (1. - alpha) * u]
+      #   opt_sol = opt_evaluator.run(acqf_minimizer.minimizer_callback, x0)[0]
+      #   acqf_solve_success = opt_sol[2]
+      #   if not acqf_solve_success:
+      #     print(self.acqf_UB_solver + " failed a second time. Will take the minimum of a small number of acqf function evaluations", flush=True)
+      # if acqf_solve_success:
+      #   acqf_U = self.acqf.evaluate(np.atleast_2d(opt_sol[0])).flatten()[0]
+      #   acqf_U_x = opt_sol[0]
+
+
     # evaluate the acquisition over a skeleton of the box
     # and choose the smallest value as the upper bound
     # of the minimum over the box

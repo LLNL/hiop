@@ -595,7 +595,7 @@ class BOAlgorithm(BOAlgorithmBase):
                             f"pairs_corr_ge_0p99="
                             f"{sample_metrics['pairs_corr_ge_0p99']}")
 
-      #selected_point_metrics = []
+      selected_point_metrics = []
       q_batch = self.batch_size      
       y_train_virtual = y_train.copy() # old training + batch_size num of virtual points
       if self.opt_solver != "BnB":
