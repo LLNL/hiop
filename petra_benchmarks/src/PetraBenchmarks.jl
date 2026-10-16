@@ -17,6 +17,7 @@ include("problems/sparse_portfolio.jl")
 include("adapters/portfolio_native.jl")
 
 include("adapters/bazinga.jl")
+include("solvers/petra.jl")
 
 export AbstractBenchmark, AbstractScalarOracle, WeightedAbsolute, AffineScenario
 export scalar_value, scalar_prox, scenario_value, prox_scenario
@@ -35,5 +36,8 @@ export SparsePortfolioProblem, sparse_portfolio, synthetic_portfolio
 export portfolio_from_csv
 
 export portfolio_native_model, solve_portfolio_native
+
+#solver exports
+export PetraOptions, petra_master_step, solve_petra
 
 end # module
