@@ -1,0 +1,13 @@
+name = "PetraBenchmarks"
+uuid = "fdb2ebc9-a899-45f6-b19c-5e58059b2cf2"
+version = "0.1.0"
+
+[deps]
+Bazinga = "1813857a-e752-4f0d-be8d-6cc2d384c177"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
