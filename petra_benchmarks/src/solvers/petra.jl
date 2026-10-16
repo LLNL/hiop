@@ -1,8 +1,9 @@
-# Algorithm 4.1 of "A Proximal Oracle Sequential NLP Algorithm for
-# Constrained Nonsmooth Optimization".
+# Implementation of "A Proximal Oracle Sequential NLP Algorithm for Constrained 
+# Nonsmooth Optimization", by which is a Proximal Envelope Termwise
+# Regularization Algorithm (PETRA).
 #
-# This solver deliberately knows nothing about Bazinga.  It needs the common
-# benchmark callbacks from core/scenario_oracles.jl and one master NLP solver:
+# This solver needs the common benchmark callbacks from core/scenario_oracles.jl,
+# which are shared with Bazinga's ALS and ALPS solvers, and one master NLP solver:
 #     petra_master_step(problem, xcenter, g, alpha)::Vector
 #
 # The master NLP is:
@@ -16,6 +17,7 @@ Base.@kwdef struct PetraOptions
     rho_bar::Float64 = 0.1
     sigma::Float64 = 0.1
     alpha_floor::Float64 = 1.0
+    alpha_strategy::Symbol = :paper # :paper or :affine_tight
     max_inner::Int = 300
     max_consecutive_rejections::Int = 20
     feasibility_tol::Float64 = 1e-8
@@ -41,6 +43,8 @@ function _check_petra_options(o::PetraOptions)
         throw(ArgumentError("sigma must be positive"))
     isfinite(o.alpha_floor) && o.alpha_floor > 0 ||
         throw(ArgumentError("alpha_floor must be positive"))
+    o.alpha_strategy in (:paper, :affine_tight) ||
+        throw(ArgumentError("alpha_strategy must be :paper or :affine_tight"))
     o.max_inner > 0 || throw(ArgumentError("max_inner must be positive"))
     o.max_consecutive_rejections > 0 ||
         throw(ArgumentError("max_consecutive_rejections must be positive"))
@@ -48,6 +52,41 @@ function _check_petra_options(o::PetraOptions)
     o.model_decrease_tol >= 0 ||
         throw(ArgumentError("model_decrease_tol must be nonnegative"))
     return nothing
+end
+
+# Eror out when a failed master NLP occurs to avoid misleading successful Petra convergence.
+struct PetraMasterFailure <: Exception
+    message::String
+end
+Base.showerror(io::IO, err::PetraMasterFailure) = print(io, err.message)
+
+# State of the master NLP used to solve the step. By default, it is stateless. Specialize this hook
+# to build a reusable solver/model once per complete solve_petra call.
+petra_master_context(::AbstractBenchmark) = nothing
+petra_master_step(p::AbstractBenchmark, xc, g, alpha, context) =
+    petra_master_step(p, xc, g, alpha)
+
+# The :paper value N is a general valid coefficient of the majorizing
+# quadratic N*||d||^2/(2lambda). For an affine scenario
+#   r_i(x)=rho_i(a_i'x+b_i)
+# the tighter curvature is sum_i a_i*a_i' / ||a_i||^2.
+# Therefore opnorm(A)^2/(2lambda), A[:,i]=a_i/||a_i||,
+# is ALSO a globally valid isotropic quadratic majorizer of the same envelopes.
+# In particular, coordinate-separable portfolio terms have factor 1, not N.
+function _petra_majorization_factor(p::AbstractBenchmark, strategy::Symbol)
+    if strategy === :paper
+        return Float64(num_scenarios(p))
+    elseif strategy === :affine_tight
+        n = num_master(p)
+        N = num_scenarios(p)
+        A = Matrix{Float64}(undef, n, N)
+        for (i, s) in enumerate(p.scenarios)
+            A[:,i] .= s.a ./ norm(s.a)
+        end
+        return opnorm(A)^2
+    else
+        throw(ArgumentError("Unknown alpha strategy $strategy"))
+    end
 end
 
 # Compute the objective and proximal vectors at one point.  This deliberately
@@ -82,23 +121,6 @@ function petra_master_step(p::AbstractBenchmark, xcenter, g, alpha)
           "Implement petra_master_step(problem, xcenter, g, alpha).")
 end
 
-# For Example A the master NLP can be solved exactly, without JuMP/Ipopt.
-# f(x) = 0.5 * ||x-[0.3,0.7]||^2, h(x)=x1+x2-1, 0<=x<=1.
-# The unconstrained minimizer of the model is
-#   u = ([0.3,0.7] - g + 2*alpha*xcenter)/(1+2*alpha).
-# Project u orthogonally onto the feasible segment {(t,1-t): 0<=t<=1}.
-function petra_master_step(::AbsoluteRecourseProblem,
-                           xcenter::AbstractVector{<:Real},
-                           g::AbstractVector{<:Real}, alpha::Real)
-    length(xcenter) == 2 || throw(DimensionMismatch("master dimension"))
-    length(g) == 2 || throw(DimensionMismatch("gradient dimension"))
-    alpha > 0 || throw(ArgumentError("alpha must be positive"))
-    denom = 1.0 + 2.0 * alpha
-    u1 = (0.3 - g[1] + 2.0 * alpha * xcenter[1]) / denom
-    u2 = (0.7 - g[2] + 2.0 * alpha * xcenter[2]) / denom
-    t = clamp((1.0 + u1 - u2) / 2.0, 0.0, 1.0)
-    return [t, 1.0 - t]
-end
 
 """
     solve_petra(problem; x0=problem.x0, options=PetraOptions())
@@ -121,10 +143,12 @@ function solve_petra(p::AbstractBenchmark;
     all(isfinite, x) || throw(ArgumentError("x0 must be finite"))
     if master_feasibility(p, x) > options.feasibility_tol ||
        bound_violation(p, x) > options.feasibility_tol
-        throw(ArgumentError("Petra requires a feasible initial master point"))
+        throw(ArgumentError("Algorithm requires a feasible initial master point"))
     end
 
     start_ns = time_ns()
+    master_context = petra_master_context(p)
+    majorization_factor = _petra_majorization_factor(p, options.alpha_strategy)
     ninner = 0
     naccepted = 0
     nrejected = 0
@@ -139,8 +163,10 @@ function solve_petra(p::AbstractBenchmark;
     for (stage, (lambda, epsilon)) in enumerate(zip(options.lambda_schedule,
                                                     options.epsilon_schedule))
         last_lambda = lambda
-        # Algorithm 4.1, line 4: alpha >= number_of_summands/(2*lambda).
-        alpha = max(options.alpha_floor, num_scenarios(p) / (2.0 * lambda))
+        # :paper reproduces Algorithm 4.1 initialization;
+        # :affine_tight  uses a valid tighter upper model for the present affine scenarios.
+        alpha = max(options.alpha_floor, majorization_factor / (2.0 * lambda))
+        alpha_initial = alpha
         data = _petra_moreau_data(p, x, lambda)
         nbatches += 1
         last_data = data
@@ -149,27 +175,37 @@ function solve_petra(p::AbstractBenchmark;
         stage_accepted = 0
         stage_rejected = 0
         stage_status = :max_inner
+        stage_master_error = nothing
 
         for k in 1:options.max_inner
             ninner += 1
-            xtrial = Float64.(petra_master_step(p, x, data.g, alpha))
+            xtrial = try
+                Float64.(petra_master_step(p, x, data.g, alpha,
+                                         master_context))
+            catch err
+                if err isa PetraMasterFailure
+                    stage_status = :master_failed
+                    stage_master_error = sprint(showerror, err)
+                    break
+                end
+                rethrow()
+            end
             if length(xtrial) != n || !all(isfinite, xtrial) ||
                master_feasibility(p, xtrial) > options.feasibility_tol ||
                bound_violation(p, xtrial) > options.feasibility_tol
                 stage_status = :master_infeasible
                 break
             end
-
+            # STEP
             d = xtrial .- x
             sqstep = dot(d, d)
             # Pred = M(xcenter)-M(xtrial). Constant envelope terms cancel.
-            pred = smooth_value(p, x) - smooth_value(p, xtrial) -
-                   dot(data.g, d) - alpha * sqstep
+            pred = smooth_value(p, x) - smooth_value(p, xtrial) - dot(data.g, d) - alpha * sqstep
             if !isfinite(pred) || pred < -options.model_decrease_tol
                 stage_status = :master_no_descent
                 break
             end
-
+            # ratio rho 
             if iszero(sqstep)
                 trial_data = data
                 ared = 0.0
@@ -224,7 +260,8 @@ function solve_petra(p::AbstractBenchmark;
                lagged_residual=last_lagged,
                max_prox_displacement=data.max_displacement,
                accepted=stage_accepted, rejected=stage_rejected,
-               alpha_final=alpha))
+               alpha_initial=alpha_initial, alpha_final=alpha,
+               master_error=stage_master_error))
         if options.verbose
             println("Petra stage=", stage,
                     " lambda=", lambda, " eps=", epsilon,
@@ -254,6 +291,8 @@ function solve_petra(p::AbstractBenchmark;
         rejected_steps=nrejected,
         oracle_batches=nbatches,
         oracle_calls=nbatches * num_scenarios(p),
+        alpha_strategy=options.alpha_strategy,
+        majorization_factor=majorization_factor,
         final_lambda=last_lambda,
         final_moreau_objective=last_data.objective,
         final_lagged_residual=last_lagged,
