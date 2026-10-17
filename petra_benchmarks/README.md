@@ -15,32 +15,32 @@ The main objective is to compare solution quality, convergence behavior, feasibi
 
 PETRA targets problems of the form
 
-\[
+```math
 \begin{aligned}
 \min_x\quad & F(x)=f(x)+\sum_{i=1}^N r_i(x)\\
 \text{s.t.}\quad &h(x)=0,\qquad l\le x\le u,
 \end{aligned}
-\]
+```
 
 where \(f\) and \(h\) are smooth, while the \(r_i\) may be nonsmooth and nonconvex.
 
 The benchmarks use scalar scenario functions composed with affine mappings:
 
-\[
+```math
 r_i(x)=\rho_i(a_i^\top x+b_i).
-\]
+```
 
 Each scenario provides a proximal oracle
 
-\[
+```math
 w_i\in\operatorname{prox}_{\lambda r_i}(x)
-\]
+```
 
 together with its Moreau-envelope value and proximal vector
 
-\[
+```math
 g_i=\frac{x-w_i}{\lambda}.
-\]
+```
 
 This common interface is shared across PETRA and the Bazinga solver adapters.
 
@@ -59,7 +59,7 @@ Examples A–C are synthetic problems constructed for this benchmark suite. Exam
 
 The problem is
 
-\[
+```math
 \begin{aligned}
 \min_{0\le x\le1}\quad&
 \frac12(x_1-0.3)^2+\frac12(x_2-0.7)^2\\
@@ -67,13 +67,13 @@ The problem is
 +0.3|x_1-0.8|\\
 \text{s.t.}\quad&x_1+x_2=1.
 \end{aligned}
-\]
+```
 
 Its exact global minimizer and objective value are
 
-\[
+```math
 x^*=(0.5,0.5),\qquad F(x^*)=0.19.
-\]
+```
 
 The scenario proximal mappings are available analytically through soft thresholding.
 
@@ -83,13 +83,13 @@ This problem serves as the principal regression test for all three solvers.
 
 The master problem is
 
-\[
+```math
 \begin{aligned}
 \min_{0\le x\le1}\quad&
 4(x_1-0.4)^2+\sum_{i=1}^N r_i(x)\\
 \text{s.t.}\quad&x_1+x_2=1.
 \end{aligned}
-\]
+```
 
 Each scenario models quadratic corrective-dispatch cost together with capacity limits and penalized unmet demand.
 
@@ -97,9 +97,9 @@ Its optimal-value function is piecewise quadratic/linear, and its proximal mappi
 
 For the default three scenarios, the global solution is
 
-\[
+```math
 x^*=(15/26,11/26).
-\]
+```
 
 For \(N>3\), the three original scenario types are repeated with weights normalized by \(1/N\).
 
@@ -109,19 +109,19 @@ This benchmark tests the effect of increasing the number of separable nonsmooth 
 
 Each scenario is defined through the nonconvex optimal-value function
 
-\[
+```math
 r_i(x)=\frac13\min_y
 \left\{
 (y^2-1)^2+
 \frac{\kappa_i}{2}(y-a_i^\top x+b_i)^2
 \right\}.
-\]
+```
 
 The smooth master objective is
 
-\[
+```math
 f(x)=0.2\left[(x_1-0.35)^2+(x_2+0.35)^2\right].
-\]
+```
 
 Two master equality formulations are available:
 
@@ -145,7 +145,7 @@ This example is particularly relevant for investigating different stationary sol
 
 Based on Section 4.4 of De Marchi et al. (2023):
 
-\[
+```math
 \begin{aligned}
 \min_x\quad&
 \frac12x^\top Qx+\alpha\|x\|_0\\
@@ -154,7 +154,7 @@ Based on Section 4.4 of De Marchi et al. (2023):
 &\mathbf1^\top x=1,\\
 &0\le x\le u.
 \end{aligned}
-\]
+```
 
 The sparsity penalty admits an exact hard-thresholding proximal mapping.
 
@@ -181,15 +181,15 @@ Their inner augmented-Lagrangian subproblems are approximately solved using PANO
 
 For Examples A–C, the common Bazinga adapter uses an explicit scenario-consensus formulation:
 
-\[
+```math
 z_i=a_i^\top x+b_i.
-\]
+```
 
 This makes the nonsmooth objective separable:
 
-\[
+```math
 \sum_i\rho_i(z_i).
-\]
+```
 
 ALS retains explicit augmented-Lagrangian constraint slacks, while ALPS eliminates those slacks implicitly.
 
@@ -199,9 +199,9 @@ The Bazinga ALPS implementation used here still retains the scenario-consensus v
 
 PETRA uses termwise Moreau regularization,
 
-\[
+```math
 F_\lambda(x)=f(x)+\sum_i e_\lambda r_i(x),
-\]
+```
 
 and solves sequential smooth constrained NLP models while preserving the original master equalities and bounds.
 
@@ -391,9 +391,9 @@ PETRA supports two continuation presets.
 
 **Smoke test** (default):
 
-\[
+```math
 \lambda=[0.2],\qquad \epsilon=[10^{-3}].
-\]
+```
 
 The default maximum is 300 inner iterations.
 
@@ -406,13 +406,13 @@ This is intended primarily for implementation testing.
 
 **Full continuation:**
 
-\[
+```math
 \lambda=[0.2,0.05,0.01,0.002],
-\]
+```
 
-\[
+```math
 \epsilon=[10^{-3},10^{-4},10^{-5},10^{-6}].
-\]
+```
 
 The default maximum is 3000 inner iterations per stage.
 
@@ -613,9 +613,9 @@ The large-scale study uses LLNL's ExaJuGO library, with power systems ranging fr
 
 The motivating problems have the structure
 
-\[
+```math
 \min_x f(x)+\sum_i r_i(x)
-\]
+```
 
 under smooth master power-network constraints, where each \(r_i\) is the optimal value of a nonlinear post-contingency recourse problem.
 
