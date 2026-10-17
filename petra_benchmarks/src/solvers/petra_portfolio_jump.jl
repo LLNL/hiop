@@ -30,13 +30,11 @@ function petra_master_context(p::SparsePortfolioProblem)
         JuMP.set_upper_bound(a[j], p.upper_assets[j])
     end
     JuMP.@variable(model, s >= 0)
-    JuMP.@constraint(model, sum(a[j] for j in 1:n) == 1.0)
-    JuMP.@constraint(model,
-        sum(p.returns[j] * a[j] for j in 1:n) - s == p.target_return)
+    JuMP.@constraint(model, budget_eq, sum(a[j] for j in 1:n) == 1.0)
+    JuMP.@constraint(model, return_eq, sum(p.returns[j] * a[j] for j in 1:n) - s == p.target_return)
 
     # Keep the expensive dense-Q base quadratic once, and copy it on updates.
-    JuMP.@objective(model, Min,
-        0.5 * sum(p.Q[i,j] * a[i] * a[j] for i in 1:n, j in 1:n))
+    JuMP.@objective(model, Min, 0.5 * sum(p.Q[i,j] * a[i] * a[j] for i in 1:n, j in 1:n))
     base_quad = copy(JuMP.objective_function(model))
     return _PortfolioMasterContext(model, collect(a), s, base_quad)
 end
@@ -81,4 +79,26 @@ function petra_master_step(p::SparsePortfolioProblem, xc::AbstractVector{<:Real}
     all(isfinite, x) ||
         throw(PetraMasterFailure("Portfolio master returned non-finite primal values"))
     return x
+end
+
+
+function _petra_master_optimality(p::SparsePortfolioProblem, xc, g, alpha, y,
+                                  ctx::_PortfolioMasterContext)
+    JuMP.has_duals(ctx.model) || return NaN
+
+    r = zeros(length(y))
+    smooth_gradient!(r, p, y)
+    r .+= g .+ (2 * alpha) .* (y .- xc)
+
+    # JuMP/MOI dual sign convention for minimization.
+    multipliers = [
+        JuMP.dual(ctx.model[:budget_eq]),
+        JuMP.dual(ctx.model[:return_eq])
+    ]
+
+    jt = similar(r)
+    master_jtprod!(jt, p, y, multipliers)
+    r .-= jt
+
+    return _petra_box_kkt(p, y, r)
 end

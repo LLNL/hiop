@@ -4,6 +4,7 @@ using Random
 import DelimitedFiles
 using LinearAlgebra
 import Bazinga
+import Printf
 
 include("core/scenario_oracles.jl")
 include("core/extra_oracles.jl")

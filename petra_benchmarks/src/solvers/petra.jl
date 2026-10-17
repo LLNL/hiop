@@ -122,6 +122,73 @@ function petra_master_step(p::AbstractBenchmark, xcenter, g, alpha)
 end
 
 
+function _petra_print_header(io::IO=stdout)
+    names = ("Iter", "Stage", "F_orig", "F_lambda", "M_trial",
+             "step_inf", "opt_master", "opt_lag", "opt_prox",
+             "delta", "lambda", "alpha", "rho", "A/R")
+    widths = (5, 5, 12, 12, 12, 10, 10, 10, 10, 10, 10, 10, 10, 3)
+    println(io, join((lpad(s, w) for (s, w) in zip(names, widths)), " "))
+end
+
+function _petra_print_row(io::IO, r)
+    Printf.@printf(io, "%5d %5d %12.5e %12.5e %12.5e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3s\n",
+                   r.iter, r.stage, r.f_orig, r.f_lambda, r.m_trial, r.step_inf, r.opt_master, r.opt_lag, r.opt_prox,
+                   r.delta, r.lambda, r.alpha, r.rho, r.accepted ? "A" : "R")
+end
+
+# KKT residual after eliminating the box normal cone.
+# r = grad(M) + J'h for a chosen equality multiplier.
+function _petra_box_kkt(p, y, r; tol=1e-7)
+    opt = max(master_feasibility(p, y), bound_violation(p, y))
+    for i in eachindex(y)
+        lo = isfinite(p.lower[i]) && y[i] <= p.lower[i] + tol
+        hi = isfinite(p.upper[i]) && y[i] >= p.upper[i] - tol
+
+        ri = if lo && hi
+            0.0
+        elseif lo
+            min(r[i], 0.0)
+        elseif hi
+            max(r[i], 0.0)
+        else
+            r[i]
+        end
+        opt = max(opt, abs(ri))
+    end
+    return opt
+end
+
+# Generic fallback: estimate equality multipliers using
+# free variables, then calculate a projected KKT residual.
+function _petra_master_optimality(p::AbstractBenchmark, xc, g, alpha, y, context)
+    n = length(y)
+    m = num_equalities(p)
+
+    r = zeros(n)
+    smooth_gradient!(r, p, y)
+    r .+= g .+ (2 * alpha) .* (y .- xc)
+
+    if m > 0
+        JT = zeros(n, m)
+        e = zeros(m)
+        for j in 1:m
+            e[j] = 1.0
+            master_jtprod!(view(JT, :, j), p, y, e)
+            e[j] = 0.0
+        end
+
+        free = [i for i in eachindex(y)
+                if y[i] > p.lower[i] + 1e-7 &&
+                   y[i] < p.upper[i] - 1e-7]
+        rows = isempty(free) ? collect(eachindex(y)) : free
+
+        multiplier = JT[rows, :] \ (-r[rows])
+        r .+= JT * multiplier
+    end
+    return _petra_box_kkt(p, y, r)
+end
+
+
 """
     solve_petra(problem; x0=problem.x0, options=PetraOptions())
 
@@ -133,9 +200,7 @@ Returns a named tuple with common benchmarking fields, outer stage summaries,
 and an iteration trace. `:converged` means that each finite lambda stage met
 its stated stopping test; it is NOT a certificate of global optimality.
 """
-function solve_petra(p::AbstractBenchmark;
-                     x0::AbstractVector{<:Real}=p.x0,
-                     options::PetraOptions=PetraOptions())
+function solve_petra(p::AbstractBenchmark; x0::AbstractVector{<:Real}=p.x0, options::PetraOptions=PetraOptions())
     _check_petra_options(options)
     n = num_master(p)
     length(x0) == n || throw(DimensionMismatch("initial point dimension"))
@@ -160,8 +225,7 @@ function solve_petra(p::AbstractBenchmark;
     last_lagged = Inf
     status = :converged
 
-    for (stage, (lambda, epsilon)) in enumerate(zip(options.lambda_schedule,
-                                                    options.epsilon_schedule))
+    for (stage, (lambda, epsilon)) in enumerate(zip(options.lambda_schedule, options.epsilon_schedule))
         last_lambda = lambda
         # :paper reproduces Algorithm 4.1 initialization;
         # :affine_tight  uses a valid tighter upper model for the present affine scenarios.
@@ -176,6 +240,13 @@ function solve_petra(p::AbstractBenchmark;
         stage_rejected = 0
         stage_status = :max_inner
         stage_master_error = nothing
+
+
+        if options.verbose
+            println("\nPETRA stage=", stage, " lambda=", lambda, " epsilon=", epsilon, " alpha0=", alpha_initial)
+            _petra_print_header()
+        end
+
 
         for k in 1:options.max_inner
             ninner += 1
@@ -199,8 +270,14 @@ function solve_petra(p::AbstractBenchmark;
             # STEP
             d = xtrial .- x
             sqstep = dot(d, d)
-            # Pred = M(xcenter)-M(xtrial). Constant envelope terms cancel.
-            pred = smooth_value(p, x) - smooth_value(p, xtrial) - dot(data.g, d) - alpha * sqstep
+
+
+            # Master model at the trial point (constant omitted).
+            f_trial = smooth_value(p, xtrial)
+            m_trial = f_trial + dot(data.g, d) + alpha * sqstep
+
+            # Predicted decrease Pred = M(xcenter)-M(xtrial). Constant envelope terms cancel.
+            pred = smooth_value(p, x) - m_trial
             if !isfinite(pred) || pred < -options.model_decrease_tol
                 stage_status = :master_no_descent
                 break
@@ -219,10 +296,37 @@ function solve_petra(p::AbstractBenchmark;
             end
 
             accepted = isfinite(ratio) && ratio >= options.rho_bar
-            push!(iteration_history,
-                  (stage=stage, inner=k, lambda=lambda, alpha=alpha,
-                   accepted=accepted, predicted=pred, actual=ared,
-                   rho=ratio, step_inf=norm(d, Inf)))
+
+
+
+            step_inf = norm(d, Inf)
+            opt_lag = 2.0 * alpha * step_inf
+
+            # Diagnostics <-- verbose mode.
+            if options.verbose
+                f_orig = original_objective(p, xtrial)
+
+                opt_master = _petra_master_optimality(p, x, data.g, alpha, xtrial, master_context)
+
+                # Non-lagged Moreau stationarity proxy.
+                opt_prox = norm(trial_data.g .- data.g .- (2.0 * alpha) .* d, Inf)
+            else
+                f_orig = NaN
+                opt_master = NaN
+                opt_prox = NaN
+            end
+
+            entry = (iter=ninner, stage=stage, inner=k, f_orig=f_orig, f_lambda=trial_data.objective,
+                     m_trial=m_trial, step_inf=step_inf, opt_master=opt_master, opt_lag=opt_lag,
+                     opt_prox=opt_prox, delta=trial_data.max_displacement, lambda=lambda, alpha=alpha,
+                     rho=ratio, accepted=accepted, predicted=pred, actual=ared)
+
+            push!(iteration_history, entry)
+
+            if options.verbose
+                _petra_print_row(stdout, entry)
+            end
+
 
             if accepted
                 # Accept, do NOT increase alpha. Reuse trial oracle values at
@@ -230,7 +334,7 @@ function solve_petra(p::AbstractBenchmark;
                 x = xtrial
                 data = trial_data
                 last_data = data
-                last_lagged = 2.0 * alpha * norm(d, Inf)
+                last_lagged = opt_lag #2.0 * alpha * norm(d, Inf)
                 naccepted += 1
                 stage_accepted += 1
                 consecutive_rejections = 0
@@ -253,24 +357,14 @@ function solve_petra(p::AbstractBenchmark;
             end
         end
 
-        push!(stage_history,
-              (stage=stage, lambda=lambda, epsilon=epsilon,
-               status=stage_status, x=copy(x),
-               moreau_objective=data.objective,
-               lagged_residual=last_lagged,
-               max_prox_displacement=data.max_displacement,
-               accepted=stage_accepted, rejected=stage_rejected,
-               alpha_initial=alpha_initial, alpha_final=alpha,
-               master_error=stage_master_error))
+        push!(stage_history, (stage=stage, lambda=lambda, epsilon=epsilon, status=stage_status, x=copy(x),
+                              moreau_objective=data.objective, lagged_residual=last_lagged,
+                              max_prox_displacement=data.max_displacement, accepted=stage_accepted, rejected=stage_rejected,
+                              alpha_initial=alpha_initial, alpha_final=alpha, master_error=stage_master_error))
         if options.verbose
-            println("Petra stage=", stage,
-                    " lambda=", lambda, " eps=", epsilon,
-                    " x=", x, " F_lambda=", data.objective,
-                    " lagged=", last_lagged,
-                    " accepted=", stage_accepted,
-                    " rejected=", stage_rejected,
-                    " status=", stage_status)
+            println("--- stage ", stage, ": ", stage_status, " (accepted=", stage_accepted, ", rejected=", stage_rejected, ")")
         end
+        
         if stage_status != :converged
             status = stage_status
             break
