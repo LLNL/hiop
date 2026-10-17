@@ -76,3 +76,4 @@ if get(ENV, "RUN_SOLVERS", "0") == "1"
 end
 
 include("test_extra_examples.jl")
+include("test_runner.jl")
