@@ -33,7 +33,7 @@ r_i(x)=\rho_i(a_i^\top x+b_i).
 Each scenario provides a proximal oracle
 
 ```math
-w_i\in\operatorname{prox}_{\lambda r_i}(x)
+w_i\in\textnormal{prox}_{\lambda r_i}(x)
 ```
 
 together with its Moreau-envelope value and proximal vector
