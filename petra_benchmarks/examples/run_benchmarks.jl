@@ -44,6 +44,7 @@ Base.@kwdef mutable struct Config
     returns_file::Union{Nothing,String} = nothing
     upper_file::Union{Nothing,String} = nothing
     target_return::Union{Nothing,Float64} = nothing
+    al_trace::Bool = false
 end
 
 function usage(io::IO=stdout)
@@ -68,6 +69,7 @@ function usage(io::IO=stdout)
       --tol FLOAT                ALS/ALPS outer tolerance (default 1e-6)
       --maxit INT                ALS/ALPS max outer iterations (default 150)
       --verbose                  Enable each solver's detailed iteration output
+      --al-trace                 Print one cost summary per ALS/ALPS outer iteration
       --strict                   Exit nonzero if a solver doesn't converge
       --check-reference          Check A and B (3 scenarios) against reference solutions
       --csv PATH                 Append comparable results to a CSV file
@@ -148,7 +150,7 @@ function parse_cli(args::Vector{String})
         if arg in ("-h", "--help")
             cfg.help = true
             return cfg
-        elseif arg in ("--verbose", "--strict", "--check-reference", "--dry-run")
+        elseif arg in ("--verbose", "--al-trace", "--strict", "--check-reference", "--dry-run")
             push!(flags, arg)
         elseif startswith(arg, "--")
             if occursin('=', arg)
@@ -188,6 +190,7 @@ function parse_cli(args::Vector{String})
     cfg.petra_schedule = Symbol(_normalize(get(values, "--petra-schedule", "smoke")))
     cfg.alpha_strategy = Symbol(_normalize(get(values, "--alpha-strategy", "paper")))
     cfg.verbose = "--verbose" in flags
+    cfg.al_trace = "--al-trace" in flags
     cfg.strict = "--strict" in flags
     cfg.check_reference = "--check-reference" in flags
     cfg.dry_run = "--dry-run" in flags
@@ -269,6 +272,7 @@ function petra_options(cfg::Config)
         eps = [1e-3]
         maxinner = cfg.petra_max_inner == 0 ? 300 : cfg.petra_max_inner
     else
+        # aaa
         lambda = [0.2, 0.05, 0.01, 0.002]
         eps = [1e-3, 1e-4, 1e-5, 1e-6]
         maxinner = cfg.petra_max_inner == 0 ? 3000 : cfg.petra_max_inner
@@ -288,10 +292,10 @@ function run_solver(kind::Symbol, solver::Symbol, p, cfg::Config)
     elseif solver === :als || solver === :alps
         if kind === :portfolio
             return solve_portfolio_native(p; method=solver, tol=cfg.tol,
-                                          maxit=cfg.maxit, verbose=cfg.verbose)
+                                          maxit=cfg.maxit, verbose=cfg.verbose, al_trace=cfg.al_trace)
         end
         return solve_bazinga(p; method=solver, tol=cfg.tol,
-                             maxit=cfg.maxit, verbose=cfg.verbose)
+                             maxit=cfg.maxit, verbose=cfg.verbose, al_trace=cfg.al_trace)
     end
     throw(ArgumentError("unsupported solver $solver"))
 end
@@ -323,6 +327,8 @@ function show_result(kind::Symbol, solver::Symbol, p, cfg::Config, result)
                      :outer_iterations, :inner_iterations,
                      :accepted_steps, :rejected_steps,
                      :oracle_calls, :oracle_batches,
+                     :prox_calls, :scenario_prox_calls,
+                     :panoc_seconds, 
                      :final_lambda, :final_lagged_residual,
                      :final_max_prox_displacement, :elapsed_seconds)
     for key in keys_to_print
@@ -376,6 +382,9 @@ function result_row(kind::Symbol, solver::Symbol, p, cfg::Config,
         outer_iterations=getfield_or(result, :outer_iterations),
         inner_iterations=getfield_or(result, :inner_iterations),
         oracle_calls=getfield_or(result, :oracle_calls),
+        prox_calls=getfield_or(result, :prox_calls),
+        scenario_prox_calls=getfield_or(result, :scenario_prox_calls),
+        panoc_seconds=getfield_or(result, :panoc_seconds),
         elapsed_seconds=getfield_or(result, :elapsed_seconds),
         final_lambda=getfield_or(result, :final_lambda),
         final_lagged_residual=getfield_or(result, :final_lagged_residual),

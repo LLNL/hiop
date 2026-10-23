@@ -113,8 +113,13 @@ original (unpenalized) objective. The nonsmooth sparsity count is exact.
 function solve_portfolio_native(p::SparsePortfolioProblem;
                                 method::Symbol=:alps, tol::Real=1e-6,
                                 maxit::Int=150, verbose::Bool=false,
-                                x0::AbstractVector{<:Real}=p.x0[1:p.n_assets])
+                                x0::AbstractVector{<:Real}=p.x0[1:p.n_assets],
+                                al_trace::Bool=false)
     data = portfolio_native_model(p;x0=x0)
+
+    stats = ALWorkStats(nterms=p.n_assets, trace=al_trace)
+    g_counted = CountedNonsmooth(data.g, stats)
+    
     alg = if method === :als
         Bazinga.als
     elseif method === :alps
@@ -122,18 +127,19 @@ function solve_portfolio_native(p::SparsePortfolioProblem;
     else
         throw(ArgumentError("method must be :als or :alps"))
     end
-    (x,y,nouter,ninner,elapsed,status,inner_tol,
-     residual,slack,penalties) = alg(
-        data.f, data.g, data.c, data.D, data.x0, data.y0;
-        tol=tol,maxit=maxit,verbose=verbose)
+
+    (x, y, nouter, ninner, elapsed, status, inner_tol, residual, slack, penalties) =
+    alg(data.f, g_counted, data.c, data.D, data.x0, data.y0;
+         tol=tol, maxit=maxit, verbose=verbose,
+         subsolver=TracedPANOCFactory(stats))
+
     x = copy(x)
     ret = dot(p.returns,x)
     budget_error = abs(sum(x)-1)
     return_error = max(0.0,p.target_return-ret)
     # Append a diagnostic slack for comparison with the Petra master model.
     xs = vcat(x,max(0.0,ret-p.target_return))
-    return (
-        method=method, status=status, x=xs, assets=x,
+    return (method=method, status=status, x=xs, assets=x,
         objective=original_objective(p,xs),
         master_feasibility=master_feasibility(p,xs),
         bound_violation=bound_violation(p,xs),
@@ -142,5 +148,5 @@ function solve_portfolio_native(p::SparsePortfolioProblem;
         bazinga_primal_residual=residual,outer_iterations=nouter,
         inner_iterations=ninner,elapsed_seconds=elapsed,
         final_inner_tolerance=inner_tol,multipliers=copy(y),
-        slacks=copy(slack),penalties=copy(penalties))
+        slacks=copy(slack),penalties=copy(penalties),al_work_summary(stats)...)
 end
