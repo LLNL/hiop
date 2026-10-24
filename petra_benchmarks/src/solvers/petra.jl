@@ -17,7 +17,13 @@ Base.@kwdef struct PetraOptions
     rho_bar::Float64 = 0.1
     sigma::Float64 = 0.1
     alpha_floor::Float64 = 1.0
-    alpha_strategy::Symbol = :paper # :paper or :affine_tight
+    alpha_strategy::Symbol = :paper # :paper or :affine_tight or :adaptive_scalar
+    #used only by :adaptive_scalar
+    alpha_start::Float64 = 1.0
+    alpha_min::Float64 = 1e-4
+    alpha_shrink::Float64 = 0.5
+    alpha_grow::Float64 = 2.0
+    rho_good::Float64 = 0.8
     max_inner::Int = 300
     max_consecutive_rejections::Int = 20
     feasibility_tol::Float64 = 1e-8
@@ -26,8 +32,7 @@ Base.@kwdef struct PetraOptions
 end
 
 function _check_petra_options(o::PetraOptions)
-    length(o.lambda_schedule) == length(o.epsilon_schedule) &&
-        !isempty(o.lambda_schedule) ||
+    length(o.lambda_schedule) == length(o.epsilon_schedule) && !isempty(o.lambda_schedule) ||
         throw(ArgumentError("lambda_schedule and epsilon_schedule must be nonempty and have equal length"))
     all(v -> isfinite(v) && v > 0, o.lambda_schedule) ||
         throw(ArgumentError("lambda values must be finite and positive"))
@@ -43,14 +48,23 @@ function _check_petra_options(o::PetraOptions)
         throw(ArgumentError("sigma must be positive"))
     isfinite(o.alpha_floor) && o.alpha_floor > 0 ||
         throw(ArgumentError("alpha_floor must be positive"))
-    o.alpha_strategy in (:paper, :affine_tight) ||
+    o.alpha_strategy in (:paper, :affine_tight, :adaptive_scalar) ||
         throw(ArgumentError("alpha_strategy must be :paper or :affine_tight"))
+    if o.alpha_strategy === :adaptive_scalar
+        isfinite(o.alpha_start) && o.alpha_start > 0 ||
+            throw(ArgumentError("alpha_start must be positive"))
+        isfinite(o.alpha_min) && o.alpha_min > 0 || throw(ArgumentError("alpha_min must be positive"))
+        isfinite(o.alpha_shrink) && 0 < o.alpha_shrink < 1 ||
+            throw(ArgumentError("alpha_shrink must be in (0,1)"))
+        isfinite(o.alpha_grow) && o.alpha_grow > 1 || throw(ArgumentError("alpha_grow must exceed 1"))
+        isfinite(o.rho_good) && o.rho_bar <= o.rho_good <= 1 ||
+            throw(ArgumentError("rho_good must be in [rho_bar,1]"))
+    end        
     o.max_inner > 0 || throw(ArgumentError("max_inner must be positive"))
     o.max_consecutive_rejections > 0 ||
         throw(ArgumentError("max_consecutive_rejections must be positive"))
     o.feasibility_tol > 0 || throw(ArgumentError("feasibility_tol must be positive"))
-    o.model_decrease_tol >= 0 ||
-        throw(ArgumentError("model_decrease_tol must be nonnegative"))
+    o.model_decrease_tol >= 0 || throw(ArgumentError("model_decrease_tol must be nonnegative"))
     return nothing
 end
 
@@ -213,7 +227,14 @@ function solve_petra(p::AbstractBenchmark; x0::AbstractVector{<:Real}=p.x0, opti
 
     start_ns = time_ns()
     master_context = petra_master_context(p)
-    majorization_factor = _petra_majorization_factor(p, options.alpha_strategy)
+    
+    #majorization_factor = _petra_majorization_factor(p, options.alpha_strategy)
+    # For adaptive mode, retain the paper's global bound, but do not impose it on alpha.
+    bound_strategy = options.alpha_strategy === :adaptive_scalar ? :paper : options.alpha_strategy
+    majorization_factor = _petra_majorization_factor(p, bound_strategy)
+    # Carried between continuation stages for adaptive mode.
+    alpha_warm = max(options.alpha_min, options.alpha_start)
+    
     ninner = 0
     naccepted = 0
     nrejected = 0
@@ -229,8 +250,18 @@ function solve_petra(p::AbstractBenchmark; x0::AbstractVector{<:Real}=p.x0, opti
         last_lambda = lambda
         # :paper reproduces Algorithm 4.1 initialization;
         # :affine_tight  uses a valid tighter upper model for the present affine scenarios.
-        alpha = max(options.alpha_floor, majorization_factor / (2.0 * lambda))
+        #alpha = max(options.alpha_floor, majorization_factor / (2.0 * lambda))
+        #alpha_initial = alpha
+
+        
+        alpha = if options.alpha_strategy === :adaptive_scalar
+            alpha_warm
+        else
+            max(options.alpha_floor, majorization_factor / (2.0 * lambda))
+        end
         alpha_initial = alpha
+
+
         data = _petra_moreau_data(p, x, lambda)
         nbatches += 1
         last_data = data
@@ -326,31 +357,40 @@ function solve_petra(p::AbstractBenchmark; x0::AbstractVector{<:Real}=p.x0, opti
             if options.verbose
                 _petra_print_row(stdout, entry)
             end
-
-
+            
             if accepted
-                # Accept, do NOT increase alpha. Reuse trial oracle values at
-                # the next inner iteration (no redundant oracle batch).
-                x = xtrial
-                data = trial_data
-                last_data = data
+                # Accept: reuse trial oracle data.
+                x = xtrial; data = trial_data; last_data = data
                 last_lagged = opt_lag #2.0 * alpha * norm(d, Inf)
-                naccepted += 1
-                stage_accepted += 1
-                consecutive_rejections = 0
+                naccepted += 1; stage_accepted += 1; consecutive_rejections = 0
+
+                # Stabilization proposed for the next iteration.
+                alpha_next = alpha
+
+                if options.alpha_strategy === :adaptive_scalar && ratio >= options.rho_good
+                    alpha_next = max(options.alpha_min, options.alpha_shrink * alpha)
+                end
+
+                # IMPORTANT: convergence uses alpha from the step just solved, not alpha_next.
                 if last_lagged <= epsilon
                     stage_status = :converged
+
+                    # Save the stabilization param to the next continuation stage.
+                    if options.alpha_strategy === :adaptive_scalar
+                        alpha_warm = alpha_next
+                    end
                     break
                 end
+
+                alpha = alpha_next
             else
-                # Reject and keep the SAME x and proximal selections; only
-                # stabilization changes, as in Algorithm 4.1, lines 14-17.
-                alpha *= 2.0
-                nrejected += 1
-                stage_rejected += 1
-                consecutive_rejections += 1
-                if !isfinite(alpha) ||
-                   consecutive_rejections >= options.max_consecutive_rejections
+                # Rejected: retain x and its proximal data.
+                growth = options.alpha_strategy === :adaptive_scalar ? options.alpha_grow : 2.0
+                alpha *= growth
+
+                nrejected += 1; stage_rejected += 1; consecutive_rejections += 1
+
+                if !isfinite(alpha) || consecutive_rejections >= options.max_consecutive_rejections
                     stage_status = :rejection_limit
                     break
                 end
